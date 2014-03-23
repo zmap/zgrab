@@ -51,9 +51,6 @@ func (_ hexConverter) convert(res *Result) *bannerOutput {
 	return out
 }
 
-
-
-
 type bannerEncoder struct {
 	enc *json.Encoder
 	converter ResultConverter
