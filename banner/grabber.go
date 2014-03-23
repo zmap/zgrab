@@ -17,7 +17,7 @@ type Result struct {
 }
 
 type GrabConfig struct {
-	Udp, Tls, SendMessage, Summary bool
+	Udp, Tls, SendMessage bool
 	Port uint16
 	Timeout int
 	Message string
@@ -32,7 +32,6 @@ func makeDialer(config *GrabConfig) ( func(rhost string) (net.Conn, error) ) {
 	}
 
 	timeout := time.Duration(config.Timeout) * time.Second
-	log.Print(timeout)
 
 	if config.Tls {
 		tlsConfig := new(tls.Config)

@@ -1,13 +1,19 @@
 package banner
 
 import (
-	"fmt"
 	"os"
+	"log"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/base64"
 	"errors"
 )
+
+type Summary struct {
+	Success uint			`json:"success_count"`
+	Error uint				`json:"error_count"`
+	Errors map[string]int   `json:"errors"`
+}
 
 type bannerOutput struct {
 	Addr string 	`json:"host"`
@@ -79,13 +85,27 @@ func newBannerEncoder(f *os.File, converter ResultConverter) bannerEncoder {
 	return be
 }
 
-func WriteOutput(resultChan chan Result, converter ResultConverter, f *os.File) {
+func SerializeSummary(s *Summary) ([]byte, error) {
+	return json.Marshal(*s)
+}
+
+func WriteOutput(resultChan chan Result, converter ResultConverter, f *os.File, summaryChan chan Summary) {
+	summary := Summary{0, 0, make(map[string]int)}
 	enc := newBannerEncoder(f, converter)
 	for result := range resultChan {
 		if err := enc.Encode(&result); err != nil {
-			fmt.Fprintln(os.Stderr, "Error: JSON ", err)
+			log.Print(err)
+		}
+		if result.Err == nil {
+			summary.Success += 1
+		} else {
+			summary.Error += 1
+			summary.Errors[result.Err.Error()] += 1
 		}
 	}
+	// Print summary
+	summaryChan <- summary
+
 }
 
 

@@ -15,6 +15,7 @@ import (
 var (
 	encoding, outputFileName, inputFileName, messageFileName string
 	portFlag uint
+	summaryFlag bool
 	outputFile, inputFile *os.File
 )
 
@@ -33,7 +34,7 @@ func init() {
 	flag.IntVar(&config.Timeout, "timeout", 4, "Set connection timeout in seconds")
 	flag.BoolVar(&config.Tls, "tls", false, "Grab over TLS")
 	flag.BoolVar(&config.Udp, "udp", false, "Grab over UDP")
-	flag.BoolVar(&config.Summary, "summary", false, "Print a summary when finished")
+	flag.BoolVar(&summaryFlag, "summary", false, "Print a summary when finished")
 	flag.Parse()
 
 	// Validate port
@@ -45,6 +46,11 @@ func init() {
 	// Validate timeout
 	if config.Timeout < 0 {
 		log.Fatal("Error: Invalid timeout", config.Timeout)
+	}
+
+	// Check UDP
+	if config.Udp {
+		log.Print("Warning: UDP is untested")
 	}
 
 
@@ -63,7 +69,7 @@ func init() {
 	case "-":
 		outputFile = os.Stdout
 	default:
-		if outputFile, err = os.Open(outputFileName); err != nil {
+		if outputFile, err = os.Create(outputFileName); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -86,7 +92,6 @@ func init() {
 }
 
 func ReadInput(addrChan chan net.IP, inputFile *os.File) {
-	fmt.Println("Reading input")
 	scanner := bufio.NewScanner(inputFile)
 	for scanner.Scan() {
 		ipString := scanner.Text()
@@ -110,8 +115,9 @@ func main() {
 	}
 	addrChan := make(chan net.IP)
 	resultChan := make(chan banner.Result)
+	summaryChan := make(chan banner.Summary)
 
-	go banner.WriteOutput(resultChan, converter, outputFile)
+	go banner.WriteOutput(resultChan, converter, outputFile, summaryChan)
 	go banner.GrabBanner(addrChan, resultChan, &config)
 	ReadInput(addrChan, inputFile)
 	if inputFile != os.Stdin {
@@ -119,6 +125,12 @@ func main() {
 	}
 	if outputFile != os.Stdout {
 		outputFile.Close()
+	}
+	summary := <- summaryChan
+	if s, err := banner.SerializeSummary(&summary); err != nil {
+		log.Fatal(err)
+	} else {
+		fmt.Println(string(s))
 	}
 }
 
