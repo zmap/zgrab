@@ -17,6 +17,7 @@ var (
 	portFlag uint
 	summaryFlag bool
 	outputFile, inputFile *os.File
+	senders uint
 )
 
 var (
@@ -35,6 +36,7 @@ func init() {
 	flag.BoolVar(&config.Tls, "tls", false, "Grab over TLS")
 	flag.BoolVar(&config.Udp, "udp", false, "Grab over UDP")
 	flag.BoolVar(&summaryFlag, "summary", false, "Print a summary when finished")
+	flag.UintVar(&senders, "senders", 10, "Number of send coroutines to use")
 	flag.Parse()
 
 	// Validate port
@@ -53,6 +55,10 @@ func init() {
 		log.Print("Warning: UDP is untested")
 	}
 
+	// Validate senders
+	if senders == 0 {
+		log.Fatal("Error: Need at least one sender")
+	}
 
 	// Open input and output files
 	var err error
@@ -113,13 +119,24 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	addrChan := make(chan net.IP)
-	resultChan := make(chan banner.Result)
+	addrChan := make(chan net.IP, senders)
+	resultChan := make(chan banner.Result, senders)
 	summaryChan := make(chan banner.Summary)
+	doneChan := make(chan int)
 
 	go banner.WriteOutput(resultChan, converter, outputFile, summaryChan)
-	go banner.GrabBanner(addrChan, resultChan, &config)
+	for i := uint(0); i < senders; i += 1 {
+		go banner.GrabBanner(addrChan, resultChan, doneChan, &config)
+	}
 	ReadInput(addrChan, inputFile)
+
+	// Wait for grabbers to finish
+	for i := uint(0); i < senders; i += 1 {
+		<- doneChan
+	}
+	close(doneChan)
+	close(resultChan)
+
 	if inputFile != os.Stdin {
 		inputFile.Close()
 	}
@@ -127,10 +144,12 @@ func main() {
 		outputFile.Close()
 	}
 	summary := <- summaryChan
-	if s, err := banner.SerializeSummary(&summary); err != nil {
-		log.Fatal(err)
-	} else {
-		fmt.Println(string(s))
+	if summaryFlag {
+		if s, err := banner.SerializeSummary(&summary); err != nil {
+			log.Fatal(err)
+		} else {
+			fmt.Println(string(s))
+		}
 	}
 }
 

@@ -41,7 +41,7 @@ func makeDialer(config *GrabConfig) ( func(rhost string) (net.Conn, error) ) {
 			now := time.Now()
 			conn, err := net.DialTimeout(network, rhost, timeout)
 			if err == nil {
-				conn, err = tls.Client(conn, tlsConfig), nil
+				conn = tls.Client(conn, tlsConfig)
 				if config.Timeout != 0 {
 					deadline := now.Add(timeout)
 					conn.SetDeadline(deadline)
@@ -62,7 +62,7 @@ func makeDialer(config *GrabConfig) ( func(rhost string) (net.Conn, error) ) {
 	}
 }
 
-func GrabBanner(addrChan chan net.IP, resultChan chan Result, config *GrabConfig) {
+func GrabBanner(addrChan chan net.IP, resultChan chan Result, doneChan chan int, config *GrabConfig) {
 
 	dial := makeDialer(config)
 	port := strconv.FormatUint(uint64(config.Port), 10)
@@ -71,7 +71,7 @@ func GrabBanner(addrChan chan net.IP, resultChan chan Result, config *GrabConfig
 		rhost := net.JoinHostPort(addr, port)
 		conn, err := dial(rhost)
 		if err != nil {
-			log.Print("Could not connect to host ", addr, err)
+			log.Print("Could not connect to host ", addr, " - ", err)
 			continue
 		}
 		if config.SendMessage {
@@ -93,5 +93,5 @@ func GrabBanner(addrChan chan net.IP, resultChan chan Result, config *GrabConfig
 		res := Result{addr, nil, buf[0:n]}
 		resultChan <- res
 	}
-	close(resultChan)
+	doneChan <- 1
 }
