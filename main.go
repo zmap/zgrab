@@ -13,15 +13,15 @@ import (
 
 // Command-line flags
 var (
-	encoding, outputFileName, inputFileName, messageFileName string
+	encoding, outputFileName, inputFileName, logFileName, metadataFileName, messageFileName string
 	portFlag uint
-	summaryFlag bool
 	outputFile, inputFile *os.File
 	senders uint
 )
 
 var (
 	config banner.GrabConfig
+	metadataFile *os.File
 )
 
 // Pre-main bind flags to variables
@@ -31,11 +31,11 @@ func init() {
 	flag.StringVar(&outputFileName, "output-file", "-", "Output filename, use - for stdout")
 	flag.StringVar(&inputFileName, "input-file", "-", "Input filename, use - for stdin")
 	flag.StringVar(&messageFileName, "data", "", "Optional message to send (%s will be replaced with destination IP)")
+	flag.StringVar(&metadataFileName, "metadata-file", "-", "Optional file to record banner-grab metadata, use - for stdout")
 	flag.UintVar(&portFlag, "port", 80, "Port to grab on")
 	flag.IntVar(&config.Timeout, "timeout", 4, "Set connection timeout in seconds")
 	flag.BoolVar(&config.Tls, "tls", false, "Grab over TLS")
 	flag.BoolVar(&config.Udp, "udp", false, "Grab over UDP")
-	flag.BoolVar(&summaryFlag, "summary", false, "Print a summary when finished")
 	flag.UintVar(&senders, "senders", 10, "Number of send coroutines to use")
 	flag.Parse()
 
@@ -95,6 +95,15 @@ func init() {
 			messageFile.Close()
 		}
 	}
+
+	// Open metadata file
+	if metadataFileName == "-" {
+		metadataFile = os.Stdout
+	} else {
+		if metadataFile, err = os.Create(metadataFileName); err != nil {
+			log.Fatal(err)
+		}
+	}
 }
 
 func ReadInput(addrChan chan net.IP, inputFile *os.File) {
@@ -144,12 +153,10 @@ func main() {
 		outputFile.Close()
 	}
 	summary := <- summaryChan
-	if summaryFlag {
-		if s, err := banner.SerializeSummary(&summary); err != nil {
-			log.Fatal(err)
-		} else {
-			fmt.Println(string(s))
-		}
+	if s, err := banner.SerializeSummary(&summary); err != nil {
+		log.Fatal(err)
+	} else {
+		metadataFile.Write(s)
 	}
 }
 
