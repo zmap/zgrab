@@ -13,7 +13,7 @@ import (
 
 // Command-line flags
 var (
-	encoding, outputFileName, inputFileName, logFileName, metadataFileName, messageFileName string
+	encoding, outputFileName, inputFileName, logFileName, metadataFileName, messageFileName, interfaceName string
 	portFlag uint
 	inputFile, metadataFile  *os.File
 	senders uint
@@ -34,6 +34,7 @@ func init() {
 	flag.StringVar(&messageFileName, "data", "", "Optional message to send (%s will be replaced with destination IP)")
 	flag.StringVar(&metadataFileName, "metadata-file", "-", "File to record banner-grab metadata, use - for stdout")
 	flag.StringVar(&logFileName, "log-file", "-", "File to log to, use - for stderr")
+	flag.StringVar(&interfaceName, "interface", "", "Network interface to send on")
 	flag.UintVar(&portFlag, "port", 80, "Port to grab on")
 	flag.IntVar(&grabConfig.Timeout, "timeout", 4, "Set connection timeout in seconds")
 	flag.BoolVar(&grabConfig.Tls, "tls", false, "Grab over TLS")
@@ -69,8 +70,21 @@ func init() {
 		log.Fatal("Error: Invalid encoding ", encoding)
 	}
 
-	// Open input and output files
+	// Check the network interface
 	var err error
+	if interfaceName != "" {
+		var iface *net.Interface
+		if iface, err = net.InterfaceByName(interfaceName); err != nil {
+			log.Fatal("Error: Invalid network interface: ", interfaceName)
+		}
+		var addrs []net.Addr
+		if addrs, err = iface.Addrs(); err != nil || len(addrs) == 0 {
+			log.Fatal("Error: No addresses for interface ", interfaceName)
+		}
+		grabConfig.LocalAddr = addrs[0]
+	}
+
+	// Open input and output files
 	switch inputFileName {
 	case "-":
 		inputFile = os.Stdin
@@ -170,6 +184,7 @@ func main() {
 	if outputConfig.OutputFile != os.Stdout {
 		outputConfig.OutputFile.Close()
 	}
+
 	summary := <- summaryChan
 	if s, err := banner.SerializeSummary(&summary); err != nil {
 		log.Fatal(err)
