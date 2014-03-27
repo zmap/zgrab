@@ -15,13 +15,14 @@ import (
 var (
 	encoding, outputFileName, inputFileName, logFileName, metadataFileName, messageFileName string
 	portFlag uint
-	outputFile, inputFile *os.File
+	inputFile, metadataFile  *os.File
 	senders uint
 )
 
+// Module configurations
 var (
-	config banner.GrabConfig
-	metadataFile *os.File
+	grabConfig banner.GrabConfig
+	outputConfig banner.OutputConfig
 )
 
 // Pre-main bind flags to variables
@@ -31,11 +32,12 @@ func init() {
 	flag.StringVar(&outputFileName, "output-file", "-", "Output filename, use - for stdout")
 	flag.StringVar(&inputFileName, "input-file", "-", "Input filename, use - for stdin")
 	flag.StringVar(&messageFileName, "data", "", "Optional message to send (%s will be replaced with destination IP)")
-	flag.StringVar(&metadataFileName, "metadata-file", "-", "Optional file to record banner-grab metadata, use - for stdout")
+	flag.StringVar(&metadataFileName, "metadata-file", "-", "File to record banner-grab metadata, use - for stdout")
+	flag.StringVar(&logFileName, "log-file", "-", "File to log to, use - for stderr")
 	flag.UintVar(&portFlag, "port", 80, "Port to grab on")
-	flag.IntVar(&config.Timeout, "timeout", 4, "Set connection timeout in seconds")
-	flag.BoolVar(&config.Tls, "tls", false, "Grab over TLS")
-	flag.BoolVar(&config.Udp, "udp", false, "Grab over UDP")
+	flag.IntVar(&grabConfig.Timeout, "timeout", 4, "Set connection timeout in seconds")
+	flag.BoolVar(&grabConfig.Tls, "tls", false, "Grab over TLS")
+	flag.BoolVar(&grabConfig.Udp, "udp", false, "Grab over UDP")
 	flag.UintVar(&senders, "senders", 10, "Number of send coroutines to use")
 	flag.Parse()
 
@@ -43,21 +45,28 @@ func init() {
 	if portFlag > 65535 {
 		log.Fatal("Error: Port", portFlag, "out of range")
 	}
-	config.Port = uint16(portFlag)
+	grabConfig.Port = uint16(portFlag)
 
 	// Validate timeout
-	if config.Timeout < 0 {
-		log.Fatal("Error: Invalid timeout", config.Timeout)
+	if grabConfig.Timeout < 0 {
+		log.Fatal("Error: Invalid timeout", grabConfig.Timeout)
 	}
 
 	// Check UDP
-	if config.Udp {
+	if grabConfig.Udp {
 		log.Print("Warning: UDP is untested")
 	}
 
 	// Validate senders
 	if senders == 0 {
 		log.Fatal("Error: Need at least one sender")
+	}
+
+	// Check output type
+	if converter, ok := banner.Converters[encoding]; ok {
+		outputConfig.Converter = converter
+	} else {
+		log.Fatal("Error: Invalid encoding ", encoding)
 	}
 
 	// Open input and output files
@@ -73,9 +82,9 @@ func init() {
 
 	switch outputFileName {
 	case "-":
-		outputFile = os.Stdout
+		outputConfig.OutputFile = os.Stdout
 	default:
-		if outputFile, err = os.Create(outputFileName); err != nil {
+		if outputConfig.OutputFile, err = os.Create(outputFileName); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -87,8 +96,8 @@ func init() {
 		} else {
 			buf := make([]byte, 1024)
 			n, err := messageFile.Read(buf)
-			config.SendMessage = true
-			config.Message = string(buf[0:n])
+			grabConfig.SendMessage = true
+			grabConfig.Message = string(buf[0:n])
 			if err != nil && err != io.EOF {
 				log.Fatal(err)
 			}
@@ -104,6 +113,19 @@ func init() {
 			log.Fatal(err)
 		}
 	}
+
+	// Open log file, attach to configs
+	var logFile *os.File
+	if logFileName == "-" {
+		logFile = os.Stderr
+	} else {
+		if logFile, err = os.Create(logFileName); err != nil {
+			log.Fatal(err)
+		}
+	}
+	logger := log.New(logFile, "[BANNER-GRAB]", log.LstdFlags)
+	outputConfig.ErrorLog = logger
+	grabConfig.ErrorLog = logger
 }
 
 func ReadInput(addrChan chan net.IP, inputFile *os.File) {
@@ -124,18 +146,14 @@ func ReadInput(addrChan chan net.IP, inputFile *os.File) {
 }
 
 func main() {
-	converter, err := banner.NewResultConverter(encoding)
-	if err != nil {
-		log.Fatal(err)
-	}
 	addrChan := make(chan net.IP, senders)
 	resultChan := make(chan banner.Result, senders)
 	summaryChan := make(chan banner.Summary)
 	doneChan := make(chan int)
 
-	go banner.WriteOutput(resultChan, converter, outputFile, summaryChan)
+	go banner.WriteOutput(resultChan, summaryChan, &outputConfig)
 	for i := uint(0); i < senders; i += 1 {
-		go banner.GrabBanner(addrChan, resultChan, doneChan, &config)
+		go banner.GrabBanner(addrChan, resultChan, doneChan, &grabConfig)
 	}
 	ReadInput(addrChan, inputFile)
 
@@ -149,8 +167,8 @@ func main() {
 	if inputFile != os.Stdin {
 		inputFile.Close()
 	}
-	if outputFile != os.Stdout {
-		outputFile.Close()
+	if outputConfig.OutputFile != os.Stdout {
+		outputConfig.OutputFile.Close()
 	}
 	summary := <- summaryChan
 	if s, err := banner.SerializeSummary(&summary); err != nil {

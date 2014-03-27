@@ -21,6 +21,7 @@ type GrabConfig struct {
 	Port uint16
 	Timeout int
 	Message string
+	ErrorLog *log.Logger
 }
 
 func makeDialer(config *GrabConfig) ( func(rhost string) (net.Conn, error) ) {
@@ -71,14 +72,14 @@ func GrabBanner(addrChan chan net.IP, resultChan chan Result, doneChan chan int,
 		rhost := net.JoinHostPort(addr, port)
 		conn, err := dial(rhost)
 		if err != nil {
-			log.Print("Could not connect to host ", addr, " - ", err)
+			config.ErrorLog.Print("Could not connect to host ", addr, " - ", err)
 			continue
 		}
 		if config.SendMessage {
 			s := strings.Replace(config.Message, "%s", addr, -1)
 			if _, err := conn.Write([]byte(s)); err != nil {
 				conn.Close()
-				log.Print("Could not write message to host ", addr, " - ", err)
+				config.ErrorLog.Print("Could not write message to host ", addr, " - ", err)
 				continue
 			}
 		}

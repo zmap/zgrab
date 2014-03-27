@@ -6,8 +6,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/base64"
-	"errors"
 )
+
+type OutputConfig struct {
+	ErrorLog *log.Logger
+	Converter ResultConverter
+	OutputFile *os.File
+}
 
 type Summary struct {
 	Success uint			`json:"success_count"`
@@ -67,17 +72,15 @@ func (be *bannerEncoder) Encode(r *Result) error {
 	return be.enc.Encode(value)
 }
 
-func NewResultConverter(encoding string) (ResultConverter, error) {
-	switch encoding {
-	case "string":
-		return stringConverter{}, nil
-	case "base64":
-		return base64Converter{}, nil
-	case "hex":
-		return hexConverter{}, nil
-	default:
-		return nil, errors.New("Invalid encoding " + encoding)
-	}
+var (
+	Converters map[string]ResultConverter
+)
+
+func init() {
+	Converters = make(map[string]ResultConverter)
+	Converters["string"] = stringConverter{}
+	Converters["base64"] = base64Converter{}
+	Converters["hex"] = hexConverter{}
 }
 
 func newBannerEncoder(f *os.File, converter ResultConverter) bannerEncoder {
@@ -89,12 +92,12 @@ func SerializeSummary(s *Summary) ([]byte, error) {
 	return json.Marshal(*s)
 }
 
-func WriteOutput(resultChan chan Result, converter ResultConverter, f *os.File, summaryChan chan Summary) {
+func WriteOutput(resultChan chan Result, summaryChan chan Summary, config *OutputConfig) {
 	summary := Summary{0, 0, make(map[string]int)}
-	enc := newBannerEncoder(f, converter)
+	enc := newBannerEncoder(config.OutputFile, config.Converter)
 	for result := range resultChan {
 		if err := enc.Encode(&result); err != nil {
-			log.Print(err)
+			config.ErrorLog.Print(err)
 		}
 		if result.Err == nil {
 			summary.Success += 1
