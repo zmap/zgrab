@@ -53,6 +53,11 @@ type Conn struct {
 	input    *block       // application data waiting to be read
 	hand     bytes.Buffer // handshake data waiting to be read
 
+	// ztls
+	serverHello 		*ServerHello
+	serverCertificates 	*ServerCertificates
+	serverKeyExchange   *ServerKeyExchange
+
 	tmp [16]byte
 }
 
