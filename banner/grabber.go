@@ -7,7 +7,7 @@ import (
 	"time"
 	"strings"
 	"strconv"
-	"crypto/tls"
+	"../zcrypto/ztls"
 )
 
 type Result struct {
@@ -36,16 +36,16 @@ func makeDialer(config *GrabConfig) ( func(rhost string) (net.Conn, error) ) {
 	timeout := time.Duration(config.Timeout) * time.Second
 
 	if config.Tls {
-		tlsConfig := new(tls.Config)
+		tlsConfig := new(ztls.Config)
 		tlsConfig.InsecureSkipVerify = true
-		tlsConfig.MinVersion = tls.VersionSSL30		
+		tlsConfig.MinVersion = ztls.VersionSSL30		
 		return func(rhost string) (net.Conn, error) {
 			now := time.Now()
 			deadline := now.Add(timeout)
 			dialer := net.Dialer{timeout, deadline, config.LocalAddr, false}
 			conn, err := dialer.Dial(network, rhost)
 			if err == nil {
-				conn = tls.Client(conn, tlsConfig)
+				conn = ztls.Client(conn, tlsConfig)
 				conn.SetDeadline(deadline)
 			}
 			return conn, err
