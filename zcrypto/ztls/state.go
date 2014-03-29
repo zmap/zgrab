@@ -57,5 +57,16 @@ func (m *finishedMsg) ZtlsFinishedMessage() *FinishedMessage {
 	return fm
 }
 
+type ConnectionLog struct {
+	ServerHelloMsg 			*ServerHello
+	ServerCertificatesMsg 	*ServerCertificates
+	ServerKeyExchangeMsg 	*ServerKeyExchange
+	ServerFinishedMsg		*FinishedMessage
+}
+
+func (c *Conn) ConnectionLog() ConnectionLog {
+	return ConnectionLog{c.serverHello, c.serverCertificates,
+			c.serverKeyExchange, c.serverFinished}
+}
 
 

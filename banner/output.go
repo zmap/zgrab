@@ -8,6 +8,10 @@ import (
 	"encoding/base64"
 )
 
+type TlsLog interface {
+
+}
+
 type OutputConfig struct {
 	ErrorLog *log.Logger
 	Converter ResultConverter
@@ -21,10 +25,11 @@ type Summary struct {
 }
 
 type bannerOutput struct {
-	Addr string 	`json:"host"`
-	Err error   	`json:"error"`
-	Encoding string `json:"encoding"`
-	Data string     `json:"data"`
+	Addr string 			`json:"host"`
+	Err error   			`json:"error"`
+	TlsHandshakeLog TlsLog 	`json:"tls_handshake"`
+	Encoding string 		`json:"encoding"`
+	Data string     		`json:"data"`
 }
 
 type ResultConverter interface {
@@ -39,6 +44,7 @@ func (_ stringConverter) convert(res *Result) *bannerOutput {
 	out := new(bannerOutput)
 	out.Addr = res.Addr
 	out.Err = res.Err
+	out.TlsHandshakeLog = res.TlsHandshakeLog
 	out.Encoding = "string"
 	out.Data = string(res.Data)
 	return out
@@ -48,6 +54,7 @@ func (_ base64Converter) convert(res *Result) *bannerOutput {
 	out := new(bannerOutput)
 	out.Addr = res.Addr
 	out.Err = res.Err
+	out.TlsHandshakeLog = res.TlsHandshakeLog
 	out.Encoding = "base64"
 	out.Data = base64.StdEncoding.EncodeToString(res.Data)
 	return out
@@ -57,6 +64,7 @@ func (_ hexConverter) convert(res *Result) *bannerOutput {
 	out := new(bannerOutput)
 	out.Addr = res.Addr
 	out.Err = res.Err
+	out.TlsHandshakeLog = res.TlsHandshakeLog
 	out.Encoding = "hex"
 	out.Data = hex.EncodeToString(res.Data)
 	return out
