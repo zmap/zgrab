@@ -76,6 +76,7 @@ NextCipherSuite:
 	if !ok {
 		return c.sendAlert(alertUnexpectedMessage)
 	}
+	c.serverHello = serverHello.ZtlsNewServerHello()
 
 	vers, ok := c.config.mutualVersion(serverHello.vers)
 	if !ok || vers < VersionTLS10 {
@@ -111,6 +112,7 @@ NextCipherSuite:
 	if !ok || len(certMsg.certificates) == 0 {
 		return c.sendAlert(alertUnexpectedMessage)
 	}
+	c.serverCertificates = certMsg.ZtlsServerCertificates()
 	finishedHash.Write(certMsg.marshal())
 
 	certs := make([]*x509.Certificate, len(certMsg.certificates))
@@ -178,6 +180,7 @@ NextCipherSuite:
 
 	skx, ok := msg.(*serverKeyExchangeMsg)
 	if ok {
+		c.serverKeyExchange = skx.ZtlsServerKeyExchange()
 		finishedHash.Write(skx.marshal())
 		err = keyAgreement.processServerKeyExchange(c.config, hello, serverHello, certs[0], skx)
 		if err != nil {
@@ -382,6 +385,7 @@ NextCipherSuite:
 	if !ok {
 		return c.sendAlert(alertUnexpectedMessage)
 	}
+	c.serverFinished = serverFinished.ZtlsFinishedMessage()
 
 	verify := finishedHash.serverSum(masterSecret)
 	if len(verify) != len(serverFinished.verifyData) ||

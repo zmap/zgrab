@@ -57,6 +57,7 @@ type Conn struct {
 	serverHello 		*ServerHello
 	serverCertificates 	*ServerCertificates
 	serverKeyExchange   *ServerKeyExchange
+	serverFinished		*FinishedMessage
 
 	tmp [16]byte
 }
