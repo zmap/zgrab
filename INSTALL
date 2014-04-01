@@ -1,0 +1,3 @@
+banner-grab requires Go v1.2.1 or higher installed
+
+To build, navigate to the root of the source directory and run `go build`
