@@ -190,6 +190,7 @@ func main() {
 		log.Fatal(err)
 	} else {
 		metadataFile.Write(s)
+		metadataFile.Write([]byte("\n"))
 	}
 }
 
