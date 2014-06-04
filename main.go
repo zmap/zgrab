@@ -40,7 +40,15 @@ func init() {
 	flag.BoolVar(&grabConfig.Tls, "tls", false, "Grab over TLS")
 	flag.BoolVar(&grabConfig.Udp, "udp", false, "Grab over UDP")
 	flag.UintVar(&senders, "senders", 10, "Number of send coroutines to use")
+	flag.BoolVar(&grabConfig.ReadFirst, "read-first", false, "Read data before sending anything")
+	flag.BoolVar(&grabConfig.StartTls, "starttls", false, "Send STARTTLS before negotiating (implies --tls)")
+	flag.BoolVar(&grabConfig.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
 	flag.Parse()
+
+	// STARTTLS implies TLS
+	if grabConfig.StartTls || grabConfig.Heartbleed {
+		grabConfig.Tls = true
+	}
 
 	// Validate port
 	if portFlag > 65535 {

@@ -6,6 +6,8 @@ package ztls
 
 import "bytes"
 
+//import "log"
+
 type clientHelloMsg struct {
 	raw                []byte
 	vers               uint16
@@ -21,6 +23,8 @@ type clientHelloMsg struct {
 	ticketSupported    bool
 	sessionTicket      []uint8
 	signatureAndHashes []signatureAndHash
+	heartbeatEnabled   bool
+	heartbeatMode      uint8
 }
 
 func (m *clientHelloMsg) equal(i interface{}) bool {
@@ -42,7 +46,9 @@ func (m *clientHelloMsg) equal(i interface{}) bool {
 		bytes.Equal(m.supportedPoints, m1.supportedPoints) &&
 		m.ticketSupported == m1.ticketSupported &&
 		bytes.Equal(m.sessionTicket, m1.sessionTicket) &&
-		eqSignatureAndHashes(m.signatureAndHashes, m1.signatureAndHashes)
+		eqSignatureAndHashes(m.signatureAndHashes, m1.signatureAndHashes) &&
+		m.heartbeatEnabled == m1.heartbeatEnabled &&
+		m.heartbeatMode == m1.heartbeatMode
 }
 
 func (m *clientHelloMsg) marshal() []byte {
@@ -78,6 +84,10 @@ func (m *clientHelloMsg) marshal() []byte {
 	}
 	if len(m.signatureAndHashes) > 0 {
 		extensionsLength += 2 + 2*len(m.signatureAndHashes)
+		numExtensions++
+	}
+	if m.heartbeatEnabled {
+		extensionsLength += 1
 		numExtensions++
 	}
 	if numExtensions > 0 {
@@ -223,6 +233,15 @@ func (m *clientHelloMsg) marshal() []byte {
 			z[1] = sigAndHash.signature
 			z = z[2:]
 		}
+	}
+	if m.heartbeatEnabled {
+		z[0] = byte(extensionHeartbeat >> 8)
+		z[1] = byte(extensionHeartbeat)
+		l := 1
+		z[2] = byte(l >> 8)
+		z[3] = byte(l)
+		z[4] = m.heartbeatMode
+		z = z[5:]
 	}
 
 	m.raw = x
@@ -379,6 +398,18 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 				m.signatureAndHashes[i].signature = d[1]
 				d = d[2:]
 			}
+		case extensionHeartbeat:
+			// https://tools.ietf.org/html/rfc6520
+			if length != 1 {
+				return false
+			}
+			mode := data[0]
+			if mode != heartbeatModePeerAllowed &&
+				mode != heartbeatModePeerNotAllowed {
+				return false
+			}
+			m.heartbeatEnabled = true
+			m.heartbeatMode = mode
 		}
 		data = data[length:]
 	}
@@ -397,6 +428,8 @@ type serverHelloMsg struct {
 	nextProtos        []string
 	ocspStapling      bool
 	ticketSupported   bool
+	heartbeatEnabled  bool
+	heartbeatMode     uint8
 }
 
 func (m *serverHelloMsg) equal(i interface{}) bool {
@@ -414,7 +447,9 @@ func (m *serverHelloMsg) equal(i interface{}) bool {
 		m.nextProtoNeg == m1.nextProtoNeg &&
 		eqStrings(m.nextProtos, m1.nextProtos) &&
 		m.ocspStapling == m1.ocspStapling &&
-		m.ticketSupported == m1.ticketSupported
+		m.ticketSupported == m1.ticketSupported &&
+		m.heartbeatEnabled == m1.heartbeatEnabled &&
+		m.heartbeatMode == m1.heartbeatMode
 }
 
 func (m *serverHelloMsg) marshal() []byte {
@@ -440,6 +475,10 @@ func (m *serverHelloMsg) marshal() []byte {
 	}
 	if m.ticketSupported {
 		numExtensions++
+	}
+	if m.heartbeatEnabled {
+		numExtensions++
+		extensionsLength += 1
 	}
 	if numExtensions > 0 {
 		extensionsLength += 4 * numExtensions
@@ -493,6 +532,14 @@ func (m *serverHelloMsg) marshal() []byte {
 		z[0] = byte(extensionSessionTicket >> 8)
 		z[1] = byte(extensionSessionTicket)
 		z = z[4:]
+	}
+	if m.heartbeatEnabled {
+		z[0] = byte(extensionHeartbeat >> 8)
+		z[1] = byte(extensionHeartbeat)
+		z[2] = byte(1 >> 8)
+		z[3] = byte(1)
+		z[4] = m.heartbeatMode
+		z = z[5:] 
 	}
 
 	m.raw = x
@@ -573,6 +620,9 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 				return false
 			}
 			m.ticketSupported = true
+		case extensionHeartbeat:
+			m.heartbeatEnabled = true
+			m.heartbeatMode = data[0]
 		}
 		data = data[length:]
 	}
@@ -1240,6 +1290,53 @@ func (m *newSessionTicketMsg) unmarshal(data []byte) bool {
 
 	m.ticket = data[10:]
 
+	return true
+}
+
+
+type heartbeatMessage struct {
+	messageType uint8
+	payload	    []byte
+	raw         []byte
+}
+
+func (m* heartbeatMessage) equal(i interface{}) bool {
+	m1, ok := i.(*heartbeatMessage)
+	if !ok {
+		return false
+	}
+	return m.messageType == m1.messageType &&
+		bytes.Equal(m.raw, m1.raw) &&
+		bytes.Equal(m.payload, m1.payload)
+}
+
+func (m* heartbeatMessage) marshal() []byte {
+	length := 1 + 2 + len(m.payload)
+	data := make([]byte, length)
+	x := data[:]
+	x[0] = m.messageType
+	x[1] = byte(len(m.payload) >> 8)
+	x[2] = byte(len(m.payload))
+	x = x[3:]
+	copy(x, m.payload)
+	m.raw = data
+	return data
+}
+
+func (m* heartbeatMessage) unmarshal(data []byte) bool {
+	if len(data) < 3 {
+		return false
+	}
+	raw := data
+	m.messageType = data[0]
+	payloadLength := uint32(data[1] << 8 | data[2])
+	if len(data) != int(payloadLength + 3) {
+		return false
+	}
+	data = data[3:]
+	m.payload = make([]byte, payloadLength)
+	copy(m.payload, data)
+	m.raw = raw
 	return true
 }
 

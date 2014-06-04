@@ -40,6 +40,7 @@ const (
 	recordTypeAlert            recordType = 21
 	recordTypeHandshake        recordType = 22
 	recordTypeApplicationData  recordType = 23
+	recordTypeHeartbeat        recordType = 24
 )
 
 // TLS handshake message types.
@@ -72,6 +73,15 @@ var (
 	extensionSignatureAlgorithms uint16 = 13
 	extensionSessionTicket       uint16 = 35
 	extensionNextProtoNeg        uint16 = 13172 // not IANA assigned
+	extensionHeartbeat           uint16 = 15
+)
+
+// Heartbeat message types
+const (
+	heartbeatModePeerAllowed     uint8 = 1
+	heartbeatModePeerNotAllowed  uint8 = 2
+	heartbeatTypeRequest         uint8 = 1
+	heartbeatTypeResponse        uint8 = 2
 )
 
 // TLS Elliptic Curves

@@ -18,7 +18,7 @@ type Result struct {
 }
 
 type GrabConfig struct {
-	Udp, Tls, SendMessage bool
+	Udp, Tls, SendMessage, StartTls, ReadFirst, Heartbleed bool
 	Port uint16
 	Timeout int
 	Message string
@@ -36,6 +36,7 @@ func makeDialer(config *GrabConfig) ( func(rhost string) (net.Conn, TlsLog, erro
 
 	timeout := time.Duration(config.Timeout) * time.Second
 
+	b := make([]byte, 65536)
 	if config.Tls {
 		tlsConfig := new(ztls.Config)
 		tlsConfig.InsecureSkipVerify = true
@@ -43,14 +44,44 @@ func makeDialer(config *GrabConfig) ( func(rhost string) (net.Conn, TlsLog, erro
 		return func(rhost string) (net.Conn, TlsLog, error) {
 			now := time.Now()
 			deadline := now.Add(timeout)
-			dialer := net.Dialer{timeout, deadline, config.LocalAddr, false}
+			dialer := net.Dialer{Timeout:timeout, Deadline:deadline, LocalAddr:config.LocalAddr, DualStack:false}
 			var conn *ztls.Conn
 			if nconn, err := dialer.Dial(network, rhost); err != nil {
 				return nconn, nil, err
 			} else {
+				nconn.SetDeadline(deadline)
+				if config.ReadFirst {
+					res := make([]byte, 1024)
+					// TODO add logging
+					if _, err := nconn.Read(res); err != nil {
+						log.Print("failed first read")
+						return nconn, nil, err
+					}
+				}
+				if config.StartTls {
+					res := make([]byte, 1024)
+					if _, err := nconn.Write([]byte("EHLO eecs.umich.edu\r\n")); err != nil {
+						log.Print("failed EHLO")
+						return nconn, nil, err
+					}
+					if _, err := nconn.Read(res); err != nil {
+						// TODO Validate server likes it
+						log.Print("failed EHLO read")
+						return nconn, nil, err
+					}
+					if _, err := nconn.Write([]byte("STARTTLS\r\n")); err != nil {
+						log.Print("failed starttls");
+					}
+					if _, err := nconn.Read(res); err != nil {
+						log.Print("failed starttls read")
+					}
+				} 
 				conn = ztls.Client(nconn, tlsConfig)
 				conn.SetDeadline(deadline)
 				err = conn.Handshake()
+				if err == nil && config.Heartbleed {
+					conn.CheckHeartbleed(b)
+				}
 				return conn, conn.ConnectionLog(), err
 			}
 		}

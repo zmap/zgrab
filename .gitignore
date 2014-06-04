@@ -23,6 +23,7 @@ _testmain.go
 
 # Target
 tls-banner-grab-go
+banner-grab
 
 # Mac OS X files
 .DS_Store

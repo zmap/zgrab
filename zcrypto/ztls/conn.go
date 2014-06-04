@@ -59,6 +59,9 @@ type Conn struct {
 	serverKeyExchange   *ServerKeyExchange
 	serverFinished		*FinishedMessage
 
+	heartbeat           bool
+	heartbleed          bool
+
 	tmp [16]byte
 }
 
@@ -529,7 +532,7 @@ func (c *Conn) readRecord(want recordType) error {
 		if c.handshakeComplete {
 			return c.sendAlert(alertInternalError)
 		}
-	case recordTypeApplicationData:
+	case recordTypeApplicationData, recordTypeHeartbeat:
 		if !c.handshakeComplete {
 			return c.sendAlert(alertInternalError)
 		}
@@ -658,6 +661,14 @@ Again:
 			return c.sendAlert(alertNoRenegotiation)
 		}
 		c.hand.Write(data)
+
+	case recordTypeHeartbeat:
+		if typ != recordTypeHeartbeat {
+			return c.sendAlert(alertUnexpectedMessage)
+		}
+		c.serverHello.Heartbleed = true
+		c.input = b
+		b = nil
 	}
 
 	if b != nil {

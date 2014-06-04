@@ -66,6 +66,9 @@ NextCipherSuite:
 		hello.signatureAndHashes = supportedSKXSignatureAlgorithms
 	}
 
+	hello.heartbeatEnabled = true
+	hello.heartbeatMode = heartbeatModePeerAllowed
+
 	c.writeRecord(recordTypeHandshake, hello.marshal())
 
 	msg, err := c.readHandshake()
@@ -77,6 +80,10 @@ NextCipherSuite:
 		return c.sendAlert(alertUnexpectedMessage)
 	}
 	c.serverHello = serverHello.ZtlsNewServerHello()
+
+	if serverHello.heartbeatEnabled {
+		c.heartbeat = true
+	}
 
 	vers, ok := c.config.mutualVersion(serverHello.vers)
 	if !ok || vers < VersionTLS10 {

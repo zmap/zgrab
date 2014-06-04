@@ -12,6 +12,8 @@ type ServerHello struct {
 	NextProtos			[]string	`json:"next_protocols"`
 	OcspStapling		bool		`json:"ocsp_stapling"`
 	TicketSupported		bool		`json:"ticket_supported"`
+	HeartbeatSupported  bool        `json:"heartbeat_supported"`
+	Heartbleed          bool        `json:"heartbleed_vulnerable"`
 }
 
 func (m *serverHelloMsg) ZtlsNewServerHello() *ServerHello {
@@ -25,6 +27,7 @@ func (m *serverHelloMsg) ZtlsNewServerHello() *ServerHello {
 	h.NextProtos = m.nextProtos
 	h.OcspStapling = m.ocspStapling
 	h.TicketSupported = m.ticketSupported
+	h.HeartbeatSupported = m.heartbeatEnabled
 	return h
 }
 
