@@ -1,27 +1,31 @@
 package main
 
 import (
+	"./banner"
+	"bufio"
 	"flag"
 	"fmt"
-	"log"
-	"bufio"
-	"os"
-	"net"
 	"io"
-	"./banner"
+	"log"
+	"net"
+	"os"
 )
 
 // Command-line flags
 var (
-	encoding, outputFileName, inputFileName, logFileName, metadataFileName, messageFileName, interfaceName string
-	portFlag uint
-	inputFile, metadataFile  *os.File
-	senders uint
+	encoding                      string
+	outputFileName, inputFileName string
+	logFileName, metadataFileName string
+	messageFileName               string
+	interfaceName                 string
+	portFlag                      uint
+	inputFile, metadataFile       *os.File
+	senders                       uint
 )
 
 // Module configurations
 var (
-	grabConfig banner.GrabConfig
+	grabConfig   banner.GrabConfig
 	outputConfig banner.OutputConfig
 )
 
@@ -159,6 +163,7 @@ func ReadInput(addrChan chan net.IP, inputFile *os.File) {
 			fmt.Fprintln(os.Stderr, "Invalid IP address: ", ipString)
 			continue
 		}
+
 		addrChan <- ip
 	}
 	if err := scanner.Err(); err != nil {
@@ -181,7 +186,7 @@ func main() {
 
 	// Wait for grabbers to finish
 	for i := uint(0); i < senders; i += 1 {
-		<- doneChan
+		<-doneChan
 	}
 	close(doneChan)
 	close(resultChan)
@@ -193,7 +198,7 @@ func main() {
 		outputConfig.OutputFile.Close()
 	}
 
-	summary := <- summaryChan
+	summary := <-summaryChan
 	if s, err := banner.SerializeSummary(&summary); err != nil {
 		log.Fatal(err)
 	} else {
@@ -201,4 +206,3 @@ func main() {
 		metadataFile.Write([]byte("\n"))
 	}
 }
-
