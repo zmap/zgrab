@@ -29,7 +29,7 @@ func addToQueue(nbsc *nonblockingSendChannel) {
 func sendToChannel(nbsc *nonblockingSendChannel) {
 	for !nbsc.done {
 		nbsc.cond.L.Lock()
-		for !(nbsc.queue.Size() > 0) && !nbsc.done {
+		for !(nbsc.queue.Size() > 0 || nbsc.done) {
 			nbsc.cond.Wait()
 		}
 		if (nbsc.done) {
