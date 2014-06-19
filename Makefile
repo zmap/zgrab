@@ -2,10 +2,10 @@ TARGETS := banner-grab
 
 all: $(TARGETS)
 
-banner-grab: 
+banner-grab: *.go
 	go build
 
-.PHONY: clean install uninstall
+.PHONY: clean install uninstall banner-grab
 
 install: $(TARGETS)
 	install -m 755 $(TARGETS) /usr/local/bin
@@ -15,5 +15,4 @@ uninstall:
 
 clean:
 	go clean
-
 
