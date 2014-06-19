@@ -21,7 +21,7 @@ type OutputConfig struct {
 type Summary struct {
 	Success uint			`json:"success_count"`
 	Error uint				`json:"error_count"`
-	Errors map[string]int   `json:"errors"`
+	Total uint				`json:"total"`
 }
 
 type bannerOutput struct {
@@ -101,7 +101,7 @@ func SerializeSummary(s *Summary) ([]byte, error) {
 }
 
 func WriteOutput(resultChan chan Result, summaryChan chan Summary, config *OutputConfig) {
-	summary := Summary{0, 0, make(map[string]int)}
+	summary := Summary{0, 0, 0}
 	enc := newBannerEncoder(config.OutputFile, config.Converter)
 	for result := range resultChan {
 		if err := enc.Encode(&result); err != nil {
@@ -111,9 +111,9 @@ func WriteOutput(resultChan chan Result, summaryChan chan Summary, config *Outpu
 			summary.Success += 1
 		} else {
 			summary.Error += 1
-			summary.Errors[result.Err.Error()] += 1
 		}
 	}
+	summary.Total = summary.Success + summary.Error
 	// Print summary
 	summaryChan <- summary
 
