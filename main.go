@@ -44,7 +44,7 @@ func init() {
 	flag.IntVar(&grabConfig.Timeout, "timeout", 4, "Set connection timeout in seconds")
 	flag.BoolVar(&grabConfig.Tls, "tls", false, "Grab over TLS")
 	flag.BoolVar(&grabConfig.Udp, "udp", false, "Grab over UDP")
-	flag.UintVar(&senders, "senders", 10, "Number of send coroutines to use")
+	flag.UintVar(&senders, "senders", 1000, "Number of send coroutines to use")
 	flag.BoolVar(&grabConfig.ReadFirst, "read-first", false, "Read data before sending anything")
 	flag.BoolVar(&grabConfig.StartTls, "starttls", false, "Send STARTTLS before negotiating (implies --tls)")
 	flag.BoolVar(&grabConfig.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
