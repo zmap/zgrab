@@ -150,7 +150,7 @@ func init() {
 			log.Fatal(err)
 		}
 	}
-	logger := log.New(logFile, "[BANNER-GRAB]", log.LstdFlags)
+	logger := log.New(logFile, "[BANNER-GRAB] ", log.LstdFlags)
 	outputConfig.ErrorLog = logger
 	grabConfig.ErrorLog = logger
 }
