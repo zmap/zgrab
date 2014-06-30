@@ -1,7 +1,6 @@
 package main
 
 import (
-	"./zutil"
 	"./banner"
 	"bufio"
 	"flag"
@@ -174,16 +173,16 @@ func ReadInput(addrChan chan net.IP, inputFile *os.File) {
 }
 
 func main() {
-	addrInChan, addrOutChan := zutil.NewNonblockingSendPair()
+	addrChan := make(chan net.IP, senders)
 	resultChan := make(chan banner.Result, senders)
 	summaryChan := make(chan banner.Summary)
 	doneChan := make(chan int)
 
 	go banner.WriteOutput(resultChan, summaryChan, &outputConfig)
 	for i := uint(0); i < senders; i += 1 {
-		go banner.GrabBanner(addrOutChan, resultChan, doneChan, &grabConfig)
+		go banner.GrabBanner(addrChan, resultChan, doneChan, &grabConfig)
 	}
-	ReadInput(addrInChan, inputFile)
+	ReadInput(addrChan, inputFile)
 
 	// Wait for grabbers to finish
 	for i := uint(0); i < senders; i += 1 {
