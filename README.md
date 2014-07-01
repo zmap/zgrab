@@ -12,7 +12,7 @@ $ go build
 ## Usage
 
 ```
-./banner-grab --help
+./zgrab --help
 ```
 
 ## Example
