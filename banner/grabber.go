@@ -89,7 +89,7 @@ func makeDialer(config *GrabConfig) ( func(rhost string) (net.Conn, TlsLog, erro
 		return func(rhost string) (net.Conn, TlsLog, error) {
 			now := time.Now()
 			deadline := now.Add(timeout)
-			dialer := net.Dialer{timeout, deadline, config.LocalAddr, false}
+			dialer := net.Dialer{Timeout:timeout, Deadline:deadline, LocalAddr:config.LocalAddr}
 			conn, err := dialer.Dial(network, rhost);
 			if err == nil {
 				conn.SetDeadline(deadline)
