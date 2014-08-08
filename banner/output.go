@@ -26,6 +26,7 @@ type Summary struct {
 
 type bannerOutput struct {
 	Addr string 			`json:"host"`
+	FirstData string	`json:"first_data"`
 	Err error   			`json:"error"`
 	TlsHandshakeLog TlsLog 	`json:"tls_handshake"`
 	Encoding string 		`json:"encoding"`
@@ -47,6 +48,7 @@ func (_ stringConverter) convert(res *Result) *bannerOutput {
 	out.TlsHandshakeLog = res.TlsHandshakeLog
 	out.Encoding = "string"
 	out.Data = string(res.Data)
+	out.FirstData = string(res.FirstData)
 	return out
 }
 
@@ -57,6 +59,7 @@ func (_ base64Converter) convert(res *Result) *bannerOutput {
 	out.TlsHandshakeLog = res.TlsHandshakeLog
 	out.Encoding = "base64"
 	out.Data = base64.StdEncoding.EncodeToString(res.Data)
+	out.FirstData = base64.StdEncoding.EncodeToString(res.FirstData)
 	return out
 }
 
@@ -67,6 +70,7 @@ func (_ hexConverter) convert(res *Result) *bannerOutput {
 	out.TlsHandshakeLog = res.TlsHandshakeLog
 	out.Encoding = "hex"
 	out.Data = hex.EncodeToString(res.Data)
+	out.FirstData = hex.EncodeToString(res.Data)
 	return out
 }
 
@@ -118,5 +122,3 @@ func WriteOutput(resultChan chan Result, summaryChan chan Summary, config *Outpu
 	summaryChan <- summary
 
 }
-
-
