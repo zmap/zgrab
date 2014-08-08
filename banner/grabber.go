@@ -56,7 +56,7 @@ func makeDialer(config *GrabConfig) ( func(rhost string) (net.Conn, []byte, TlsL
 					res := make([]byte, 1024)
 					// TODO add logging
 					if firstReadBytes, err := nconn.Read(res); err != nil {
-						log.Print("failed first read")
+						config.ErrorLog.Print("failed first read")
 						return nconn, firstRead, nil, err
 					} else {
 						firstRead = make([]byte, firstReadBytes)
@@ -66,18 +66,18 @@ func makeDialer(config *GrabConfig) ( func(rhost string) (net.Conn, []byte, TlsL
 				if config.StartTls {
 					res := make([]byte, 1024)
 					if _, err := nconn.Write([]byte("EHLO eecs.umich.edu\r\n")); err != nil {
-						log.Print("failed EHLO")
+						config.ErrorLog.Print("failed EHLO")
 						return nconn, firstRead, nil, err
 					}
 					if _, err := nconn.Read(res); err != nil {
 						// TODO Validate server likes it
-						log.Print("failed EHLO read")
+						config.ErrorLog.Print("failed EHLO read")
 					}
 					if _, err := nconn.Write([]byte("STARTTLS\r\n")); err != nil {
-						log.Print("failed starttls");
+						config.ErrorLog.Print("failed starttls");
 					}
 					if _, err := nconn.Read(res); err != nil {
-						log.Print("failed starttls read")
+						config.ErrorLog.Print("failed starttls read")
 					}
 				}
 				conn = ztls.Client(nconn, tlsConfig)
