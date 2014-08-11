@@ -79,7 +79,7 @@ NextCipherSuite:
 	if !ok {
 		return c.sendAlert(alertUnexpectedMessage)
 	}
-	c.serverHello = serverHello.ZtlsNewServerHello()
+	c.handshakeLog.ServerHello = serverHello.ztlsNewServerHello()
 
 	if serverHello.heartbeatEnabled {
 		c.heartbeat = true
@@ -119,7 +119,7 @@ NextCipherSuite:
 	if !ok || len(certMsg.certificates) == 0 {
 		return c.sendAlert(alertUnexpectedMessage)
 	}
-	c.serverCertificates = certMsg.ZtlsServerCertificates()
+	c.handshakeLog.ServerCertificates = certMsg.ztlsNewServerCertificates()
 	finishedHash.Write(certMsg.marshal())
 
 	certs := make([]*x509.Certificate, len(certMsg.certificates))
@@ -187,7 +187,7 @@ NextCipherSuite:
 
 	skx, ok := msg.(*serverKeyExchangeMsg)
 	if ok {
-		c.serverKeyExchange = skx.ZtlsServerKeyExchange()
+		c.handshakeLog.ServerKeyExchange = skx.ztlsNewServerKeyExchange()
 		finishedHash.Write(skx.marshal())
 		err = keyAgreement.processServerKeyExchange(c.config, hello, serverHello, certs[0], skx)
 		if err != nil {
@@ -392,7 +392,7 @@ NextCipherSuite:
 	if !ok {
 		return c.sendAlert(alertUnexpectedMessage)
 	}
-	c.serverFinished = serverFinished.ZtlsFinishedMessage()
+	c.handshakeLog.ServerFinished = serverFinished.ztlsNewServerFinished()
 
 	verify := finishedHash.serverSum(masterSecret)
 	if len(verify) != len(serverFinished.verifyData) ||

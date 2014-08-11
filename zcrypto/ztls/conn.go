@@ -54,10 +54,8 @@ type Conn struct {
 	hand     bytes.Buffer // handshake data waiting to be read
 
 	// ztls
-	serverHello 		*ServerHello
-	serverCertificates 	*ServerCertificates
-	serverKeyExchange   *ServerKeyExchange
-	serverFinished		*FinishedMessage
+	handshakeLog *ZtlsHandshakeLog
+	heartbleedLog *ZtlsHeartbleedLog
 
 	heartbeat           bool
 	heartbleed          bool
@@ -666,7 +664,7 @@ Again:
 		if typ != recordTypeHeartbeat {
 			return c.sendAlert(alertUnexpectedMessage)
 		}
-		c.serverHello.Heartbleed = true
+		c.heartbleedLog.Vulnerable = true
 		c.input = b
 		b = nil
 	}

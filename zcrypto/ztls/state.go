@@ -1,8 +1,6 @@
 package ztls
 
-
-
-type ServerHello struct {
+type ztlsServerHello struct {
 	Version 			uint16		`json:"version"`
 	Random 				[]byte		`json:"random"`
 	SessionId 			[]byte		`json:"session_id"`
@@ -16,8 +14,8 @@ type ServerHello struct {
 	Heartbleed          bool        `json:"heartbleed_vulnerable"`
 }
 
-func (m *serverHelloMsg) ZtlsNewServerHello() *ServerHello {
-	h := new(ServerHello)
+func (m *serverHelloMsg) ztlsNewServerHello() *ztlsServerHello {
+	h := new(ztlsServerHello)
 	h.Version = m.vers
 	h.Random = m.random
 	h.SessionId = m.sessionId
@@ -31,45 +29,51 @@ func (m *serverHelloMsg) ZtlsNewServerHello() *ServerHello {
 	return h
 }
 
-type ServerCertificates struct {
+type ztlsServerCertificates struct {
 	Certificates [][]byte	`json:"certificates"`
 }
-func (m *certificateMsg) ZtlsServerCertificates() *ServerCertificates {
-	c := new(ServerCertificates)
+func (m *certificateMsg) ztlsNewServerCertificates() *ztlsServerCertificates {
+	c := new(ztlsServerCertificates)
 	c.Certificates = m.certificates
 	return c
 }
 
-type ServerKeyExchange struct {
+type ztlsServerKeyExchange struct {
 	Key	[]byte	`json:"key"`
 }
 
-func (m *serverKeyExchangeMsg) ZtlsServerKeyExchange() *ServerKeyExchange {
-	skx := new(ServerKeyExchange)
+func (m *serverKeyExchangeMsg) ztlsNewServerKeyExchange() *ztlsServerKeyExchange {
+	skx := new(ztlsServerKeyExchange)
 	skx.Key = m.key
 	return skx
 }
 
-type FinishedMessage struct {
+type ztlsServerFinished struct {
 	VerifyData []byte	`json:"verify_data"`
 }
 
-func (m *finishedMsg) ZtlsFinishedMessage() *FinishedMessage {
-	fm := new(FinishedMessage)
+func (m *finishedMsg) ztlsNewServerFinished() *ztlsServerFinished {
+	fm := new(ztlsServerFinished)
 	fm.VerifyData = m.verifyData
 	return fm
 }
 
-type ConnectionLog struct {
-	ServerHelloMsg 			*ServerHello
-	ServerCertificatesMsg 	*ServerCertificates
-	ServerKeyExchangeMsg 	*ServerKeyExchange
-	ServerFinishedMsg		*FinishedMessage
+type ZtlsHandshakeLog struct {
+	ServerHello 			*ztlsServerHello `json:"server_hello"`
+	ServerCertificates 	*ztlsServerCertificates `json:"server_certificates"`
+	ServerKeyExchange 	*ztlsServerKeyExchange `json:"server_key_exchange"`
+	ServerFinished		*ztlsServerFinished `json:"server_finished"`
 }
 
-func (c *Conn) ConnectionLog() ConnectionLog {
-	return ConnectionLog{c.serverHello, c.serverCertificates,
-			c.serverKeyExchange, c.serverFinished}
+type ZtlsHeartbleedLog struct {
+	Enabled bool `json:"heartbeat_enabled"`
+	Vulnerable bool `json:"heartbleed_vulnerable"`
 }
 
+func (c *Conn) HandshakeLog() *ZtlsHandshakeLog {
+	return c.handshakeLog
+}
 
+func (c *Conn) HeartbleedLog() *ZtlsHeartbleedLog {
+	return c.heartbleedLog
+}
