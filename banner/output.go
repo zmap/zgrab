@@ -8,9 +8,13 @@ import (
 	"encoding/base64"
 )
 
-type TlsLog interface {
+type OutputEncoding uint8
 
-}
+const (
+	stringFlag OutputEncoding = iota
+	hexFlag OutputEncoding = iota
+	base64Flag OutputEncoding = iota
+)
 
 type OutputConfig struct {
 	ErrorLog *log.Logger
