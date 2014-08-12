@@ -117,3 +117,12 @@ func (c *Conn) StarttlsHandshake() error {
 	// Successful so far, attempt to do the actual handshake
 	return c.TlsHandshake()
 }
+
+func (c *Conn) SendHeartbleedProbe(b []byte) (int, error) {
+	if !isTls {
+		return 0, fmt.Errorf(
+			"Must perform TLS handshake before sending Heartbleed probe to %s",
+			c.RemoteAddr().String())
+	}
+	return tlsConn.CheckHeartbleed(b)
+}
