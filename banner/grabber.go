@@ -15,7 +15,7 @@ type GrabConfig struct {
 	StartTls bool
 	Heartbleed bool
 	Port uint16
-	Timeout int
+	Timeout time.Duration
 	Message []byte
 	Protocol string
 	ErrorLog *log.Logger
@@ -30,21 +30,28 @@ type Grab struct {
 }
 
 type Progress struct {
-
+	Success uint
+	Error uint
+	Total uint
 }
 
 func makeDialer(c *GrabConfig) (func(string) (*Conn, error)) {
 	proto := c.Protocol
-	deadline := time.Duration(c.Timeout)*time.Second
+	timeout := c.Timeout
 	return func(addr string) (*Conn, error) {
+		deadline := time.Now().Add(timeout)
 		d := Dialer {
-			Deadline: time.Now().Add(deadline),
+			Deadline: deadline,
 		}
-		return d.Dial(proto, addr)
+		conn, err := d.Dial(proto, addr)
+		if err == nil {
+			conn.SetDeadline(deadline)
+		}
+		return conn, err
 	}
 }
 
-func makeGrabber(config *GrabConfig) (func(*Conn) []StateLog) {
+func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
 	// Do all the hard work here
 	g := func(c *Conn) error {
 		banner := make([]byte, 1024)
@@ -83,13 +90,13 @@ func makeGrabber(config *GrabConfig) (func(*Conn) []StateLog) {
 		return nil
 	}
 	// Wrap the whole thing in a logger
-	return func(c *Conn) []StateLog {
+	return func(c *Conn) ([]StateLog, error) {
 		err := g(c);
 		if err != nil {
 			config.ErrorLog.Printf("Conversation error with remote host %s: %s",
 				c.RemoteAddr().String(), err.Error())
 		}
-		return c.States()
+		return c.States(), err
 	}
 }
 
@@ -97,20 +104,28 @@ func GrabBanner(addrChan chan net.IP, grabChan chan Grab, doneChan chan Progress
 	dial := makeDialer(config)
 	grabber := makeGrabber(config)
 	port := strconv.FormatUint(uint64(config.Port), 10)
+	p := Progress{}
 	for ip := range addrChan {
+		p.Total += 1
 		addr := ip.String()
 		rhost := net.JoinHostPort(addr, port)
-		startTime := time.Now()
+		t := time.Now()
 		conn, dialErr := dial(rhost)
 		if dialErr != nil {
 			// Could not connect to host
 			config.ErrorLog.Printf("Could not connect to remote host %s: %s",
 				addr, dialErr.Error())
-			grabChan <- Grab{addr, config.Port, startTime, conn.States()}
+			grabChan <- Grab{addr, config.Port, t, conn.States()}
+			p.Error += 1
 			continue
 		}
-		grabStates := grabber(conn)
-		grabChan <- Grab{addr, config.Port, startTime, grabStates}
+		grabStates, err := grabber(conn)
+		if err != nil {
+			p.Error += 1
+		} else {
+			p.Success += 1
+		}
+		grabChan <- Grab{addr, config.Port, t, grabStates}
 	}
-	doneChan <- Progress{}
+	doneChan <- p
 }

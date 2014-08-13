@@ -24,6 +24,7 @@ var (
 	inputFile, metadataFile       *os.File
 	senders                       uint
 	udp bool
+	timeout uint
 )
 
 // Module configurations
@@ -41,6 +42,7 @@ type Summary struct {
 	Start time.Time `json:"start_time"`
 	End time.Time `json:"end_time"`
 	Duration time.Duration `json:"duration"`
+	Timeout uint `json:"timeout"`
 }
 
 // Pre-main bind flags to variables
@@ -53,7 +55,7 @@ func init() {
 	flag.StringVar(&logFileName, "log-file", "-", "File to log to, use - for stderr")
 	flag.StringVar(&interfaceName, "interface", "", "Network interface to send on")
 	flag.UintVar(&portFlag, "port", 80, "Port to grab on")
-	flag.IntVar(&grabConfig.Timeout, "timeout", 4, "Set connection timeout in seconds")
+	flag.UintVar(&timeout, "timeout", 10, "Set connection timeout in seconds")
 	flag.BoolVar(&grabConfig.Tls, "tls", false, "Grab over TLS")
 	flag.BoolVar(&udp, "udp", false, "Grab over UDP")
 	flag.UintVar(&senders, "senders", 1000, "Number of send coroutines to use")
@@ -81,9 +83,7 @@ func init() {
 	grabConfig.Port = uint16(portFlag)
 
 	// Validate timeout
-	if grabConfig.Timeout < 0 {
-		log.Fatal("Invalid timeout", grabConfig.Timeout)
-	}
+	grabConfig.Timeout = time.Duration(timeout) * time.Second
 
 	// Check UDP
 	if udp {
@@ -196,7 +196,10 @@ func ReadInput(addrChan chan net.IP, inputFile *os.File) {
 	close(addrChan)
 }
 
-func (s *Summary) Update(p *banner.Progress) {
+func (s *Summary) AddProgress(p *banner.Progress) {
+	s.Success += p.Success
+	s.Error += p.Error
+	s.Total += p.Total
 }
 
 func main() {
@@ -204,7 +207,12 @@ func main() {
 	grabChan := make(chan banner.Grab, senders*4)
 	doneChan := make(chan banner.Progress)
 
-	s := Summary{Start: time.Now()}
+	s := Summary {
+		Start: time.Now(),
+		Protocol: grabConfig.Protocol,
+		Port: grabConfig.Port,
+		Timeout: timeout,
+	}
 
 	go banner.WriteOutput(grabChan, &outputConfig)
 	for i := uint(0); i < senders; i += 1 {
@@ -215,12 +223,12 @@ func main() {
 	// Wait for grabbers to finish
 	for i := uint(0); i < senders; i += 1 {
 		finalProgress := <- doneChan
-		s.Update(&finalProgress)
+		s.AddProgress(&finalProgress)
 	}
 	close(grabChan)
 	close(doneChan)
 	s.End = time.Now()
-	s.Duration = s.End.Sub(s.Start)
+	s.Duration = s.End.Sub(s.Start) / time.Second
 
 	if inputFile != os.Stdin {
 		inputFile.Close()

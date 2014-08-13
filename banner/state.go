@@ -38,10 +38,17 @@ type readState struct {
 }
 
 func (rs *readState) StateLog() StateLog {
+	res := string(rs.response)
+	var rptr *string
+	if len(res) > 0 {
+		rptr = &res
+	} else {
+		rptr = nil
+	}
 	var data = struct {
-		Response string `json:"response"`
+		Response *string `json:"response"`
 	}{
-		string(rs.response),
+		rptr,
 	}
 	sl := StateLog {
 		StateType: "read",
