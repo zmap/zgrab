@@ -132,6 +132,9 @@ func (c *Conn) SendHeartbleedProbe(b []byte) (int, error) {
 	}
 	n, err := c.tlsConn.CheckHeartbleed(b)
 	hl := c.tlsConn.HeartbleedLog()
+	if err == ztls.HeartbleedError {
+		err = nil
+	}
 	hs := heartbleedState{probe: hl, err: err}
 	c.operations = append(c.operations, &hs)
 	return n, err

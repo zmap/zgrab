@@ -1,8 +1,10 @@
 package ztls
 
 import (
-	"io"
+	"errors"
 )
+
+var HeartbleedError = errors.New("Error after Heartbleed")
 
 type heartbleedMessage struct {
 	raw []byte
@@ -35,10 +37,10 @@ func (c *Conn) CheckHeartbleed(b []byte) (n int, err error) {
 	}
 
 	if err = c.readRecord(recordTypeHeartbeat); err != nil {
-		return 0, err
+		return 0, HeartbleedError
 	}
 	if err = c.error(); err != nil {
-		return 0, err
+		return 0, HeartbleedError
 	}
 	n, err = c.input.Read(b)
 	if c.input.off >= len(c.input.data) {
@@ -47,10 +49,10 @@ func (c *Conn) CheckHeartbleed(b []byte) (n int, err error) {
 	}
 
 	if n != 0 {
-		return n, err
+		return n, HeartbleedError
 	}
 	if err != nil {
-		return 0, err
+		return 0, HeartbleedError
 	}
-	return 0, io.ErrNoProgress
+	return 0, HeartbleedError
 }
