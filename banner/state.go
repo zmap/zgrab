@@ -7,7 +7,7 @@ import (
 type StateLog struct {
 	StateType string `json:"type"`
 	Data interface{} `json:"data"`
-	Error error `json:"error"`
+	Error *string `json:"error"`
 }
 
 type ConnectionOperation interface {
@@ -24,7 +24,10 @@ func (cs *connectState) StateLog() StateLog {
 	sl := StateLog {
 		StateType: "connect",
 		Data: nil,
-		Error: cs.err,
+	}
+	if cs.err != nil {
+		errString := cs.err.Error()
+		sl.Error = &errString
 	}
 	return sl;
 }
@@ -36,14 +39,17 @@ type readState struct {
 
 func (rs *readState) StateLog() StateLog {
 	var data = struct {
-		response string `json:"response"`
+		Response string `json:"response"`
 	}{
 		string(rs.response),
 	}
 	sl := StateLog {
 		StateType: "read",
 		Data: data,
-		Error: rs.err,
+	}
+	if rs.err != nil {
+		errString := rs.err.Error()
+		sl.Error = &errString
 	}
 	return sl
 }
@@ -57,7 +63,10 @@ func (ws *writeState) StateLog() StateLog {
 	sl := StateLog {
 		StateType: "write",
 		Data: nil,
-		Error: ws.err,
+	}
+	if ws.err != nil {
+		errString := ws.err.Error()
+		sl.Error = &errString
 	}
 	return sl
 }
@@ -69,14 +78,17 @@ type starttlsState struct {
 
 func (ss *starttlsState) StateLog() StateLog {
 	var data = struct {
-		response string `json:"response"`
+		Response string `json:"response"`
 	}{
 		string(ss.response),
 	}
 	sl := StateLog {
 		StateType: "starttls",
 		Data: data,
-		Error: ss.err,
+	}
+	if ss.err != nil {
+		errString := ss.err.Error()
+		sl.Error = &errString
 	}
 	return sl
 }
@@ -90,7 +102,10 @@ func (ts *tlsState) StateLog() StateLog {
 	sl := StateLog {
 		StateType: "tls_handshake",
 		Data: ts.handshake,
-		Error: ts.err,
+	}
+	if ts.err != nil {
+		errString := ts.err.Error()
+		sl.Error = &errString
 	}
 	return sl
 }
@@ -104,7 +119,10 @@ func (hs *heartbleedState) StateLog() StateLog {
 	sl := StateLog {
 		StateType: "heartbleed",
 		Data: hs.probe,
-		Error: hs.err,
+	}
+	if hs.err != nil {
+		errString := hs.err.Error()
+		sl.Error = &errString
 	}
 	return sl
 }

@@ -23,10 +23,10 @@ type GrabConfig struct {
 }
 
 type Grab struct {
-	Host string
-	Port uint16
-	Time time.Time
-	Log []StateLog
+	Host string `json:"host"`
+	Port uint16 `json:"port"`
+	Time time.Time `json:"timestamp"`
+	Log []StateLog `json:"log"`
 }
 
 type Progress struct {
@@ -45,10 +45,10 @@ func makeDialer(c *GrabConfig) (func(string) (*Conn, error)) {
 }
 
 func makeGrabber(config *GrabConfig) (func(*Conn) []StateLog) {
-	banner := make([]byte, 1024)
-	response := make([]byte, 65536)
 	// Do all the hard work here
 	g := func(c *Conn) error {
+		banner := make([]byte, 1024)
+		response := make([]byte, 65536)
 		if config.Tls {
 			if err := c.TlsHandshake(); err != nil {
 				return err

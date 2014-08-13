@@ -57,7 +57,7 @@ func init() {
 	flag.BoolVar(&grabConfig.Tls, "tls", false, "Grab over TLS")
 	flag.BoolVar(&udp, "udp", false, "Grab over UDP")
 	flag.UintVar(&senders, "senders", 1000, "Number of send coroutines to use")
-	flag.BoolVar(&grabConfig.Banners, "banners", true, "Read banner upon connection creation")
+	flag.BoolVar(&grabConfig.Banners, "banners", false, "Read banner upon connection creation")
 	flag.StringVar(&messageFileName, "data", "", "Optional message to send (%s will be replaced with destination IP)")
 	flag.BoolVar(&grabConfig.ReadResponse, "read-response", false, "Read response to message")
 	flag.BoolVar(&grabConfig.StartTls, "starttls", false, "Send STARTTLS before negotiating (implies --tls)")
