@@ -1,11 +1,11 @@
-TARGETS := banner-grab
+TARGETS := zgrab
 
 all: $(TARGETS)
 
-banner-grab: *.go
+zgrab: *.go
 	go build
 
-.PHONY: clean install uninstall banner-grab
+.PHONY: clean install uninstall zgrab
 
 install: $(TARGETS)
 	install -m 755 $(TARGETS) /usr/local/bin
