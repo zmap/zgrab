@@ -65,7 +65,7 @@ type ZtlsHandshakeLog struct {
 }
 
 type ZtlsHeartbleedLog struct {
-	Enabled bool `json:"heartbeat_enabled"`
+	Enabled bool `json:"heartbeat_supported"`
 	Vulnerable bool `json:"heartbleed_vulnerable"`
 }
 

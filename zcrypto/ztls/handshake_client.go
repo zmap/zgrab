@@ -22,6 +22,7 @@ func (c *Conn) clientHandshake() error {
 	}
 
 	c.handshakeLog = new(ZtlsHandshakeLog)
+	c.heartbleedLog = new(ZtlsHeartbleedLog)
 
 	hello := &clientHelloMsg{
 		vers:               c.config.maxVersion(),
@@ -85,6 +86,7 @@ NextCipherSuite:
 
 	if serverHello.heartbeatEnabled {
 		c.heartbeat = true
+		c.heartbleedLog.Enabled = true
 	}
 
 	vers, ok := c.config.mutualVersion(serverHello.vers)

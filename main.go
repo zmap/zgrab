@@ -206,6 +206,7 @@ func main() {
 	addrChan := make(chan net.IP, senders*4)
 	grabChan := make(chan banner.Grab, senders*4)
 	doneChan := make(chan banner.Progress)
+	outputDoneChan := make(chan int)
 
 	s := Summary {
 		Start: time.Now(),
@@ -214,7 +215,7 @@ func main() {
 		Timeout: timeout,
 	}
 
-	go banner.WriteOutput(grabChan, &outputConfig)
+	go banner.WriteOutput(grabChan, outputDoneChan, &outputConfig)
 	for i := uint(0); i < senders; i += 1 {
 		go banner.GrabBanner(addrChan, grabChan, doneChan, &grabConfig)
 	}
@@ -229,6 +230,9 @@ func main() {
 	close(doneChan)
 	s.End = time.Now()
 	s.Duration = s.End.Sub(s.Start) / time.Second
+
+	<- outputDoneChan
+	close(outputDoneChan)
 
 	if inputFile != os.Stdin {
 		inputFile.Close()

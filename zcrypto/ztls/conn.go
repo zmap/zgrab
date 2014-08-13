@@ -58,7 +58,6 @@ type Conn struct {
 	heartbleedLog *ZtlsHeartbleedLog
 
 	heartbeat           bool
-	heartbleed          bool
 
 	tmp [16]byte
 }
