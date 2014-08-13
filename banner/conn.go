@@ -11,23 +11,22 @@ import (
 type Conn struct {
 	// Underlying network connection
 	conn net.Conn
-	tlsConn ztls.Conn
+	tlsConn *ztls.Conn
 	isTls bool
 
 	// Keep track of state / network operations
-	operations []ConnectionState
+	operations []ConnectionOperation
 
 	// Cache the deadlines so we can reapply after TLS handshake
 	readDeadline time.Time
 	writeDeadline time.Time
-
 }
 
 func (c *Conn) getUnderlyingConn() (net.Conn) {
 	if c.isTls {
 		return c.tlsConn
 	}
-	return c.net.Conn
+	return c.conn
 }
 
 // Layer in the regular conn methods
@@ -39,7 +38,7 @@ func (c *Conn) RemoteAddr() net.Addr {
 	return c.getUnderlyingConn().RemoteAddr()
 }
 
-func (c *Conn) SetDeadline(t time.Time) {
+func (c *Conn) SetDeadline(t time.Time) error {
 	c.readDeadline = t
 	c.writeDeadline = t
 	return c.getUnderlyingConn().SetDeadline(t)
@@ -51,7 +50,7 @@ func (c *Conn) SetReadDeadline(t time.Time) error {
 }
 
 func (c *Conn) SetWriteDeadline(t time.Time) error {
-	c.writeDeadline = deadline
+	c.writeDeadline = t
 	return c.getUnderlyingConn().SetWriteDeadline(t)
 }
 
@@ -59,20 +58,24 @@ func (c *Conn) SetWriteDeadline(t time.Time) error {
 func (c *Conn) Write(b []byte) (int, error) {
 	n, err := c.getUnderlyingConn().Write(b)
 	ws := writeState{toSend: b, err: err}
-	operations = append(operations, []ConnectionState{ws})
+	c.operations = append(c.operations, &ws)
 	return n, err
 }
 
 func (c *Conn) Read(b []byte) (int, error) {
 	n, err := c.getUnderlyingConn().Read(b)
 	rs := readState{response: b[0:n], err: err}
-	operations = append(operations, []ConnectionState{rs})
+	c.operations = append(c.operations, &rs)
 	return n, err
+}
+
+func (c *Conn) Close() error {
+	return c.getUnderlyingConn().Close()
 }
 
 // Extra method - Do a TLS Handshake and record progress
 func (c *Conn) TlsHandshake() error {
-	if isTls {
+	if c.isTls {
 		return fmt.Errorf(
 			"Attempted repeat handshake with remote host %s",
 			c.RemoteAddr().String())
@@ -80,18 +83,21 @@ func (c *Conn) TlsHandshake() error {
 	tlsConfig := new(ztls.Config)
 	tlsConfig.InsecureSkipVerify = true
 	tlsConfig.MinVersion = ztls.VersionSSL30
-	c.tlsConn = ztls.Client(nconn, tlsConfig)
+	c.tlsConn = ztls.Client(c.conn, tlsConfig)
 	c.tlsConn.SetReadDeadline(c.readDeadline)
 	c.tlsConn.SetWriteDeadline(c.writeDeadline)
 	c.isTls = true
-	err := tlsConn.Handshake()
+	err := c.tlsConn.Handshake()
+	hl := c.tlsConn.HandshakeLog()
+	ts := tlsState{handshake: hl, err: err}
+	c.operations = append(c.operations, &ts)
 	return err
 }
 
 // Do a STARTTLS handshake
 func (c *Conn) StarttlsHandshake() error {
 	// Don't doublehandshake
-	if isTls {
+	if c.isTls {
 		return fmt.Errorf(
 			"Attempt STARTTLS after TLS handshake with remote host %s",
 			c.RemoteAddr().String())
@@ -99,17 +105,17 @@ func (c *Conn) StarttlsHandshake() error {
 	// Send the STARTTLS message
 	starttls := []byte("STARTTLS\r\n");
 	ss := starttlsState{}
- 	_, err := conn.Write(starttls);
+ 	_, err := c.conn.Write(starttls);
 	// Read the response on a successful send
 	if err == nil {
 		var n int
 		buf := make([]byte, 256)
-		n, err = conn.Read(buf)
+		n, err = c.conn.Read(buf)
 		ss.response = buf[0:n]
 	}
 	// No matter what happened, record the state
 	ss.err = err
-	operations = append(operations, []ConnectionState{ss})
+	c.operations = append(c.operations, &ss)
 	// Stop if we failed already
 	if err != nil {
 		return err
@@ -119,10 +125,22 @@ func (c *Conn) StarttlsHandshake() error {
 }
 
 func (c *Conn) SendHeartbleedProbe(b []byte) (int, error) {
-	if !isTls {
+	if !c.isTls {
 		return 0, fmt.Errorf(
 			"Must perform TLS handshake before sending Heartbleed probe to %s",
 			c.RemoteAddr().String())
 	}
-	return tlsConn.CheckHeartbleed(b)
+	n, err := c.tlsConn.CheckHeartbleed(b)
+	hl := c.tlsConn.HeartbleedLog()
+	hs := heartbleedState{probe: hl, err: err}
+	c.operations = append(c.operations, &hs)
+	return n, err
+}
+
+func (c *Conn) States() []StateLog {
+	states := make([]StateLog, 0, len(c.operations))
+	for _, state := range c.operations {
+		states = append(states, state.StateLog())
+	}
+	return states
 }

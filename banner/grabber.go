@@ -2,139 +2,115 @@ package banner
 
 import (
 	"log"
-	"io"
 	"net"
 	"time"
-	"strings"
 	"strconv"
-	"../zcrypto/ztls"
 )
 
-type Result struct {
-	Addr string
-	FirstData []byte
-	Err error
-	TlsHandshakeLog TlsLog
-	Data []byte
-}
-
 type GrabConfig struct {
-	Udp, Tls, SendMessage, StartTls, ReadFirst, Heartbleed bool
+	Tls bool
+	Banners bool
+	SendMessage bool
+	ReadResponse bool
+	StartTls bool
+	Heartbleed bool
 	Port uint16
 	Timeout int
-	Message string
+	Message []byte
+	Protocol string
 	ErrorLog *log.Logger
 	LocalAddr net.Addr
 }
 
-func makeDialer(config *GrabConfig) ( func(rhost string) (net.Conn, []byte, TlsLog, error) ) {
-	var network string
-	if config.Udp {
-		network = "udp"
-	} else {
-		network = "tcp"
-	}
+type Grab struct {
+	Host string
+	Port uint16
+	Time time.Time
+	Log []StateLog
+}
 
-	timeout := time.Duration(config.Timeout) * time.Second
+type Progress struct {
 
-	b := make([]byte, 65536)
-	if config.Tls {
-		tlsConfig := new(ztls.Config)
-		tlsConfig.InsecureSkipVerify = true
-		tlsConfig.MinVersion = ztls.VersionSSL30
-		return func(rhost string) (net.Conn, []byte, TlsLog, error) {
-			now := time.Now()
-			deadline := now.Add(timeout)
-			dialer := net.Dialer{Timeout:timeout, Deadline:deadline, LocalAddr:config.LocalAddr, DualStack:false}
-			var conn *ztls.Conn
-			firstRead := []byte{}
-			if nconn, err := dialer.Dial(network, rhost); err != nil {
-				return nconn, firstRead, nil, err
-			} else {
-				nconn.SetDeadline(deadline)
-				if config.ReadFirst {
-					res := make([]byte, 1024)
-					// TODO add logging
-					if firstReadBytes, err := nconn.Read(res); err != nil {
-						config.ErrorLog.Print("failed first read")
-						return nconn, firstRead, nil, err
-					} else {
-						firstRead = make([]byte, firstReadBytes)
-						copy(firstRead, res)
-					}
-				}
-				if config.StartTls {
-					res := make([]byte, 1024)
-					if _, err := nconn.Write([]byte("EHLO eecs.umich.edu\r\n")); err != nil {
-						config.ErrorLog.Print("failed EHLO")
-						return nconn, firstRead, nil, err
-					}
-					if _, err := nconn.Read(res); err != nil {
-						// TODO Validate server likes it
-						config.ErrorLog.Print("failed EHLO read")
-					}
-					if _, err := nconn.Write([]byte("STARTTLS\r\n")); err != nil {
-						config.ErrorLog.Print("failed starttls");
-					}
-					if _, err := nconn.Read(res); err != nil {
-						config.ErrorLog.Print("failed starttls read")
-					}
-				}
-				conn = ztls.Client(nconn, tlsConfig)
-				conn.SetDeadline(deadline)
-				err = conn.Handshake()
-				if err == nil && config.Heartbleed {
-					conn.CheckHeartbleed(b)
-				}
-				return conn, firstRead, conn.ConnectionLog(), err
-			}
+}
+
+func makeDialer(c *GrabConfig) (func(string) (*Conn, error)) {
+	proto := c.Protocol
+	deadline := time.Duration(c.Timeout)*time.Second
+	return func(addr string) (*Conn, error) {
+		d := Dialer {
+			Deadline: time.Now().Add(deadline),
 		}
-	} else {
-		return func(rhost string) (net.Conn, []byte, TlsLog, error) {
-			now := time.Now()
-			deadline := now.Add(timeout)
-			dialer := net.Dialer{Timeout:timeout, Deadline:deadline, LocalAddr:config.LocalAddr}
-			conn, err := dialer.Dial(network, rhost);
-			if err == nil {
-				conn.SetDeadline(deadline)
-			}
-			return conn, []byte{}, nil, err
-		}
+		return d.Dial(proto, addr)
 	}
 }
 
-func GrabBanner(addrChan chan net.IP, resultChan chan Result, doneChan chan int, config *GrabConfig) {
+func makeGrabber(config *GrabConfig) (func(*Conn) []StateLog) {
+	banner := make([]byte, 1024)
+	response := make([]byte, 65536)
+	// Do all the hard work here
+	g := func(c *Conn) error {
+		if config.Tls {
+			if err := c.TlsHandshake(); err != nil {
+				return err
+			}
+		}
+		if config.Banners {
+			if _, err := c.Read(banner); err != nil {
+				return err
+			}
+		}
+		if config.SendMessage {
+			if _, err := c.Write(config.Message); err != nil {
+				return err
+			}
+		}
+		if config.ReadResponse {
+			if _, err := c.Read(response); err != nil {
+				return err
+			}
+		}
+		if config.StartTls {
+			if err := c.StarttlsHandshake(); err != nil {
+				return err
+			}
+		}
+		if config.Heartbleed {
+			buf := make([]byte, 256)
+			if _, err := c.SendHeartbleedProbe(buf); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	// Wrap the whole thing in a logger
+	return func(c *Conn) []StateLog {
+		err := g(c);
+		if err != nil {
+			config.ErrorLog.Printf("Conversation error with remote host %s: %s",
+				c.RemoteAddr().String(), err.Error())
+		}
+		return c.States()
+	}
+}
+
+func GrabBanner(addrChan chan net.IP, grabChan chan Grab, doneChan chan Progress, config *GrabConfig) {
 	dial := makeDialer(config)
+	grabber := makeGrabber(config)
 	port := strconv.FormatUint(uint64(config.Port), 10)
 	for ip := range addrChan {
 		addr := ip.String()
 		rhost := net.JoinHostPort(addr, port)
-		conn, firstData, tlsLog, err := dial(rhost)
-		if err != nil {
-			config.ErrorLog.Print("Could not connect to host ", addr, " - ", err)
-			resultChan <- Result{addr, firstData, err, tlsLog, nil}
+		startTime := time.Now()
+		conn, dialErr := dial(rhost)
+		if dialErr != nil {
+			// Could not connect to host
+			config.ErrorLog.Printf("Could not connect to remote host %s: %s",
+				addr, dialErr.Error())
+			grabChan <- Grab{addr, config.Port, startTime, conn.States()}
 			continue
 		}
-		if config.SendMessage {
-			s := strings.Replace(config.Message, "%s", addr, -1)
-			if _, err := conn.Write([]byte(s)); err != nil {
-				conn.Close()
-				config.ErrorLog.Print("Could not write message to host ", addr, " - ", err)
-				resultChan <- Result{addr, firstData, err, tlsLog, nil}
-				continue
-			}
-		}
-		var buf [1024]byte
-		n, err := conn.Read(buf[:])
-		conn.Close()
-		if err != nil && (err != io.EOF || n == 0) {
-			config.ErrorLog.Print("Could not read from host ", addr, " - ", err)
-			res := Result{addr, firstData, err, tlsLog, nil}
-			resultChan <- res
-			continue
-		}
-		res := Result{addr, firstData, nil, tlsLog, buf[0:n]}
-		resultChan <- res
+		grabStates := grabber(conn)
+		grabChan <- Grab{addr, config.Port, startTime, grabStates}
 	}
-	doneChan <- 1
+	doneChan <- Progress{}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"./banner"
 	"bufio"
 	"flag"
@@ -9,6 +10,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 )
 
 // Command-line flags
@@ -21,6 +23,7 @@ var (
 	portFlag                      uint
 	inputFile, metadataFile       *os.File
 	senders                       uint
+	udp bool
 )
 
 // Module configurations
@@ -29,45 +32,65 @@ var (
 	outputConfig banner.OutputConfig
 )
 
+type Summary struct {
+	Success uint			`json:"success_count"`
+	Error uint				`json:"error_count"`
+	Total uint				`json:"total"`
+	Protocol string `json:"protocol"`
+	Port uint16 `json:"port"`
+	Start time.Time `json:"start_time"`
+	End time.Time `json:"end_time"`
+	Duration time.Duration `json:"duration"`
+}
+
 // Pre-main bind flags to variables
 func init() {
 
 	flag.StringVar(&encoding, "encoding", "string", "Encode banner as string|hex|base64")
 	flag.StringVar(&outputFileName, "output-file", "-", "Output filename, use - for stdout")
 	flag.StringVar(&inputFileName, "input-file", "-", "Input filename, use - for stdin")
-	flag.StringVar(&messageFileName, "data", "", "Optional message to send (%s will be replaced with destination IP)")
 	flag.StringVar(&metadataFileName, "metadata-file", "-", "File to record banner-grab metadata, use - for stdout")
 	flag.StringVar(&logFileName, "log-file", "-", "File to log to, use - for stderr")
 	flag.StringVar(&interfaceName, "interface", "", "Network interface to send on")
 	flag.UintVar(&portFlag, "port", 80, "Port to grab on")
 	flag.IntVar(&grabConfig.Timeout, "timeout", 4, "Set connection timeout in seconds")
 	flag.BoolVar(&grabConfig.Tls, "tls", false, "Grab over TLS")
-	flag.BoolVar(&grabConfig.Udp, "udp", false, "Grab over UDP")
+	flag.BoolVar(&udp, "udp", false, "Grab over UDP")
 	flag.UintVar(&senders, "senders", 1000, "Number of send coroutines to use")
-	flag.BoolVar(&grabConfig.ReadFirst, "read-first", false, "Read data before sending anything")
+	flag.BoolVar(&grabConfig.Banners, "banners", true, "Read banner upon connection creation")
+	flag.StringVar(&messageFileName, "data", "", "Optional message to send (%s will be replaced with destination IP)")
+	flag.BoolVar(&grabConfig.ReadResponse, "read-response", false, "Read response to message")
 	flag.BoolVar(&grabConfig.StartTls, "starttls", false, "Send STARTTLS before negotiating (implies --tls)")
 	flag.BoolVar(&grabConfig.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
 	flag.Parse()
 
-	// STARTTLS implies TLS
-	if grabConfig.StartTls || grabConfig.Heartbleed {
-		grabConfig.Tls = true
+	// STARTTLS cannot be used with TLS
+	if grabConfig.StartTls && grabConfig.Tls {
+		log.Fatal("Cannot both initiate a TLS and STARTTLS connection")
+	}
+
+	// Heartbleed requires STARTTLS or TLS
+	if (grabConfig.Heartbleed && !(grabConfig.StartTls || grabConfig.Tls)) {
+		log.Fatal("Must specify one of --tls or --starttls for --heartbleed")
 	}
 
 	// Validate port
 	if portFlag > 65535 {
-		log.Fatal("Error: Port", portFlag, "out of range")
+		log.Fatal("Port", portFlag, "out of range")
 	}
 	grabConfig.Port = uint16(portFlag)
 
 	// Validate timeout
 	if grabConfig.Timeout < 0 {
-		log.Fatal("Error: Invalid timeout", grabConfig.Timeout)
+		log.Fatal("Invalid timeout", grabConfig.Timeout)
 	}
 
 	// Check UDP
-	if grabConfig.Udp {
+	if udp {
 		log.Print("Warning: UDP is untested")
+		grabConfig.Protocol = "udp"
+	} else {
+		grabConfig.Protocol = "tcp"
 	}
 
 	// Validate senders
@@ -76,14 +99,10 @@ func init() {
 	}
 
 	// Check output type
-	if converter, ok := banner.Converters[encoding]; ok {
-		outputConfig.Converter = converter
-	} else {
-		log.Fatal("Error: Invalid encoding ", encoding)
-	}
 
 	// Check the network interface
 	var err error
+	/*
 	if interfaceName != "" {
 		var iface *net.Interface
 		if iface, err = net.InterfaceByName(interfaceName); err != nil {
@@ -95,6 +114,7 @@ func init() {
 		}
 		grabConfig.LocalAddr = addrs[0]
 	}
+	*/
 
 	// Open input and output files
 	switch inputFileName {
@@ -123,12 +143,16 @@ func init() {
 			buf := make([]byte, 1024)
 			n, err := messageFile.Read(buf)
 			grabConfig.SendMessage = true
-			grabConfig.Message = string(buf[0:n])
+			grabConfig.Message = buf[0:n]
 			if err != nil && err != io.EOF {
 				log.Fatal(err)
 			}
 			messageFile.Close()
 		}
+	}
+
+	if grabConfig.ReadResponse && !grabConfig.SendMessage {
+		log.Fatal("--read-response requires --data to be sent")
 	}
 
 	// Open metadata file
@@ -172,24 +196,31 @@ func ReadInput(addrChan chan net.IP, inputFile *os.File) {
 	close(addrChan)
 }
 
-func main() {
-	addrChan := make(chan net.IP, senders)
-	resultChan := make(chan banner.Result, senders)
-	summaryChan := make(chan banner.Summary)
-	doneChan := make(chan int)
+func (s *Summary) Update(p *banner.Progress) {
+}
 
-	go banner.WriteOutput(resultChan, summaryChan, &outputConfig)
+func main() {
+	addrChan := make(chan net.IP, senders*4)
+	grabChan := make(chan banner.Grab, senders*4)
+	doneChan := make(chan banner.Progress)
+
+	s := Summary{Start: time.Now()}
+
+	go banner.WriteOutput(grabChan, &outputConfig)
 	for i := uint(0); i < senders; i += 1 {
-		go banner.GrabBanner(addrChan, resultChan, doneChan, &grabConfig)
+		go banner.GrabBanner(addrChan, grabChan, doneChan, &grabConfig)
 	}
 	ReadInput(addrChan, inputFile)
 
 	// Wait for grabbers to finish
 	for i := uint(0); i < senders; i += 1 {
-		<-doneChan
+		finalProgress := <- doneChan
+		s.Update(&finalProgress)
 	}
+	close(grabChan)
 	close(doneChan)
-	close(resultChan)
+	s.End = time.Now()
+	s.Duration = s.End.Sub(s.Start)
 
 	if inputFile != os.Stdin {
 		inputFile.Close()
@@ -198,11 +229,8 @@ func main() {
 		outputConfig.OutputFile.Close()
 	}
 
-	summary := <-summaryChan
-	if s, err := banner.SerializeSummary(&summary); err != nil {
+	enc := json.NewEncoder(metadataFile)
+	if err := enc.Encode(s); err != nil {
 		log.Fatal(err)
-	} else {
-		metadataFile.Write(s)
-		metadataFile.Write([]byte("\n"))
 	}
 }
