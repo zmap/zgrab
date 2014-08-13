@@ -21,6 +21,8 @@ func (c *Conn) clientHandshake() error {
 		c.config = defaultConfig()
 	}
 
+	c.handshakeLog = new(ZtlsHandshakeLog)
+
 	hello := &clientHelloMsg{
 		vers:               c.config.maxVersion(),
 		compressionMethods: []uint8{compressionNone},
