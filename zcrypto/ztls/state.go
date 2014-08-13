@@ -11,7 +11,6 @@ type ztlsServerHello struct {
 	OcspStapling		bool		`json:"ocsp_stapling"`
 	TicketSupported		bool		`json:"ticket_supported"`
 	HeartbeatSupported  bool        `json:"heartbeat_supported"`
-	Heartbleed          bool        `json:"heartbleed_vulnerable"`
 }
 
 func (m *serverHelloMsg) ztlsNewServerHello() *ztlsServerHello {
