@@ -12,11 +12,16 @@ type GrabConfig struct {
 	Banners bool
 	SendMessage bool
 	ReadResponse bool
+	Ehlo bool
+	SmtpHelp bool
 	StartTls bool
+	Imap bool
+	Pop3 bool
 	Heartbleed bool
 	Port uint16
 	Timeout time.Duration
 	Message []byte
+	EhloDomain string
 	Protocol string
 	ErrorLog *log.Logger
 	LocalAddr net.Addr
@@ -53,6 +58,14 @@ func makeDialer(c *GrabConfig) (func(string) (*Conn, error)) {
 
 func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
 	// Do all the hard work here
+	var command string
+	if config.Imap {
+		command = "a001 STARTTLS\r\n"
+	} else if config.Pop3 {
+		command = "STLS\r\n"
+	} else {
+		command = "STARTTLS\r\n"
+	}
 	g := func(c *Conn) error {
 		banner := make([]byte, 1024)
 		response := make([]byte, 65536)
@@ -76,8 +89,18 @@ func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
 				return err
 			}
 		}
+		if config.Ehlo {
+			if err := c.Ehlo(config.EhloDomain); err != nil {
+				return err
+			}
+		}
+		if config.SmtpHelp {
+			if err := c.SmtpHelp(); err != nil {
+				return err
+			}
+		}
 		if config.StartTls {
-			if err := c.StarttlsHandshake(); err != nil {
+			if err := c.StarttlsHandshake(command); err != nil {
 				return err
 			}
 		}

@@ -78,16 +78,84 @@ func (ws *writeState) StateLog() StateLog {
 	return sl
 }
 
+type ehloState struct {
+	response []byte
+	err error
+}
+
+func (es *ehloState) StateLog() StateLog {
+	res := string(es.response)
+	var res_ptr *string
+	if res == "" {
+		res_ptr = nil
+	} else {
+		res_ptr = &res
+	}
+	var data = struct {
+		Response *string `json:"response"`
+	}{
+		res_ptr,
+	}
+	sl := StateLog {
+		StateType: "ehlo",
+		Data: data,
+	}
+	if es.err != nil {
+		errString := es.err.Error()
+		sl.Error = &errString
+	}
+	return sl
+}
+
+type helpState struct {
+	response []byte
+	err error
+}
+
+func (hs *helpState) StateLog() StateLog {
+	res := string(hs.response)
+	var res_ptr *string
+	if res == "" {
+		res_ptr = nil
+	} else {
+		res_ptr = &res
+	}
+	var data = struct {
+		Response *string `json:"response"`
+	}{
+		res_ptr,
+	}
+	sl := StateLog {
+		StateType: "smtp-help",
+		Data: data,
+	}
+	if hs.err != nil {
+		errString := hs.err.Error()
+		sl.Error = &errString
+	}
+	return sl
+}
+
 type starttlsState struct {
+	command []byte
 	response []byte
 	err error
 }
 
 func (ss *starttlsState) StateLog() StateLog {
+	res := string(ss.response)
+	var res_ptr *string
+	if res == "" {
+		res_ptr = nil
+	} else {
+		res_ptr = &res
+	}
 	var data = struct {
-		Response string `json:"response"`
+		Command string `json:"command"`
+		Response *string `json:"response"`
 	}{
-		string(ss.response),
+		string(ss.command),
+		res_ptr,
 	}
 	sl := StateLog {
 		StateType: "starttls",

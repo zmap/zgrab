@@ -95,7 +95,7 @@ func (c *Conn) TlsHandshake() error {
 }
 
 // Do a STARTTLS handshake
-func (c *Conn) StarttlsHandshake() error {
+func (c *Conn) StarttlsHandshake(command string) error {
 	// Don't doublehandshake
 	if c.isTls {
 		return fmt.Errorf(
@@ -103,8 +103,8 @@ func (c *Conn) StarttlsHandshake() error {
 			c.RemoteAddr().String())
 	}
 	// Send the STARTTLS message
-	starttls := []byte("STARTTLS\r\n");
-	ss := starttlsState{}
+	starttls := []byte(command);
+	ss := starttlsState{command: starttls}
  	_, err := c.conn.Write(starttls);
 	// Read the response on a successful send
 	if err == nil {
@@ -122,6 +122,38 @@ func (c *Conn) StarttlsHandshake() error {
 	}
 	// Successful so far, attempt to do the actual handshake
 	return c.TlsHandshake()
+}
+
+func (c *Conn) Ehlo(domain string) error {
+	cmd := []byte("EHLO " + domain + "\r\n")
+	es := ehloState{}
+	_, writeErr := c.getUnderlyingConn().Write(cmd)
+	if writeErr != nil {
+		es.err = writeErr
+	} else {
+		buf := make([]byte, 512)
+		n, readErr := c.getUnderlyingConn().Read(buf)
+		es.err = readErr
+		es.response = buf[0:n]
+	}
+	c.operations = append(c.operations, &es)
+	return es.err
+}
+
+func (c *Conn) SmtpHelp() error {
+	cmd := []byte("HELP\r\n")
+	hs := helpState{}
+	_, writeErr := c.getUnderlyingConn().Write(cmd)
+	if writeErr != nil {
+		hs.err = writeErr
+	} else {
+		buf := make([]byte, 512)
+		n, readErr := c.getUnderlyingConn().Read(buf)
+		hs.err = readErr
+		hs.response = buf[0:n]
+	}
+	c.operations = append(c.operations, &hs)
+	return hs.err
 }
 
 func (c *Conn) SendHeartbleedProbe(b []byte) (int, error) {

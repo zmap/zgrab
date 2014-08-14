@@ -20,6 +20,7 @@ var (
 	logFileName, metadataFileName string
 	messageFileName               string
 	interfaceName                 string
+	ehlo string
 	portFlag                      uint
 	inputFile, metadataFile       *os.File
 	senders                       uint
@@ -62,13 +63,33 @@ func init() {
 	flag.BoolVar(&grabConfig.Banners, "banners", false, "Read banner upon connection creation")
 	flag.StringVar(&messageFileName, "data", "", "Optional message to send (%s will be replaced with destination IP)")
 	flag.BoolVar(&grabConfig.ReadResponse, "read-response", false, "Read response to message")
+	flag.StringVar(&grabConfig.EhloDomain, "ehlo", "", "Send an EHLO with the specified domain")
+	flag.BoolVar(&grabConfig.SmtpHelp, "smtp-help", false, "Send a SMTP help")
 	flag.BoolVar(&grabConfig.StartTls, "starttls", false, "Send STARTTLS before negotiating (implies --tls)")
+	flag.BoolVar(&grabConfig.Imap, "imap", false, "Conform to IMAP rules when sending STARTTLS")
+	flag.BoolVar(&grabConfig.Pop3, "pop3", false, "Conform to POP3 rules when sending STARTTLS")
 	flag.BoolVar(&grabConfig.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
 	flag.Parse()
 
 	// STARTTLS cannot be used with TLS
 	if grabConfig.StartTls && grabConfig.Tls {
 		log.Fatal("Cannot both initiate a TLS and STARTTLS connection")
+	}
+
+	if grabConfig.Imap && grabConfig.Pop3 {
+		log.Fatal("Cannot conform to IMAP and POP3 at the same time")
+	}
+
+	if grabConfig.SmtpHelp && (grabConfig.Imap || grabConfig.Pop3) {
+		log.Fatal("Cannot send an SMTP HELP with IMAP or POP3")
+	}
+
+	if grabConfig.EhloDomain != "" {
+		grabConfig.Ehlo = true
+	}
+
+	if grabConfig.Ehlo && (grabConfig.Imap || grabConfig.Pop3) {
+		log.Fatal("Cannot send an EHLO when conforming to IMAP or POP3")
 	}
 
 	// Heartbleed requires STARTTLS or TLS
