@@ -63,9 +63,10 @@ func init() {
 	flag.BoolVar(&grabConfig.Banners, "banners", false, "Read banner upon connection creation")
 	flag.StringVar(&messageFileName, "data", "", "Optional message to send (%s will be replaced with destination IP)")
 	flag.BoolVar(&grabConfig.ReadResponse, "read-response", false, "Read response to message")
-	flag.StringVar(&grabConfig.EhloDomain, "ehlo", "", "Send an EHLO with the specified domain")
-	flag.BoolVar(&grabConfig.SmtpHelp, "smtp-help", false, "Send a SMTP help")
-	flag.BoolVar(&grabConfig.StartTls, "starttls", false, "Send STARTTLS before negotiating (implies --tls)")
+	flag.StringVar(&grabConfig.EhloDomain, "ehlo", "", "Send an EHLO with the specified domain (implies --smtp)")
+	flag.BoolVar(&grabConfig.SmtpHelp, "smtp-help", false, "Send a SMTP help (implies --smtp)")
+	flag.BoolVar(&grabConfig.StartTls, "starttls", false, "Send STARTTLS before negotiating")
+	flag.BoolVar(&grabConfig.Smtp, "smtp", false, "Conform to SMTP when reading responses and sending STARTTLS")
 	flag.BoolVar(&grabConfig.Imap, "imap", false, "Conform to IMAP rules when sending STARTTLS")
 	flag.BoolVar(&grabConfig.Pop3, "pop3", false, "Conform to POP3 rules when sending STARTTLS")
 	flag.BoolVar(&grabConfig.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
@@ -76,16 +77,20 @@ func init() {
 		log.Fatal("Cannot both initiate a TLS and STARTTLS connection")
 	}
 
-	if grabConfig.Imap && grabConfig.Pop3 {
-		log.Fatal("Cannot conform to IMAP and POP3 at the same time")
-	}
-
-	if grabConfig.SmtpHelp && (grabConfig.Imap || grabConfig.Pop3) {
-		log.Fatal("Cannot send an SMTP HELP with IMAP or POP3")
-	}
-
 	if grabConfig.EhloDomain != "" {
 		grabConfig.Ehlo = true
+	}
+
+	if grabConfig.SmtpHelp || grabConfig.Ehlo {
+		grabConfig.Smtp = true
+	}
+
+	if grabConfig.Smtp && (grabConfig.Imap || grabConfig.Pop3) {
+		log.Fatal("Cannot conform to SMTP and IMAP/POP3 at the same time")
+	}
+
+	if grabConfig.Imap && grabConfig.Pop3 {
+		log.Fatal("Cannot conform to IMAP and POP3 at the same time")
 	}
 
 	if grabConfig.Ehlo && (grabConfig.Imap || grabConfig.Pop3) {

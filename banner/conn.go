@@ -5,7 +5,11 @@ import (
 	"net"
 	"fmt"
 	"time"
+	"regexp"
+	"log"
 )
+
+var smtpEndRegex = regexp.MustCompile(`^[0-9]{3} .+\r\n$`)
 
 // Implements the net.Conn interface
 type Conn struct {
@@ -122,6 +126,37 @@ func (c *Conn) StarttlsHandshake(command string) error {
 	}
 	// Successful so far, attempt to do the actual handshake
 	return c.TlsHandshake()
+}
+
+func (c *Conn) readSmtpResponse(res []byte) (int, error) {
+	buf := res[0:]
+	length := 0
+	for finished := false; !finished; {
+		n, err := c.getUnderlyingConn().Read(buf);
+		length += n
+		if err != nil {
+			return length, err
+		}
+		if smtpEndRegex.Match(res[0:length]) {
+			log.Print("Matched")
+			finished = true
+		} else if length == len(res) {
+			b := make([]byte, 3*length)
+			copy(b, res)
+			res = b
+		}
+		buf = res[length:]
+	}
+	return length, nil
+}
+
+func (c *Conn) SmtpBanner(b []byte) (int, error) {
+	n, err := c.readSmtpResponse(b)
+	rs := readState{}
+	rs.response = b[0:n]
+	rs.err = err
+	c.operations = append(c.operations, &rs)
+	return n, err
 }
 
 func (c *Conn) Ehlo(domain string) error {

@@ -12,6 +12,7 @@ type GrabConfig struct {
 	Banners bool
 	SendMessage bool
 	ReadResponse bool
+	Smtp bool
 	Ehlo bool
 	SmtpHelp bool
 	StartTls bool
@@ -75,8 +76,14 @@ func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
 			}
 		}
 		if config.Banners {
-			if _, err := c.Read(banner); err != nil {
-				return err
+			if config.Smtp {
+				if _, err := c.SmtpBanner(banner); err != nil {
+					return err
+				}
+			} else {
+				if _, err := c.Read(banner); err != nil {
+					return err
+				}
 			}
 		}
 		if config.SendMessage {
