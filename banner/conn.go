@@ -118,18 +118,19 @@ func (c *Conn) SmtpStarttlsHandshake() error {
 	// Make the state
 	ss := starttlsState{command: []byte(SMTP_COMMAND)}
 	// Send the command
-	err := c.sendStarttlsCommand(SMTP_COMMAND)
+	ss.err = c.sendStarttlsCommand(SMTP_COMMAND)
 	// Read the response on a successful send
-	if err == nil {
+	if ss.err == nil {
 		buf := make([]byte, 256)
-		_, err = c.readSmtpResponse(buf)
+		n, err := c.readSmtpResponse(buf)
+		ss.response = buf[0:n]
+		ss.err = err
 	}
 	// No matter what happened, record the state
-	ss.err = err
 	c.operations = append(c.operations, &ss)
 	// Stop if we failed already
-	if err != nil {
-		return err
+	if ss.err != nil {
+		return ss.err
 	}
 	// Successful so far, attempt to do the actual handshake
 	return c.TlsHandshake()
@@ -174,9 +175,8 @@ func (c *Conn) Ehlo(domain string) error {
 		es.err = writeErr
 	} else {
 		buf := make([]byte, 512)
-		n, readErr := c.getUnderlyingConn().Read(buf)
+		_, readErr := c.readSmtpResponse(buf)
 		es.err = readErr
-		es.response = buf[0:n]
 	}
 	c.operations = append(c.operations, &es)
 	return es.err
