@@ -9,7 +9,7 @@ import (
 	"log"
 )
 
-var smtpEndRegex = regexp.MustCompile(`^[0-9]{3} .+\r\n$`)
+var smtpEndRegex = regexp.MustCompile(`(?:\r\n)|^[0-9]{3} .+\r\n$`)
 
 // Implements the net.Conn interface
 type Conn struct {
@@ -183,7 +183,7 @@ func (c *Conn) SmtpHelp() error {
 		hs.err = writeErr
 	} else {
 		buf := make([]byte, 512)
-		n, readErr := c.getUnderlyingConn().Read(buf)
+		n, readErr := c.readSmtpResponse(buf)
 		hs.err = readErr
 		hs.response = buf[0:n]
 	}
