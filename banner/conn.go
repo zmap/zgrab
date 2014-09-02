@@ -11,6 +11,8 @@ import (
 
 var smtpEndRegex = regexp.MustCompile(`(?:\r\n)|^[0-9]{3} .+\r\n$`)
 
+const SMTP_COMMAND = "STARTTLS\r\n"
+
 // Implements the net.Conn interface
 type Conn struct {
 	// Underlying network connection
@@ -98,8 +100,7 @@ func (c *Conn) TlsHandshake() error {
 	return err
 }
 
-// Do a STARTTLS handshake
-func (c *Conn) StarttlsHandshake(command string) error {
+func (c *Conn) sendStarttlsCommand(command string) error {
 	// Don't doublehandshake
 	if c.isTls {
 		return fmt.Errorf(
@@ -108,14 +109,20 @@ func (c *Conn) StarttlsHandshake(command string) error {
 	}
 	// Send the STARTTLS message
 	starttls := []byte(command);
-	ss := starttlsState{command: starttls}
- 	_, err := c.conn.Write(starttls);
+	_, err := c.conn.Write(starttls);
+	return err
+}
+
+// Do a STARTTLS handshake
+func (c *Conn) SmtpStarttlsHandshake() error {
+	// Make the state
+	ss := starttlsState{command: []byte(SMTP_COMMAND)}
+	// Send the command
+	err := c.sendStarttlsCommand(SMTP_COMMAND)
 	// Read the response on a successful send
 	if err == nil {
-		var n int
 		buf := make([]byte, 256)
-		n, err = c.conn.Read(buf)
-		ss.response = buf[0:n]
+		_, err = c.readSmtpResponse(buf)
 	}
 	// No matter what happened, record the state
 	ss.err = err

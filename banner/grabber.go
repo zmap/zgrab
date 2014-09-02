@@ -59,6 +59,7 @@ func makeDialer(c *GrabConfig) (func(string) (*Conn, error)) {
 
 func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
 	// Do all the hard work here
+	/*
 	var command string
 	if config.Imap {
 		command = "a001 STARTTLS\r\n"
@@ -66,6 +67,10 @@ func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
 		command = "STLS\r\n"
 	} else {
 		command = "STARTTLS\r\n"
+	}
+	*/
+	if config.StartTls && (config.Imap || config.Pop3) {
+		log.Fatal("Not implemented")
 	}
 	g := func(c *Conn) error {
 		banner := make([]byte, 1024)
@@ -107,7 +112,7 @@ func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
 			}
 		}
 		if config.StartTls {
-			if err := c.StarttlsHandshake(command); err != nil {
+			if err := c.SmtpStarttlsHandshake(); err != nil {
 				return err
 			}
 		}
