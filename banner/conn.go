@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 	"regexp"
-	"log"
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:\r\n)|^[0-9]{3} .+\r\n$`)
@@ -146,7 +145,6 @@ func (c *Conn) readSmtpResponse(res []byte) (int, error) {
 			return length, err
 		}
 		if smtpEndRegex.Match(res[0:length]) {
-			log.Print("Matched")
 			finished = true
 		} else if length == len(res) {
 			b := make([]byte, 3*length)
