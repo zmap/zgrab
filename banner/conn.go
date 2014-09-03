@@ -213,8 +213,9 @@ func (c *Conn) Ehlo(domain string) error {
 		es.err = writeErr
 	} else {
 		buf := make([]byte, 512)
-		_, readErr := c.readSmtpResponse(buf)
+		n, readErr := c.readSmtpResponse(buf)
 		es.err = readErr
+		es.response = buf[0:n]
 	}
 	c.operations = append(c.operations, &es)
 	return es.err
