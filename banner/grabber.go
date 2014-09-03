@@ -59,19 +59,6 @@ func makeDialer(c *GrabConfig) (func(string) (*Conn, error)) {
 
 func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
 	// Do all the hard work here
-	/*
-	var command string
-	if config.Imap {
-		command = "a001 STARTTLS\r\n"
-	} else if config.Pop3 {
-		command = "STLS\r\n"
-	} else {
-		command = "STARTTLS\r\n"
-	}
-	*/
-	if config.StartTls && (config.Imap || config.Pop3) {
-		log.Fatal("Not implemented")
-	}
 	g := func(c *Conn) error {
 		banner := make([]byte, 1024)
 		response := make([]byte, 65536)
@@ -85,6 +72,14 @@ func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
 				if _, err := c.SmtpBanner(banner); err != nil {
 					return err
 				}
+			} else if config.Pop3 {
+				if _, err := c.Pop3Banner(banner); err != nil {
+					return err
+				}
+			} else if config.Imap {
+				if _, err := c.ImapBanner(banner); err != nil {
+					return err
+				}
 			} else {
 				if _, err := c.Read(banner); err != nil {
 					return err
@@ -95,8 +90,6 @@ func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
 			if _, err := c.Write(config.Message); err != nil {
 				return err
 			}
-		}
-		if config.ReadResponse {
 			if _, err := c.Read(response); err != nil {
 				return err
 			}
@@ -112,8 +105,18 @@ func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
 			}
 		}
 		if config.StartTls {
-			if err := c.SmtpStarttlsHandshake(); err != nil {
-				return err
+			if config.Imap {
+				if err := c.ImapStarttlsHandshake(); err != nil {
+					return err
+				}
+			} else if config.Pop3 {
+				if err := c.Pop3StarttlsHandshake(); err != nil {
+					return err
+				}
+			} else {
+				if err := c.SmtpStarttlsHandshake(); err != nil {
+					return err
+				}
 			}
 		}
 		if config.Heartbleed {

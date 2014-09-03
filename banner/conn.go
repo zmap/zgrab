@@ -9,8 +9,12 @@ import (
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:\r\n)|^[0-9]{3} .+\r\n$`)
+var pop3EndRegex = regexp.MustCompile(`(?:\r\n\.\r\n$)|(?:\r\n$)`)
+var imapStatusEndRegex = regexp.MustCompile(`\r\n$`)
 
 const SMTP_COMMAND = "STARTTLS\r\n"
+const POP3_COMMAND = "STLS\r\n"
+const IMAP_COMMAND = "a001 STARTTLS\r\n"
 
 // Implements the net.Conn interface
 type Conn struct {
@@ -135,7 +139,39 @@ func (c *Conn) SmtpStarttlsHandshake() error {
 	return c.TlsHandshake()
 }
 
-func (c *Conn) readSmtpResponse(res []byte) (int, error) {
+func (c *Conn) Pop3StarttlsHandshake() error {
+	ss := starttlsState{command: []byte(POP3_COMMAND)}
+	ss.err = c.sendStarttlsCommand(POP3_COMMAND)
+	if ss.err == nil {
+		buf := make([]byte, 512)
+		n, err := c.readPop3Response(buf)
+		ss.response = buf[0:n]
+		ss.err = err
+	}
+	c.operations = append(c.operations, &ss)
+	if ss.err != nil {
+		return ss.err
+	}
+	return c.TlsHandshake()
+}
+
+func (c *Conn) ImapStarttlsHandshake() error {
+	ss := starttlsState{command: []byte(IMAP_COMMAND)}
+	ss.err = c.sendStarttlsCommand(IMAP_COMMAND)
+	if ss.err == nil {
+		buf := make([]byte, 512)
+		n, err := c.readImapStatusResponse(buf)
+		ss.response = buf[0:n]
+		ss.err = err
+	}
+	c.operations = append(c.operations, &ss)
+	if ss.err != nil {
+		return ss.err
+	}
+	return c.TlsHandshake()
+}
+
+func (c *Conn) readUntilRegex(res []byte, expr *regexp.Regexp) (int, error) {
 	buf := res[0:]
 	length := 0
 	for finished := false; !finished; {
@@ -144,7 +180,7 @@ func (c *Conn) readSmtpResponse(res []byte) (int, error) {
 		if err != nil {
 			return length, err
 		}
-		if smtpEndRegex.Match(res[0:length]) {
+		if expr.Match(res[0:length]) {
 			finished = true
 		} else if length == len(res) {
 			b := make([]byte, 3*length)
@@ -154,6 +190,10 @@ func (c *Conn) readSmtpResponse(res []byte) (int, error) {
 		buf = res[length:]
 	}
 	return length, nil
+}
+
+func (c *Conn) readSmtpResponse(res []byte) (int, error) {
+	return c.readUntilRegex(res, smtpEndRegex)
 }
 
 func (c *Conn) SmtpBanner(b []byte) (int, error) {
@@ -194,6 +234,34 @@ func (c *Conn) SmtpHelp() error {
 	}
 	c.operations = append(c.operations, &hs)
 	return hs.err
+}
+
+func (c *Conn) readPop3Response(res []byte) (int, error) {
+	return c.readUntilRegex(res, pop3EndRegex)
+}
+
+func (c *Conn) Pop3Banner(b []byte) (int, error) {
+	n, err := c.readPop3Response(b)
+	rs := readState{
+		response: b[0:n],
+		err: err,
+	}
+	c.operations = append(c.operations, &rs)
+	return n, err
+}
+
+func (c *Conn) readImapStatusResponse(res []byte) (int, error) {
+	return c.readUntilRegex(res, imapStatusEndRegex)
+}
+
+func (c *Conn) ImapBanner(b []byte) (int, error) {
+	n, err := c.readImapStatusResponse(b)
+	rs := readState {
+		response: b[0:n],
+		err: err,
+	}
+	c.operations = append(c.operations, &rs)
+	return n, err
 }
 
 func (c *Conn) SendHeartbleedProbe(b []byte) (int, error) {

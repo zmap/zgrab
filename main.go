@@ -34,6 +34,10 @@ var (
 	outputConfig banner.OutputConfig
 )
 
+var (
+	mailStrPtr *string = nil
+)
+
 type Summary struct {
 	Success uint			`json:"success_count"`
 	Error uint				`json:"error_count"`
@@ -44,6 +48,7 @@ type Summary struct {
 	End time.Time `json:"end_time"`
 	Duration time.Duration `json:"duration"`
 	Timeout uint `json:"timeout"`
+	Mail *string `json:"mail_type"`
 }
 
 // Pre-main bind flags to variables
@@ -62,7 +67,6 @@ func init() {
 	flag.UintVar(&senders, "senders", 1000, "Number of send coroutines to use")
 	flag.BoolVar(&grabConfig.Banners, "banners", false, "Read banner upon connection creation")
 	flag.StringVar(&messageFileName, "data", "", "Optional message to send (%s will be replaced with destination IP)")
-	flag.BoolVar(&grabConfig.ReadResponse, "read-response", false, "Read response to message")
 	flag.StringVar(&grabConfig.EhloDomain, "ehlo", "", "Send an EHLO with the specified domain (implies --smtp)")
 	flag.BoolVar(&grabConfig.SmtpHelp, "smtp-help", false, "Send a SMTP help (implies --smtp)")
 	flag.BoolVar(&grabConfig.StartTls, "starttls", false, "Send STARTTLS before negotiating")
@@ -83,10 +87,22 @@ func init() {
 
 	if grabConfig.SmtpHelp || grabConfig.Ehlo {
 		grabConfig.Smtp = true
+
 	}
 
 	if grabConfig.Smtp && (grabConfig.Imap || grabConfig.Pop3) {
 		log.Fatal("Cannot conform to SMTP and IMAP/POP3 at the same time")
+	}
+
+	if grabConfig.Smtp {
+		mailStr := "smtp"
+		mailStrPtr = &mailStr
+	} else if grabConfig.Imap {
+		mailStr := "imap"
+		mailStrPtr = &mailStr
+	} else if grabConfig.Pop3 {
+		mailStr := "pop3"
+		mailStrPtr = &mailStr
 	}
 
 	if grabConfig.Imap && grabConfig.Pop3 {
@@ -96,6 +112,8 @@ func init() {
 	if grabConfig.Ehlo && (grabConfig.Imap || grabConfig.Pop3) {
 		log.Fatal("Cannot send an EHLO when conforming to IMAP or POP3")
 	}
+
+	// Set mail type
 
 	// Heartbleed requires STARTTLS or TLS
 	if (grabConfig.Heartbleed && !(grabConfig.StartTls || grabConfig.Tls)) {
@@ -239,6 +257,7 @@ func main() {
 		Protocol: grabConfig.Protocol,
 		Port: grabConfig.Port,
 		Timeout: timeout,
+		Mail: mailStrPtr,
 	}
 
 	go banner.WriteOutput(grabChan, outputDoneChan, &outputConfig)
