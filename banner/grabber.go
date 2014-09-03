@@ -5,6 +5,7 @@ import (
 	"net"
 	"time"
 	"strconv"
+	"bytes"
 )
 
 type GrabConfig struct {
@@ -87,7 +88,9 @@ func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
 			}
 		}
 		if config.SendMessage {
-			if _, err := c.Write(config.Message); err != nil {
+			dest := []byte(c.RemoteAddr().String())
+			msg := bytes.Replace(config.Message, []byte("%s"), dest, -1)
+			if _, err := c.Write(msg); err != nil {
 				return err
 			}
 			if _, err := c.Read(response); err != nil {

@@ -66,7 +66,7 @@ func init() {
 	flag.BoolVar(&udp, "udp", false, "Grab over UDP")
 	flag.UintVar(&senders, "senders", 1000, "Number of send coroutines to use")
 	flag.BoolVar(&grabConfig.Banners, "banners", false, "Read banner upon connection creation")
-	flag.StringVar(&messageFileName, "data", "", "Optional message to send (%s will be replaced with destination IP)")
+	flag.StringVar(&messageFileName, "data", "", "Send a message and read response (%s will be replaced with destination IP)")
 	flag.StringVar(&grabConfig.EhloDomain, "ehlo", "", "Send an EHLO with the specified domain (implies --smtp)")
 	flag.BoolVar(&grabConfig.SmtpHelp, "smtp-help", false, "Send a SMTP help (implies --smtp)")
 	flag.BoolVar(&grabConfig.StartTls, "starttls", false, "Send STARTTLS before negotiating")

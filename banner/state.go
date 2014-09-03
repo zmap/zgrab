@@ -67,9 +67,21 @@ type writeState struct {
 }
 
 func (ws *writeState) StateLog() StateLog {
+	sent := string(ws.toSend)
+	var sent_ptr *string
+	if sent == "" {
+		sent_ptr = nil
+	} else {
+		sent_ptr = &sent
+	}
+	var data = struct {
+		Sent *string `json:"sent"`
+	}{
+		sent_ptr,
+	}
 	sl := StateLog {
 		StateType: "write",
-		Data: nil,
+		Data: data,
 	}
 	if ws.err != nil {
 		errString := ws.err.Error()
