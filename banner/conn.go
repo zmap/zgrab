@@ -182,7 +182,8 @@ func (c *Conn) readUntilRegex(res []byte, expr *regexp.Regexp) (int, error) {
 		}
 		if expr.Match(res[0:length]) {
 			finished = true
-		} else if length == len(res) {
+		}
+		if length == len(res) {
 			b := make([]byte, 3*length)
 			copy(b, res)
 			res = b
