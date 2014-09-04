@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 	"regexp"
+	"errors"
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:\r\n)|^[0-9]{3} .+\r\n$`)
@@ -184,9 +185,7 @@ func (c *Conn) readUntilRegex(res []byte, expr *regexp.Regexp) (int, error) {
 			finished = true
 		}
 		if length == len(res) {
-			b := make([]byte, 3*length)
-			copy(b, res)
-			res = b
+			return length, errors.New("Not enough buffer space")
 		}
 		buf = res[length:]
 	}
