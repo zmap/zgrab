@@ -64,7 +64,7 @@ func (ka rsaKeyAgreement) processServerKeyExchange(config *Config, clientHello *
 	return errors.New("unexpected ServerKeyExchange")
 }
 
-func (ka rsaKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate) ([]byte, *clientKeyExchangeMsg, error) {
+func (ka rsaKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate, vers uint16) ([]byte, *clientKeyExchangeMsg, error) {
 	preMasterSecret := make([]byte, 48)
 	preMasterSecret[0] = byte(clientHello.vers >> 8)
 	preMasterSecret[1] = byte(clientHello.vers)
@@ -78,7 +78,7 @@ func (ka rsaKeyAgreement) generateClientKeyExchange(config *Config, clientHello 
 		return nil, nil, err
 	}
 	ckx := new(clientKeyExchangeMsg)
-	if clientHello.vers != VersionSSL30 {
+	if vers != VersionSSL30 {
 		ckx.ciphertext = make([]byte, len(encrypted)+2)
 		ckx.ciphertext[0] = byte(len(encrypted) >> 8)
 		ckx.ciphertext[1] = byte(len(encrypted))
@@ -380,7 +380,7 @@ func (ka *ecdheKeyAgreement) processServerKeyExchange(config *Config, clientHell
 	return nil
 }
 
-func (ka *ecdheKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate) ([]byte, *clientKeyExchangeMsg, error) {
+func (ka *ecdheKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate, _ uint16) ([]byte, *clientKeyExchangeMsg, error) {
 	if ka.curve == nil {
 		return nil, nil, errors.New("missing ServerKeyExchange message")
 	}

@@ -302,7 +302,7 @@ NextCipherSuite:
 		c.writeRecord(recordTypeHandshake, certMsg.marshal())
 	}
 
-	preMasterSecret, ckx, err := keyAgreement.generateClientKeyExchange(c.config, hello, certs[0])
+	preMasterSecret, ckx, err := keyAgreement.generateClientKeyExchange(c.config, hello, certs[0], c.vers)
 	if err != nil {
 		c.sendAlert(alertInternalError)
 		return err

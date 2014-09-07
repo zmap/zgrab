@@ -93,6 +93,7 @@ func (c *Conn) TlsHandshake() error {
 	tlsConfig := new(ztls.Config)
 	tlsConfig.InsecureSkipVerify = true
 	tlsConfig.MinVersion = ztls.VersionSSL30
+	tlsConfig.MaxVersion = ztls.VersionTLS12
 	c.tlsConn = ztls.Client(c.conn, tlsConfig)
 	c.tlsConn.SetReadDeadline(c.readDeadline)
 	c.tlsConn.SetWriteDeadline(c.writeDeadline)

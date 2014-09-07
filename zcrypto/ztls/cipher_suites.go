@@ -31,7 +31,7 @@ type keyAgreement interface {
 	// This method may not be called if the server doesn't send a
 	// ServerKeyExchange message.
 	processServerKeyExchange(*Config, *clientHelloMsg, *serverHelloMsg, *x509.Certificate, *serverKeyExchangeMsg) error
-	generateClientKeyExchange(*Config, *clientHelloMsg, *x509.Certificate) ([]byte, *clientKeyExchangeMsg, error)
+	generateClientKeyExchange(*Config, *clientHelloMsg, *x509.Certificate, uint16) ([]byte, *clientKeyExchangeMsg, error)
 }
 
 const (
