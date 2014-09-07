@@ -14,6 +14,7 @@ import (
 	"errors"
 	"io"
 	"strconv"
+	"fmt"
 )
 
 func (c *Conn) clientHandshake() error {
@@ -89,12 +90,11 @@ NextCipherSuite:
 		c.heartbleedLog.Enabled = true
 	}
 
-	vers, ok := c.config.mutualVersion(serverHello.vers)
-	if !ok || vers < VersionTLS10 {
-		// TLS 1.0 is the minimum version supported as a client.
-		return c.sendAlert(alertProtocolVersion)
-	}
-	c.vers = vers
+	c.vers, ok = c.config.mutualVersion(serverHello.vers)
+	if !ok {
+ 		c.sendAlert(alertProtocolVersion)
+ 		return fmt.Errorf("server selected unsupported protocol version %x", serverHello.vers)
+ 	}
 	c.haveVers = true
 
 	finishedHash := newFinishedHash(c.vers)
@@ -102,7 +102,8 @@ NextCipherSuite:
 	finishedHash.Write(serverHello.marshal())
 
 	if serverHello.compressionMethod != compressionNone {
-		return c.sendAlert(alertUnexpectedMessage)
+		c.sendAlert(alertUnexpectedMessage)
+		return fmt.Errorf("server uses compression")
 	}
 
 	if !hello.nextProtoNeg && serverHello.nextProtoNeg {
