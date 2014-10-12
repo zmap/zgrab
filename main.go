@@ -11,6 +11,8 @@ import (
 	"net"
 	"os"
 	"time"
+	"./zcrypto/ztls"
+	"strings"
 )
 
 // Command-line flags
@@ -26,6 +28,7 @@ var (
 	senders                       uint
 	udp bool
 	timeout uint
+	tlsVersion string
 )
 
 // Module configurations
@@ -49,6 +52,7 @@ type Summary struct {
 	Duration time.Duration `json:"duration"`
 	Timeout uint `json:"timeout"`
 	Mail *string `json:"mail_type"`
+	TlsVersion string `json:"tls_version"`
 }
 
 // Pre-main bind flags to variables
@@ -63,6 +67,7 @@ func init() {
 	flag.UintVar(&portFlag, "port", 80, "Port to grab on")
 	flag.UintVar(&timeout, "timeout", 10, "Set connection timeout in seconds")
 	flag.BoolVar(&grabConfig.Tls, "tls", false, "Grab over TLS")
+	flag.StringVar(&tlsVersion, "tls-version", "", "Max TLS version to use (implies --tls)")
 	flag.BoolVar(&udp, "udp", false, "Grab over UDP")
 	flag.UintVar(&senders, "senders", 1000, "Number of send coroutines to use")
 	flag.BoolVar(&grabConfig.Banners, "banners", false, "Read banner upon connection creation")
@@ -75,6 +80,25 @@ func init() {
 	flag.BoolVar(&grabConfig.Pop3, "pop3", false, "Conform to POP3 rules when sending STARTTLS")
 	flag.BoolVar(&grabConfig.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
 	flag.Parse()
+
+	// Validate TLS Versions
+	tv := strings.ToUpper(tlsVersion)
+	if tv != "" {
+		grabConfig.Tls = true
+	}
+
+	switch(tv) {
+	case "SSLV3", "SSLV30", "SSLV3.0":
+		grabConfig.TlsVersion = ztls.VersionSSL30
+	case "TLSV1", "TLSV10", "TLSV1.0":
+		grabConfig.TlsVersion = ztls.VersionTLS10
+	case "TLSV11", "TLSV1.1":
+		grabConfig.TlsVersion = ztls.VersionTLS11
+	case "", "TLSV12", "TLSV1.2":
+		grabConfig.TlsVersion = ztls.VersionTLS12
+	default:
+		log.Fatal("Invalid SSL/TLS versions")
+	}
 
 	// STARTTLS cannot be used with TLS
 	if grabConfig.StartTls && grabConfig.Tls {

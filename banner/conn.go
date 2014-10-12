@@ -24,6 +24,9 @@ type Conn struct {
 	tlsConn *ztls.Conn
 	isTls bool
 
+	// Max TLS version
+	maxTlsVersion uint16
+
 	// Keep track of state / network operations
 	operations []ConnectionOperation
 
@@ -93,7 +96,7 @@ func (c *Conn) TlsHandshake() error {
 	tlsConfig := new(ztls.Config)
 	tlsConfig.InsecureSkipVerify = true
 	tlsConfig.MinVersion = ztls.VersionSSL30
-	tlsConfig.MaxVersion = ztls.VersionTLS12
+	tlsConfig.MaxVersion = c.maxTlsVersion
 	c.tlsConn = ztls.Client(c.conn, tlsConfig)
 	c.tlsConn.SetReadDeadline(c.readDeadline)
 	c.tlsConn.SetWriteDeadline(c.writeDeadline)

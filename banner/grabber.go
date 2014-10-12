@@ -10,6 +10,7 @@ import (
 
 type GrabConfig struct {
 	Tls bool
+	TlsVersion uint16
 	Banners bool
 	SendMessage bool
 	ReadResponse bool
@@ -51,6 +52,7 @@ func makeDialer(c *GrabConfig) (func(string) (*Conn, error)) {
 			Deadline: deadline,
 		}
 		conn, err := d.Dial(proto, addr)
+		conn.maxTlsVersion = c.TlsVersion
 		if err == nil {
 			conn.SetDeadline(deadline)
 		}
