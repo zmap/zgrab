@@ -7,6 +7,7 @@ import (
 	"time"
 	"regexp"
 	"errors"
+	"crypto/x509"
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:\r\n)|^[0-9]{3} .+\r\n$`)
@@ -33,6 +34,8 @@ type Conn struct {
 	// Cache the deadlines so we can reapply after TLS handshake
 	readDeadline time.Time
 	writeDeadline time.Time
+
+	caPool *x509.CertPool
 }
 
 func (c *Conn) getUnderlyingConn() (net.Conn) {
@@ -40,6 +43,10 @@ func (c *Conn) getUnderlyingConn() (net.Conn) {
 		return c.tlsConn
 	}
 	return c.conn
+}
+
+func (c *Conn) SetCAPool(pool *x509.CertPool) {
+	c.caPool = pool
 }
 
 // Layer in the regular conn methods
@@ -98,6 +105,7 @@ func (c *Conn) TlsHandshake() error {
 	tlsConfig.MinVersion = ztls.VersionSSL30
 	tlsConfig.MaxVersion = c.maxTlsVersion
 	c.tlsConn = ztls.Client(c.conn, tlsConfig)
+	c.tlsConn.SetCAPool(c.caPool)
 	c.tlsConn.SetReadDeadline(c.readDeadline)
 	c.tlsConn.SetWriteDeadline(c.writeDeadline)
 	c.isTls = true

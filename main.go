@@ -32,7 +32,6 @@ var (
 	timeout uint
 	tlsVersion string
 	rootCAFileName string
-	rootCAPool *x509.CertPool
 )
 
 // Module configurations
@@ -204,12 +203,11 @@ func init() {
 		if readErr != nil {
 			log.Fatal(err)
 		}
-		rootCAPool = x509.NewCertPool()
-		ok := rootCAPool.AppendCertsFromPEM(caBytes)
+		grabConfig.RootCAPool = x509.NewCertPool()
+		ok := grabConfig.RootCAPool.AppendCertsFromPEM(caBytes)
 		if !ok {
 			log.Fatal("Could not read certificates from PEM file. Invalid PEM?")
 		}
-
 	}
 
 	// Open input and output files

@@ -6,6 +6,7 @@ import (
 	"time"
 	"strconv"
 	"bytes"
+	"crypto/x509"
 )
 
 type GrabConfig struct {
@@ -28,6 +29,7 @@ type GrabConfig struct {
 	Protocol string
 	ErrorLog *log.Logger
 	LocalAddr net.Addr
+	RootCAPool *x509.CertPool
 }
 
 type Grab struct {
@@ -65,6 +67,7 @@ func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
 	g := func(c *Conn) error {
 		banner := make([]byte, 1024)
 		response := make([]byte, 65536)
+		c.SetCAPool(config.RootCAPool)
 		if config.Tls {
 			if err := c.TlsHandshake(); err != nil {
 				return err
