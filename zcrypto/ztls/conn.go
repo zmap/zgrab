@@ -94,6 +94,9 @@ func (c *Conn) checkValid(m *certificateMsg) {
 	_, validationErr := parsedCertificates[0].Verify(opts)
 	if validationErr == nil {
 		m.valid = true
+	} else {
+		errString := validationErr.Error()
+		m.validationError = &errString
 	}
 }
 
