@@ -124,6 +124,9 @@ NextCipherSuite:
 	if !ok || len(certMsg.certificates) == 0 {
 		return c.sendAlert(alertUnexpectedMessage)
 	}
+
+	c.checkValid(certMsg)
+
 	c.handshakeLog.ServerCertificates = certMsg.ztlsNewServerCertificates()
 	finishedHash.Write(certMsg.marshal())
 

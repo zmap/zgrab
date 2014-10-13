@@ -30,10 +30,12 @@ func (m *serverHelloMsg) ztlsNewServerHello() *ztlsServerHello {
 
 type ztlsServerCertificates struct {
 	Certificates [][]byte	`json:"certificates"`
+	Valid bool `json:"is_valid"`
 }
 func (m *certificateMsg) ztlsNewServerCertificates() *ztlsServerCertificates {
 	c := new(ztlsServerCertificates)
 	c.Certificates = m.certificates
+	c.Valid = m.valid
 	return c
 }
 

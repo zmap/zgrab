@@ -539,7 +539,7 @@ func (m *serverHelloMsg) marshal() []byte {
 		z[2] = byte(1 >> 8)
 		z[3] = byte(1)
 		z[4] = m.heartbeatMode
-		z = z[5:] 
+		z = z[5:]
 	}
 
 	m.raw = x
@@ -633,6 +633,7 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 type certificateMsg struct {
 	raw          []byte
 	certificates [][]byte
+	valid	bool
 }
 
 func (m *certificateMsg) equal(i interface{}) bool {

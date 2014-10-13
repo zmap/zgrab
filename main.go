@@ -12,7 +12,9 @@ import (
 	"os"
 	"time"
 	"./zcrypto/ztls"
+	"crypto/x509"
 	"strings"
+	"io/ioutil"
 )
 
 // Command-line flags
@@ -29,6 +31,8 @@ var (
 	udp bool
 	timeout uint
 	tlsVersion string
+	rootCAFileName string
+	rootCAPool *x509.CertPool
 )
 
 // Module configurations
@@ -52,7 +56,8 @@ type Summary struct {
 	Duration time.Duration `json:"duration"`
 	Timeout uint `json:"timeout"`
 	Mail *string `json:"mail_type"`
-	TlsVersion string `json:"tls_version"`
+	TlsVersion string `json:"max_tls_version"`
+	CAFileName string `json:"ca_file"`
 }
 
 // Pre-main bind flags to variables
@@ -79,6 +84,7 @@ func init() {
 	flag.BoolVar(&grabConfig.Imap, "imap", false, "Conform to IMAP rules when sending STARTTLS")
 	flag.BoolVar(&grabConfig.Pop3, "pop3", false, "Conform to POP3 rules when sending STARTTLS")
 	flag.BoolVar(&grabConfig.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
+	flag.StringVar(&rootCAFileName, "ca-file", "", "List of trusted root certificate authorities in PEM format")
 	flag.Parse()
 
 	// Validate TLS Versions
@@ -90,12 +96,16 @@ func init() {
 	switch(tv) {
 	case "SSLV3", "SSLV30", "SSLV3.0":
 		grabConfig.TlsVersion = ztls.VersionSSL30
+		tlsVersion = "SSLv3"
 	case "TLSV1", "TLSV10", "TLSV1.0":
 		grabConfig.TlsVersion = ztls.VersionTLS10
+		tlsVersion = "TLSv1.0"
 	case "TLSV11", "TLSV1.1":
 		grabConfig.TlsVersion = ztls.VersionTLS11
+		tlsVersion = "TLSv1.1"
 	case "", "TLSV12", "TLSV1.2":
 		grabConfig.TlsVersion = ztls.VersionTLS12
+		tlsVersion = "TLSv1.2"
 	default:
 		log.Fatal("Invalid SSL/TLS versions")
 	}
@@ -183,6 +193,24 @@ func init() {
 		grabConfig.LocalAddr = addrs[0]
 	}
 	*/
+
+	// Look at CA file
+	if rootCAFileName != "" {
+		var fd *os.File
+		if fd, err = os.Open(rootCAFileName); err != nil {
+			log.Fatal(err)
+		}
+		caBytes, readErr := ioutil.ReadAll(fd)
+		if readErr != nil {
+			log.Fatal(err)
+		}
+		rootCAPool = x509.NewCertPool()
+		ok := rootCAPool.AppendCertsFromPEM(caBytes)
+		if !ok {
+			log.Fatal("Could not read certificates from PEM file. Invalid PEM?")
+		}
+
+	}
 
 	// Open input and output files
 	switch inputFileName {
@@ -282,6 +310,8 @@ func main() {
 		Port: grabConfig.Port,
 		Timeout: timeout,
 		Mail: mailStrPtr,
+		TlsVersion: tlsVersion,
+		CAFileName: rootCAFileName,
 	}
 
 	go banner.WriteOutput(grabChan, outputDoneChan, &outputConfig)

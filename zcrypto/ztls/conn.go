@@ -59,12 +59,42 @@ type Conn struct {
 
 	heartbeat           bool
 
+	// CA Pool
+	caPool *x509.CertPool
+
 	tmp [16]byte
 }
 
 type connErr struct {
 	mu    sync.Mutex
 	value error
+}
+
+func (c *Conn) SetCAPool(pool *x509.CertPool) {
+	c.caPool = pool
+}
+
+func (c *Conn) checkValid(m *certificateMsg) {
+	m.valid = false
+	if len(m.certificates) == 0 {
+		return
+	}
+	parsedCertificates, err := x509.ParseCertificates(bytes.Join(m.certificates, []byte{}))
+	if err != nil || len(parsedCertificates) == 0 {
+		return
+	}
+	intermediates := x509.NewCertPool()
+	for i := 1; i < len(parsedCertificates); i += 1 {
+		intermediates.AddCert(parsedCertificates[i])
+	}
+	opts := x509.VerifyOptions {
+		Intermediates: intermediates,
+		Roots: c.caPool,
+	}
+	_, validationErr := parsedCertificates[0].Verify(opts)
+	if validationErr == nil {
+		m.valid = true
+	}
 }
 
 func (e *connErr) setError(err error) error {
