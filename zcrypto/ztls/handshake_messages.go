@@ -635,6 +635,9 @@ type certificateMsg struct {
 	certificates [][]byte
 	valid	bool
 	validationError *string
+	commonName string
+	altNames []string
+	issuer string
 }
 
 func (m *certificateMsg) equal(i interface{}) bool {

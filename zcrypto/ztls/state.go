@@ -32,12 +32,23 @@ type ztlsServerCertificates struct {
 	Certificates [][]byte	`json:"certificates"`
 	Valid bool `json:"is_valid"`
 	ValidationError *string `json:"validation_error"`
+	CommonName *string `json:"common_name"`
+	AltNames []string `json:"alt_names"`
+	Issuer *string `json:"issuer"`
 }
+
 func (m *certificateMsg) ztlsNewServerCertificates() *ztlsServerCertificates {
 	c := new(ztlsServerCertificates)
 	c.Certificates = m.certificates
 	c.Valid = m.valid
 	c.ValidationError = m.validationError
+	if m.commonName != "" {
+		c.CommonName = &m.commonName
+	}
+	c.AltNames = m.altNames
+	if m.issuer != "" {
+		c.Issuer = &m.issuer
+	}
 	return c
 }
 

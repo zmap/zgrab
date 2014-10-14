@@ -77,10 +77,19 @@ func (c *Conn) SetCAPool(pool *x509.CertPool) {
 func (c *Conn) checkValid(m *certificateMsg) {
 	m.valid = false
 	if len(m.certificates) == 0 {
+		e := "No certificate present"
+		m.validationError = &e
 		return
 	}
 	parsedCertificates, err := x509.ParseCertificates(bytes.Join(m.certificates, []byte{}))
-	if err != nil || len(parsedCertificates) == 0 {
+	if err != nil {
+		e := err.Error()
+		m.validationError = &e
+		return
+	}
+	if len(parsedCertificates) == 0 {
+		e := "Parsed certificate chain had 0 length"
+		m.validationError = &e
 		return
 	}
 	intermediates := x509.NewCertPool()
@@ -91,13 +100,21 @@ func (c *Conn) checkValid(m *certificateMsg) {
 		Intermediates: intermediates,
 		Roots: c.caPool,
 	}
-	_, validationErr := parsedCertificates[0].Verify(opts)
+	cert := parsedCertificates[0]
+	_, validationErr := cert.Verify(opts)
 	if validationErr == nil {
 		m.valid = true
 	} else {
 		errString := validationErr.Error()
 		m.validationError = &errString
 	}
+	// Shove some of the parsed field into the certificates
+	// This isn't a complete parsing, but rather just some useful fields
+	// that might be available. For more in depth parsing, use a post-processing
+	// tool
+	m.commonName = cert.Subject.CommonName
+	m.altNames = cert.DNSNames
+	m.issuer = cert.Issuer.CommonName
 }
 
 func (e *connErr) setError(err error) error {
