@@ -1,56 +1,57 @@
 package banner
 
 import (
-	"log"
-	"net"
-	"time"
-	"strconv"
 	"bytes"
 	"crypto/x509"
+	"log"
+	"net"
+	"strconv"
+	"time"
 )
 
 type GrabConfig struct {
-	Tls bool
-	TlsVersion uint16
-	Banners bool
-	SendMessage bool
+	Tls          bool
+	TlsVersion   uint16
+	Banners      bool
+	SendMessage  bool
 	ReadResponse bool
-	Smtp bool
-	Ehlo bool
-	SmtpHelp bool
-	StartTls bool
-	Imap bool
-	Pop3 bool
-	Heartbleed bool
-	Port uint16
-	Timeout time.Duration
-	Message []byte
-	EhloDomain string
-	Protocol string
-	ErrorLog *log.Logger
-	LocalAddr net.Addr
-	RootCAPool *x509.CertPool
+	Smtp         bool
+	Ehlo         bool
+	SmtpHelp     bool
+	StartTls     bool
+	Imap         bool
+	Pop3         bool
+	Heartbleed   bool
+	Port         uint16
+	Timeout      time.Duration
+	Message      []byte
+	EhloDomain   string
+	Protocol     string
+	ErrorLog     *log.Logger
+	LocalAddr    net.Addr
+	RootCAPool   *x509.CertPool
+	CbcOnly      bool
 }
 
 type Grab struct {
-	Host string `json:"host"`
-	Port uint16 `json:"port"`
-	Time time.Time `json:"timestamp"`
-	Log []StateLog `json:"log"`
+	Host string     `json:"host"`
+	Port uint16     `json:"port"`
+	Time time.Time  `json:"timestamp"`
+	Log  []StateLog `json:"log"`
 }
 
 type Progress struct {
 	Success uint
-	Error uint
-	Total uint
+	Error   uint
+	Total   uint
 }
 
-func makeDialer(c *GrabConfig) (func(string) (*Conn, error)) {
+func makeDialer(c *GrabConfig) func(string) (*Conn, error) {
 	proto := c.Protocol
 	timeout := c.Timeout
 	return func(addr string) (*Conn, error) {
 		deadline := time.Now().Add(timeout)
-		d := Dialer {
+		d := Dialer{
 			Deadline: deadline,
 		}
 		conn, err := d.Dial(proto, addr)
@@ -62,12 +63,13 @@ func makeDialer(c *GrabConfig) (func(string) (*Conn, error)) {
 	}
 }
 
-func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
+func makeGrabber(config *GrabConfig) func(*Conn) ([]StateLog, error) {
 	// Do all the hard work here
 	g := func(c *Conn) error {
 		banner := make([]byte, 1024)
 		response := make([]byte, 65536)
 		c.SetCAPool(config.RootCAPool)
+		c.SetCbcOnly() // XXX THIS IS TERRIBLE
 		if config.Tls {
 			if err := c.TlsHandshake(); err != nil {
 				return err
@@ -137,7 +139,7 @@ func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
 	}
 	// Wrap the whole thing in a logger
 	return func(c *Conn) ([]StateLog, error) {
-		err := g(c);
+		err := g(c)
 		if err != nil {
 			config.ErrorLog.Printf("Conversation error with remote host %s: %s",
 				c.RemoteAddr().String(), err.Error())

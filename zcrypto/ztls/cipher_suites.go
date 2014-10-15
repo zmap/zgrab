@@ -84,6 +84,17 @@ var cipherSuites = []*cipherSuite{
 	{TLS_RSA_WITH_3DES_EDE_CBC_SHA, 24, 20, 8, rsaKA, 0, cipher3DES, macSHA1, nil},
 }
 
+var CbcSuiteIds = []uint16{
+	TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+	TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+	TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+	TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+	TLS_RSA_WITH_AES_128_CBC_SHA,
+	TLS_RSA_WITH_AES_256_CBC_SHA,
+	TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+	TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+}
+
 func cipherRC4(key, iv []byte, isRead bool) interface{} {
 	cipher, _ := rc4.NewCipher(key)
 	return cipher
