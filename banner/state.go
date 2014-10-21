@@ -1,13 +1,13 @@
 package banner
 
 import (
-	"../zcrypto/ztls"
+	"zgrab/zcrypto/ztls"
 )
 
 type StateLog struct {
-	StateType string `json:"type"`
-	Data interface{} `json:"data"`
-	Error *string `json:"error"`
+	StateType string      `json:"type"`
+	Data      interface{} `json:"data"`
+	Error     *string     `json:"error"`
 }
 
 type ConnectionOperation interface {
@@ -15,26 +15,26 @@ type ConnectionOperation interface {
 }
 
 type connectState struct {
-	protocol string
+	protocol   string
 	remoteHost string
-	err error
+	err        error
 }
 
 func (cs *connectState) StateLog() StateLog {
-	sl := StateLog {
+	sl := StateLog{
 		StateType: "connect",
-		Data: nil,
+		Data:      nil,
 	}
 	if cs.err != nil {
 		errString := cs.err.Error()
 		sl.Error = &errString
 	}
-	return sl;
+	return sl
 }
 
 type readState struct {
 	response []byte
-	err error
+	err      error
 }
 
 func (rs *readState) StateLog() StateLog {
@@ -50,9 +50,9 @@ func (rs *readState) StateLog() StateLog {
 	}{
 		rptr,
 	}
-	sl := StateLog {
+	sl := StateLog{
 		StateType: "read",
-		Data: data,
+		Data:      data,
 	}
 	if rs.err != nil {
 		errString := rs.err.Error()
@@ -63,7 +63,7 @@ func (rs *readState) StateLog() StateLog {
 
 type writeState struct {
 	toSend []byte
-	err error
+	err    error
 }
 
 func (ws *writeState) StateLog() StateLog {
@@ -79,9 +79,9 @@ func (ws *writeState) StateLog() StateLog {
 	}{
 		sent_ptr,
 	}
-	sl := StateLog {
+	sl := StateLog{
 		StateType: "write",
-		Data: data,
+		Data:      data,
 	}
 	if ws.err != nil {
 		errString := ws.err.Error()
@@ -92,7 +92,7 @@ func (ws *writeState) StateLog() StateLog {
 
 type ehloState struct {
 	response []byte
-	err error
+	err      error
 }
 
 func (es *ehloState) StateLog() StateLog {
@@ -108,9 +108,9 @@ func (es *ehloState) StateLog() StateLog {
 	}{
 		res_ptr,
 	}
-	sl := StateLog {
+	sl := StateLog{
 		StateType: "ehlo",
-		Data: data,
+		Data:      data,
 	}
 	if es.err != nil {
 		errString := es.err.Error()
@@ -121,7 +121,7 @@ func (es *ehloState) StateLog() StateLog {
 
 type helpState struct {
 	response []byte
-	err error
+	err      error
 }
 
 func (hs *helpState) StateLog() StateLog {
@@ -137,9 +137,9 @@ func (hs *helpState) StateLog() StateLog {
 	}{
 		res_ptr,
 	}
-	sl := StateLog {
+	sl := StateLog{
 		StateType: "smtp-help",
-		Data: data,
+		Data:      data,
 	}
 	if hs.err != nil {
 		errString := hs.err.Error()
@@ -149,9 +149,9 @@ func (hs *helpState) StateLog() StateLog {
 }
 
 type starttlsState struct {
-	command []byte
+	command  []byte
 	response []byte
-	err error
+	err      error
 }
 
 func (ss *starttlsState) StateLog() StateLog {
@@ -163,15 +163,15 @@ func (ss *starttlsState) StateLog() StateLog {
 		res_ptr = &res
 	}
 	var data = struct {
-		Command string `json:"command"`
+		Command  string  `json:"command"`
 		Response *string `json:"response"`
 	}{
 		string(ss.command),
 		res_ptr,
 	}
-	sl := StateLog {
+	sl := StateLog{
 		StateType: "starttls",
-		Data: data,
+		Data:      data,
 	}
 	if ss.err != nil {
 		errString := ss.err.Error()
@@ -182,13 +182,13 @@ func (ss *starttlsState) StateLog() StateLog {
 
 type tlsState struct {
 	handshake *ztls.ZtlsHandshakeLog
-	err error
+	err       error
 }
 
 func (ts *tlsState) StateLog() StateLog {
-	sl := StateLog {
+	sl := StateLog{
 		StateType: "tls_handshake",
-		Data: ts.handshake,
+		Data:      ts.handshake,
 	}
 	if ts.err != nil {
 		errString := ts.err.Error()
@@ -199,13 +199,13 @@ func (ts *tlsState) StateLog() StateLog {
 
 type heartbleedState struct {
 	probe *ztls.ZtlsHeartbleedLog
-	err error
+	err   error
 }
 
 func (hs *heartbleedState) StateLog() StateLog {
-	sl := StateLog {
+	sl := StateLog{
 		StateType: "heartbleed",
-		Data: hs.probe,
+		Data:      hs.probe,
 	}
 	if hs.err != nil {
 		errString := hs.err.Error()

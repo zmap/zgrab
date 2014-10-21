@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"./banner"
-	"./zcrypto/ztls"
+	"zgrab/banner"
+	"zgrab/zcrypto/ztls"
 )
 
 // Command-line flags
