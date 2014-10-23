@@ -38,6 +38,8 @@ type Conn struct {
 
 	caPool  *x509.CertPool
 	cbcOnly bool
+
+	domain string
 }
 
 func (c *Conn) getUnderlyingConn() net.Conn {
@@ -53,6 +55,10 @@ func (c *Conn) SetCbcOnly() {
 
 func (c *Conn) SetCAPool(pool *x509.CertPool) {
 	c.caPool = pool
+}
+
+func (c *Conn) SetDomain(domain string) {
+	c.domain = domain
 }
 
 // Layer in the regular conn methods
@@ -110,6 +116,9 @@ func (c *Conn) TlsHandshake() error {
 	tlsConfig.InsecureSkipVerify = true
 	tlsConfig.MinVersion = ztls.VersionSSL30
 	tlsConfig.MaxVersion = c.maxTlsVersion
+	if c.domain != "" {
+		tlsConfig.ServerName = c.domain
+	}
 	if c.cbcOnly {
 		tlsConfig.CipherSuites = ztls.CbcSuiteIds
 	}

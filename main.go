@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"crypto/x509"
+	"encoding/csv"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -13,7 +13,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
 	"zgrab/banner"
 	"zgrab/zcrypto/ztls"
 )
@@ -274,20 +273,36 @@ func init() {
 	grabConfig.ErrorLog = logger
 }
 
-func ReadInput(addrChan chan net.IP, inputFile *os.File) {
-	scanner := bufio.NewScanner(inputFile)
-	for scanner.Scan() {
-		ipString := scanner.Text()
+func ReadInput(addrChan chan banner.GrabTarget, inputFile *os.File) {
+	r := csv.NewReader(inputFile)
+	for {
+		row, err := r.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Printf("Error reading stdin: %s", err.Error())
+		}
+		// Ignore blank lines
+		if len(row) < 1 {
+			continue
+		}
+		ipString := row[0]
 		ip := net.ParseIP(ipString)
 		if ip == nil {
 			fmt.Fprintln(os.Stderr, "Invalid IP address: ", ipString)
 			continue
 		}
+		var domain string
+		if len(row) >= 2 {
+			domain = row[1]
+		}
+		remoteHost := banner.GrabTarget{
+			Addr:   ip,
+			Domain: domain,
+		}
 
-		addrChan <- ip
-	}
-	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "Reading stdin: ", err)
+		addrChan <- remoteHost
 	}
 	close(addrChan)
 }
@@ -299,7 +314,7 @@ func (s *Summary) AddProgress(p *banner.Progress) {
 }
 
 func main() {
-	addrChan := make(chan net.IP, senders*4)
+	addrChan := make(chan banner.GrabTarget, senders*4)
 	grabChan := make(chan banner.Grab, senders*4)
 	doneChan := make(chan banner.Progress)
 	outputDoneChan := make(chan int)
