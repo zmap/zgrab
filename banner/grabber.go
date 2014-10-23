@@ -103,8 +103,8 @@ func makeGrabber(config *GrabConfig) func(*Conn) ([]StateLog, error) {
 			}
 		}
 		if config.SendMessage {
-			dest := []byte(c.RemoteAddr().String())
-			msg := bytes.Replace(config.Message, []byte("%s"), dest, -1)
+			host, _, _ := net.SplitHostPort(c.RemoteAddr().String())
+			msg := bytes.Replace(config.Message, []byte("%s"), []byte(host), -1)
 			msg = bytes.Replace(msg, []byte("%d"), []byte(c.domain), -1)
 			if _, err := c.Write(msg); err != nil {
 				return err
