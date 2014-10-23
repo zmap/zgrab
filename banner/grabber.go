@@ -75,7 +75,9 @@ func makeGrabber(config *GrabConfig) func(*Conn) ([]StateLog, error) {
 		banner := make([]byte, 1024)
 		response := make([]byte, 65536)
 		c.SetCAPool(config.RootCAPool)
-		c.SetCbcOnly() // XXX THIS IS TERRIBLE
+		if config.CbcOnly {
+			c.SetCbcOnly()
+		}
 		if config.Tls {
 			if err := c.TlsHandshake(); err != nil {
 				return err
