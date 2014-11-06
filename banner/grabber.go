@@ -167,7 +167,8 @@ func GrabBanner(addrChan chan GrabTarget, grabChan chan Grab, doneChan chan Prog
 		addr := target.Addr.String()
 		var domain *string
 		if target.Domain != "" {
-			domain = &target.Domain
+			d := target.Domain
+			domain = &d
 		}
 		rhost := net.JoinHostPort(addr, port)
 		t := time.Now()
