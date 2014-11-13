@@ -1,23 +1,24 @@
-package banner
+package zgrab
 
 import (
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"net"
 	"regexp"
 	"time"
 
-	"zgrab/zcrypto/ztls"
+	"ztools/ztls"
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:\r\n)|^[0-9]{3} .+\r\n$`)
 var pop3EndRegex = regexp.MustCompile(`(?:\r\n\.\r\n$)|(?:\r\n$)`)
 var imapStatusEndRegex = regexp.MustCompile(`\r\n$`)
 
-const SMTP_COMMAND = "STARTTLS\r\n"
-const POP3_COMMAND = "STLS\r\n"
-const IMAP_COMMAND = "a001 STARTTLS\r\n"
+const (
+	SMTP_COMMAND = "STARTTLS\r\n"
+	POP3_COMMAND = "STLS\r\n"
+	IMAP_COMMAND = "a001 STARTTLS\r\n"
+)
 
 // Implements the net.Conn interface
 type Conn struct {
@@ -30,7 +31,7 @@ type Conn struct {
 	maxTlsVersion uint16
 
 	// Keep track of state / network operations
-	operations []ConnectionOperation
+	operations []ConnectionEvent
 
 	// Cache the deadlines so we can reapply after TLS handshake
 	readDeadline  time.Time
@@ -89,15 +90,23 @@ func (c *Conn) SetWriteDeadline(t time.Time) error {
 // Delegate here, but record all the things
 func (c *Conn) Write(b []byte) (int, error) {
 	n, err := c.getUnderlyingConn().Write(b)
-	ws := writeState{toSend: b, err: err}
-	c.operations = append(c.operations, &ws)
+	w := WriteEvent{Sent: b}
+	event := ConnectionEvent{
+		Data:  &w,
+		Error: err,
+	}
+	c.operations = append(c.operations, event)
 	return n, err
 }
 
 func (c *Conn) Read(b []byte) (int, error) {
 	n, err := c.getUnderlyingConn().Read(b)
-	rs := readState{response: b[0:n], err: err}
-	c.operations = append(c.operations, &rs)
+	r := ReadEvent{Response: b[0:n]}
+	event := ConnectionEvent{
+		Data:  &r,
+		Error: err,
+	}
+	c.operations = append(c.operations, event)
 	return n, err
 }
 
@@ -116,23 +125,26 @@ func (c *Conn) TlsHandshake() error {
 	tlsConfig.InsecureSkipVerify = true
 	tlsConfig.MinVersion = ztls.VersionSSL30
 	tlsConfig.MaxVersion = c.maxTlsVersion
+	tlsConfig.RootCAs = c.caPool
 	if c.domain != "" {
 		tlsConfig.ServerName = c.domain
 	}
-	if c.cbcOnly {
-		tlsConfig.CipherSuites = ztls.CbcSuiteIds
-	}
 	c.tlsConn = ztls.Client(c.conn, tlsConfig)
-	c.tlsConn.SetCAPool(c.caPool)
 	c.tlsConn.SetReadDeadline(c.readDeadline)
 	c.tlsConn.SetWriteDeadline(c.writeDeadline)
 	c.isTls = true
 	err := c.tlsConn.Handshake()
-	hl := c.tlsConn.HandshakeLog()
-	ts := tlsState{handshake: hl, err: err}
-	c.operations = append(c.operations, &ts)
+	hl := c.tlsConn.GetHandshakeLog()
+	ts := TLSHandshakeEvent{handshakeLog: hl}
+	event := ConnectionEvent{
+		Data:  &ts,
+		Error: err,
+	}
+	c.operations = append(c.operations, event)
 	return err
 }
+
+/*
 
 func (c *Conn) sendStarttlsCommand(command string) error {
 	// Don't doublehandshake
@@ -294,6 +306,7 @@ func (c *Conn) ImapBanner(b []byte) (int, error) {
 	c.operations = append(c.operations, &rs)
 	return n, err
 }
+*/
 
 func (c *Conn) SendHeartbleedProbe(b []byte) (int, error) {
 	if !c.isTls {
@@ -302,19 +315,18 @@ func (c *Conn) SendHeartbleedProbe(b []byte) (int, error) {
 			c.RemoteAddr().String())
 	}
 	n, err := c.tlsConn.CheckHeartbleed(b)
-	hl := c.tlsConn.HeartbleedLog()
+	hb := c.tlsConn.GetHeartbleedLog()
 	if err == ztls.HeartbleedError {
 		err = nil
 	}
-	hs := heartbleedState{probe: hl, err: err}
-	c.operations = append(c.operations, &hs)
+	event := ConnectionEvent{
+		Data:  &HeartbleedEvent{heartbleedLog: hb},
+		Error: err,
+	}
+	c.operations = append(c.operations, event)
 	return n, err
 }
 
-func (c *Conn) States() []StateLog {
-	states := make([]StateLog, 0, len(c.operations))
-	for _, state := range c.operations {
-		states = append(states, state.StateLog())
-	}
-	return states
+func (c *Conn) States() []ConnectionEvent {
+	return c.operations
 }

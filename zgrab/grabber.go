@@ -1,4 +1,4 @@
-package banner
+package zgrab
 
 import (
 	"bytes"
@@ -38,14 +38,6 @@ type GrabConfig struct {
 	CbcOnly      bool
 }
 
-type Grab struct {
-	Host   string     `json:"host"`
-	Domain *string    `json:"domain"`
-	Port   uint16     `json:"port"`
-	Time   time.Time  `json:"timestamp"`
-	Log    []StateLog `json:"log"`
-}
-
 type Progress struct {
 	Success uint
 	Error   uint
@@ -69,10 +61,10 @@ func makeDialer(c *GrabConfig) func(string) (*Conn, error) {
 	}
 }
 
-func makeGrabber(config *GrabConfig) func(*Conn) ([]StateLog, error) {
+func makeGrabber(config *GrabConfig) func(*Conn) ([]ConnectionEvent, error) {
 	// Do all the hard work here
 	g := func(c *Conn) error {
-		banner := make([]byte, 1024)
+		//banner := make([]byte, 1024)
 		response := make([]byte, 65536)
 		c.SetCAPool(config.RootCAPool)
 		if config.CbcOnly {
@@ -83,25 +75,27 @@ func makeGrabber(config *GrabConfig) func(*Conn) ([]StateLog, error) {
 				return err
 			}
 		}
-		if config.Banners {
-			if config.Smtp {
-				if _, err := c.SmtpBanner(banner); err != nil {
-					return err
-				}
-			} else if config.Pop3 {
-				if _, err := c.Pop3Banner(banner); err != nil {
-					return err
-				}
-			} else if config.Imap {
-				if _, err := c.ImapBanner(banner); err != nil {
-					return err
-				}
-			} else {
+		/*
+			if config.Banners {
+					if config.Smtp {
+						if _, err := c.SmtpBanner(banner); err != nil {
+							return err
+						}
+					} else if config.Pop3 {
+						if _, err := c.Pop3Banner(banner); err != nil {
+							return err
+						}
+					} else if config.Imap {
+						if _, err := c.ImapBanner(banner); err != nil {
+							return err
+						}
+					} else {
 				if _, err := c.Read(banner); err != nil {
 					return err
 				}
+				}
 			}
-		}
+		*/
 		if config.SendMessage {
 			host, _, _ := net.SplitHostPort(c.RemoteAddr().String())
 			msg := bytes.Replace(config.Message, []byte("%s"), []byte(host), -1)
@@ -113,31 +107,33 @@ func makeGrabber(config *GrabConfig) func(*Conn) ([]StateLog, error) {
 				return err
 			}
 		}
-		if config.Ehlo {
-			if err := c.Ehlo(config.EhloDomain); err != nil {
-				return err
-			}
-		}
-		if config.SmtpHelp {
-			if err := c.SmtpHelp(); err != nil {
-				return err
-			}
-		}
-		if config.StartTls {
-			if config.Imap {
-				if err := c.ImapStarttlsHandshake(); err != nil {
-					return err
-				}
-			} else if config.Pop3 {
-				if err := c.Pop3StarttlsHandshake(); err != nil {
-					return err
-				}
-			} else {
-				if err := c.SmtpStarttlsHandshake(); err != nil {
+		/*
+			if config.Ehlo {
+				if err := c.Ehlo(config.EhloDomain); err != nil {
 					return err
 				}
 			}
-		}
+			if config.SmtpHelp {
+				if err := c.SmtpHelp(); err != nil {
+					return err
+				}
+			}
+			if config.StartTls {
+				if config.Imap {
+					if err := c.ImapStarttlsHandshake(); err != nil {
+						return err
+					}
+				} else if config.Pop3 {
+					if err := c.Pop3StarttlsHandshake(); err != nil {
+						return err
+					}
+				} else {
+					if err := c.SmtpStarttlsHandshake(); err != nil {
+						return err
+					}
+				}
+			}
+		*/
 		if config.Heartbleed {
 			buf := make([]byte, 256)
 			if _, err := c.SendHeartbleedProbe(buf); err != nil {
@@ -147,7 +143,7 @@ func makeGrabber(config *GrabConfig) func(*Conn) ([]StateLog, error) {
 		return nil
 	}
 	// Wrap the whole thing in a logger
-	return func(c *Conn) ([]StateLog, error) {
+	return func(c *Conn) ([]ConnectionEvent, error) {
 		err := g(c)
 		if err != nil {
 			config.ErrorLog.Printf("Conversation error with remote host %s: %s",
@@ -165,15 +161,10 @@ func GrabBanner(addrChan chan GrabTarget, grabChan chan Grab, doneChan chan Prog
 	for target := range addrChan {
 		p.Total += 1
 		addr := target.Addr.String()
-		var domain *string
-		if target.Domain != "" {
-			d := target.Domain
-			domain = &d
-		}
 		rhost := net.JoinHostPort(addr, port)
 		t := time.Now()
 		conn, dialErr := dial(rhost)
-		if domain != nil {
+		if target.Domain != "" {
 			conn.SetDomain(target.Domain)
 		}
 		if dialErr != nil {
@@ -181,9 +172,8 @@ func GrabBanner(addrChan chan GrabTarget, grabChan chan Grab, doneChan chan Prog
 			config.ErrorLog.Printf("Could not connect to %s remote host %s: %s",
 				target.Domain, addr, dialErr.Error())
 			grabChan <- Grab{
-				Host:   addr,
-				Domain: domain,
-				Port:   config.Port,
+				Host:   target.Addr,
+				Domain: target.Domain,
 				Time:   t,
 				Log:    conn.States(),
 			}
@@ -197,9 +187,8 @@ func GrabBanner(addrChan chan GrabTarget, grabChan chan Grab, doneChan chan Prog
 			p.Success += 1
 		}
 		grabChan <- Grab{
-			Host:   addr,
-			Domain: domain,
-			Port:   config.Port,
+			Host:   target.Addr,
+			Domain: target.Domain,
 			Time:   t,
 			Log:    grabStates,
 		}
