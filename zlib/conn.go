@@ -1,4 +1,4 @@
-package zgrab
+package zlib
 
 import (
 	"crypto/x509"

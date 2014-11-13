@@ -24,8 +24,7 @@ _testmain.go
 # Target
 tls-banner-grab-go
 banner-grab
-zgrab$
-!zgrab/*
+zgrab
 
 # Mac OS X files
 .DS_Store

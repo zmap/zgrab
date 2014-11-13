@@ -13,8 +13,8 @@ import (
 	"os"
 	"strings"
 	"time"
-	"zgrab/banner"
-	"zgrab/zcrypto/ztls"
+	"zgrab/zlib"
+	"ztools/ztls"
 )
 
 // Command-line flags
@@ -36,8 +36,8 @@ var (
 
 // Module configurations
 var (
-	grabConfig   banner.GrabConfig
-	outputConfig banner.OutputConfig
+	grabConfig   zlib.GrabConfig
+	outputConfig zlib.OutputConfig
 )
 
 var (
@@ -273,7 +273,7 @@ func init() {
 	grabConfig.ErrorLog = logger
 }
 
-func ReadInput(addrChan chan banner.GrabTarget, inputFile *os.File) {
+func ReadInput(addrChan chan zlib.GrabTarget, inputFile *os.File) {
 	r := csv.NewReader(inputFile)
 	for {
 		row, err := r.Read()
@@ -297,7 +297,7 @@ func ReadInput(addrChan chan banner.GrabTarget, inputFile *os.File) {
 		if len(row) >= 2 {
 			domain = row[1]
 		}
-		remoteHost := banner.GrabTarget{
+		remoteHost := zlib.GrabTarget{
 			Addr:   ip,
 			Domain: domain,
 		}
@@ -307,16 +307,16 @@ func ReadInput(addrChan chan banner.GrabTarget, inputFile *os.File) {
 	close(addrChan)
 }
 
-func (s *Summary) AddProgress(p *banner.Progress) {
+func (s *Summary) AddProgress(p *zlib.Progress) {
 	s.Success += p.Success
 	s.Error += p.Error
 	s.Total += p.Total
 }
 
 func main() {
-	addrChan := make(chan banner.GrabTarget, senders*4)
-	grabChan := make(chan banner.Grab, senders*4)
-	doneChan := make(chan banner.Progress)
+	addrChan := make(chan zlib.GrabTarget, senders*4)
+	grabChan := make(chan zlib.Grab, senders*4)
+	doneChan := make(chan zlib.Progress)
 	outputDoneChan := make(chan int)
 
 	s := Summary{
@@ -329,9 +329,9 @@ func main() {
 		CAFileName: rootCAFileName,
 	}
 
-	go banner.WriteOutput(grabChan, outputDoneChan, &outputConfig)
+	go zlib.WriteOutput(grabChan, outputDoneChan, &outputConfig)
 	for i := uint(0); i < senders; i += 1 {
-		go banner.GrabBanner(addrChan, grabChan, doneChan, &grabConfig)
+		go zlib.GrabBanner(addrChan, grabChan, doneChan, &grabConfig)
 	}
 	ReadInput(addrChan, inputFile)
 
