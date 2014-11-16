@@ -3,15 +3,64 @@ package zlib
 import (
 	"bytes"
 	"crypto/x509"
+	"encoding/csv"
+	"errors"
+	"fmt"
+	"io"
 	"log"
 	"net"
 	"strconv"
 	"time"
+	"ztools/processing"
 )
 
 type GrabTarget struct {
 	Addr   net.IP
 	Domain string
+}
+
+type grabTargetDecoder struct {
+	reader *csv.Reader
+}
+
+func (gtd *grabTargetDecoder) DecodeNext() (interface{}, error) {
+	record, err := gtd.reader.Read()
+	if err != nil {
+		return nil, err
+	}
+	if len(record) < 1 {
+		return nil, errors.New("Invalid grab target (no fields)")
+	}
+	var target GrabTarget
+	target.Addr = net.ParseIP(record[0])
+	if target.Addr == nil {
+		return nil, fmt.Errorf("Invalid IP address %s", record[0])
+	}
+	// Check for a domain
+	if len(record) >= 2 {
+		target.Domain = record[1]
+	}
+	return target, nil
+}
+
+func NewGrabTargetDecoder(reader io.Reader) processing.Decoder {
+	csvReader := csv.NewReader(reader)
+	d := grabTargetDecoder{
+		reader: csvReader,
+	}
+	return &d
+}
+
+func NewGrabWorker(config *GrabConfig) processing.Worker {
+	return func(v interface{}) interface{} {
+		target, ok := v.(GrabTarget)
+		if !ok {
+			log.Print("NOT OK")
+			log.Print(v)
+			return nil
+		}
+		return GrabBanner(config, &target)
+	}
 }
 
 type GrabConfig struct {
@@ -71,7 +120,7 @@ func makeGrabber(config *GrabConfig) func(*Conn) ([]ConnectionEvent, error) {
 			c.SetCbcOnly()
 		}
 		if config.Tls {
-			if err := c.TlsHandshake(); err != nil {
+			if err := c.TLSHandshake(); err != nil {
 				return err
 			}
 		}
@@ -136,7 +185,7 @@ func makeGrabber(config *GrabConfig) func(*Conn) ([]ConnectionEvent, error) {
 		*/
 		if config.Heartbleed {
 			buf := make([]byte, 256)
-			if _, err := c.SendHeartbleedProbe(buf); err != nil {
+			if _, err := c.CheckHeartbleed(buf); err != nil {
 				return err
 			}
 		}
@@ -153,45 +202,33 @@ func makeGrabber(config *GrabConfig) func(*Conn) ([]ConnectionEvent, error) {
 	}
 }
 
-func GrabBanner(addrChan chan GrabTarget, grabChan chan Grab, doneChan chan Progress, config *GrabConfig) {
+func GrabBanner(config *GrabConfig, target *GrabTarget) Grab {
 	dial := makeDialer(config)
 	grabber := makeGrabber(config)
 	port := strconv.FormatUint(uint64(config.Port), 10)
-	p := Progress{}
-	for target := range addrChan {
-		p.Total += 1
-		addr := target.Addr.String()
-		rhost := net.JoinHostPort(addr, port)
-		t := time.Now()
-		conn, dialErr := dial(rhost)
-		if target.Domain != "" {
-			conn.SetDomain(target.Domain)
-		}
-		if dialErr != nil {
-			// Could not connect to host
-			config.ErrorLog.Printf("Could not connect to %s remote host %s: %s",
-				target.Domain, addr, dialErr.Error())
-			grabChan <- Grab{
-				Host:   target.Addr,
-				Domain: target.Domain,
-				Time:   t,
-				Log:    conn.States(),
-			}
-			p.Error += 1
-			continue
-		}
-		grabStates, err := grabber(conn)
-		if err != nil {
-			p.Error += 1
-		} else {
-			p.Success += 1
-		}
-		grabChan <- Grab{
+	addr := target.Addr.String()
+	rhost := net.JoinHostPort(addr, port)
+	t := time.Now()
+	conn, dialErr := dial(rhost)
+	if target.Domain != "" {
+		conn.SetDomain(target.Domain)
+	}
+	if dialErr != nil {
+		// Could not connect to host
+		config.ErrorLog.Printf("Could not connect to %s remote host %s: %s",
+			target.Domain, addr, dialErr.Error())
+		return Grab{
 			Host:   target.Addr,
 			Domain: target.Domain,
 			Time:   t,
-			Log:    grabStates,
+			Log:    conn.States(),
 		}
 	}
-	doneChan <- p
+	grabStates, _ := grabber(conn)
+	return Grab{
+		Host:   target.Addr,
+		Domain: target.Domain,
+		Time:   t,
+		Log:    grabStates,
+	}
 }

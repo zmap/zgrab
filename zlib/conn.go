@@ -115,7 +115,7 @@ func (c *Conn) Close() error {
 }
 
 // Extra method - Do a TLS Handshake and record progress
-func (c *Conn) TlsHandshake() error {
+func (c *Conn) TLSHandshake() error {
 	if c.isTls {
 		return fmt.Errorf(
 			"Attempted repeat handshake with remote host %s",
@@ -308,7 +308,7 @@ func (c *Conn) ImapBanner(b []byte) (int, error) {
 }
 */
 
-func (c *Conn) SendHeartbleedProbe(b []byte) (int, error) {
+func (c *Conn) CheckHeartbleed(b []byte) (int, error) {
 	if !c.isTls {
 		return 0, fmt.Errorf(
 			"Must perform TLS handshake before sending Heartbleed probe to %s",

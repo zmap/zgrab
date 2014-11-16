@@ -2,18 +2,16 @@ package main
 
 import (
 	"crypto/x509"
-	"encoding/csv"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
-	"net"
 	"os"
 	"strings"
 	"time"
 	"zgrab/zlib"
+	"ztools/processing"
 	"ztools/ztls"
 )
 
@@ -273,40 +271,6 @@ func init() {
 	grabConfig.ErrorLog = logger
 }
 
-func ReadInput(addrChan chan zlib.GrabTarget, inputFile *os.File) {
-	r := csv.NewReader(inputFile)
-	for {
-		row, err := r.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Printf("Error reading stdin: %s", err.Error())
-		}
-		// Ignore blank lines
-		if len(row) < 1 {
-			continue
-		}
-		ipString := row[0]
-		ip := net.ParseIP(ipString)
-		if ip == nil {
-			fmt.Fprintln(os.Stderr, "Invalid IP address: ", ipString)
-			continue
-		}
-		var domain string
-		if len(row) >= 2 {
-			domain = row[1]
-		}
-		remoteHost := zlib.GrabTarget{
-			Addr:   ip,
-			Domain: domain,
-		}
-
-		addrChan <- remoteHost
-	}
-	close(addrChan)
-}
-
 func (s *Summary) AddProgress(p *zlib.Progress) {
 	s.Success += p.Success
 	s.Error += p.Error
@@ -314,49 +278,8 @@ func (s *Summary) AddProgress(p *zlib.Progress) {
 }
 
 func main() {
-	addrChan := make(chan zlib.GrabTarget, senders*4)
-	grabChan := make(chan zlib.Grab, senders*4)
-	doneChan := make(chan zlib.Progress)
-	outputDoneChan := make(chan int)
-
-	s := Summary{
-		Start:      time.Now(),
-		Protocol:   grabConfig.Protocol,
-		Port:       grabConfig.Port,
-		Timeout:    timeout,
-		Mail:       mailStrPtr,
-		TlsVersion: tlsVersion,
-		CAFileName: rootCAFileName,
-	}
-
-	go zlib.WriteOutput(grabChan, outputDoneChan, &outputConfig)
-	for i := uint(0); i < senders; i += 1 {
-		go zlib.GrabBanner(addrChan, grabChan, doneChan, &grabConfig)
-	}
-	ReadInput(addrChan, inputFile)
-
-	// Wait for grabbers to finish
-	for i := uint(0); i < senders; i += 1 {
-		finalProgress := <-doneChan
-		s.AddProgress(&finalProgress)
-	}
-	close(grabChan)
-	close(doneChan)
-	s.End = time.Now()
-	s.Duration = s.End.Sub(s.Start) / time.Second
-
-	<-outputDoneChan
-	close(outputDoneChan)
-
-	if inputFile != os.Stdin {
-		inputFile.Close()
-	}
-	if outputConfig.OutputFile != os.Stdout {
-		outputConfig.OutputFile.Close()
-	}
-
-	enc := json.NewEncoder(metadataFile)
-	if err := enc.Encode(s); err != nil {
-		log.Fatal(err)
-	}
+	decoder := zlib.NewGrabTargetDecoder(inputFile)
+	encoder := json.NewEncoder(outputConfig.OutputFile)
+	worker := zlib.NewGrabWorker(&grabConfig)
+	processing.Process(decoder, encoder, worker, senders)
 }
