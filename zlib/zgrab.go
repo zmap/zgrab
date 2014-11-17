@@ -83,6 +83,7 @@ func (g *Grab) MarshalJSON() ([]byte, error) {
 		domainPtr = &g.Domain
 	}
 	time := g.Time.Format(time.RFC3339)
+	log.Print(time)
 	obj := encodedGrab{
 		Host:   g.Host.String(),
 		Domain: domainPtr,

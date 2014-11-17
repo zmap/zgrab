@@ -2,12 +2,10 @@ package zlib
 
 import (
 	"bytes"
-	"crypto/x509"
 	"encoding/csv"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strconv"
 	"time"
@@ -51,50 +49,18 @@ func NewGrabTargetDecoder(reader io.Reader) processing.Decoder {
 	return &d
 }
 
-func NewGrabWorker(config *GrabConfig) processing.Worker {
+func NewGrabWorker(config *Config) processing.Worker {
 	return func(v interface{}) interface{} {
 		target, ok := v.(GrabTarget)
 		if !ok {
-			log.Print("NOT OK")
-			log.Print(v)
 			return nil
 		}
 		return GrabBanner(config, &target)
 	}
 }
 
-type GrabConfig struct {
-	Tls          bool
-	TlsVersion   uint16
-	Banners      bool
-	SendMessage  bool
-	ReadResponse bool
-	Smtp         bool
-	Ehlo         bool
-	SmtpHelp     bool
-	StartTls     bool
-	Imap         bool
-	Pop3         bool
-	Heartbleed   bool
-	Port         uint16
-	Timeout      time.Duration
-	Message      []byte
-	EhloDomain   string
-	Protocol     string
-	ErrorLog     *log.Logger
-	LocalAddr    net.Addr
-	RootCAPool   *x509.CertPool
-	CbcOnly      bool
-}
-
-type Progress struct {
-	Success uint
-	Error   uint
-	Total   uint
-}
-
-func makeDialer(c *GrabConfig) func(string) (*Conn, error) {
-	proto := c.Protocol
+func makeDialer(c *Config) func(string) (*Conn, error) {
+	proto := "tcp"
 	timeout := c.Timeout
 	return func(addr string) (*Conn, error) {
 		deadline := time.Now().Add(timeout)
@@ -102,7 +68,7 @@ func makeDialer(c *GrabConfig) func(string) (*Conn, error) {
 			Deadline: deadline,
 		}
 		conn, err := d.Dial(proto, addr)
-		conn.maxTlsVersion = c.TlsVersion
+		conn.maxTlsVersion = c.TLSVersion
 		if err == nil {
 			conn.SetDeadline(deadline)
 		}
@@ -110,16 +76,16 @@ func makeDialer(c *GrabConfig) func(string) (*Conn, error) {
 	}
 }
 
-func makeGrabber(config *GrabConfig) func(*Conn) ([]ConnectionEvent, error) {
+func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 	// Do all the hard work here
 	g := func(c *Conn) error {
 		//banner := make([]byte, 1024)
 		response := make([]byte, 65536)
 		c.SetCAPool(config.RootCAPool)
-		if config.CbcOnly {
+		if config.CBCOnly {
 			c.SetCbcOnly()
 		}
-		if config.Tls {
+		if config.TLS {
 			if err := c.TLSHandshake(); err != nil {
 				return err
 			}
@@ -145,9 +111,9 @@ func makeGrabber(config *GrabConfig) func(*Conn) ([]ConnectionEvent, error) {
 				}
 			}
 		*/
-		if config.SendMessage {
+		if config.SendData {
 			host, _, _ := net.SplitHostPort(c.RemoteAddr().String())
-			msg := bytes.Replace(config.Message, []byte("%s"), []byte(host), -1)
+			msg := bytes.Replace(config.Data, []byte("%s"), []byte(host), -1)
 			msg = bytes.Replace(msg, []byte("%d"), []byte(c.domain), -1)
 			if _, err := c.Write(msg); err != nil {
 				return err
@@ -202,7 +168,7 @@ func makeGrabber(config *GrabConfig) func(*Conn) ([]ConnectionEvent, error) {
 	}
 }
 
-func GrabBanner(config *GrabConfig, target *GrabTarget) Grab {
+func GrabBanner(config *Config, target *GrabTarget) *Grab {
 	dial := makeDialer(config)
 	grabber := makeGrabber(config)
 	port := strconv.FormatUint(uint64(config.Port), 10)
@@ -217,7 +183,7 @@ func GrabBanner(config *GrabConfig, target *GrabTarget) Grab {
 		// Could not connect to host
 		config.ErrorLog.Printf("Could not connect to %s remote host %s: %s",
 			target.Domain, addr, dialErr.Error())
-		return Grab{
+		return &Grab{
 			Host:   target.Addr,
 			Domain: target.Domain,
 			Time:   t,
@@ -225,7 +191,7 @@ func GrabBanner(config *GrabConfig, target *GrabTarget) Grab {
 		}
 	}
 	grabStates, _ := grabber(conn)
-	return Grab{
+	return &Grab{
 		Host:   target.Addr,
 		Domain: target.Domain,
 		Time:   t,

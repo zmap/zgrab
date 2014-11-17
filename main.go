@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 	"zgrab/zlib"
@@ -34,7 +35,7 @@ var (
 
 // Module configurations
 var (
-	grabConfig   zlib.GrabConfig
+	config       zlib.Config
 	outputConfig zlib.OutputConfig
 )
 
@@ -68,87 +69,74 @@ func init() {
 	flag.StringVar(&interfaceName, "interface", "", "Network interface to send on")
 	flag.UintVar(&portFlag, "port", 80, "Port to grab on")
 	flag.UintVar(&timeout, "timeout", 10, "Set connection timeout in seconds")
-	flag.BoolVar(&grabConfig.Tls, "tls", false, "Grab over TLS")
+	flag.BoolVar(&config.TLS, "tls", false, "Grab over TLS")
 	flag.StringVar(&tlsVersion, "tls-version", "", "Max TLS version to use (implies --tls)")
 	flag.BoolVar(&udp, "udp", false, "Grab over UDP")
 	flag.UintVar(&senders, "senders", 1000, "Number of send coroutines to use")
-	flag.BoolVar(&grabConfig.Banners, "banners", false, "Read banner upon connection creation")
+	flag.BoolVar(&config.Banners, "banners", false, "Read banner upon connection creation")
 	flag.StringVar(&messageFileName, "data", "", "Send a message and read response (%s will be replaced with destination IP)")
-	flag.StringVar(&grabConfig.EhloDomain, "ehlo", "", "Send an EHLO with the specified domain (implies --smtp)")
-	flag.BoolVar(&grabConfig.SmtpHelp, "smtp-help", false, "Send a SMTP help (implies --smtp)")
-	flag.BoolVar(&grabConfig.StartTls, "starttls", false, "Send STARTTLS before negotiating")
-	flag.BoolVar(&grabConfig.Smtp, "smtp", false, "Conform to SMTP when reading responses and sending STARTTLS")
-	flag.BoolVar(&grabConfig.Imap, "imap", false, "Conform to IMAP rules when sending STARTTLS")
-	flag.BoolVar(&grabConfig.Pop3, "pop3", false, "Conform to POP3 rules when sending STARTTLS")
-	flag.BoolVar(&grabConfig.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
+	flag.StringVar(&config.EHLODomain, "ehlo", "", "Send an EHLO with the specified domain (implies --smtp)")
+	flag.BoolVar(&config.SMTPHelp, "smtp-help", false, "Send a SMTP help (implies --smtp)")
+	flag.BoolVar(&config.StartTLS, "starttls", false, "Send STARTTLS before negotiating")
+	flag.BoolVar(&config.SMTP, "smtp", false, "Conform to SMTP when reading responses and sending STARTTLS")
+	flag.BoolVar(&config.IMAP, "imap", false, "Conform to IMAP rules when sending STARTTLS")
+	flag.BoolVar(&config.POP3, "pop3", false, "Conform to POP3 rules when sending STARTTLS")
+	flag.BoolVar(&config.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
 	flag.StringVar(&rootCAFileName, "ca-file", "", "List of trusted root certificate authorities in PEM format")
-	flag.BoolVar(&grabConfig.CbcOnly, "cbc-only", false, "Send only ciphers that use CBC")
+	flag.BoolVar(&config.CBCOnly, "cbc-only", false, "Send only ciphers that use CBC")
 	flag.Parse()
 
 	// Validate TLS Versions
 	tv := strings.ToUpper(tlsVersion)
 	if tv != "" {
-		grabConfig.Tls = true
+		config.TLS = true
 	}
 
 	switch tv {
 	case "SSLV3", "SSLV30", "SSLV3.0":
-		grabConfig.TlsVersion = ztls.VersionSSL30
+		config.TLSVersion = ztls.VersionSSL30
 		tlsVersion = "SSLv3"
 	case "TLSV1", "TLSV10", "TLSV1.0":
-		grabConfig.TlsVersion = ztls.VersionTLS10
+		config.TLSVersion = ztls.VersionTLS10
 		tlsVersion = "TLSv1.0"
 	case "TLSV11", "TLSV1.1":
-		grabConfig.TlsVersion = ztls.VersionTLS11
+		config.TLSVersion = ztls.VersionTLS11
 		tlsVersion = "TLSv1.1"
 	case "", "TLSV12", "TLSV1.2":
-		grabConfig.TlsVersion = ztls.VersionTLS12
+		config.TLSVersion = ztls.VersionTLS12
 		tlsVersion = "TLSv1.2"
 	default:
 		log.Fatal("Invalid SSL/TLS versions")
 	}
 
 	// STARTTLS cannot be used with TLS
-	if grabConfig.StartTls && grabConfig.Tls {
+	if config.StartTLS && config.TLS {
 		log.Fatal("Cannot both initiate a TLS and STARTTLS connection")
 	}
 
-	if grabConfig.EhloDomain != "" {
-		grabConfig.Ehlo = true
+	if config.EHLODomain != "" {
+		config.EHLO = true
 	}
 
-	if grabConfig.SmtpHelp || grabConfig.Ehlo {
-		grabConfig.Smtp = true
+	if config.SMTPHelp || config.EHLO {
+		config.SMTP = true
 
 	}
 
-	if grabConfig.Smtp && (grabConfig.Imap || grabConfig.Pop3) {
+	if config.SMTP && (config.IMAP || config.POP3) {
 		log.Fatal("Cannot conform to SMTP and IMAP/POP3 at the same time")
 	}
 
-	if grabConfig.Smtp {
-		mailStr := "smtp"
-		mailStrPtr = &mailStr
-	} else if grabConfig.Imap {
-		mailStr := "imap"
-		mailStrPtr = &mailStr
-	} else if grabConfig.Pop3 {
-		mailStr := "pop3"
-		mailStrPtr = &mailStr
-	}
-
-	if grabConfig.Imap && grabConfig.Pop3 {
+	if config.IMAP && config.POP3 {
 		log.Fatal("Cannot conform to IMAP and POP3 at the same time")
 	}
 
-	if grabConfig.Ehlo && (grabConfig.Imap || grabConfig.Pop3) {
+	if config.EHLO && (config.IMAP || config.POP3) {
 		log.Fatal("Cannot send an EHLO when conforming to IMAP or POP3")
 	}
 
-	// Set mail type
-
 	// Heartbleed requires STARTTLS or TLS
-	if grabConfig.Heartbleed && !(grabConfig.StartTls || grabConfig.Tls) {
+	if config.Heartbleed && !(config.StartTLS || config.TLS) {
 		log.Fatal("Must specify one of --tls or --starttls for --heartbleed")
 	}
 
@@ -156,18 +144,10 @@ func init() {
 	if portFlag > 65535 {
 		log.Fatal("Port", portFlag, "out of range")
 	}
-	grabConfig.Port = uint16(portFlag)
+	config.Port = uint16(portFlag)
 
 	// Validate timeout
-	grabConfig.Timeout = time.Duration(timeout) * time.Second
-
-	// Check UDP
-	if udp {
-		log.Print("Warning: UDP is untested")
-		grabConfig.Protocol = "udp"
-	} else {
-		grabConfig.Protocol = "tcp"
-	}
+	config.Timeout = time.Duration(timeout) * time.Second
 
 	// Validate senders
 	if senders == 0 {
@@ -202,8 +182,8 @@ func init() {
 		if readErr != nil {
 			log.Fatal(err)
 		}
-		grabConfig.RootCAPool = x509.NewCertPool()
-		ok := grabConfig.RootCAPool.AppendCertsFromPEM(caBytes)
+		config.RootCAPool = x509.NewCertPool()
+		ok := config.RootCAPool.AppendCertsFromPEM(caBytes)
 		if !ok {
 			log.Fatal("Could not read certificates from PEM file. Invalid PEM?")
 		}
@@ -235,8 +215,8 @@ func init() {
 		} else {
 			buf := make([]byte, 1024)
 			n, err := messageFile.Read(buf)
-			grabConfig.SendMessage = true
-			grabConfig.Message = buf[0:n]
+			config.SendData = true
+			config.Data = buf[0:n]
 			if err != nil && err != io.EOF {
 				log.Fatal(err)
 			}
@@ -244,18 +224,16 @@ func init() {
 		}
 	}
 
-	if grabConfig.ReadResponse && !grabConfig.SendMessage {
-		log.Fatal("--read-response requires --data to be sent")
-	}
-
 	// Open metadata file
-	if metadataFileName == "-" {
-		metadataFile = os.Stdout
-	} else {
-		if metadataFile, err = os.Create(metadataFileName); err != nil {
-			log.Fatal(err)
+	/*
+		if metadataFileName == "-" {
+			metadataFile = os.Stdout
+		} else {
+			if metadataFile, err = os.Create(metadataFileName); err != nil {
+				log.Fatal(err)
+			}
 		}
-	}
+	*/
 
 	// Open log file, attach to configs
 	var logFile *os.File
@@ -267,19 +245,24 @@ func init() {
 		}
 	}
 	logger := log.New(logFile, "[BANNER-GRAB] ", log.LstdFlags)
-	outputConfig.ErrorLog = logger
-	grabConfig.ErrorLog = logger
+	config.ErrorLog = logger
 }
 
-func (s *Summary) AddProgress(p *zlib.Progress) {
-	s.Success += p.Success
-	s.Error += p.Error
-	s.Total += p.Total
+type EncoderTest struct {
+	enc *json.Encoder
+}
+
+func (e *EncoderTest) Encode(v interface{}) error {
+	val := reflect.ValueOf(&v)
+	p := reflect.Indirect(val).Interface()
+	log.Print(reflect.TypeOf(p))
+	log.Print(reflect.TypeOf(&p))
+	return e.enc.Encode(p)
 }
 
 func main() {
 	decoder := zlib.NewGrabTargetDecoder(inputFile)
 	encoder := json.NewEncoder(outputConfig.OutputFile)
-	worker := zlib.NewGrabWorker(&grabConfig)
+	worker := zlib.NewGrabWorker(&config)
 	processing.Process(decoder, encoder, worker, senders)
 }

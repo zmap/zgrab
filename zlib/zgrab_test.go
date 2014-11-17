@@ -2,6 +2,7 @@ package zlib
 
 import (
 	"encoding/json"
+	"log"
 	"net"
 	"testing"
 	"time"
@@ -29,6 +30,8 @@ func (s *ZGrabSuite) TestDecodeGrab(c *C) {
 	g.Host = net.ParseIP("2.3.4.5")
 	g.Log = make([]ConnectionEvent, 1)
 	g.Log[0].Data = new(mockEventData).saneDefaults()
+	b, _ := json.Marshal(g)
+	log.Print(string(b))
 	var d Grab
 	marshalAndUnmarshal(g, &d, c)
 }
