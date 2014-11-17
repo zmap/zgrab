@@ -4,8 +4,8 @@ import "encoding/json"
 
 // An EHLOEvent represents the response to an EHLO
 type EHLOEvent struct {
+	Domain   string
 	Response []byte
-	Error    error
 }
 
 var EHLOEventType = EventType{
@@ -14,8 +14,7 @@ var EHLOEventType = EventType{
 }
 
 type encodedEHLOEvent struct {
-	Response []byte  `json:"response"`
-	Error    *string `json:"error"`
+	Response []byte `json:"response"`
 }
 
 func (e *EHLOEvent) GetType() EventType {
@@ -26,7 +25,6 @@ func (e *EHLOEvent) GetType() EventType {
 func (e *EHLOEvent) MarshalJSON() ([]byte, error) {
 	encoded := encodedEHLOEvent{
 		Response: e.Response,
-		Error:    errorToStringPointer(e.Error),
 	}
 	return json.Marshal(encoded)
 }
@@ -38,10 +36,47 @@ func (e *EHLOEvent) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	e.Response = encoded.Response
-	e.Error = stringPointerToError(encoded.Error)
 	return nil
 }
 
 func newEHLOEvent() EventData {
 	return new(EHLOEvent)
+}
+
+// A StartTLSEvent represents sending a StartTLS
+type StartTLSEvent struct {
+	Command  string
+	Response []byte
+}
+
+var StartTLSEventType = EventType{
+	TypeName:         CONNECTION_EVENT_STARTTLS_NAME,
+	GetEmptyInstance: func() EventData { return new(StartTLSEvent) },
+}
+
+type encodedStartTLSEvent struct {
+	Command  string
+	Response []byte
+}
+
+func (s *StartTLSEvent) GetType() EventType {
+	return StartTLSEventType
+}
+
+func (s *StartTLSEvent) MarshalJSON() ([]byte, error) {
+	e := encodedStartTLSEvent{
+		Command:  s.Command,
+		Response: s.Response,
+	}
+	return json.Marshal(e)
+}
+
+func (s *StartTLSEvent) UnmarshalJSON(b []byte) error {
+	var e encodedStartTLSEvent
+	if err := json.Unmarshal(b, &e); err != nil {
+		return err
+	}
+	s.Command = e.Command
+	s.Response = e.Response
+	return nil
 }

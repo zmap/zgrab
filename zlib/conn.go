@@ -2,6 +2,7 @@ package zlib
 
 import (
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"net"
 	"regexp"
@@ -144,8 +145,6 @@ func (c *Conn) TLSHandshake() error {
 	return err
 }
 
-/*
-
 func (c *Conn) sendStarttlsCommand(command string) error {
 	// Don't doublehandshake
 	if c.isTls {
@@ -160,58 +159,65 @@ func (c *Conn) sendStarttlsCommand(command string) error {
 }
 
 // Do a STARTTLS handshake
-func (c *Conn) SmtpStarttlsHandshake() error {
+func (c *Conn) SMTPStarttlsHandshake() error {
 	// Make the state
-	ss := starttlsState{command: []byte(SMTP_COMMAND)}
+	ss := StartTLSEvent{Command: SMTP_COMMAND}
+
 	// Send the command
-	ss.err = c.sendStarttlsCommand(SMTP_COMMAND)
-	// Read the response on a successful send
-	if ss.err == nil {
-		buf := make([]byte, 256)
-		n, err := c.readSmtpResponse(buf)
-		ss.response = buf[0:n]
-		ss.err = err
+	if err := c.sendStarttlsCommand(SMTP_COMMAND); err != nil {
+		c.appendEvent(&ss, err)
+		return err
 	}
-	// No matter what happened, record the state
-	c.operations = append(c.operations, &ss)
+	// Read the response on a successful send
+	buf := make([]byte, 256)
+	n, err := c.readSmtpResponse(buf)
+	ss.Response = buf[0:n]
+
+	// Record everything no matter the result
+	c.appendEvent(&ss, err)
+
 	// Stop if we failed already
-	if ss.err != nil {
-		return ss.err
+	if err != nil {
+		return err
 	}
 	// Successful so far, attempt to do the actual handshake
-	return c.TlsHandshake()
+	return c.TLSHandshake()
 }
 
-func (c *Conn) Pop3StarttlsHandshake() error {
-	ss := starttlsState{command: []byte(POP3_COMMAND)}
-	ss.err = c.sendStarttlsCommand(POP3_COMMAND)
-	if ss.err == nil {
-		buf := make([]byte, 512)
-		n, err := c.readPop3Response(buf)
-		ss.response = buf[0:n]
-		ss.err = err
+func (c *Conn) POP3StarttlsHandshake() error {
+	ss := StartTLSEvent{Command: POP3_COMMAND}
+	if err := c.sendStarttlsCommand(POP3_COMMAND); err != nil {
+		c.appendEvent(&ss, err)
+		return err
 	}
-	c.operations = append(c.operations, &ss)
-	if ss.err != nil {
-		return ss.err
+
+	buf := make([]byte, 512)
+	n, err := c.readPop3Response(buf)
+	ss.Response = buf[0:n]
+	c.appendEvent(&ss, err)
+
+	if err != nil {
+		return err
 	}
-	return c.TlsHandshake()
+	return c.TLSHandshake()
 }
 
-func (c *Conn) ImapStarttlsHandshake() error {
-	ss := starttlsState{command: []byte(IMAP_COMMAND)}
-	ss.err = c.sendStarttlsCommand(IMAP_COMMAND)
-	if ss.err == nil {
-		buf := make([]byte, 512)
-		n, err := c.readImapStatusResponse(buf)
-		ss.response = buf[0:n]
-		ss.err = err
+func (c *Conn) IMAPStarttlsHandshake() error {
+	ss := StartTLSEvent{Command: IMAP_COMMAND}
+	if err := c.sendStarttlsCommand(IMAP_COMMAND); err != nil {
+		c.appendEvent(&ss, err)
+		return err
 	}
-	c.operations = append(c.operations, &ss)
-	if ss.err != nil {
-		return ss.err
+
+	buf := make([]byte, 512)
+	n, err := c.readImapStatusResponse(buf)
+	ss.Response = buf[0:n]
+	c.appendEvent(&ss, err)
+
+	if err != nil {
+		return err
 	}
-	return c.TlsHandshake()
+	return c.TLSHandshake()
 }
 
 func (c *Conn) readUntilRegex(res []byte, expr *regexp.Regexp) (int, error) {
@@ -238,32 +244,32 @@ func (c *Conn) readSmtpResponse(res []byte) (int, error) {
 	return c.readUntilRegex(res, smtpEndRegex)
 }
 
-func (c *Conn) SmtpBanner(b []byte) (int, error) {
+func (c *Conn) SMTPBanner(b []byte) (int, error) {
 	n, err := c.readSmtpResponse(b)
-	rs := readState{}
-	rs.response = b[0:n]
-	rs.err = err
-	c.operations = append(c.operations, &rs)
+	r := ReadEvent{}
+	r.Response = b[0:n]
+	c.appendEvent(&r, err)
 	return n, err
 }
 
-func (c *Conn) Ehlo(domain string) error {
+func (c *Conn) EHLO(domain string) error {
 	cmd := []byte("EHLO " + domain + "\r\n")
-	es := ehloState{}
-	_, writeErr := c.getUnderlyingConn().Write(cmd)
-	if writeErr != nil {
-		es.err = writeErr
-	} else {
-		buf := make([]byte, 512)
-		n, readErr := c.readSmtpResponse(buf)
-		es.err = readErr
-		es.response = buf[0:n]
+	ee := EHLOEvent{}
+	if _, err := c.getUnderlyingConn().Write(cmd); err != nil {
+		c.appendEvent(&ee, err)
+		return err
 	}
-	c.operations = append(c.operations, &es)
-	return es.err
+
+	buf := make([]byte, 512)
+	n, err := c.readSmtpResponse(buf)
+	ee.Response = buf[0:n]
+	c.appendEvent(&ee, err)
+
+	return err
 }
 
-func (c *Conn) SmtpHelp() error {
+/*
+func (c *Conn) SMTPHelp() error {
 	cmd := []byte("HELP\r\n")
 	hs := helpState{}
 	_, writeErr := c.getUnderlyingConn().Write(cmd)
@@ -278,18 +284,18 @@ func (c *Conn) SmtpHelp() error {
 	c.operations = append(c.operations, &hs)
 	return hs.err
 }
+*/
 
 func (c *Conn) readPop3Response(res []byte) (int, error) {
 	return c.readUntilRegex(res, pop3EndRegex)
 }
 
-func (c *Conn) Pop3Banner(b []byte) (int, error) {
+func (c *Conn) POP3Banner(b []byte) (int, error) {
 	n, err := c.readPop3Response(b)
-	rs := readState{
-		response: b[0:n],
-		err:      err,
+	rs := ReadEvent{
+		Response: b[0:n],
 	}
-	c.operations = append(c.operations, &rs)
+	c.appendEvent(&rs, err)
 	return n, err
 }
 
@@ -297,16 +303,14 @@ func (c *Conn) readImapStatusResponse(res []byte) (int, error) {
 	return c.readUntilRegex(res, imapStatusEndRegex)
 }
 
-func (c *Conn) ImapBanner(b []byte) (int, error) {
+func (c *Conn) IMAPBanner(b []byte) (int, error) {
 	n, err := c.readImapStatusResponse(b)
-	rs := readState{
-		response: b[0:n],
-		err:      err,
+	rs := ReadEvent{
+		Response: b[0:n],
 	}
-	c.operations = append(c.operations, &rs)
+	c.appendEvent(&rs, err)
 	return n, err
 }
-*/
 
 func (c *Conn) CheckHeartbleed(b []byte) (int, error) {
 	if !c.isTls {
@@ -329,4 +333,12 @@ func (c *Conn) CheckHeartbleed(b []byte) (int, error) {
 
 func (c *Conn) States() []ConnectionEvent {
 	return c.operations
+}
+
+func (c *Conn) appendEvent(data EventData, err error) {
+	event := ConnectionEvent{
+		Data:  data,
+		Error: err,
+	}
+	c.operations = append(c.operations, event)
 }

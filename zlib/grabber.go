@@ -79,7 +79,7 @@ func makeDialer(c *Config) func(string) (*Conn, error) {
 func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 	// Do all the hard work here
 	g := func(c *Conn) error {
-		//banner := make([]byte, 1024)
+		banner := make([]byte, 1024)
 		response := make([]byte, 65536)
 		c.SetCAPool(config.RootCAPool)
 		if config.CBCOnly {
@@ -90,27 +90,25 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 				return err
 			}
 		}
-		/*
-			if config.Banners {
-					if config.Smtp {
-						if _, err := c.SmtpBanner(banner); err != nil {
-							return err
-						}
-					} else if config.Pop3 {
-						if _, err := c.Pop3Banner(banner); err != nil {
-							return err
-						}
-					} else if config.Imap {
-						if _, err := c.ImapBanner(banner); err != nil {
-							return err
-						}
-					} else {
+		if config.Banners {
+			if config.SMTP {
+				if _, err := c.SMTPBanner(banner); err != nil {
+					return err
+				}
+			} else if config.POP3 {
+				if _, err := c.POP3Banner(banner); err != nil {
+					return err
+				}
+			} else if config.IMAP {
+				if _, err := c.IMAPBanner(banner); err != nil {
+					return err
+				}
+			} else {
 				if _, err := c.Read(banner); err != nil {
 					return err
 				}
-				}
 			}
-		*/
+		}
 		if config.SendData {
 			host, _, _ := net.SplitHostPort(c.RemoteAddr().String())
 			msg := bytes.Replace(config.Data, []byte("%s"), []byte(host), -1)
