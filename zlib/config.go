@@ -35,27 +35,3 @@ type Config struct {
 	// Error handling
 	ErrorLog *log.Logger
 }
-
-/*
-Tls          bool
-TlsVersion   uint16
-Banners      bool
-SendMessage  bool
-ReadResponse bool
-Smtp         bool
-Ehlo         bool
-SmtpHelp     bool
-StartTls     bool
-Imap         bool
-Pop3         bool
-Heartbleed   bool
-Port         uint16
-Timeout      time.Duration
-Message      []byte
-EhloDomain   string
-Protocol     string
-ErrorLog     *log.Logger
-LocalAddr    net.Addr
-RootCAPool   *x509.CertPool
-CbcOnly      bool
-*/

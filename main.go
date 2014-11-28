@@ -154,23 +154,8 @@ func init() {
 		log.Fatal("Error: Need at least one sender")
 	}
 
-	// Check output type
-
 	// Check the network interface
 	var err error
-	/*
-		if interfaceName != "" {
-			var iface *net.Interface
-			if iface, err = net.InterfaceByName(interfaceName); err != nil {
-				log.Fatal("Error: Invalid network interface: ", interfaceName)
-			}
-			var addrs []net.Addr
-			if addrs, err = iface.Addrs(); err != nil || len(addrs) == 0 {
-				log.Fatal("Error: No addresses for interface ", interfaceName)
-			}
-			grabConfig.LocalAddr = addrs[0]
-		}
-	*/
 
 	// Look at CA file
 	if rootCAFileName != "" {
