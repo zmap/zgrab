@@ -80,3 +80,37 @@ func (s *StartTLSEvent) UnmarshalJSON(b []byte) error {
 	s.Response = e.Response
 	return nil
 }
+
+// An SMTPHelpEvent represents sending a "HELP" message over SMTP
+type SMTPHelpEvent struct {
+	Response []byte
+}
+
+var SMTPHelpEventType = EventType{
+	TypeName:         "smtp_help",
+	GetEmptyInstance: func() EventData { return new(SMTPHelpEvent) },
+}
+
+func (h *SMTPHelpEvent) GetType() EventType {
+	return SMTPHelpEventType
+}
+
+type encodedSMTPHelpEvent struct {
+	Response []byte
+}
+
+func (h *SMTPHelpEvent) MarshalJSON() ([]byte, error) {
+	e := encodedSMTPHelpEvent{
+		Response: h.Response,
+	}
+	return json.Marshal(e)
+}
+
+func (h *SMTPHelpEvent) UnmarshalJSON(b []byte) error {
+	var e encodedSMTPHelpEvent
+	if err := json.Unmarshal(b, &e); err != nil {
+		return err
+	}
+	h.Response = e.Response
+	return nil
+}

@@ -264,27 +264,22 @@ func (c *Conn) EHLO(domain string) error {
 	n, err := c.readSmtpResponse(buf)
 	ee.Response = buf[0:n]
 	c.appendEvent(&ee, err)
-
 	return err
 }
 
-/*
 func (c *Conn) SMTPHelp() error {
 	cmd := []byte("HELP\r\n")
-	hs := helpState{}
-	_, writeErr := c.getUnderlyingConn().Write(cmd)
-	if writeErr != nil {
-		hs.err = writeErr
-	} else {
-		buf := make([]byte, 512)
-		n, readErr := c.readSmtpResponse(buf)
-		hs.err = readErr
-		hs.response = buf[0:n]
+	h := new(SMTPHelpEvent)
+	if _, err := c.getUnderlyingConn().Write(cmd); err != nil {
+		c.appendEvent(h, err)
+		return err
 	}
-	c.operations = append(c.operations, &hs)
-	return hs.err
+	buf := make([]byte, 512)
+	n, err := c.readSmtpResponse(buf)
+	h.Response = buf[0:n]
+	c.appendEvent(h, err)
+	return err
 }
-*/
 
 func (c *Conn) readPop3Response(res []byte) (int, error) {
 	return c.readUntilRegex(res, pop3EndRegex)
