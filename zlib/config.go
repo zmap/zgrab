@@ -2,8 +2,8 @@ package zlib
 
 import (
 	"crypto/x509"
-	"log"
 	"time"
+	"ztools/zlog"
 )
 
 type Config struct {
@@ -33,5 +33,5 @@ type Config struct {
 	StartTLS   bool
 
 	// Error handling
-	ErrorLog *log.Logger
+	Log *zlog.Logger
 }

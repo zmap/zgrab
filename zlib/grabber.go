@@ -2,61 +2,14 @@ package zlib
 
 import (
 	"bytes"
-	"encoding/csv"
-	"errors"
-	"fmt"
-	"io"
 	"net"
 	"strconv"
 	"time"
-	"ztools/processing"
 )
 
 type GrabTarget struct {
 	Addr   net.IP
 	Domain string
-}
-
-type grabTargetDecoder struct {
-	reader *csv.Reader
-}
-
-func (gtd *grabTargetDecoder) DecodeNext() (interface{}, error) {
-	record, err := gtd.reader.Read()
-	if err != nil {
-		return nil, err
-	}
-	if len(record) < 1 {
-		return nil, errors.New("Invalid grab target (no fields)")
-	}
-	var target GrabTarget
-	target.Addr = net.ParseIP(record[0])
-	if target.Addr == nil {
-		return nil, fmt.Errorf("Invalid IP address %s", record[0])
-	}
-	// Check for a domain
-	if len(record) >= 2 {
-		target.Domain = record[1]
-	}
-	return target, nil
-}
-
-func NewGrabTargetDecoder(reader io.Reader) processing.Decoder {
-	csvReader := csv.NewReader(reader)
-	d := grabTargetDecoder{
-		reader: csvReader,
-	}
-	return &d
-}
-
-func NewGrabWorker(config *Config) processing.Worker {
-	return func(v interface{}) interface{} {
-		target, ok := v.(GrabTarget)
-		if !ok {
-			return nil
-		}
-		return GrabBanner(config, &target)
-	}
 }
 
 func makeDialer(c *Config) func(string) (*Conn, error) {
@@ -159,7 +112,7 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 	return func(c *Conn) ([]ConnectionEvent, error) {
 		err := g(c)
 		if err != nil {
-			config.ErrorLog.Printf("Conversation error with remote host %s: %s",
+			config.Log.Errorf("Conversation error with remote host %s: %s",
 				c.RemoteAddr().String(), err.Error())
 		}
 		return c.States(), err
@@ -179,7 +132,7 @@ func GrabBanner(config *Config, target *GrabTarget) *Grab {
 	}
 	if dialErr != nil {
 		// Could not connect to host
-		config.ErrorLog.Printf("Could not connect to %s remote host %s: %s",
+		config.Log.Errorf("Could not connect to %s remote host %s: %s",
 			target.Domain, addr, dialErr.Error())
 		return &Grab{
 			Host:   target.Addr,

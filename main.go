@@ -6,13 +6,12 @@ import (
 	"flag"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
-	"reflect"
 	"strings"
 	"time"
 	"zgrab/zlib"
 	"ztools/processing"
+	"ztools/zlog"
 	"ztools/ztls"
 )
 
@@ -106,12 +105,12 @@ func init() {
 		config.TLSVersion = ztls.VersionTLS12
 		tlsVersion = "TLSv1.2"
 	default:
-		log.Fatal("Invalid SSL/TLS versions")
+		zlog.Fatal("Invalid SSL/TLS versions")
 	}
 
 	// STARTTLS cannot be used with TLS
 	if config.StartTLS && config.TLS {
-		log.Fatal("Cannot both initiate a TLS and STARTTLS connection")
+		zlog.Fatal("Cannot both initiate a TLS and STARTTLS connection")
 	}
 
 	if config.EHLODomain != "" {
@@ -124,25 +123,25 @@ func init() {
 	}
 
 	if config.SMTP && (config.IMAP || config.POP3) {
-		log.Fatal("Cannot conform to SMTP and IMAP/POP3 at the same time")
+		zlog.Fatal("Cannot conform to SMTP and IMAP/POP3 at the same time")
 	}
 
 	if config.IMAP && config.POP3 {
-		log.Fatal("Cannot conform to IMAP and POP3 at the same time")
+		zlog.Fatal("Cannot conform to IMAP and POP3 at the same time")
 	}
 
 	if config.EHLO && (config.IMAP || config.POP3) {
-		log.Fatal("Cannot send an EHLO when conforming to IMAP or POP3")
+		zlog.Fatal("Cannot send an EHLO when conforming to IMAP or POP3")
 	}
 
 	// Heartbleed requires STARTTLS or TLS
 	if config.Heartbleed && !(config.StartTLS || config.TLS) {
-		log.Fatal("Must specify one of --tls or --starttls for --heartbleed")
+		zlog.Fatal("Must specify one of --tls or --starttls for --heartbleed")
 	}
 
 	// Validate port
 	if portFlag > 65535 {
-		log.Fatal("Port", portFlag, "out of range")
+		zlog.Fatal("Port", portFlag, "out of range")
 	}
 	config.Port = uint16(portFlag)
 
@@ -151,7 +150,7 @@ func init() {
 
 	// Validate senders
 	if senders == 0 {
-		log.Fatal("Error: Need at least one sender")
+		zlog.Fatal("Error: Need at least one sender")
 	}
 
 	// Check the network interface
@@ -161,16 +160,16 @@ func init() {
 	if rootCAFileName != "" {
 		var fd *os.File
 		if fd, err = os.Open(rootCAFileName); err != nil {
-			log.Fatal(err)
+			zlog.Fatal(err)
 		}
 		caBytes, readErr := ioutil.ReadAll(fd)
 		if readErr != nil {
-			log.Fatal(err)
+			zlog.Fatal(err)
 		}
 		config.RootCAPool = x509.NewCertPool()
 		ok := config.RootCAPool.AppendCertsFromPEM(caBytes)
 		if !ok {
-			log.Fatal("Could not read certificates from PEM file. Invalid PEM?")
+			zlog.Fatal("Could not read certificates from PEM file. Invalid PEM?")
 		}
 	}
 
@@ -180,7 +179,7 @@ func init() {
 		inputFile = os.Stdin
 	default:
 		if inputFile, err = os.Open(inputFileName); err != nil {
-			log.Fatal(err)
+			zlog.Fatal(err)
 		}
 	}
 
@@ -189,21 +188,21 @@ func init() {
 		outputConfig.OutputFile = os.Stdout
 	default:
 		if outputConfig.OutputFile, err = os.Create(outputFileName); err != nil {
-			log.Fatal(err)
+			zlog.Fatal(err)
 		}
 	}
 
 	// Open message file, if applicable
 	if messageFileName != "" {
 		if messageFile, err := os.Open(messageFileName); err != nil {
-			log.Fatal(err)
+			zlog.Fatal(err)
 		} else {
 			buf := make([]byte, 1024)
 			n, err := messageFile.Read(buf)
 			config.SendData = true
 			config.Data = buf[0:n]
 			if err != nil && err != io.EOF {
-				log.Fatal(err)
+				zlog.Fatal(err)
 			}
 			messageFile.Close()
 		}
@@ -226,28 +225,16 @@ func init() {
 		logFile = os.Stderr
 	} else {
 		if logFile, err = os.Create(logFileName); err != nil {
-			log.Fatal(err)
+			zlog.Fatalf("Unable to open logfile %s", logFileName)
 		}
 	}
-	logger := log.New(logFile, "[BANNER-GRAB] ", log.LstdFlags)
-	config.ErrorLog = logger
-}
-
-type EncoderTest struct {
-	enc *json.Encoder
-}
-
-func (e *EncoderTest) Encode(v interface{}) error {
-	val := reflect.ValueOf(&v)
-	p := reflect.Indirect(val).Interface()
-	log.Print(reflect.TypeOf(p))
-	log.Print(reflect.TypeOf(&p))
-	return e.enc.Encode(p)
+	logger := zlog.New(logFile, "banner-grab")
+	config.Log = logger
 }
 
 func main() {
 	decoder := zlib.NewGrabTargetDecoder(inputFile)
 	encoder := json.NewEncoder(outputConfig.OutputFile)
-	worker := zlib.NewGrabWorker(&config)
+	worker := zlib.NewGrabWorker(&config, senders)
 	processing.Process(decoder, encoder, worker, senders)
 }
