@@ -102,12 +102,10 @@ func (c *Conn) Write(b []byte) (int, error) {
 
 func (c *Conn) Read(b []byte) (int, error) {
 	n, err := c.getUnderlyingConn().Read(b)
-	r := ReadEvent{Response: b[0:n]}
-	event := ConnectionEvent{
-		Data:  &r,
-		Error: err,
+	r := ReadEvent{
+		Response: b[0:n],
 	}
-	c.operations = append(c.operations, event)
+	c.appendEvent(&r, err)
 	return n, err
 }
 
@@ -145,7 +143,7 @@ func (c *Conn) TLSHandshake() error {
 	return err
 }
 
-func (c *Conn) sendStarttlsCommand(command string) error {
+func (c *Conn) sendStartTLSCommand(command string) error {
 	// Don't doublehandshake
 	if c.isTls {
 		return fmt.Errorf(
@@ -159,12 +157,12 @@ func (c *Conn) sendStarttlsCommand(command string) error {
 }
 
 // Do a STARTTLS handshake
-func (c *Conn) SMTPStarttlsHandshake() error {
+func (c *Conn) SMTPStartTLSHandshake() error {
 	// Make the state
 	ss := StartTLSEvent{Command: SMTP_COMMAND}
 
 	// Send the command
-	if err := c.sendStarttlsCommand(SMTP_COMMAND); err != nil {
+	if err := c.sendStartTLSCommand(SMTP_COMMAND); err != nil {
 		c.appendEvent(&ss, err)
 		return err
 	}
@@ -184,9 +182,9 @@ func (c *Conn) SMTPStarttlsHandshake() error {
 	return c.TLSHandshake()
 }
 
-func (c *Conn) POP3StarttlsHandshake() error {
+func (c *Conn) POP3StartTLSHandshake() error {
 	ss := StartTLSEvent{Command: POP3_COMMAND}
-	if err := c.sendStarttlsCommand(POP3_COMMAND); err != nil {
+	if err := c.sendStartTLSCommand(POP3_COMMAND); err != nil {
 		c.appendEvent(&ss, err)
 		return err
 	}
@@ -202,9 +200,9 @@ func (c *Conn) POP3StarttlsHandshake() error {
 	return c.TLSHandshake()
 }
 
-func (c *Conn) IMAPStarttlsHandshake() error {
+func (c *Conn) IMAPStartTLSHandshake() error {
 	ss := StartTLSEvent{Command: IMAP_COMMAND}
-	if err := c.sendStarttlsCommand(IMAP_COMMAND); err != nil {
+	if err := c.sendStartTLSCommand(IMAP_COMMAND); err != nil {
 		c.appendEvent(&ss, err)
 		return err
 	}
@@ -246,9 +244,9 @@ func (c *Conn) readSmtpResponse(res []byte) (int, error) {
 
 func (c *Conn) SMTPBanner(b []byte) (int, error) {
 	n, err := c.readSmtpResponse(b)
-	r := ReadEvent{}
-	r.Response = b[0:n]
-	c.appendEvent(&r, err)
+	mb := MailBannerEvent{}
+	mb.Banner = string(b[0:n])
+	c.appendEvent(&mb, err)
 	return n, err
 }
 
@@ -287,10 +285,10 @@ func (c *Conn) readPop3Response(res []byte) (int, error) {
 
 func (c *Conn) POP3Banner(b []byte) (int, error) {
 	n, err := c.readPop3Response(b)
-	rs := ReadEvent{
-		Response: b[0:n],
+	mb := MailBannerEvent{
+		Banner: string(b[0:n]),
 	}
-	c.appendEvent(&rs, err)
+	c.appendEvent(&mb, err)
 	return n, err
 }
 
@@ -300,10 +298,10 @@ func (c *Conn) readImapStatusResponse(res []byte) (int, error) {
 
 func (c *Conn) IMAPBanner(b []byte) (int, error) {
 	n, err := c.readImapStatusResponse(b)
-	rs := ReadEvent{
-		Response: b[0:n],
+	mb := MailBannerEvent{
+		Banner: string(b[0:n]),
 	}
-	c.appendEvent(&rs, err)
+	c.appendEvent(&mb, err)
 	return n, err
 }
 

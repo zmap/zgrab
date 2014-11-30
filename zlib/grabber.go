@@ -120,33 +120,33 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 				return err
 			}
 		}
-		/*
-			if config.Ehlo {
-				if err := c.Ehlo(config.EhloDomain); err != nil {
+
+		if config.EHLO {
+			if err := c.EHLO(config.EHLODomain); err != nil {
+				return err
+			}
+		}
+		if config.SMTPHelp {
+			if err := c.SMTPHelp(); err != nil {
+				return err
+			}
+		}
+		if config.StartTLS {
+			if config.IMAP {
+				if err := c.IMAPStartTLSHandshake(); err != nil {
+					return err
+				}
+			} else if config.POP3 {
+				if err := c.POP3StartTLSHandshake(); err != nil {
+					return err
+				}
+			} else {
+				if err := c.SMTPStartTLSHandshake(); err != nil {
 					return err
 				}
 			}
-			if config.SmtpHelp {
-				if err := c.SmtpHelp(); err != nil {
-					return err
-				}
-			}
-			if config.StartTls {
-				if config.Imap {
-					if err := c.ImapStarttlsHandshake(); err != nil {
-						return err
-					}
-				} else if config.Pop3 {
-					if err := c.Pop3StarttlsHandshake(); err != nil {
-						return err
-					}
-				} else {
-					if err := c.SmtpStarttlsHandshake(); err != nil {
-						return err
-					}
-				}
-			}
-		*/
+		}
+
 		if config.Heartbleed {
 			buf := make([]byte, 256)
 			if _, err := c.CheckHeartbleed(buf); err != nil {
@@ -159,7 +159,7 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 	return func(c *Conn) ([]ConnectionEvent, error) {
 		err := g(c)
 		if err != nil {
-			config.ErrorLog.Printf("Conversation error with remote host %s: %s",
+			config.ErrorLog.Errorf("Conversation error with remote host %s: %s",
 				c.RemoteAddr().String(), err.Error())
 		}
 		return c.States(), err
@@ -179,7 +179,7 @@ func GrabBanner(config *Config, target *GrabTarget) *Grab {
 	}
 	if dialErr != nil {
 		// Could not connect to host
-		config.ErrorLog.Printf("Could not connect to %s remote host %s: %s",
+		config.ErrorLog.Errorf("Could not connect to %s remote host %s: %s",
 			target.Domain, addr, dialErr.Error())
 		return &Grab{
 			Host:   target.Addr,

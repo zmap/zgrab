@@ -2,8 +2,8 @@ package zlib
 
 import (
 	"crypto/x509"
-	"log"
 	"time"
+	"ztools/zlog"
 )
 
 type Config struct {
@@ -17,10 +17,11 @@ type Config struct {
 	Heartbleed bool
 	RootCAPool *x509.CertPool
 
-	// Banners
+	// Banners and Data
 	Banners  bool
 	SendData bool
 	Data     []byte
+	Raw      bool
 
 	// Mail
 	SMTP       bool
@@ -33,5 +34,5 @@ type Config struct {
 	StartTLS   bool
 
 	// Error handling
-	ErrorLog *log.Logger
+	ErrorLog *zlog.Logger
 }

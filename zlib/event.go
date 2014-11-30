@@ -56,4 +56,5 @@ const (
 	CONNECTION_EVENT_HEARTBLEED_NAME = "heartbleed"
 	CONNECTION_EVENT_EHLO_NAME       = "ehlo"
 	CONNECTION_EVENT_STARTTLS_NAME   = "starttls"
+	CONNECTION_EVENT_MAIL_BANNER     = "mail_banner"
 )
