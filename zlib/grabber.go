@@ -83,7 +83,7 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 		response := make([]byte, 65536)
 		c.SetCAPool(config.RootCAPool)
 		if config.CBCOnly {
-			c.SetCbcOnly()
+			c.SetCBCOnly()
 		}
 		if config.TLS {
 			if err := c.TLSHandshake(); err != nil {
