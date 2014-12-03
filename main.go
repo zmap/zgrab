@@ -39,23 +39,8 @@ var (
 )
 
 var (
-	mailStrPtr *string = nil
+	mailType string
 )
-
-type Summary struct {
-	Success    uint          `json:"success_count"`
-	Error      uint          `json:"error_count"`
-	Total      uint          `json:"total"`
-	Protocol   string        `json:"protocol"`
-	Port       uint16        `json:"port"`
-	Start      time.Time     `json:"start_time"`
-	End        time.Time     `json:"end_time"`
-	Duration   time.Duration `json:"duration"`
-	Timeout    uint          `json:"timeout"`
-	Mail       *string       `json:"mail_type"`
-	TlsVersion string        `json:"max_tls_version"`
-	CAFileName string        `json:"ca_file"`
-}
 
 // Pre-main bind flags to variables
 func init() {
@@ -91,21 +76,24 @@ func init() {
 		config.TLS = true
 	}
 
-	switch tv {
-	case "SSLV3", "SSLV30", "SSLV3.0":
-		config.TLSVersion = ztls.VersionSSL30
-		tlsVersion = "SSLv3"
-	case "TLSV1", "TLSV10", "TLSV1.0":
-		config.TLSVersion = ztls.VersionTLS10
-		tlsVersion = "TLSv1.0"
-	case "TLSV11", "TLSV1.1":
-		config.TLSVersion = ztls.VersionTLS11
-		tlsVersion = "TLSv1.1"
-	case "", "TLSV12", "TLSV1.2":
-		config.TLSVersion = ztls.VersionTLS12
-		tlsVersion = "TLSv1.2"
-	default:
-		zlog.Fatal("Invalid SSL/TLS versions")
+	if config.TLS {
+
+		switch tv {
+		case "SSLV3", "SSLV30", "SSLV3.0":
+			config.TLSVersion = ztls.VersionSSL30
+			tlsVersion = "SSLv3"
+		case "TLSV1", "TLSV10", "TLSV1.0":
+			config.TLSVersion = ztls.VersionTLS10
+			tlsVersion = "TLSv1.0"
+		case "TLSV11", "TLSV1.1":
+			config.TLSVersion = ztls.VersionTLS11
+			tlsVersion = "TLSv1.1"
+		case "", "TLSV12", "TLSV1.2":
+			config.TLSVersion = ztls.VersionTLS12
+			tlsVersion = "TLSv1.2"
+		default:
+			zlog.Fatal("Invalid SSL/TLS versions")
+		}
 	}
 
 	// STARTTLS cannot be used with TLS
@@ -132,6 +120,14 @@ func init() {
 
 	if config.EHLO && (config.IMAP || config.POP3) {
 		zlog.Fatal("Cannot send an EHLO when conforming to IMAP or POP3")
+	}
+
+	if config.SMTP {
+		mailType = "SMTP"
+	} else if config.POP3 {
+		mailType = "POP3"
+	} else if config.IMAP {
+		mailType = "IMAP"
 	}
 
 	// Heartbleed requires STARTTLS or TLS
@@ -209,15 +205,13 @@ func init() {
 	}
 
 	// Open metadata file
-	/*
-		if metadataFileName == "-" {
-			metadataFile = os.Stdout
-		} else {
-			if metadataFile, err = os.Create(metadataFileName); err != nil {
-				log.Fatal(err)
-			}
+	if metadataFileName == "-" {
+		metadataFile = os.Stdout
+	} else {
+		if metadataFile, err = os.Create(metadataFileName); err != nil {
+			zlog.Fatal(err)
 		}
-	*/
+	}
 
 	// Open log file, attach to configs
 	var logFile *os.File
@@ -236,5 +230,24 @@ func main() {
 	decoder := zlib.NewGrabTargetDecoder(inputFile)
 	encoder := json.NewEncoder(outputConfig.OutputFile)
 	worker := zlib.NewGrabWorker(&config)
+	start := time.Now()
 	processing.Process(decoder, encoder, worker, senders)
+	end := time.Now()
+	s := Summary{
+		Port:       config.Port,
+		Success:    0,
+		Error:      0,
+		Total:      0,
+		StartTime:  start,
+		EndTime:    end,
+		Duration:   end.Sub(start),
+		Senders:    senders,
+		Timeout:    config.Timeout,
+		TLSVersion: tlsVersion,
+		MailType:   mailType,
+	}
+	enc := json.NewEncoder(metadataFile)
+	if err := enc.Encode(&s); err != nil {
+		config.ErrorLog.Errorf("Unable to write summary: %s", err.Error())
+	}
 }
