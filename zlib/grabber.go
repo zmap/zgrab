@@ -137,6 +137,13 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 			}
 		}
 
+		if config.Modbus {
+			b := []byte("go blue")
+			if _, err := c.SendModbusEcho(b); err != nil {
+				return err
+			}
+		}
+
 		if config.Heartbleed {
 			buf := make([]byte, 256)
 			if _, err := c.CheckHeartbleed(buf); err != nil {
