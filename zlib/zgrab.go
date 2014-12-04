@@ -3,7 +3,6 @@ package zlib
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"net"
 	"time"
 )
@@ -67,7 +66,6 @@ func (ce *ConnectionEvent) UnmarshalJSON(b []byte) error {
 	}
 	ece.Data = t.GetEmptyInstance()
 	if err := json.Unmarshal(b, &ece); err != nil {
-		log.Print(err)
 		return err
 	}
 	ce.Data = ece.Data
@@ -83,7 +81,6 @@ func (g *Grab) MarshalJSON() ([]byte, error) {
 		domainPtr = &g.Domain
 	}
 	time := g.Time.Format(time.RFC3339)
-	log.Print(time)
 	obj := encodedGrab{
 		Host:   g.Host.String(),
 		Domain: domainPtr,

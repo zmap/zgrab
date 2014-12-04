@@ -34,6 +34,9 @@ type Config struct {
 	EHLO       bool
 	StartTLS   bool
 
+	// Modbus
+	Modbus bool
+
 	// Error handling
 	ErrorLog *zlog.Logger
 }
