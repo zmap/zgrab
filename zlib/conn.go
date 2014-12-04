@@ -329,6 +329,14 @@ func (c *Conn) CheckHeartbleed(b []byte) (int, error) {
 
 func (c *Conn) SendModbusEcho(b []byte) (int, error) {
 	// TODO MODBUS
+	// Build a request
+
+	// Send it out
+
+	// Read the response
+
+	// make sure the whole thing gets appended to the operation log
+	// e.g. c.appendEvent(modbusEvent, modbusError)
 	return 0, nil
 }
 
