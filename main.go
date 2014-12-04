@@ -25,7 +25,6 @@ var (
 	ehlo                          string
 	portFlag                      uint
 	inputFile, metadataFile       *os.File
-	senders                       uint
 	udp                           bool
 	timeout                       uint
 	tlsVersion                    string
@@ -56,7 +55,7 @@ func init() {
 	flag.BoolVar(&config.TLS, "tls", false, "Grab over TLS")
 	flag.StringVar(&tlsVersion, "tls-version", "", "Max TLS version to use (implies --tls)")
 	flag.BoolVar(&udp, "udp", false, "Grab over UDP")
-	flag.UintVar(&senders, "senders", 1000, "Number of send coroutines to use")
+	flag.UintVar(&config.Senders, "senders", 1000, "Number of send coroutines to use")
 	flag.BoolVar(&config.Banners, "banners", false, "Read banner upon connection creation")
 	flag.StringVar(&messageFileName, "data", "", "Send a message and read response (%s will be replaced with destination IP)")
 	flag.StringVar(&config.EHLODomain, "ehlo", "", "Send an EHLO with the specified domain (implies --smtp)")
@@ -145,7 +144,7 @@ func init() {
 	config.Timeout = time.Duration(timeout) * time.Second
 
 	// Validate senders
-	if senders == 0 {
+	if config.Senders == 0 {
 		zlog.Fatal("Error: Need at least one sender")
 	}
 
@@ -231,17 +230,17 @@ func main() {
 	encoder := json.NewEncoder(outputConfig.OutputFile)
 	worker := zlib.NewGrabWorker(&config)
 	start := time.Now()
-	processing.Process(decoder, encoder, worker, senders)
+	processing.Process(decoder, encoder, worker, config.Senders)
 	end := time.Now()
 	s := Summary{
 		Port:       config.Port,
-		Success:    0,
-		Error:      0,
-		Total:      0,
+		Success:    worker.Success(),
+		Failure:    worker.Failure(),
+		Total:      worker.Total(),
 		StartTime:  start,
 		EndTime:    end,
 		Duration:   end.Sub(start),
-		Senders:    senders,
+		Senders:    config.Senders,
 		Timeout:    config.Timeout,
 		TLSVersion: tlsVersion,
 		MailType:   mailType,

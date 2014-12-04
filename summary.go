@@ -8,7 +8,7 @@ import (
 type Summary struct {
 	Port       uint16
 	Success    uint
-	Error      uint
+	Failure    uint
 	Total      uint
 	StartTime  time.Time
 	EndTime    time.Time
@@ -23,7 +23,7 @@ type Summary struct {
 type encodedSummary struct {
 	Port       uint16        `json:"port"`
 	Success    uint          `json:"success_count"`
-	Error      uint          `json:"failure_count"`
+	Failure    uint          `json:"failure_count"`
 	Total      uint          `json:"total"`
 	StartTime  string        `json:"start_time"`
 	EndTime    string        `json:"end_time"`
@@ -39,7 +39,7 @@ func (s *Summary) MarshalJSON() ([]byte, error) {
 	e := new(encodedSummary)
 	e.Port = s.Port
 	e.Success = s.Success
-	e.Error = s.Error
+	e.Failure = s.Failure
 	e.Total = s.Total
 	e.StartTime = s.StartTime.Format(time.RFC3339)
 	e.EndTime = s.EndTime.Format(time.RFC3339)
@@ -65,7 +65,7 @@ func (s *Summary) UnmarshalJSON(b []byte) error {
 	}
 	s.Port = e.Port
 	s.Success = e.Success
-	s.Error = e.Error
+	s.Failure = e.Failure
 	s.Total = e.Total
 	var err error
 	if s.StartTime, err = time.Parse(time.RFC3339, e.StartTime); err != nil {

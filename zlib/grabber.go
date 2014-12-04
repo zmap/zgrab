@@ -49,16 +49,6 @@ func NewGrabTargetDecoder(reader io.Reader) processing.Decoder {
 	return &d
 }
 
-func NewGrabWorker(config *Config) processing.Worker {
-	return func(v interface{}) interface{} {
-		target, ok := v.(GrabTarget)
-		if !ok {
-			return nil
-		}
-		return GrabBanner(config, &target)
-	}
-}
-
 func makeDialer(c *Config) func(string) (*Conn, error) {
 	proto := "tcp"
 	timeout := c.Timeout

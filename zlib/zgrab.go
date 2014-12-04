@@ -109,3 +109,15 @@ func (g *Grab) UnmarshalJSON(b []byte) error {
 	g.Log = eg.Log
 	return nil
 }
+
+func (g *Grab) status() status {
+	if len(g.Log) == 0 {
+		return status_failure
+	}
+	for _, entry := range g.Log {
+		if entry.Error != nil {
+			return status_failure
+		}
+	}
+	return status_success
+}

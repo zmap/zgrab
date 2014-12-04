@@ -10,6 +10,7 @@ type Config struct {
 	// Connection
 	Port    uint16
 	Timeout time.Duration
+	Senders uint
 
 	// TLS
 	TLS        bool
