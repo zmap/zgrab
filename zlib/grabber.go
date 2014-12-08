@@ -138,8 +138,7 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 		}
 
 		if config.Modbus {
-			b := []byte("go blue")
-			if _, err := c.SendModbusEcho(b); err != nil {
+			if _, err := c.SendModbusEcho(); err != nil {
 				return err
 			}
 		}
