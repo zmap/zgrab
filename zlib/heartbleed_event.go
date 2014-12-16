@@ -2,7 +2,8 @@ package zlib
 
 import (
 	"encoding/json"
-	"ztools/ztls"
+
+	"github.com/zmap/ztools/ztls"
 )
 
 type HeartbleedEvent struct {

@@ -1,6 +1,6 @@
 package zlib
 
-import "ztools/processing"
+import "github.com/zmap/ztools/processing"
 
 // GrabWorker implements ztools.processing.Worker
 type GrabWorker struct {

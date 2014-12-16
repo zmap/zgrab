@@ -9,10 +9,11 @@ import (
 	"os"
 	"strings"
 	"time"
-	"zgrab/zlib"
-	"ztools/processing"
-	"ztools/zlog"
-	"ztools/ztls"
+
+	"github.com/zmap/zgrab/zlib"
+	"github.com/zmap/ztools/processing"
+	"github.com/zmap/ztools/zlog"
+	"github.com/zmap/ztools/ztls"
 )
 
 // Command-line flags

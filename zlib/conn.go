@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"time"
 
-	"ztools/ztls"
+	"github.com/zmap/ztools/ztls"
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:\r\n)|^[0-9]{3} .+\r\n$`)
