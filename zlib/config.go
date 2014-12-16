@@ -3,7 +3,8 @@ package zlib
 import (
 	"crypto/x509"
 	"time"
-	"ztools/zlog"
+
+	"github.com/zmap/ztools/zlog"
 )
 
 type Config struct {

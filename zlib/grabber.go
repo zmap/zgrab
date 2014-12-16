@@ -9,7 +9,8 @@ import (
 	"net"
 	"strconv"
 	"time"
-	"ztools/processing"
+
+	"github.com/zmap/ztools/processing"
 )
 
 type GrabTarget struct {
