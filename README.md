@@ -5,13 +5,18 @@ A TLS Banner Grabber, in Go
 
 ## Building
 
-You will need to have a valid `$GOPATH` set up, and this repository should exist in `$GOPATH/src/zgrab`. For more information about `$GOPATH`, see https://golang.org/doc/code.html. Unfortunately, since zgrab is still actively under development, you will also need to clone the ztools repository to `$GOPATH/src/ztools`.
+You will need to have a valid `$GOPATH` set up, for more information about `$GOPATH`, see https://golang.org/doc/code.html. 
 
 The ztools repository is located at https://github.com/zmap/ztools.
 
-Once you have a working `$GOPATH` with ztools installed,
+Once you have a working `$GOPATH` 
+
+`go get github.com/zmap/zgrab`
+
+once it has installed zgrab and ztools under `$GOPATH/src/github.com/zmap/zgrab` and `$GOPATH/src/github.com/zmap/ztools`
 
 ```
+$ cd $GOPATH/src/github.com/zmap/zgrab
 $ go build
 ```
 
