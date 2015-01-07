@@ -26,3 +26,7 @@ $ go build
 ```
 $ zmap -p 443 --output-fields=* | ztee --output-file=results.csv | zgrab --port 443 --tls --data=./http-req --output-file=banners.json
 ```
+
+## Requirements
+
+zgrab requires go version of at least 1.3.3
