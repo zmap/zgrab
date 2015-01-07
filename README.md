@@ -9,11 +9,13 @@ You will need to have a valid `$GOPATH` set up, for more information about `$GOP
 
 The ztools repository is located at https://github.com/zmap/ztools.
 
-Once you have a working `$GOPATH` 
+Once you have a working `$GOPATH`, run: 
 
-`go get github.com/zmap/zgrab`
+```
+go get github.com/zmap/zgrab
+```
 
-once it has installed zgrab and ztools under `$GOPATH/src/github.com/zmap/zgrab` and `$GOPATH/src/github.com/zmap/ztools`
+This will install zgrab and ztools under `$GOPATH/src/github.com/zmap/zgrab` and `$GOPATH/src/github.com/zmap/ztools`.
 
 ```
 $ cd $GOPATH/src/github.com/zmap/zgrab
@@ -34,4 +36,4 @@ $ zmap -p 443 --output-fields=* | ztee --output-file=results.csv | zgrab --port 
 
 ## Requirements
 
-zgrab requires go version of at least 1.3.3
+zgrab requires go version of at least 1.3.3. Please note that this is newer than the version included in Ubuntu 14.04 apt repository.
