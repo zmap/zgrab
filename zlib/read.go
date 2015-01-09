@@ -1,9 +1,14 @@
 package zlib
 
-import "encoding/json"
+import (
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+)
 
 type ReadEvent struct {
 	Response []byte
+	encoding string
 }
 
 var ReadEventType = EventType{
@@ -15,9 +20,25 @@ func (r *ReadEvent) GetType() EventType {
 	return ReadEventType
 }
 
+func (r *ReadEvent) encodeResponse() string {
+	var enc string
+	switch r.encoding {
+	case "base64":
+		enc = base64.StdEncoding.EncodeToString(r.Response)
+	case "string":
+		enc = string(r.Response)
+	case "hex":
+		enc = hex.EncodeToString(r.Response)
+	default:
+		enc = string(r.Response)
+	}
+	return enc
+}
+
 func (r *ReadEvent) MarshalJSON() ([]byte, error) {
+	encodedResponse := r.encodeResponse()
 	encoded := encodedReadEvent{
-		Response: r.Response,
+		Response: encodedResponse,
 	}
 	return json.Marshal(encoded)
 }
@@ -27,10 +48,10 @@ func (r *ReadEvent) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &encoded); err != nil {
 		return err
 	}
-	r.Response = encoded.Response
+	r.Response = []byte(encoded.Response)
 	return nil
 }
 
 type encodedReadEvent struct {
-	Response []byte `json:"response"`
+	Response string `json:"response"`
 }

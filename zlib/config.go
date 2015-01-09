@@ -13,6 +13,9 @@ type Config struct {
 	Timeout time.Duration
 	Senders uint
 
+	// Encoding
+	Encoding string
+
 	// TLS
 	TLS        bool
 	TLSVersion uint16

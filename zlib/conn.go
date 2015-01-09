@@ -42,6 +42,9 @@ type Conn struct {
 	onlyCBC bool
 
 	domain string
+
+	// Encoding type
+	ReadEncoding string
 }
 
 func (c *Conn) getUnderlyingConn() net.Conn {
@@ -104,6 +107,7 @@ func (c *Conn) Read(b []byte) (int, error) {
 	n, err := c.getUnderlyingConn().Read(b)
 	r := ReadEvent{
 		Response: b[0:n],
+		encoding: c.ReadEncoding,
 	}
 	c.appendEvent(&r, err)
 	return n, err
