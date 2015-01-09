@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/x509"
 	"encoding/json"
 	"flag"
 	"io"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/zmap/zgrab/zlib"
 	"github.com/zmap/ztools/processing"
+	"github.com/zmap/ztools/x509"
 	"github.com/zmap/ztools/zlog"
 	"github.com/zmap/ztools/ztls"
 )

@@ -1,13 +1,13 @@
 package zlib
 
 import (
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"net"
 	"regexp"
 	"time"
 
+	"github.com/zmap/ztools/x509"
 	"github.com/zmap/ztools/ztls"
 )
 

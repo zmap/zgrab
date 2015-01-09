@@ -1,9 +1,9 @@
 package zlib
 
 import (
-	"crypto/x509"
 	"time"
 
+	"github.com/zmap/ztools/x509"
 	"github.com/zmap/ztools/zlog"
 )
 
