@@ -76,6 +76,9 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 		if config.CBCOnly {
 			c.SetCBCOnly()
 		}
+		if config.SChannelOnly {
+			c.SetSChannelOnly()
+		}
 		c.ReadEncoding = config.Encoding
 		if config.TLS {
 			if err := c.TLSHandshake(); err != nil {

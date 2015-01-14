@@ -38,8 +38,10 @@ type Conn struct {
 	readDeadline  time.Time
 	writeDeadline time.Time
 
-	caPool  *x509.CertPool
-	onlyCBC bool
+	caPool *x509.CertPool
+
+	onlyCBC      bool
+	onlySchannel bool
 
 	domain string
 
@@ -56,6 +58,10 @@ func (c *Conn) getUnderlyingConn() net.Conn {
 
 func (c *Conn) SetCBCOnly() {
 	c.onlyCBC = true
+}
+
+func (c *Conn) SetSChannelOnly() {
+	c.onlySchannel = true
 }
 
 func (c *Conn) SetCAPool(pool *x509.CertPool) {
@@ -134,6 +140,9 @@ func (c *Conn) TLSHandshake() error {
 	}
 	if c.onlyCBC {
 		tlsConfig.CipherSuites = ztls.CBCSuiteIDList
+	}
+	if c.onlySchannel {
+		tlsConfig.CipherSuites = ztls.SChannelSuites
 	}
 	c.tlsConn = ztls.Client(c.conn, tlsConfig)
 	c.tlsConn.SetReadDeadline(c.readDeadline)

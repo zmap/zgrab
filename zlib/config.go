@@ -17,10 +17,12 @@ type Config struct {
 	Encoding string
 
 	// TLS
-	TLS        bool
-	TLSVersion uint16
-	Heartbleed bool
-	RootCAPool *x509.CertPool
+	TLS          bool
+	TLSVersion   uint16
+	Heartbleed   bool
+	RootCAPool   *x509.CertPool
+	CBCOnly      bool
+	SChannelOnly bool
 
 	// Banners and Data
 	Banners  bool
@@ -34,7 +36,6 @@ type Config struct {
 	POP3       bool
 	SMTPHelp   bool
 	EHLODomain string
-	CBCOnly    bool
 	EHLO       bool
 	StartTLS   bool
 
