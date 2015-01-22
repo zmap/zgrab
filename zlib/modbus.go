@@ -5,13 +5,146 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"strconv"
 )
 
+type MEIResponse struct {
+	ConformityLevel int         `json:"conformity_level"`
+	MoreFollows     bool        `json:"more_follows"`
+	ObjectCount     int         `json:"object_count"`
+	Objects         []MEIObject `json:"objects"`
+}
+
+type MEIObject struct {
+	OID   MEIObjectID `json:"type"`
+	Value string      `json:"value"`
+}
+
+type MEIObjectID int
+
+const (
+	OIDVendor              MEIObjectID = 0
+	OIDProductCode         MEIObjectID = 1
+	OIDRevision            MEIObjectID = 2
+	OIDVendorURL           MEIObjectID = 3
+	OIDProductName         MEIObjectID = 4
+	OIDModelName           MEIObjectID = 5
+	OIDUserApplicationName MEIObjectID = 6
+)
+
+var meiObjectNames = []string{
+	"vendor",
+	"product_code",
+	"revision",
+	"vendor_url",
+	"product_name",
+	"model_name",
+	"user_application_name",
+}
+
+func (m *MEIObjectID) MarshalJSON() ([]byte, error) {
+	oid := int(*m)
+	var name string
+	if oid >= len(meiObjectNames) || oid < 0 {
+		name = "oid." + strconv.Itoa(oid)
+	} else {
+		name = meiObjectNames[oid]
+	}
+	return json.Marshal(name)
+}
+
+type ExceptionResponse struct {
+	ExceptionFunction FunctionCode `json:"exception_function"`
+	ExceptionType     byte         `json:"exception_type"`
+}
+
 type ModbusEvent struct {
-	Length   int
-	UnitID   int
-	Function FunctionCode
-	Response []byte
+	Length           int                `json:"length"`
+	UnitID           int                `json:"unit_id"`
+	Function         FunctionCode       `json:"function_code"`
+	Response         []byte             `json:"raw_response"`
+	MEIResponse      *MEIResponse       `json:"mei_response,omitempty"`
+	ExceptionReponse *ExceptionResponse `json:"exception_response,omitempty"`
+}
+
+func (m *ModbusEvent) IsException() bool {
+	return (m.Function&0x80 != 0)
+}
+
+func (m *ModbusEvent) ParseSelf() {
+	if m.IsException() {
+		m.parseException()
+	} else {
+		m.parseReponse()
+	}
+}
+
+func (m *ModbusEvent) parseException() {
+	exceptionFunction := m.Function & 0x7F
+	var exceptionType byte
+	if len(m.Response) > 0 {
+		exceptionType = m.Response[0]
+	}
+	res := ExceptionResponse{
+		ExceptionFunction: exceptionFunction,
+		ExceptionType:     exceptionType,
+	}
+	m.ExceptionReponse = &res
+}
+
+func (m *ModbusEvent) parseReponse() {
+	if m.Function != FunctionCodeMEI {
+		return
+	}
+	if len(m.Response) < 6 {
+		return
+	}
+	meiType := m.Response[0]
+	if meiType != 0x0E {
+		return
+	}
+	readType := m.Response[1]
+	if readType != 1 {
+		return
+	}
+	conformityLevel := m.Response[2]
+	moreFollows := (m.Response[3] != 0)
+	objectCount := m.Response[5]
+	objects := make([]MEIObject, objectCount)
+	it := 6
+	for idx := range objects {
+		n, obj := parseMEIObject(m.Response[it:])
+		it += n
+		if obj == nil {
+			break
+		}
+		objects[idx] = *obj
+	}
+	res := MEIResponse{
+		ConformityLevel: int(conformityLevel),
+		MoreFollows:     moreFollows,
+		ObjectCount:     int(objectCount),
+		Objects:         objects,
+	}
+	m.MEIResponse = &res
+}
+
+func parseMEIObject(objectBytes []byte) (int, *MEIObject) {
+	length := len(objectBytes)
+	if length < 2 {
+		return length, nil
+	}
+	oid := objectBytes[0]
+	objLen := int(objectBytes[1])
+	if length < 2+objLen {
+		return length, nil
+	}
+	s := string(objectBytes[2 : 2+objLen])
+	obj := MEIObject{
+		OID:   MEIObjectID(oid),
+		Value: s,
+	}
+	return 2 + objLen, &obj
 }
 
 var ModbusEventType = EventType{
@@ -21,34 +154,6 @@ var ModbusEventType = EventType{
 
 func (m *ModbusEvent) GetType() EventType {
 	return ModbusEventType
-}
-
-type encodedModbusEvent struct {
-	Length   int          `json:"length"`
-	UnitID   int          `json:"unit_id"`
-	Function FunctionCode `json:"function_code"`
-	Response []byte       `json:"response"`
-}
-
-func (m *ModbusEvent) MarshalJSON() ([]byte, error) {
-	e := encodedModbusEvent{
-		Length:   m.Length,
-		UnitID:   m.UnitID,
-		Function: m.Function,
-		Response: m.Response,
-	}
-	return json.Marshal(&e)
-}
-
-func (m *ModbusEvent) UnmarshalJSON(b []byte) error {
-	e := new(encodedModbusEvent)
-	if err := json.Unmarshal(b, e); err != nil {
-		return err
-	}
-	m.Length = e.Length
-	m.Function = e.Function
-	m.Response = e.Response
-	return nil
 }
 
 type FunctionCode byte
@@ -181,3 +286,7 @@ var ModbusHeaderBytes = []byte{
 }
 
 var ModbusFunctionEncapsulatedInterface = FunctionCode(0x2B)
+
+const (
+	FunctionCodeMEI = FunctionCode(0x2B)
+)

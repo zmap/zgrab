@@ -7,8 +7,6 @@ import (
 
 type EventData interface {
 	GetType() EventType
-	MarshalJSON() ([]byte, error)
-	UnmarshalJSON([]byte) error
 }
 
 type EventType struct {

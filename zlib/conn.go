@@ -367,6 +367,7 @@ func (c *Conn) SendModbusEcho() (int, error) {
 	event.UnitID = res.UnitID
 	event.Function = res.Function
 	event.Response = res.Data
+	event.ParseSelf()
 	// make sure the whole thing gets appended to the operation log
 	c.appendEvent(event, err)
 	return w, err
