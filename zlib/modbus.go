@@ -9,15 +9,25 @@ import (
 )
 
 type MEIResponse struct {
-	ConformityLevel int         `json:"conformity_level"`
-	MoreFollows     bool        `json:"more_follows"`
-	ObjectCount     int         `json:"object_count"`
-	Objects         []MEIObject `json:"objects"`
+	ConformityLevel int          `json:"conformity_level"`
+	MoreFollows     bool         `json:"more_follows"`
+	ObjectCount     int          `json:"object_count"`
+	Objects         MEIObjectSet `json:"objects"`
+}
+
+type MEIObjectSet []MEIObject
+
+func (ms *MEIObjectSet) MarshalJSON() ([]byte, error) {
+	enc := make(map[string]string, len(*ms))
+	for _, obj := range *ms {
+		enc[obj.OID.Name()] = obj.Value
+	}
+	return json.Marshal(enc)
 }
 
 type MEIObject struct {
-	OID   MEIObjectID `json:"type"`
-	Value string      `json:"value"`
+	OID   MEIObjectID
+	Value string
 }
 
 type MEIObjectID int
@@ -42,7 +52,7 @@ var meiObjectNames = []string{
 	"user_application_name",
 }
 
-func (m *MEIObjectID) MarshalJSON() ([]byte, error) {
+func (m *MEIObjectID) Name() string {
 	oid := int(*m)
 	var name string
 	if oid >= len(meiObjectNames) || oid < 0 {
@@ -50,7 +60,14 @@ func (m *MEIObjectID) MarshalJSON() ([]byte, error) {
 	} else {
 		name = meiObjectNames[oid]
 	}
-	return json.Marshal(name)
+	return name
+}
+
+func (m *MEIObject) MarshalJSON() ([]byte, error) {
+	enc := make(map[string]interface{}, 1)
+	name := m.OID.Name()
+	enc[name] = m.Value
+	return json.Marshal(enc)
 }
 
 type ExceptionResponse struct {
