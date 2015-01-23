@@ -246,10 +246,10 @@ func init() {
 
 func main() {
 	decoder := zlib.NewGrabTargetDecoder(inputFile)
-	encoder := json.NewEncoder(outputConfig.OutputFile)
+	marshaler := zlib.NewGrabMarshaler()
 	worker := zlib.NewGrabWorker(&config)
 	start := time.Now()
-	processing.Process(decoder, encoder, worker, config.Senders)
+	processing.Process(decoder, outputConfig.OutputFile, worker, marshaler, config.Senders)
 	end := time.Now()
 	s := Summary{
 		Port:       config.Port,

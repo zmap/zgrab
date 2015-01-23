@@ -1,6 +1,10 @@
 package zlib
 
-import "github.com/zmap/ztools/processing"
+import (
+	"encoding/json"
+
+	"github.com/zmap/ztools/processing"
+)
 
 // GrabWorker implements ztools.processing.Worker
 type GrabWorker struct {
@@ -65,4 +69,14 @@ func NewGrabWorker(config *Config) processing.Worker {
 		}
 	}()
 	return w
+}
+
+type grabMarshaler struct{}
+
+func (gm *grabMarshaler) Marshal(v interface{}) ([]byte, error) {
+	return json.Marshal(v)
+}
+
+func NewGrabMarshaler() processing.Marshaler {
+	return new(grabMarshaler)
 }
