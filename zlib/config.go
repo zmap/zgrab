@@ -44,4 +44,7 @@ type Config struct {
 
 	// Error handling
 	ErrorLog *zlog.Logger
+
+	// Go Runtime Config
+	GOMAXPROCS int
 }
