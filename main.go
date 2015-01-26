@@ -71,7 +71,13 @@ func init() {
 	flag.StringVar(&rootCAFileName, "ca-file", "", "List of trusted root certificate authorities in PEM format")
 	flag.BoolVar(&config.CBCOnly, "cbc-only", false, "Send only ciphers that use CBC")
 	flag.BoolVar(&config.SChannelOnly, "schannel", false, "Send only ciphers for guessing schannel version")
+	flag.IntVar(&config.GOMAXPROCS, "gomaxprocs", 3, "Set GOMAXPROCS (default 3)")
 	flag.Parse()
+
+	// Validate Go Runtime config
+	if config.GOMAXPROCS < 1 {
+		zlog.Fatalf("Invalid GOMAXPROCS (must be at least 1, given %d)", config.GOMAXPROCS)
+	}
 
 	// Validate TLS Versions
 	tv := strings.ToUpper(tlsVersion)
@@ -245,7 +251,7 @@ func init() {
 }
 
 func main() {
-	runtime.GOMAXPROCS(3)
+	runtime.GOMAXPROCS(config.GOMAXPROCS)
 	decoder := zlib.NewGrabTargetDecoder(inputFile)
 	marshaler := zlib.NewGrabMarshaler()
 	worker := zlib.NewGrabWorker(&config)
