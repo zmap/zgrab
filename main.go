@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -114,7 +115,6 @@ func init() {
 
 	if config.SMTPHelp || config.EHLO {
 		config.SMTP = true
-
 	}
 
 	if config.SMTP && (config.IMAP || config.POP3) {
@@ -245,6 +245,7 @@ func init() {
 }
 
 func main() {
+	runtime.GOMAXPROCS(3)
 	decoder := zlib.NewGrabTargetDecoder(inputFile)
 	marshaler := zlib.NewGrabMarshaler()
 	worker := zlib.NewGrabWorker(&config)

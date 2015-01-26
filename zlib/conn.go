@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/zmap/ztools/x509"
@@ -185,7 +186,19 @@ func (c *Conn) SMTPStartTLSHandshake() error {
 	// Read the response on a successful send
 	buf := make([]byte, 256)
 	n, err := c.readSmtpResponse(buf)
-	ss.Response = buf[0:n]
+	ss.Response = string(buf[0:n])
+
+	// Actually check return code
+	if n < 5 {
+		err = errors.New("Server did not indicate support for STARTTLS")
+	}
+	if err == nil {
+		var ret int
+		ret, err = strconv.Atoi(ss.Response[0:3])
+		if err != nil || ret < 200 || ret >= 300 {
+			err = errors.New("Bad return code for STARTTLS")
+		}
+	}
 
 	// Record everything no matter the result
 	c.appendEvent(&ss, err)
@@ -194,6 +207,7 @@ func (c *Conn) SMTPStartTLSHandshake() error {
 	if err != nil {
 		return err
 	}
+
 	// Successful so far, attempt to do the actual handshake
 	return c.TLSHandshake()
 }
@@ -207,7 +221,7 @@ func (c *Conn) POP3StartTLSHandshake() error {
 
 	buf := make([]byte, 512)
 	n, err := c.readPop3Response(buf)
-	ss.Response = buf[0:n]
+	ss.Response = string(buf[0:n])
 	c.appendEvent(&ss, err)
 
 	if err != nil {
@@ -225,7 +239,7 @@ func (c *Conn) IMAPStartTLSHandshake() error {
 
 	buf := make([]byte, 512)
 	n, err := c.readImapStatusResponse(buf)
-	ss.Response = buf[0:n]
+	ss.Response = string(buf[0:n])
 	c.appendEvent(&ss, err)
 
 	if err != nil {
@@ -276,7 +290,7 @@ func (c *Conn) EHLO(domain string) error {
 
 	buf := make([]byte, 512)
 	n, err := c.readSmtpResponse(buf)
-	ee.Response = buf[0:n]
+	ee.Response = string(buf[0:n])
 	c.appendEvent(&ee, err)
 	return err
 }
@@ -290,7 +304,7 @@ func (c *Conn) SMTPHelp() error {
 	}
 	buf := make([]byte, 512)
 	n, err := c.readSmtpResponse(buf)
-	h.Response = buf[0:n]
+	h.Response = string(buf[0:n])
 	c.appendEvent(h, err)
 	return err
 }

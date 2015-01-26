@@ -40,8 +40,8 @@ func (mb *MailBannerEvent) UnmarshalJSON(b []byte) error {
 
 // An EHLOEvent represents the response to an EHLO
 type EHLOEvent struct {
-	Domain   string
-	Response []byte
+	Domain   string `json:"-"`
+	Response string `json:"response"`
 }
 
 var EHLOEventType = EventType{
@@ -49,30 +49,8 @@ var EHLOEventType = EventType{
 	GetEmptyInstance: newEHLOEvent,
 }
 
-type encodedEHLOEvent struct {
-	Response []byte `json:"response"`
-}
-
 func (e *EHLOEvent) GetType() EventType {
 	return EHLOEventType
-}
-
-// MarshalJSON implements the json.Marshaler interface
-func (e *EHLOEvent) MarshalJSON() ([]byte, error) {
-	encoded := encodedEHLOEvent{
-		Response: e.Response,
-	}
-	return json.Marshal(encoded)
-}
-
-// UnmarshalJSON implments the json.Unmarshal interface
-func (e *EHLOEvent) UnmarshalJSON(b []byte) error {
-	var encoded encodedEHLOEvent
-	if err := json.Unmarshal(b, &encoded); err != nil {
-		return err
-	}
-	e.Response = encoded.Response
-	return nil
 }
 
 func newEHLOEvent() EventData {
@@ -81,8 +59,8 @@ func newEHLOEvent() EventData {
 
 // A StartTLSEvent represents sending a StartTLS
 type StartTLSEvent struct {
-	Command  string
-	Response []byte
+	Command  string `json:"-"`
+	Response string `json:"response"`
 }
 
 var StartTLSEventType = EventType{
@@ -90,36 +68,13 @@ var StartTLSEventType = EventType{
 	GetEmptyInstance: func() EventData { return new(StartTLSEvent) },
 }
 
-type encodedStartTLSEvent struct {
-	Command  string
-	Response []byte
-}
-
 func (s *StartTLSEvent) GetType() EventType {
 	return StartTLSEventType
 }
 
-func (s *StartTLSEvent) MarshalJSON() ([]byte, error) {
-	e := encodedStartTLSEvent{
-		Command:  s.Command,
-		Response: s.Response,
-	}
-	return json.Marshal(e)
-}
-
-func (s *StartTLSEvent) UnmarshalJSON(b []byte) error {
-	var e encodedStartTLSEvent
-	if err := json.Unmarshal(b, &e); err != nil {
-		return err
-	}
-	s.Command = e.Command
-	s.Response = e.Response
-	return nil
-}
-
 // An SMTPHelpEvent represents sending a "HELP" message over SMTP
 type SMTPHelpEvent struct {
-	Response []byte
+	Response string
 }
 
 var SMTPHelpEventType = EventType{
@@ -129,24 +84,4 @@ var SMTPHelpEventType = EventType{
 
 func (h *SMTPHelpEvent) GetType() EventType {
 	return SMTPHelpEventType
-}
-
-type encodedSMTPHelpEvent struct {
-	Response []byte
-}
-
-func (h *SMTPHelpEvent) MarshalJSON() ([]byte, error) {
-	e := encodedSMTPHelpEvent{
-		Response: h.Response,
-	}
-	return json.Marshal(e)
-}
-
-func (h *SMTPHelpEvent) UnmarshalJSON(b []byte) error {
-	var e encodedSMTPHelpEvent
-	if err := json.Unmarshal(b, &e); err != nil {
-		return err
-	}
-	h.Response = e.Response
-	return nil
 }
