@@ -246,6 +246,11 @@ func (c *Conn) IMAPStartTLSHandshake() error {
 	buf := make([]byte, 512)
 	n, err := c.readImapStatusResponse(buf)
 	ss.Response = string(buf[0:n])
+	if err == nil {
+		if !strings.HasPrefix(ss.Response, "a001 OK") {
+			err = errors.New("Server did not indicate support for STARTTLS")
+		}
+	}
 	c.appendEvent(&ss, err)
 
 	if err != nil {
