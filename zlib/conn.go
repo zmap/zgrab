@@ -6,6 +6,7 @@ import (
 	"net"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/zmap/ztools/x509"
@@ -222,6 +223,11 @@ func (c *Conn) POP3StartTLSHandshake() error {
 	buf := make([]byte, 512)
 	n, err := c.readPop3Response(buf)
 	ss.Response = string(buf[0:n])
+	if err == nil {
+		if !strings.HasPrefix(ss.Response, "+") {
+			err = errors.New("Server did not indicate support for STARTTLS")
+		}
+	}
 	c.appendEvent(&ss, err)
 
 	if err != nil {
