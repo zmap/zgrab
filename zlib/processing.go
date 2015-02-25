@@ -3,7 +3,7 @@ package zlib
 import (
 	"encoding/json"
 
-	"github.com/zmap/ztools/processing"
+	"github.com/zmap/zgrab/ztools/processing"
 )
 
 // GrabWorker implements ztools.processing.Worker

@@ -32,6 +32,7 @@ func init() {
 	RegisterEventType(StartTLSEventType)
 	RegisterEventType(MailBannerEventType)
 	RegisterEventType(ModbusEventType)
+	RegisterEventType(FTPBannerEventType)
 }
 
 func RegisterEventType(t EventType) {
@@ -60,4 +61,5 @@ const (
 	CONNECTION_EVENT_STARTTLS_NAME   = "starttls"
 	CONNECTION_EVENT_MAIL_BANNER     = "mail_banner"
 	CONNECTION_EVENT_MODBUS          = "modbus"
+	CONNECTION_EVENT_FTP             = "ftp"
 )

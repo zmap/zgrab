@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/zmap/zgrab/zlib"
-	"github.com/zmap/ztools/processing"
-	"github.com/zmap/ztools/x509"
-	"github.com/zmap/ztools/zlog"
-	"github.com/zmap/ztools/ztls"
+	"github.com/zmap/zgrab/ztools/processing"
+	"github.com/zmap/zgrab/ztools/x509"
+	"github.com/zmap/zgrab/ztools/zlog"
+	"github.com/zmap/zgrab/ztools/ztls"
 )
 
 // Command-line flags
@@ -67,16 +67,23 @@ func init() {
 	flag.BoolVar(&config.IMAP, "imap", false, "Conform to IMAP rules when sending STARTTLS")
 	flag.BoolVar(&config.POP3, "pop3", false, "Conform to POP3 rules when sending STARTTLS")
 	flag.BoolVar(&config.Modbus, "modbus", false, "Send some modbus data")
+	flag.BoolVar(&config.ExportsOnly, "export-ciphers", false, "Send only export ciphers")
 	flag.BoolVar(&config.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
 	flag.StringVar(&rootCAFileName, "ca-file", "", "List of trusted root certificate authorities in PEM format")
 	flag.BoolVar(&config.CBCOnly, "cbc-only", false, "Send only ciphers that use CBC")
 	flag.BoolVar(&config.SChannelOnly, "schannel", false, "Send only ciphers for guessing schannel version")
 	flag.IntVar(&config.GOMAXPROCS, "gomaxprocs", 3, "Set GOMAXPROCS (default 3)")
+	flag.BoolVar(&config.FTP, "ftp", false, "Read FTP banners")
 	flag.Parse()
 
 	// Validate Go Runtime config
 	if config.GOMAXPROCS < 1 {
 		zlog.Fatalf("Invalid GOMAXPROCS (must be at least 1, given %d)", config.GOMAXPROCS)
+	}
+
+	// Validate FTP
+	if config.FTP && config.Banners {
+		zlog.Fatal("--ftp and --banners are mutually exclusive")
 	}
 
 	// Validate TLS Versions

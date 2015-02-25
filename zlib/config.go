@@ -3,8 +3,8 @@ package zlib
 import (
 	"time"
 
-	"github.com/zmap/ztools/x509"
-	"github.com/zmap/ztools/zlog"
+	"github.com/zmap/zgrab/ztools/x509"
+	"github.com/zmap/zgrab/ztools/zlog"
 )
 
 type Config struct {
@@ -23,6 +23,7 @@ type Config struct {
 	RootCAPool   *x509.CertPool
 	CBCOnly      bool
 	SChannelOnly bool
+	ExportsOnly  bool
 
 	// Banners and Data
 	Banners  bool
@@ -38,6 +39,9 @@ type Config struct {
 	EHLODomain string
 	EHLO       bool
 	StartTLS   bool
+
+	// FTP
+	FTP bool
 
 	// Modbus
 	Modbus bool

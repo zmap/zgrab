@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/zmap/ztools/processing"
+	"github.com/zmap/zgrab/ztools/processing"
 )
 
 type GrabTarget struct {
@@ -79,6 +79,9 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 		if config.SChannelOnly {
 			c.SetSChannelOnly()
 		}
+		if config.ExportsOnly {
+			c.SetExportsOnly()
+		}
 		c.ReadEncoding = config.Encoding
 		if config.TLS {
 			if err := c.TLSHandshake(); err != nil {
@@ -104,6 +107,13 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 				}
 			}
 		}
+
+		if config.FTP {
+			if err := c.GetFTPBanner(); err != nil {
+				return err
+			}
+		}
+
 		if config.SendData {
 			host, _, _ := net.SplitHostPort(c.RemoteAddr().String())
 			msg := bytes.Replace(config.Data, []byte("%s"), []byte(host), -1)

@@ -9,13 +9,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zmap/ztools/x509"
-	"github.com/zmap/ztools/ztls"
+	"github.com/zmap/zgrab/ztools/x509"
+	"github.com/zmap/zgrab/ztools/ztls"
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:\r\n)|^[0-9]{3} .+\r\n$`)
 var pop3EndRegex = regexp.MustCompile(`(?:\r\n\.\r\n$)|(?:\r\n$)`)
 var imapStatusEndRegex = regexp.MustCompile(`\r\n$`)
+var ftpEndRegex = regexp.MustCompile(`^.*[0-9]{3}( [^\r\n]*)?\r?\n$`)
 
 const (
 	SMTP_COMMAND = "STARTTLS\r\n"
@@ -44,6 +45,7 @@ type Conn struct {
 
 	onlyCBC      bool
 	onlySchannel bool
+	onlyExports  bool
 
 	domain string
 
@@ -64,6 +66,10 @@ func (c *Conn) SetCBCOnly() {
 
 func (c *Conn) SetSChannelOnly() {
 	c.onlySchannel = true
+}
+
+func (c *Conn) SetExportsOnly() {
+	c.onlyExports = true
 }
 
 func (c *Conn) SetCAPool(pool *x509.CertPool) {
@@ -145,6 +151,10 @@ func (c *Conn) TLSHandshake() error {
 	}
 	if c.onlySchannel {
 		tlsConfig.CipherSuites = ztls.SChannelSuites
+	}
+	if c.onlyExports {
+		tlsConfig.CipherSuites = ztls.ExportCiphers
+		tlsConfig.ForceSuites = true
 	}
 	c.tlsConn = ztls.Client(c.conn, tlsConfig)
 	c.tlsConn.SetReadDeadline(c.readDeadline)
@@ -396,6 +406,15 @@ func (c *Conn) SendModbusEcho() (int, error) {
 	// make sure the whole thing gets appended to the operation log
 	c.appendEvent(event, err)
 	return w, err
+}
+
+func (c *Conn) GetFTPBanner() error {
+	event := new(FTPBannerEvent)
+	res := make([]byte, 1024)
+	n, err := c.readUntilRegex(res, ftpEndRegex)
+	event.Banner = string(res[0:n])
+	c.appendEvent(event, err)
+	return err
 }
 
 func (c *Conn) States() []ConnectionEvent {
