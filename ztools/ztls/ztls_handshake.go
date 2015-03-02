@@ -136,17 +136,13 @@ func (esa *ExportSignatureAlgorithm) MarshalJSON() ([]byte, error) {
 }
 
 type RSAExportParams struct {
-	PublicKey          rsa.PublicKey            `json:"-"`
-	Modulus            []byte                   `json:"modulus"`
-	Exponent           uint32                   `json:"exponent"`
-	Signature          []byte                   `json:"signature"`
-	SignatureAlgorithm ExportSignatureAlgorithm `json:"signature_algorithm"`
+	PublicKey rsa.PublicKey `json:"-"`
+	Modulus   []byte        `json:"modulus"`
+	Exponent  uint32        `json:"exponent"`
 }
 
 func (p *rsaExportParams) MakeLog() *RSAExportParams {
 	out := new(RSAExportParams)
-	out.Signature = p.rawSignature
-	out.SignatureAlgorithm = ExportSignatureAlgorithm(p.signatureHashAlgorithm)
 	exponent := uint32(0)
 	for _, b := range p.rawExponent {
 		exponent <<= 8
