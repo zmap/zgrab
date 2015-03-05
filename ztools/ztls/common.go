@@ -8,6 +8,7 @@ import (
 	"container/list"
 	"crypto"
 	"crypto/rand"
+	"crypto/rsa"
 	"fmt"
 	"io"
 	"math/big"
@@ -305,6 +306,9 @@ type Config struct {
 	serverInitOnce sync.Once // guards calling (*Config).serverInit
 
 	ForceSuites bool
+
+	// Export RSA Key
+	ExportRSAKey *rsa.PrivateKey
 }
 
 func (c *Config) serverInit() {

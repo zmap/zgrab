@@ -13,6 +13,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/asn1"
+	"encoding/binary"
 	"errors"
 	"io"
 	"math/big"
@@ -183,6 +184,119 @@ func curveForCurveID(id CurveID) (elliptic.Curve, bool) {
 		return nil, false
 	}
 
+}
+
+type rsaExportKeyAgreement struct {
+	version uint16
+	sigType uint8
+}
+
+func (ka *rsaExportKeyAgreement) generateServerKeyExchange(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
+	modulus := config.ExportRSAKey.N.Bytes()
+	exponent := make([]byte, 4)
+	binary.BigEndian.PutUint32(exponent, uint32(config.ExportRSAKey.E))
+	exponentLength := 4
+	for _, v := range exponent {
+		if v == byte(0) {
+			exponentLength--
+		} else {
+			break
+		}
+	}
+	exponent = exponent[4-exponentLength:]
+
+	serverRSAParams := make([]byte, 2+len(modulus)+2+len(exponent))
+	binary.BigEndian.PutUint16(serverRSAParams, uint16(len(modulus)))
+	copy(serverRSAParams[2:], modulus)
+	exponentOffset := 2 + len(modulus)
+	binary.BigEndian.PutUint16(serverRSAParams[exponentOffset:], uint16(len(exponent)))
+	copy(serverRSAParams[exponentOffset+2:], exponent)
+
+	var tls12HashId uint8
+	var err error
+	if ka.version >= VersionTLS12 {
+		if tls12HashId, err = pickTLS12HashForSignature(ka.sigType, clientHello.signatureAndHashes); err != nil {
+			return nil, err
+		}
+	}
+
+	digest, hashFunc, err := hashForServerKeyExchange(ka.sigType, tls12HashId, ka.version, clientHello.random, hello.random, serverRSAParams)
+	if err != nil {
+		return nil, err
+	}
+	var sig []byte
+	switch ka.sigType {
+	case signatureRSA:
+		privKey, ok := cert.PrivateKey.(*rsa.PrivateKey)
+		if !ok {
+			return nil, errors.New("ECDHE RSA requires a RSA server private key")
+		}
+		sig, err = rsa.SignPKCS1v15(config.rand(), privKey, hashFunc, digest)
+		if err != nil {
+			return nil, errors.New("failed to sign ECDHE parameters: " + err.Error())
+		}
+	default:
+		return nil, errors.New("not an rsa export signature algorithm")
+	}
+
+	skx := new(serverKeyExchangeMsg)
+	sigAndHashLen := 0
+	if ka.version >= VersionTLS12 {
+		sigAndHashLen = 2
+	}
+	skx.key = make([]byte, len(serverRSAParams)+sigAndHashLen+2+len(sig))
+	copy(skx.key, serverRSAParams)
+	k := skx.key[len(serverRSAParams):]
+	if ka.version >= VersionTLS12 {
+		k[0] = tls12HashId
+		k[1] = ka.sigType
+		k = k[2:]
+	}
+	k[0] = byte(len(sig) >> 8)
+	k[1] = byte(len(sig))
+	copy(k[2:], sig)
+	return skx, nil
+}
+
+func (ka *rsaExportKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate, version uint16) ([]byte, *clientKeyExchangeMsg, error) {
+	return nil, nil, errors.New("export client ciphers are not implemented")
+}
+
+func (ka *rsaExportKeyAgreement) processClientKeyExchange(config *Config, cert *Certificate, ckx *clientKeyExchangeMsg, version uint16) ([]byte, error) {
+	preMasterSecret := make([]byte, 48)
+	_, err := io.ReadFull(config.rand(), preMasterSecret[2:])
+	if err != nil {
+		return nil, err
+	}
+
+	if len(ckx.ciphertext) < 2 {
+		return nil, errClientKeyExchange
+	}
+
+	ciphertext := ckx.ciphertext
+	if version != VersionSSL30 {
+		ciphertextLen := int(ckx.ciphertext[0])<<8 | int(ckx.ciphertext[1])
+		if ciphertextLen != len(ckx.ciphertext)-2 {
+			return nil, errClientKeyExchange
+		}
+		ciphertext = ckx.ciphertext[2:]
+	}
+
+	err = rsa.DecryptPKCS1v15SessionKey(config.rand(), config.ExportRSAKey, ciphertext, preMasterSecret)
+	if err != nil {
+		return nil, err
+	}
+	// We don't check the version number in the premaster secret.  For one,
+	// by checking it, we would leak information about the validity of the
+	// encrypted pre-master secret. Secondly, it provides only a small
+	// benefit against a downgrade attack and some implementations send the
+	// wrong version anyway. See the discussion at the end of section
+	// 7.4.7.1 of RFC 4346.
+	return preMasterSecret, nil
+}
+
+func (ka *rsaExportKeyAgreement) processServerKeyExchange(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, skx *serverKeyExchangeMsg) error {
+	return errors.New("tls: client export suites are not supported")
 }
 
 // ecdheRSAKeyAgreement implements a TLS key agreement where the server
