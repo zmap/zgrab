@@ -79,6 +79,9 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 		if config.SChannelOnly {
 			c.SetSChannelOnly()
 		}
+		if config.DHEOnly {
+			c.SetDHEOnly()
+		}
 		if config.ExportsOnly {
 			c.SetExportsOnly()
 		}

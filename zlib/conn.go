@@ -45,6 +45,7 @@ type Conn struct {
 
 	onlyCBC       bool
 	onlySchannel  bool
+	onlyDHE       bool
 	onlyExports   bool
 	onlyExportsDH bool
 
@@ -67,6 +68,10 @@ func (c *Conn) SetCBCOnly() {
 
 func (c *Conn) SetSChannelOnly() {
 	c.onlySchannel = true
+}
+
+func (c *Conn) SetDHEOnly() {
+	c.onlyDHE = true
 }
 
 func (c *Conn) SetExportsOnly() {
@@ -156,6 +161,10 @@ func (c *Conn) TLSHandshake() error {
 	}
 	if c.onlySchannel {
 		tlsConfig.CipherSuites = ztls.SChannelSuites
+	}
+	if c.onlyDHE {
+		tlsConfig.CipherSuites = ztls.DHECiphers
+		tlsConfig.ForceSuites = true
 	}
 	if c.onlyExports {
 		tlsConfig.CipherSuites = ztls.ExportCiphers

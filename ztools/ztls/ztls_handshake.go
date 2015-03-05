@@ -48,6 +48,7 @@ type ServerHandshake struct {
 	ServerKeyExchange  *ServerKeyExchange `json:"server_key_exchange"`
 	RSAExportParams    *RSAExportParams   `json:"rsa_export_params,omitempty"`
 	DHExportParams     *DHExportParams    `json:"dh_export_params,omitempty"`
+	DHParams           *DHParams          `json:"dh_params,omitempty"`
 	ServerFinished     *Finished          `json:"server_finished"`
 }
 
@@ -143,11 +144,13 @@ type RSAExportParams struct {
 	Exponent  uint32        `json:"exponent"`
 }
 
-type DHExportParams struct {
+type DHParams struct {
 	P  []byte `json:"p"`
 	G  []byte `json:"g"`
 	Ys []byte `json:"ys"`
 }
+
+type DHExportParams DHParams
 
 func (p *rsaExportParams) MakeLog() *RSAExportParams {
 	out := new(RSAExportParams)
@@ -168,7 +171,7 @@ func (p *rsaExportParams) MakeLog() *RSAExportParams {
 	return out
 }
 
-func (p *DHExportParams) unmarshal(buf []byte) bool {
+func (p *DHParams) unmarshal(buf []byte) bool {
 	if len(buf) < 2 {
 		return false
 	}

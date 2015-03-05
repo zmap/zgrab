@@ -320,13 +320,19 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 				c.handshakeLog.RSAExportParams = p.MakeLog()
 			}
 		} else if cipherInList(cipher, DHEExportCiphers) {
-			p := new(DHExportParams)
+			p := new(DHParams)
 			if p.unmarshal(skx.key) {
-				c.handshakeLog.DHExportParams = p
+				e := DHExportParams(*p)
+				c.handshakeLog.DHExportParams = &e
+			}
+		} else if cipherInList(cipher, DHECiphers) {
+			p := new(DHParams)
+			if p.unmarshal(skx.key) {
+				c.handshakeLog.DHParams = p
 			}
 		} else {
 			// Other export cipher?
-			return errors.New("unknown export kex")
+			return errors.New("unknown (export?) kex")
 		}
 	}
 

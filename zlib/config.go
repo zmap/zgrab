@@ -23,6 +23,7 @@ type Config struct {
 	RootCAPool    *x509.CertPool
 	CBCOnly       bool
 	SChannelOnly  bool
+	DHEOnly       bool
 	ExportsOnly   bool
 	ExportsDHOnly bool
 
