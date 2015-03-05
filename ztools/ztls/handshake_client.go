@@ -285,14 +285,6 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		return errors.New("tls: failed to parse certificate from server: " + invalidCertErr.Error())
 	}
 
-	switch certs[0].PublicKey.(type) {
-	case *rsa.PublicKey, *ecdsa.PublicKey:
-		break
-	default:
-		c.sendAlert(alertUnsupportedCertificate)
-		return fmt.Errorf("tls: server's certificate contains an unsupported type of public key: %T", certs[0].PublicKey)
-	}
-
 	c.peerCertificates = certs
 
 	if hs.serverHello.ocspStapling {
@@ -340,6 +332,14 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 
 	if c.cipherError != nil {
 		return c.cipherError
+	}
+
+	switch certs[0].PublicKey.(type) {
+	case *rsa.PublicKey, *ecdsa.PublicKey:
+		break
+	default:
+		c.sendAlert(alertUnsupportedCertificate)
+		return fmt.Errorf("tls: server's certificate contains an unsupported type of public key: %T", certs[0].PublicKey)
 	}
 
 	keyAgreement := hs.suite.ka(c.vers)
