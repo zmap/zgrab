@@ -320,9 +320,22 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 	skx, ok := msg.(*serverKeyExchangeMsg)
 	if c.config.ForceSuites && ok {
 		// XXX hijacking this variable to mean exports
-		var p rsaExportParams
-		p.unmarshal(skx.key)
-		c.handshakeLog.ExportParams = p.MakeLog()
+		// Check the cipher suite to see if it's RSA or DHE
+		cipher := hs.serverHello.cipherSuite
+		if cipherInList(cipher, RSAExportCiphers) {
+			var p rsaExportParams
+			if p.unmarshal(skx.key) {
+				c.handshakeLog.RSAExportParams = p.MakeLog()
+			}
+		} else if cipherInList(cipher, DHEExportCiphers) {
+			p := new(DHExportParams)
+			if p.unmarshal(skx.key) {
+				c.handshakeLog.DHExportParams = p
+			}
+		} else {
+			// Other export cipher?
+			return errors.New("unknown export kex")
+		}
 	}
 
 	if c.cipherError != nil {

@@ -82,6 +82,9 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 		if config.ExportsOnly {
 			c.SetExportsOnly()
 		}
+		if config.ExportsDHOnly {
+			c.SetExportsDHOnly()
+		}
 		c.ReadEncoding = config.Encoding
 		if config.TLS {
 			if err := c.TLSHandshake(); err != nil {

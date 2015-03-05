@@ -17,13 +17,14 @@ type Config struct {
 	Encoding string
 
 	// TLS
-	TLS          bool
-	TLSVersion   uint16
-	Heartbleed   bool
-	RootCAPool   *x509.CertPool
-	CBCOnly      bool
-	SChannelOnly bool
-	ExportsOnly  bool
+	TLS           bool
+	TLSVersion    uint16
+	Heartbleed    bool
+	RootCAPool    *x509.CertPool
+	CBCOnly       bool
+	SChannelOnly  bool
+	ExportsOnly   bool
+	ExportsDHOnly bool
 
 	// Banners and Data
 	Banners  bool

@@ -43,9 +43,10 @@ type Conn struct {
 
 	caPool *x509.CertPool
 
-	onlyCBC      bool
-	onlySchannel bool
-	onlyExports  bool
+	onlyCBC       bool
+	onlySchannel  bool
+	onlyExports   bool
+	onlyExportsDH bool
 
 	domain string
 
@@ -70,6 +71,10 @@ func (c *Conn) SetSChannelOnly() {
 
 func (c *Conn) SetExportsOnly() {
 	c.onlyExports = true
+}
+
+func (c *Conn) SetExportsDHOnly() {
+	c.onlyExportsDH = true
 }
 
 func (c *Conn) SetCAPool(pool *x509.CertPool) {
@@ -154,6 +159,10 @@ func (c *Conn) TLSHandshake() error {
 	}
 	if c.onlyExports {
 		tlsConfig.CipherSuites = ztls.ExportCiphers
+		tlsConfig.ForceSuites = true
+	}
+	if c.onlyExportsDH {
+		tlsConfig.CipherSuites = ztls.DHEExportCiphers
 		tlsConfig.ForceSuites = true
 	}
 	c.tlsConn = ztls.Client(c.conn, tlsConfig)
