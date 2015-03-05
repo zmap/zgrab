@@ -47,7 +47,7 @@ type ServerHandshake struct {
 	ServerCertificates *Certificates      `json:"server_certificates"`
 	ServerKeyExchange  *ServerKeyExchange `json:"server_key_exchange"`
 	RSAExportParams    *RSAExportParams   `json:"rsa_export_params,omitempty"`
-	DHExportParams     *DHExportParams    `json:"dh_export_params,omityempty"`
+	DHExportParams     *DHExportParams    `json:"dh_export_params,omitempty"`
 	ServerFinished     *Finished          `json:"server_finished"`
 }
 
