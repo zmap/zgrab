@@ -167,7 +167,7 @@ func (c *Conn) TLSHandshake() error {
 		tlsConfig.ForceSuites = true
 	}
 	if c.onlyExports {
-		tlsConfig.CipherSuites = ztls.ExportCiphers
+		tlsConfig.CipherSuites = ztls.RSA512ExportCiphers
 		tlsConfig.ForceSuites = true
 	}
 	if c.onlyExportsDH {
