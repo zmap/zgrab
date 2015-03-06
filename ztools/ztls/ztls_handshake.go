@@ -142,6 +142,7 @@ type RSAExportParams struct {
 	PublicKey rsa.PublicKey `json:"-"`
 	Modulus   []byte        `json:"modulus"`
 	Exponent  uint32        `json:"exponent"`
+	Length    int           `json:"length"`
 }
 
 type DHParams struct {
@@ -168,6 +169,7 @@ func (p *rsaExportParams) MakeLog() *RSAExportParams {
 	out.PublicKey = key
 	out.Modulus = modulus.Bytes()
 	out.Exponent = exponent
+	out.Length = modulus.BitLen()
 	return out
 }
 
