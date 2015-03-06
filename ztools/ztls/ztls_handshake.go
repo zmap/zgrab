@@ -47,7 +47,7 @@ type ServerHandshake struct {
 	ServerCertificates *Certificates      `json:"server_certificates"`
 	ServerKeyExchange  *ServerKeyExchange `json:"server_key_exchange"`
 	RSAExportParams    *RSAExportParams   `json:"rsa_export_params,omitempty"`
-	DHExportParams     *DHExportParams    `json:"dh_export_params,omitempty"`
+	DHExportParams     *DHParams          `json:"dh_export_params,omitempty"`
 	DHParams           *DHParams          `json:"dh_params,omitempty"`
 	ServerFinished     *Finished          `json:"server_finished"`
 }
@@ -146,12 +146,24 @@ type RSAExportParams struct {
 }
 
 type DHParams struct {
-	P  []byte `json:"p"`
-	G  []byte `json:"g"`
-	Ys []byte `json:"ys"`
+	P  *big.Int
+	G  uint32
+	Ys *big.Int
 }
 
-type DHExportParams DHParams
+func (p *DHParams) MarshalJSON() ([]byte, error) {
+	var aux struct {
+		P        []byte `json:"prime"`
+		PrimeLen int    `json:"prime_length"`
+		G        uint32 `json:"generator"`
+		Ys       []byte `json:"public_exponent"`
+	}
+	aux.P = p.P.Bytes()
+	aux.PrimeLen = p.P.BitLen()
+	aux.G = p.G
+	aux.Ys = p.Ys.Bytes()
+	return json.Marshal(&aux)
+}
 
 func (p *rsaExportParams) MakeLog() *RSAExportParams {
 	out := new(RSAExportParams)
@@ -183,20 +195,28 @@ func (p *DHParams) unmarshal(buf []byte) bool {
 	if len(buf) < int(pLength) {
 		return false
 	}
-	p.P = buf[0:pLength]
+	pBytes := buf[0:pLength]
 	buf = buf[pLength:]
+	p.P = big.NewInt(0)
+	p.P.SetBytes(pBytes)
 
 	if len(buf) < 2 {
 		return false
 	}
 	gLength := binary.BigEndian.Uint16(buf)
 	buf = buf[2:]
+	if gLength > 4 {
+		return false
+	}
 
 	if len(buf) < int(gLength) {
 		return false
 	}
-	p.G = buf[0:gLength]
+	gBytes := buf[0:gLength]
 	buf = buf[gLength:]
+	fourBytes := []byte{0, 0, 0, 0}
+	copy(fourBytes[4-len(gBytes):], gBytes)
+	p.G = binary.BigEndian.Uint32(fourBytes)
 
 	if len(buf) < 2 {
 		return false
@@ -207,7 +227,9 @@ func (p *DHParams) unmarshal(buf []byte) bool {
 	if len(buf) < int(ysLength) {
 		return false
 	}
-	p.Ys = buf[0:ysLength]
+	ysBytes := buf[0:ysLength]
+	p.Ys = big.NewInt(0)
+	p.Ys.SetBytes(ysBytes)
 
 	return true
 }

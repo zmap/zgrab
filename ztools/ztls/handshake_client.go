@@ -322,8 +322,7 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		} else if cipherInList(cipher, DHEExportCiphers) {
 			p := new(DHParams)
 			if p.unmarshal(skx.key) {
-				e := DHExportParams(*p)
-				c.handshakeLog.DHExportParams = &e
+				c.handshakeLog.DHExportParams = p
 			}
 		} else if cipherInList(cipher, DHECiphers) {
 			p := new(DHParams)
