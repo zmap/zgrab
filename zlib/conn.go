@@ -82,6 +82,14 @@ func (c *Conn) SetExportsDHOnly() {
 	c.onlyExportsDH = true
 }
 
+func (c *Conn) SetChromeCiphers() {
+	c.chromeCiphers = true
+}
+
+func (c *Conn) SetFirefoxCiphers() {
+	c.firefoxCiphers = true
+}
+
 func (c *Conn) SetCAPool(pool *x509.CertPool) {
 	c.caPool = pool
 }
@@ -174,6 +182,16 @@ func (c *Conn) TLSHandshake() error {
 		tlsConfig.CipherSuites = ztls.DHEExportCiphers
 		tlsConfig.ForceSuites = true
 	}
+    if c.chromeCiphers {
+		tlsConfig.CipherSuites = ztls.ChromeCiphers
+		tlsConfig.ForceSuites = true
+
+    }
+    if c.firefoxCiphers {
+		tlsConfig.CipherSuites = ztls.FirefoxCiphers
+		tlsConfig.ForceSuites = true
+
+    }
 	c.tlsConn = ztls.Client(c.conn, tlsConfig)
 	c.tlsConn.SetReadDeadline(c.readDeadline)
 	c.tlsConn.SetWriteDeadline(c.writeDeadline)
