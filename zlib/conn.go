@@ -43,11 +43,13 @@ type Conn struct {
 
 	caPool *x509.CertPool
 
-	onlyCBC       bool
-	onlySchannel  bool
-	onlyDHE       bool
-	onlyExports   bool
-	onlyExportsDH bool
+	onlyCBC        bool
+	onlySchannel   bool
+	onlyDHE        bool
+	onlyExports    bool
+	onlyExportsDH  bool
+    chromeCiphers  bool
+    firefoxCiphers bool
 
 	domain string
 
