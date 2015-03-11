@@ -147,7 +147,7 @@ type RSAExportParams struct {
 
 type DHParams struct {
 	P  *big.Int
-	G  uint32
+	G  *big.Int
 	Ys *big.Int
 }
 
@@ -155,12 +155,12 @@ func (p *DHParams) MarshalJSON() ([]byte, error) {
 	var aux struct {
 		P        []byte `json:"prime"`
 		PrimeLen int    `json:"prime_length"`
-		G        uint32 `json:"generator"`
+		G        []byte `json:"generator"`
 		Ys       []byte `json:"public_exponent"`
 	}
 	aux.P = p.P.Bytes()
 	aux.PrimeLen = p.P.BitLen()
-	aux.G = p.G
+	aux.G = p.G.Bytes()
 	aux.Ys = p.Ys.Bytes()
 	return json.Marshal(&aux)
 }
@@ -205,18 +205,14 @@ func (p *DHParams) unmarshal(buf []byte) bool {
 	}
 	gLength := binary.BigEndian.Uint16(buf)
 	buf = buf[2:]
-	if gLength > 4 {
-		return false
-	}
 
 	if len(buf) < int(gLength) {
 		return false
 	}
 	gBytes := buf[0:gLength]
 	buf = buf[gLength:]
-	fourBytes := []byte{0, 0, 0, 0}
-	copy(fourBytes[4-len(gBytes):], gBytes)
-	p.G = binary.BigEndian.Uint32(fourBytes)
+	p.G = big.NewInt(0)
+	p.G.SetBytes(gBytes)
 
 	if len(buf) < 2 {
 		return false
