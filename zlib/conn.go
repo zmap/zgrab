@@ -13,7 +13,7 @@ import (
 	"github.com/zmap/zgrab/ztools/ztls"
 )
 
-var smtpEndRegex = regexp.MustCompile(`(?:\r\n)|^[0-9]{3} .+\r\n$`)
+var smtpEndRegex = regexp.MustCompile(`(?:^\d\d\d\s.*\r\n$)|(?:^\d\d\d-[\s\S]*\r\n\d\d\d\s.*\r\n$)`)
 var pop3EndRegex = regexp.MustCompile(`(?:\r\n\.\r\n$)|(?:\r\n$)`)
 var imapStatusEndRegex = regexp.MustCompile(`\r\n$`)
 var ftpEndRegex = regexp.MustCompile(`^.*[0-9]{3}( [^\r\n]*)?\r?\n$`)
@@ -48,8 +48,8 @@ type Conn struct {
 	onlyDHE        bool
 	onlyExports    bool
 	onlyExportsDH  bool
-    chromeCiphers  bool
-    firefoxCiphers bool
+	chromeCiphers  bool
+	firefoxCiphers bool
 
 	domain string
 
@@ -184,16 +184,16 @@ func (c *Conn) TLSHandshake() error {
 		tlsConfig.CipherSuites = ztls.DHEExportCiphers
 		tlsConfig.ForceSuites = true
 	}
-    if c.chromeCiphers {
+	if c.chromeCiphers {
 		tlsConfig.CipherSuites = ztls.ChromeCiphers
 		tlsConfig.ForceSuites = true
 
-    }
-    if c.firefoxCiphers {
+	}
+	if c.firefoxCiphers {
 		tlsConfig.CipherSuites = ztls.FirefoxCiphers
 		tlsConfig.ForceSuites = true
 
-    }
+	}
 	c.tlsConn = ztls.Client(c.conn, tlsConfig)
 	c.tlsConn.SetReadDeadline(c.readDeadline)
 	c.tlsConn.SetWriteDeadline(c.writeDeadline)
