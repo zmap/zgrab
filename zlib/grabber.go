@@ -91,6 +91,9 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 		if config.ChromeOnly {
 			c.SetChromeCiphers()
 		}
+		if config.ChromeNoDHE {
+			c.SetChromeNoDHECiphers()
+		}
 		if config.FirefoxOnly {
 			c.SetFirefoxCiphers()
 		}

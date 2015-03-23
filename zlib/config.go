@@ -28,6 +28,7 @@ type Config struct {
 	ExportsDHOnly bool
 	FirefoxOnly   bool
 	ChromeOnly    bool
+	ChromeNoDHE   bool
 
 	// Banners and Data
 	Banners  bool
