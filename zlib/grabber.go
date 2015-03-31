@@ -97,6 +97,16 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 		if config.FirefoxOnly {
 			c.SetFirefoxCiphers()
 		}
+		if config.FirefoxNoDHE {
+			c.SetFirefoxNoDHECiphers()
+		}
+		if config.SafariOnly {
+			c.SetSafariCiphers()
+		}
+		if config.SafariNoDHE {
+			c.SetSafariNoDHECiphers()
+		}
+
 		c.ReadEncoding = config.Encoding
 		if config.TLS {
 			if err := c.TLSHandshake(); err != nil {

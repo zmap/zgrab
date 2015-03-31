@@ -43,14 +43,17 @@ type Conn struct {
 
 	caPool *x509.CertPool
 
-	onlyCBC        bool
-	onlySchannel   bool
-	onlyDHE        bool
-	onlyExports    bool
-	onlyExportsDH  bool
-	chromeCiphers  bool
-	chromeNoDHE    bool
-	firefoxCiphers bool
+	onlyCBC             bool
+	onlySchannel        bool
+	onlyDHE             bool
+	onlyExports         bool
+	onlyExportsDH       bool
+	chromeCiphers       bool
+	chromeNoDHE         bool
+	firefoxCiphers      bool
+	firefoxNoDHECiphers bool
+	safariCiphers       bool
+	safariNoDHECiphers  bool
 
 	domain string
 
@@ -95,6 +98,18 @@ func (c *Conn) SetChromeNoDHECiphers() {
 
 func (c *Conn) SetFirefoxCiphers() {
 	c.firefoxCiphers = true
+}
+
+func (c *Conn) SetFirefoxNoDHECiphers() {
+	c.firefoxNoDHECiphers = true
+}
+
+func (c *Conn) SetSafariCiphers() {
+	c.safariCiphers = true
+}
+
+func (c *Conn) SetSafariNoDHECiphers() {
+	c.safariNoDHECiphers = true
 }
 
 func (c *Conn) SetCAPool(pool *x509.CertPool) {

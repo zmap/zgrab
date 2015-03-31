@@ -60,6 +60,7 @@ func init() {
 	flag.UintVar(&config.Senders, "senders", 1000, "Number of send coroutines to use")
 	flag.BoolVar(&config.Banners, "banners", false, "Read banner upon connection creation")
 	flag.StringVar(&messageFileName, "data", "", "Send a message and read response (%s will be replaced with destination IP)")
+
 	flag.StringVar(&config.EHLODomain, "ehlo", "", "Send an EHLO with the specified domain (implies --smtp)")
 	flag.BoolVar(&config.SMTPHelp, "smtp-help", false, "Send a SMTP help (implies --smtp)")
 	flag.BoolVar(&config.StartTLS, "starttls", false, "Send STARTTLS before negotiating")
@@ -67,12 +68,19 @@ func init() {
 	flag.BoolVar(&config.IMAP, "imap", false, "Conform to IMAP rules when sending STARTTLS")
 	flag.BoolVar(&config.POP3, "pop3", false, "Conform to POP3 rules when sending STARTTLS")
 	flag.BoolVar(&config.Modbus, "modbus", false, "Send some modbus data")
+
 	flag.BoolVar(&config.ExportsOnly, "export-ciphers", false, "Send only export ciphers")
 	flag.BoolVar(&config.ExportsDHOnly, "export-dhe-ciphers", false, "Send only export DHE ciphers")
 	flag.BoolVar(&config.DHEOnly, "dhe-ciphers", false, "Send only DHE ciphers (not ECDHE)")
+
 	flag.BoolVar(&config.ChromeOnly, "chrome-ciphers", false, "Send Chrome Ordered Cipher Suites")
 	flag.BoolVar(&config.ChromeNoDHE, "chrome-no-dhe-ciphers", false, "Send chrome ciphers minus DHE suites")
+
 	flag.BoolVar(&config.FirefoxOnly, "firefox-ciphers", false, "Send Firefox Ordered Cipher Suites")
+
+	flag.BoolVar(&config.SafariOnly,  "safari-ciphers", false, "Send Safari Ordered Cipher Suites")
+	flag.BoolVar(&config.SafariNoDHE, "safari-no-dhe-ciphers", false, "Send Safari ciphers minus DHE suites")
+
 	flag.BoolVar(&config.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
 	flag.StringVar(&rootCAFileName, "ca-file", "", "List of trusted root certificate authorities in PEM format")
 	flag.BoolVar(&config.CBCOnly, "cbc-only", false, "Send only ciphers that use CBC")
