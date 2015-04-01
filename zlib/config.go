@@ -30,6 +30,9 @@ type Config struct {
 	ChromeOnly    bool
 	ChromeNoDHE   bool
 
+	// SSH
+	SSH bool
+
 	// Banners and Data
 	Banners  bool
 	SendData bool

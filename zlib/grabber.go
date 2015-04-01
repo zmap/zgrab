@@ -129,6 +129,12 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 			}
 		}
 
+		if config.SSH {
+			if err := c.SSHHandshake(); err != nil {
+				return err
+			}
+		}
+
 		if config.SendData {
 			host, _, _ := net.SplitHostPort(c.RemoteAddr().String())
 			msg := bytes.Replace(config.Data, []byte("%s"), []byte(host), -1)

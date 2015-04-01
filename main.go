@@ -79,6 +79,7 @@ func init() {
 	flag.BoolVar(&config.SChannelOnly, "schannel", false, "Send only ciphers for guessing schannel version")
 	flag.IntVar(&config.GOMAXPROCS, "gomaxprocs", 3, "Set GOMAXPROCS (default 3)")
 	flag.BoolVar(&config.FTP, "ftp", false, "Read FTP banners")
+	flag.BoolVar(&config.SSH, "ssh", false, "SSH scan")
 	flag.Parse()
 
 	// Validate Go Runtime config
