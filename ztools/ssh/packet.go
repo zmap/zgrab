@@ -23,6 +23,43 @@ func expectedLength(packetLength uint32, macLength uint32) int {
 // See https://tools.ietf.org/html/rfc4251 for details.
 type NameList []string
 
+func (n *NameList) MarshaledLength() int {
+	// 4 bytes for encoding the length
+	length := 4
+	nameCount := len(*n)
+
+	// No body if its empty
+	if nameCount <= 0 {
+		return length
+	}
+
+	// 1 byte per comma
+	length += nameCount - 1
+
+	// Add in lengths of string
+	for _, val := range *n {
+		length += len(val)
+	}
+	return length
+}
+
+func (n *NameList) MarshalInto(dest []byte) ([]byte, error) {
+	b := dest
+	if len(b) < 4 {
+		return dest, errShortBuffer
+	}
+	b = b[4:]
+	joined := strings.Join(*n, ",")
+	if len(b) < len(joined) {
+		return dest, errShortBuffer
+	}
+	length := len(joined)
+	binary.BigEndian.PutUint32(dest, uint32(length))
+	copy(b, joined[:])
+	b = b[length:]
+	return b, nil
+}
+
 // Unmarshal a NameList from a byte slice of the form
 // [length:body:extra] where extra is optional. Returns [extra], true
 // when successful, and raw, false when unsuccessful.

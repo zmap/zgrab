@@ -13,6 +13,8 @@ type Conn struct {
 	// Underlying network connection
 	conn net.Conn
 
+	config Config
+
 	// Key information
 	macLength uint32
 

@@ -113,6 +113,61 @@ type KeyExchangeInit struct {
 	Zero                      uint32   `json:"zero"`
 }
 
+func (kxi *KeyExchangeInit) Marshal() ([]byte, error) {
+	if kxi.raw != nil {
+		return kxi.raw, nil
+	}
+	payloadLength := 0
+	payloadLength += 16 // Cookie
+	payloadLength += kxi.KexAlgorithms.MarshaledLength()
+	payloadLength += kxi.HostKeyAlgorithms.MarshaledLength()
+	payloadLength += kxi.EncryptionClientToServer.MarshaledLength()
+	payloadLength += kxi.EncryptionServerToClient.MarshaledLength()
+	payloadLength += kxi.MACClientToServer.MarshaledLength()
+	payloadLength += kxi.MACServerToClient.MarshaledLength()
+	payloadLength += kxi.CompressionClientToServer.MarshaledLength()
+	payloadLength += kxi.CompressionServerToClient.MarshaledLength()
+	payloadLength += kxi.LanguageClientToServer.MarshaledLength()
+	payloadLength += kxi.LanguageServerToClient.MarshaledLength()
+	payloadLength += 1 + 4 // Bool + Reserved
+	out := make([]byte, payloadLength)
+	b := out
+	copy(b[0:16], kxi.Cookie[:])
+	b = b[16:]
+	var err error
+	if b, err = kxi.KexAlgorithms.MarshalInto(b); err != nil {
+		return nil, err
+	}
+	if b, err = kxi.HostKeyAlgorithms.MarshalInto(b); err != nil {
+		return nil, err
+	}
+	if b, err = kxi.EncryptionClientToServer.MarshalInto(b); err != nil {
+		return nil, err
+	}
+	if b, err = kxi.EncryptionServerToClient.MarshalInto(b); err != nil {
+		return nil, err
+	}
+	if b, err = kxi.MACClientToServer.MarshalInto(b); err != nil {
+		return nil, err
+	}
+	if b, err = kxi.MACServerToClient.MarshalInto(b); err != nil {
+		return nil, err
+	}
+	if b, err = kxi.CompressionClientToServer.MarshalInto(b); err != nil {
+		return nil, err
+	}
+	if b, err = kxi.CompressionServerToClient.MarshalInto(b); err != nil {
+		return nil, err
+	}
+	if b, err = kxi.LanguageClientToServer.MarshalInto(b); err != nil {
+		return nil, err
+	}
+	if b, err = kxi.LanguageServerToClient.MarshalInto(b); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Unmarshal a byte array into a KeyExchangeInit struct. The byte array
 // should be the entire KeyExchangeInit message payload starting after
 // the SSH_MSG_KEXINIT byte.
