@@ -13,13 +13,20 @@ type Conn struct {
 	// Underlying network connection
 	conn net.Conn
 
-	config Config
+	config *Config
 
 	// Key information
 	macLength uint32
 
 	// Log for ZGrab output
 	handshakeLog HandshakeLog
+
+	currentCipher cipher
+}
+
+type sshPayload interface {
+	MsgType() byte
+	Marshal() ([]byte, error)
 }
 
 func (c *Conn) ClientHandshake() error {
@@ -27,6 +34,14 @@ func (c *Conn) ClientHandshake() error {
 	clientProtocolBytes := clientProtocol.Marshal()
 	c.handshakeLog.ClientProtocol = clientProtocol
 	c.conn.Write(clientProtocolBytes)
+
+	ckxi, err := GenerateKeyExchangeInit(c.config)
+	if err != nil {
+		return err
+	}
+	if err = c.writePacket(ckxi); err != nil {
+		return err
+	}
 
 	buf := make([]byte, 1024)
 	protocolDone := false
@@ -53,7 +68,8 @@ func (c *Conn) ClientHandshake() error {
 	// See if it matches????
 
 	// Read the key options
-	packet, err := c.readPacket()
+	var packet interface{}
+	packet, err = c.readPacket()
 	if err != nil {
 		return err
 	}
@@ -114,7 +130,8 @@ func (c *Conn) readPacket() (interface{}, error) {
 	// Read the payload
 	payloadLength := p.packetLength - uint32(p.paddingLength) - 1
 	zlog.Debug(payloadLength)
-	p.payload = b[0:payloadLength]
+	p.msgType = b[0]
+	p.payload = b[1:payloadLength]
 	b = b[payloadLength:]
 
 	// Read the padding
@@ -134,12 +151,64 @@ func (c *Conn) readPacket() (interface{}, error) {
 	if len(p.payload) < 1 {
 		return nil, errShortPacket
 	}
-	msgType := p.payload[0]
-	switch msgType {
+	switch p.msgType {
 	case SSH_MSG_KEXINIT:
 		var kxi KeyExchangeInit
-		kxi.Unmarshal(p.payload[1:])
+		kxi.Unmarshal(p.payload)
 		return &kxi, nil
 	}
 	return nil, errors.New("unimplemented")
+}
+
+func (c *Conn) writePacket(payload sshPayload) error {
+	payloadBytes, err := payload.Marshal()
+	msgType := payload.MsgType()
+	if err != nil {
+		return err
+	}
+	if len(payloadBytes) > 32768 {
+		return errLongPacket
+	}
+	paddingLen := 8 - ((4 + 1 + 1 + len(payloadBytes)) % 8)
+	paddingBytes := make([]byte, paddingLen)
+	if len(paddingBytes) > 255 {
+		return errInvalidPadding
+	}
+	pkt := packet{
+		packetLength: uint32(2 + len(payloadBytes) + len(paddingBytes)),
+		msgType:      msgType,
+		payload:      payloadBytes,
+		padding:      paddingBytes,
+		mac:          []byte{},
+	}
+	out := make([]byte, 4+1+1+len(pkt.payload)+len(pkt.padding))
+	binary.BigEndian.PutUint32(out, pkt.packetLength)
+	out[4] = byte(len(pkt.padding))
+	out[5] = pkt.msgType
+	copy(out[6:], pkt.payload)
+	copy(out[6+len(pkt.payload):], pkt.padding)
+
+	written := 0
+	for written < len(out) {
+		n, err := c.conn.Write(out[written:])
+		written += n
+		if err != nil {
+			return err
+		}
+	}
+	written = 0
+	mac := make([]byte, 0)
+	for written < len(mac) {
+		n, err := c.conn.Write(mac[written:])
+		written += n
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Conn) authenticate(data []byte) (tag []byte) {
+	tag = make([]byte, 0)
+	return
 }

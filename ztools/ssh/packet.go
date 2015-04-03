@@ -9,6 +9,7 @@ import (
 type packet struct {
 	packetLength  uint32
 	paddingLength uint8
+	msgType       byte
 	payload       []byte
 	padding       []byte
 	mac           []byte

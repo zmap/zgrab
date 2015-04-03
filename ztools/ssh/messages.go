@@ -113,6 +113,10 @@ type KeyExchangeInit struct {
 	Zero                      uint32   `json:"zero"`
 }
 
+func (kxi *KeyExchangeInit) MsgType() byte {
+	return SSH_MSG_KEXINIT
+}
+
 func (kxi *KeyExchangeInit) Marshal() ([]byte, error) {
 	if kxi.raw != nil {
 		return kxi.raw, nil

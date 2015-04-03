@@ -466,7 +466,8 @@ func (c *Conn) GetFTPBanner() error {
 }
 
 func (c *Conn) SSHHandshake() error {
-	client := ssh.Client(c.conn)
+	config := new(ssh.Config)
+	client := ssh.Client(c.conn, config)
 	err := client.ClientHandshake()
 	handshakeLog := client.HandshakeLog()
 	event := new(SSHEvent)

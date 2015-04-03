@@ -36,6 +36,53 @@ const (
 	HOST_KEY_DSS                                  = "ssh-dss"
 )
 
+const (
+	ENCRYPTION_AES_128_CTR                 = "aes128-ctr"
+	ENCRYPTION_AES_192_CTR                 = "aes192-ctr"
+	ENCRYPTION_AES_256_CTR                 = "aes256-ctr"
+	ENCRPTION_ARCFOUR_256                  = "arcfour256"
+	ENCRYPTION_ARCFOUR_128                 = "arcfour128"
+	ENCRYPTION_AES_128_GCM_OPENSSH         = "aes128-gcm@openssh.com"
+	ENCRYPTION_AES_256_GCM_OPENSSH         = "aes256-gcm@openssh.com"
+	ENCRYPTION_CHACHA_20_POLY_1305_OPENSSH = "chacha20-poly1305@openssh.com"
+	ENCRYPTION_AES_128_CBC                 = "aes128-cbc"
+	ENCRYPTION_3DES_CBC                    = "3des-cbc"
+	ENCRYPTION_BLOWFISH_CBC                = "blowfish-cbc"
+	ENCRYPTION_CAST_128_CBC                = "cast128-cbc"
+	ENCRYPTION_AES_192_CBC                 = "aes192-cbc"
+	ENCRYPTION_AES_256_CBC                 = "aes256-cbc"
+	ENCRYPTION_ARCFOUR                     = "arcfour"
+	ENCRYPTION_RIJNDAEL_CBC_LYSATOR        = "rijndael-cbc@lysator.liu.se"
+)
+
+const (
+	MAC_HMAC_MD5_ETM_OPENSSH        = "hmac-md5-etm@openssh.com"
+	MAC_HMAC_SHA1_ETM_OPENSSH       = "hmac-sha1-etm@openssh.com"
+	MAC_UMAC_64_ETM_OPENSSH         = "umac-64-etm@openssh.com"
+	MAC_UMAC_128_ETM_OPENSSH        = "umac-128-etm@openssh.com"
+	MAC_HMAC_SHA2_256_ETM_OPENSSH   = "hmac-sha2-256-etm@openssh.com"
+	MAC_HMAC_SHA2_512_ETM_OPENSSH   = "hmac-sha2-512-etm@openssh.com"
+	MAC_HMAC_RIPEMD_160_ETM_OPENSSH = "hmac-ripemd160-etm@openssh.com"
+	MAC_HMAC_SHA1_96_ETM_OPENSSH    = "hmac-sha1-96-etm@openssh.com"
+	MAC_HMAC_MD5_96_ETM             = "hmac-md5-96-etm@openssh.com"
+	MAC_HMAC_MD5                    = "hmac-md5"
+	MAC_HMAC_SHA1                   = "hmac-sha1"
+	MAC_UMAC_64_OPENSSH             = "umac-64@openssh.com"
+	MAC_UMAC_128_OPENSSH            = "umac-128@openssh.com"
+	MAC_HMAC_SHA2_256               = "hmac-sha2-256"
+	MAC_HMAC_SHA2_512               = "hmac-sha2-512"
+	MAC_HMAC_RIPEMD_160             = "hmac-ripemd160"
+	MAC_HMAC_RIPEMD_160_OPENSSH     = "hmac-ripemd160@openssh.com"
+	MAC_HMAC_SHA1_96                = "hmac-sha1-96"
+	MAC_HMAC_MD5_96                 = "hmac-md5-96"
+)
+
+const (
+	COMPRESSION_NONE         = "none"
+	COMPRESSION_ZLIB_OPENSSH = "zlib@openssh.com"
+	COMPRESSION_ZLIB         = "zlib"
+)
+
 // KnownKexAlgorithmNames is an array of all key exchange methods known to this
 // package. All key exchange methods are not necessarily implemented.
 var KnownKexAlgorithmNames = []string{
@@ -66,6 +113,53 @@ var KnownHostKeyAlgorithmNames = []string{
 	HOST_KEY_DSS,
 }
 
+var KnownEncryptionAlgorithmNames = []string{
+	ENCRYPTION_AES_128_CTR,
+	ENCRYPTION_AES_192_CTR,
+	ENCRYPTION_AES_256_CTR,
+	ENCRPTION_ARCFOUR_256,
+	ENCRYPTION_ARCFOUR_128,
+	ENCRYPTION_AES_128_GCM_OPENSSH,
+	ENCRYPTION_AES_256_GCM_OPENSSH,
+	ENCRYPTION_CHACHA_20_POLY_1305_OPENSSH,
+	ENCRYPTION_AES_128_CBC,
+	ENCRYPTION_3DES_CBC,
+	ENCRYPTION_BLOWFISH_CBC,
+	ENCRYPTION_CAST_128_CBC,
+	ENCRYPTION_AES_192_CBC,
+	ENCRYPTION_AES_256_CBC,
+	ENCRYPTION_ARCFOUR,
+	ENCRYPTION_RIJNDAEL_CBC_LYSATOR,
+}
+
+var KnownMACAlgorithmNames = []string{
+	MAC_HMAC_MD5_ETM_OPENSSH,
+	MAC_HMAC_SHA1_ETM_OPENSSH,
+	MAC_UMAC_64_ETM_OPENSSH,
+	MAC_UMAC_128_ETM_OPENSSH,
+	MAC_HMAC_SHA2_256_ETM_OPENSSH,
+	MAC_HMAC_SHA2_512_ETM_OPENSSH,
+	MAC_HMAC_RIPEMD_160_ETM_OPENSSH,
+	MAC_HMAC_SHA1_96_ETM_OPENSSH,
+	MAC_HMAC_MD5_96_ETM,
+	MAC_HMAC_MD5,
+	MAC_HMAC_SHA1,
+	MAC_UMAC_64_OPENSSH,
+	MAC_UMAC_128_OPENSSH,
+	MAC_HMAC_SHA2_256,
+	MAC_HMAC_SHA2_512,
+	MAC_HMAC_RIPEMD_160,
+	MAC_HMAC_RIPEMD_160_OPENSSH,
+	MAC_HMAC_SHA1_96,
+	MAC_HMAC_MD5_96,
+}
+
+var KnownCompressionAlgorithmNames = []string{
+	COMPRESSION_NONE,
+	COMPRESSION_ZLIB_OPENSSH,
+	COMPRESSION_ZLIB,
+}
+
 // GenerateKeyExchangeInit generates a KeyExchangeInit message sutiable for
 // transmission over the wire based on the configuration passed.
 func GenerateKeyExchangeInit(c *Config) (*KeyExchangeInit, error) {
@@ -78,5 +172,14 @@ func GenerateKeyExchangeInit(c *Config) (*KeyExchangeInit, error) {
 		return nil, errors.New("Could not read random source")
 	}
 	kxi.KexAlgorithms = c.getKexAlgorithms()
+	kxi.HostKeyAlgorithms = c.getHostKeyAlgorithms()
+	kxi.EncryptionClientToServer = c.getClientEncryption()
+	kxi.EncryptionServerToClient = c.getServerEncryption()
+	kxi.MACClientToServer = c.getClientMAC()
+	kxi.MACServerToClient = c.getServerMAC()
+	kxi.CompressionClientToServer = c.getClientCompression()
+	kxi.CompressionServerToClient = c.getServerCompression()
+	kxi.LanguageClientToServer = make([]string, 0)
+	kxi.LanguageServerToClient = make([]string, 0)
 	return kxi, nil
 }
