@@ -357,3 +357,25 @@ func init() {
 	cipherSuiteNames[0xFF85] = "OP_PCL_TLS10_AES_128_CBC_SHA512"
 }
 
+func (cs CipherSuite) String() string {
+	if name, ok := cipherSuiteNames[int(cs)]; ok {
+		return name
+	} else {
+		return "unknown"
+	}
+}
+
+func (v TLSVersion) String() string {
+	switch v {
+	case 0x0300:
+		return "SSLv3"
+	case 0x0301:
+		return "TLSv1.0"
+	case 0x0302:
+		return "TLSv1.1"
+	case 0x0303:
+		return "TLSv1.2"
+	default:
+		return "unknown"
+	}
+}
