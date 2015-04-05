@@ -23,7 +23,9 @@ func Client(c net.Conn, config *Config) *Conn {
 
 // SSH message types. These are usually the first byte of the payload
 const (
-	SSH_MSG_KEXINIT byte = 0x14
+	SSH_MSG_KEXINIT     byte = 20
+	SSH_MSG_KEXDH_INIT  byte = 30
+	SSH_MSG_KEXDH_REPLY byte = 31
 )
 
 type Config struct {

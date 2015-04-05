@@ -2,7 +2,9 @@ package ssh
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
+	"math/big"
 	"regexp"
 
 	"github.com/zmap/zgrab/ztools/zlog"
@@ -233,6 +235,103 @@ func (kxi *KeyExchangeInit) Unmarshal(raw []byte) bool {
 	if len(b) != 0 {
 		zlog.Debug("WAAAT")
 		zlog.Debug(len(b))
+		return false
+	}
+	return true
+}
+
+// KeyExchangeDHInit represent the SSH_MSG_KEXDH_INIT message for transferring
+// Diffie-Hellman public values. E = G^X mod P, where G is the generator and P
+// is the prime. E is the public DHE value. See RFC 4253 Section 8.
+type KeyExchangeDHInit struct {
+	raw []byte
+	E   *big.Int
+}
+
+// MsgType returns the SSH_MSG_KEXDH_INIT message type
+func (dhi *KeyExchangeDHInit) MsgType() byte {
+	return SSH_MSG_KEXDH_INIT
+}
+
+// Marshal encodes a KeyExchangeDHInit message payload
+func (dhi *KeyExchangeDHInit) Marshal() ([]byte, error) {
+	if dhi.raw != nil {
+		return dhi.raw, nil
+	}
+	e := dhi.E.Bytes()
+	out := make([]byte, 4+len(e))
+	binary.BigEndian.PutUint32(out, uint32(len(e)))
+	copy(out[4:], e)
+	return out, nil
+}
+
+func (dhi *KeyExchangeDHInit) Unmarshal(raw []byte) bool {
+	b := raw
+	if len(b) < 4 {
+		return false
+	}
+	length := binary.BigEndian.Uint32(b)
+	b = b[4:]
+	if uint32(len(b)) != length {
+		return false
+	}
+	dhi.E = big.NewInt(0)
+	dhi.E.SetBytes(b[0:length])
+	dhi.raw = raw
+	return true
+}
+
+type KeyExchangeDHInitReply struct {
+	raw []byte
+
+	K_S       []byte
+	F         *big.Int
+	Signature []byte
+}
+
+func (dhr *KeyExchangeDHInitReply) MsgType() byte {
+	return SSH_MSG_KEXDH_REPLY
+}
+
+func (dhr *KeyExchangeDHInitReply) Marshal() ([]byte, error) {
+	return nil, errors.New("unimplemented")
+}
+
+func (dhr *KeyExchangeDHInitReply) Unmarshal(raw []byte) bool {
+	b := raw
+	if len(b) < 4 {
+		return false
+	}
+	ksLength := binary.BigEndian.Uint32(b)
+	b = b[4:]
+	if ksLength > uint32(len(b)) {
+		return false
+	}
+	dhr.K_S = make([]byte, ksLength)
+	copy(dhr.K_S, b[0:ksLength])
+	b = b[ksLength:]
+	if len(b) < 4 {
+		return false
+	}
+	fLength := binary.BigEndian.Uint32(b)
+	b = b[4:]
+	if fLength > uint32(len(b)) {
+		return false
+	}
+	dhr.F.SetBytes(b[0:fLength])
+	b = b[fLength:]
+	if len(b) < 4 {
+		return false
+	}
+	sigLength := binary.BigEndian.Uint32(b)
+	b = b[4:]
+	if sigLength > uint32(len(b)) {
+		return false
+	}
+	dhr.Signature = make([]byte, sigLength)
+	copy(dhr.Signature, b[0:sigLength])
+	b = b[sigLength:]
+	if len(b) > 0 {
 		return false
 	}
 	return true

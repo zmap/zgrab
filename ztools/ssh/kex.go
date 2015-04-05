@@ -21,11 +21,11 @@ const (
 // ecdsa-sha2-nistp256-cert-v01@openssh.com,ecdsa-sha2-nistp384-cert-v01@openssh.com,ecdsa-sha2-nistp521-cert-v01@openssh.com,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,ssh-ed25519-cert-v01@openssh.com,ssh-rsa-cert-v01@openssh.com,ssh-dss-cert-v01@openssh.com,ssh-rsa-cert-v00@openssh.com,ssh-dss-cert-v00@openssh.com,ssh-ed25519,ssh-rsa,ssh-dss
 const (
 	HOST_KEY_ECDSA_SHA2_NISTP256_CERT_V01_OPENSSH = "ecdsa-sha2-nistp256-cert-v01@openssh.com"
-	HOST_KEY_ECDSA_SHA2_NISTp384_CERT_V01_OPENSSH = "ecdsa-sha2-nistp384-cert-v01@openssh.com"
+	HOST_KEY_ECDSA_SHA2_NISTP384_CERT_V01_OPENSSH = "ecdsa-sha2-nistp384-cert-v01@openssh.com"
 	HOST_KEY_ECDSA_SHA2_NISTP521_CERT_V01_OPENSSH = "ecdsa-sha2-nistp521-cert-v01@openssh.com"
 	HOST_KEY_ECDSA_SHA2_NISTP256                  = "ecdsa-sha2-nistp256"
 	HOST_KEY_ECDSA_SHA2_NISTP384                  = "ecdsa-sha2-nistp384"
-	HOST_KEY_ECDSA_SHA2_NISTp521                  = "ecdsa-sha2-nistp521"
+	HOST_KEY_ECDSA_SHA2_NISTP521                  = "ecdsa-sha2-nistp521"
 	HOST_KEY_ED_25519_CERT_V01_OPENSSH            = "ssh-ed25519-cert-v01@openssh.com"
 	HOST_KEY_RSA_CERT_V01                         = "ssh-rsa-cert-v01@openssh.com"
 	HOST_KEY_DSS_CERT_V01                         = "ssh-dss-cert-v01@openssh.com"
@@ -98,11 +98,11 @@ var KnownKexAlgorithmNames = []string{
 
 var KnownHostKeyAlgorithmNames = []string{
 	HOST_KEY_ECDSA_SHA2_NISTP256_CERT_V01_OPENSSH,
-	HOST_KEY_ECDSA_SHA2_NISTp384_CERT_V01_OPENSSH,
+	HOST_KEY_ECDSA_SHA2_NISTP384_CERT_V01_OPENSSH,
 	HOST_KEY_ECDSA_SHA2_NISTP521_CERT_V01_OPENSSH,
 	HOST_KEY_ECDSA_SHA2_NISTP256,
 	HOST_KEY_ECDSA_SHA2_NISTP384,
-	HOST_KEY_ECDSA_SHA2_NISTp521,
+	HOST_KEY_ECDSA_SHA2_NISTP521,
 	HOST_KEY_ED_25519_CERT_V01_OPENSSH,
 	HOST_KEY_RSA_CERT_V01,
 	HOST_KEY_DSS_CERT_V01,
@@ -182,4 +182,15 @@ func GenerateKeyExchangeInit(c *Config) (*KeyExchangeInit, error) {
 	kxi.LanguageClientToServer = make([]string, 0)
 	kxi.LanguageServerToClient = make([]string, 0)
 	return kxi, nil
+}
+
+func chooseAlgorithm(clientAlgorithms, serverAlgorithms NameList) (string, error) {
+	for clientIdx := range clientAlgorithms {
+		for serverIdx := range serverAlgorithms {
+			if serverAlgorithms[serverIdx] == clientAlgorithms[clientIdx] {
+				return clientAlgorithms[clientIdx], nil
+			}
+		}
+	}
+	return "", errors.New("Could not agree on algorithm")
 }
