@@ -36,6 +36,7 @@ const (
 	HOST_KEY_DSS                                  = "ssh-dss"
 )
 
+// Encryption types
 const (
 	ENCRYPTION_AES_128_CTR                 = "aes128-ctr"
 	ENCRYPTION_AES_192_CTR                 = "aes192-ctr"
@@ -55,6 +56,7 @@ const (
 	ENCRYPTION_RIJNDAEL_CBC_LYSATOR        = "rijndael-cbc@lysator.liu.se"
 )
 
+// MAC types
 const (
 	MAC_HMAC_MD5_ETM_OPENSSH        = "hmac-md5-etm@openssh.com"
 	MAC_HMAC_SHA1_ETM_OPENSSH       = "hmac-sha1-etm@openssh.com"
@@ -77,6 +79,7 @@ const (
 	MAC_HMAC_MD5_96                 = "hmac-md5-96"
 )
 
+// Compression types
 const (
 	COMPRESSION_NONE         = "none"
 	COMPRESSION_ZLIB_OPENSSH = "zlib@openssh.com"
@@ -171,7 +174,7 @@ func GenerateKeyExchangeInit(c *Config) (*KeyExchangeInit, error) {
 	if n, err := randReader.Read(kxi.Cookie[:]); n != len(kxi.Cookie) || err != nil {
 		return nil, errors.New("Could not read random source")
 	}
-	kxi.KexAlgorithms = c.getKexAlgorithms()
+	kxi.KexAlgorithms = NameList([]string{KEX_DH_GROUP1_SHA1})
 	kxi.HostKeyAlgorithms = c.getHostKeyAlgorithms()
 	kxi.EncryptionClientToServer = c.getClientEncryption()
 	kxi.EncryptionServerToClient = c.getServerEncryption()

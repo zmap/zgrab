@@ -2,8 +2,28 @@ package ssh
 
 import (
 	"encoding/binary"
+	"errors"
+	"math/big"
 	"strings"
 )
+
+type mpint struct {
+	big.Int
+}
+
+func (mp *mpint) Marshal() ([]byte, error) {
+	b := mp.Bytes()
+	if len(b) == 0 {
+		return nil, errors.New("Cannot encode empty mpint")
+	}
+	if b[0] < 0x80 {
+		return b, nil
+	}
+	out := make([]byte, len(b)+1)
+	out[0] = 0x00
+	copy(out[1:], b)
+	return out, nil
+}
 
 // Packet represents an SSH binary packet. See RFC
 type packet struct {

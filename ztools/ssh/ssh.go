@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"crypto/rand"
 	"errors"
 	"io"
 	"net"
@@ -94,4 +95,11 @@ func (c *Config) getServerCompression() NameList {
 		return c.CompressionServerToClient
 	}
 	return c.getClientCompression()
+}
+
+func (c *Config) getRandom() io.Reader {
+	if c.Random != nil {
+		return c.Random
+	}
+	return rand.Reader
 }

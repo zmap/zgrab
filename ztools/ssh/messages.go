@@ -2,9 +2,9 @@ package ssh
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
 	"regexp"
 
 	"github.com/zmap/zgrab/ztools/zlog"
@@ -76,7 +76,6 @@ var serverBannerRegex = regexp.MustCompile(`(?:SSH-([!-,.-~]*)-([!-,.-~]*) ([^\r
 // key exchange.
 type Cookie [16]byte
 
-/*
 // MarshalJSON encodes a Cookie to JSON as a base64-encoded byte array.
 func (c *Cookie) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c[:])
@@ -96,7 +95,6 @@ func (c *Cookie) UnmarshalJSON(b []byte) error {
 	}
 	return nil
 }
-*/
 
 type KeyExchangeInit struct {
 	raw                       []byte
@@ -245,7 +243,7 @@ func (kxi *KeyExchangeInit) Unmarshal(raw []byte) bool {
 // is the prime. E is the public DHE value. See RFC 4253 Section 8.
 type KeyExchangeDHInit struct {
 	raw []byte
-	E   *big.Int
+	E   mpint
 }
 
 // MsgType returns the SSH_MSG_KEXDH_INIT message type
@@ -258,7 +256,7 @@ func (dhi *KeyExchangeDHInit) Marshal() ([]byte, error) {
 	if dhi.raw != nil {
 		return dhi.raw, nil
 	}
-	e := dhi.E.Bytes()
+	e, _ := dhi.E.Marshal()
 	out := make([]byte, 4+len(e))
 	binary.BigEndian.PutUint32(out, uint32(len(e)))
 	copy(out[4:], e)
@@ -275,7 +273,6 @@ func (dhi *KeyExchangeDHInit) Unmarshal(raw []byte) bool {
 	if uint32(len(b)) != length {
 		return false
 	}
-	dhi.E = big.NewInt(0)
 	dhi.E.SetBytes(b[0:length])
 	dhi.raw = raw
 	return true
@@ -285,7 +282,7 @@ type KeyExchangeDHInitReply struct {
 	raw []byte
 
 	K_S       []byte
-	F         *big.Int
+	F         mpint
 	Signature []byte
 }
 

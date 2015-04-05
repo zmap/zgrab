@@ -2,8 +2,10 @@ package ssh
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/binary"
 	"errors"
+	"math/big"
 	"net"
 
 	"github.com/zmap/zgrab/ztools/zlog"
@@ -22,6 +24,8 @@ type Conn struct {
 	handshakeLog HandshakeLog
 
 	currentCipher cipher
+
+	kexAlgorithm string
 }
 
 type sshPayload interface {
@@ -34,14 +38,6 @@ func (c *Conn) ClientHandshake() error {
 	clientProtocolBytes := clientProtocol.Marshal()
 	c.handshakeLog.ClientProtocol = clientProtocol
 	c.conn.Write(clientProtocolBytes)
-
-	ckxi, err := GenerateKeyExchangeInit(c.config)
-	if err != nil {
-		return err
-	}
-	if err = c.writePacket(ckxi); err != nil {
-		return err
-	}
 
 	buf := make([]byte, 1024)
 	protocolDone := false
@@ -67,6 +63,15 @@ func (c *Conn) ClientHandshake() error {
 
 	// See if it matches????
 
+	//
+	ckxi, err := GenerateKeyExchangeInit(c.config)
+	if err != nil {
+		return err
+	}
+	if err = c.writePacket(ckxi); err != nil {
+		return err
+	}
+
 	// Read the key options
 	var packet interface{}
 	packet, err = c.readPacket()
@@ -77,7 +82,15 @@ func (c *Conn) ClientHandshake() error {
 	if !ok {
 		return errUnexpectedMessage
 	}
-	c.handshakeLog.ServerKeyExchange = serverKex
+	c.handshakeLog.ServerKeyExchangeInit = serverKex
+
+	if c.kexAlgorithm, err = chooseAlgorithm(ckxi.KexAlgorithms, serverKex.KexAlgorithms); err != nil {
+		return err
+	}
+	c.handshakeLog.KexAlgorithm = c.kexAlgorithm
+	if err := c.dhGroup1Kex(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -156,6 +169,10 @@ func (c *Conn) readPacket() (interface{}, error) {
 		var kxi KeyExchangeInit
 		kxi.Unmarshal(p.payload)
 		return &kxi, nil
+	case SSH_MSG_KEXDH_REPLY:
+		var dhir KeyExchangeDHInitReply
+		dhir.Unmarshal(p.payload)
+		return &dhir, nil
 	}
 	return nil, errors.New("unimplemented")
 }
@@ -170,6 +187,9 @@ func (c *Conn) writePacket(payload sshPayload) error {
 		return errLongPacket
 	}
 	paddingLen := 8 - ((4 + 1 + 1 + len(payloadBytes)) % 8)
+	if paddingLen < 4 {
+		paddingLen += 8
+	}
 	paddingBytes := make([]byte, paddingLen)
 	if len(paddingBytes) > 255 {
 		return errInvalidPadding
@@ -208,7 +228,22 @@ func (c *Conn) writePacket(payload sshPayload) error {
 	return nil
 }
 
-func (c *Conn) authenticate(data []byte) (tag []byte) {
-	tag = make([]byte, 0)
-	return
+func (c *Conn) dhGroup1Kex() error {
+	x, err := rand.Int(c.config.getRandom(), dhOakleyGroup1.order)
+	if err != nil {
+		return err
+	}
+	dhi := new(KeyExchangeDHInit)
+	E := big.NewInt(0)
+	E.Exp(dhOakleyGroup1.Generator, x, dhOakleyGroup1.Prime)
+	dhi.E.Set(E)
+	c.writePacket(dhi)
+	rawReply, errRead := c.readPacket()
+	if errRead != nil {
+		zlog.Debug("waaaaat")
+		zlog.Debug(errRead.Error())
+		return errRead
+	}
+	zlog.Debug(rawReply)
+	return nil
 }
