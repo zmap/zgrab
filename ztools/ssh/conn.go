@@ -235,7 +235,7 @@ func (c *Conn) dhGroup1Kex() error {
 	}
 	dhi := new(KeyExchangeDHInit)
 	E := big.NewInt(0)
-	E.Exp(dhOakleyGroup1.Generator, x, dhOakleyGroup1.Prime)
+	E.Exp(dhOakleyGroup2.Generator, x, dhOakleyGroup2.Prime)
 	dhi.E.Set(E)
 	c.writePacket(dhi)
 	rawReply, errRead := c.readPacket()
@@ -244,6 +244,12 @@ func (c *Conn) dhGroup1Kex() error {
 		zlog.Debug(errRead.Error())
 		return errRead
 	}
+	dhReply, ok := rawReply.(*KeyExchangeDHInitReply)
+	if !ok {
+		return errUnexpectedMessage
+	}
 	zlog.Debug(rawReply)
+
+	c.handshakeLog.DHReply = dhReply
 	return nil
 }

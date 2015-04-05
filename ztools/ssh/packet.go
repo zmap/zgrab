@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"math/big"
 	"strings"
@@ -23,6 +24,35 @@ func (mp *mpint) Marshal() ([]byte, error) {
 	out[0] = 0x00
 	copy(out[1:], b)
 	return out, nil
+}
+
+func (mp *mpint) Unmarshal(raw []byte) ([]byte, bool) {
+	b := raw
+	if len(b) < 4 {
+		return raw, false
+	}
+	mpLength := binary.BigEndian.Uint32(b)
+	b = b[4:]
+	if mpLength > uint32(len(b)) {
+		return raw, false
+	}
+	mp.SetBytes(b[0:mpLength])
+	b = b[mpLength:]
+	return b, true
+}
+
+func (mp *mpint) MarshalJSON() ([]byte, error) {
+	b := mp.Bytes()
+	return json.Marshal(b)
+}
+
+func (mp *mpint) UnmarshalJSON(raw []byte) error {
+	var b []byte
+	if err := json.Unmarshal(raw, b); err != nil {
+		return err
+	}
+	mp.SetBytes(b)
+	return nil
 }
 
 // Packet represents an SSH binary packet. See RFC
