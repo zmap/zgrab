@@ -1,6 +1,8 @@
 zgrab
 ==================
 
+[![Build Status](https://travis-ci.org/zmap/zgrab.svg?branch=master)](https://travis-ci.org/zmap/zgrab)
+
 A TLS Banner Grabber, in Go
 
 ## Building

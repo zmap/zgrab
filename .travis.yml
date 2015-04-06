@@ -1,0 +1,18 @@
+language: go
+
+go:
+  - 1.4
+  - tip
+
+env:
+  global:
+  - GOPATH="$HOME/gopath"
+
+before_script:
+  # Create symlink to make it running for forks
+  - mkdir -p $HOME/gopath/src/github.com/zmap
+  - ln -s $TRAVIS_BUILD_DIR $HOME/gopath/src/github.com/zmap/ || true
+  - go get gopkg.in/check.v1
+
+script:
+  - go test -v ./...
