@@ -6,19 +6,20 @@
 package x509
 
 import (
+	// all of the hash libraries need to be imported for side-effects,
+	// so that crypto.RegisterHash is called
+	_ "crypto/md5"
+	"crypto/sha1"
+	_ "crypto/sha256"
+	_ "crypto/sha512"
+
 	"bytes"
 	"crypto"
 	"crypto/dsa"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/md5"
 	"crypto/rsa"
-	"crypto/sha1"
-	"crypto/sha256"
-	_ "crypto/sha512"
 	"encoding/asn1"
-	"encoding/hex"
-	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"io"
@@ -566,12 +567,6 @@ type Certificate struct {
 	matchesDomain   *bool
 }
 
-type CertificateFingerprint []byte
-
-func (f *CertificateFingerprint) MarshalJSON() ([]byte, error) {
-	return json.Marshal(hex.EncodeToString(*f))
-}
-
 // ErrUnsupportedAlgorithm results from attempting to perform an operation that
 // involves algorithms that are not currently implemented.
 var ErrUnsupportedAlgorithm = errors.New("x509: cannot verify signature: algorithm unimplemented")
@@ -906,17 +901,10 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 	out.RawSubject = in.TBSCertificate.Subject.FullBytes
 	out.RawIssuer = in.TBSCertificate.Issuer.FullBytes
 
-	// MD5 Fingerprint
-	md5sum := md5.Sum(in.Raw)
-	out.FingerprintMD5 = md5sum[:]
-
-	// SHA1 Fingerprint
-	sha1Print := sha1.Sum(in.Raw)
-	out.FingerprintSHA1 = sha1Print[:]
-
-	// SHA256 Fingerprint
-	sha256Print := sha256.Sum256(in.Raw)
-	out.FingerprintSHA256 = sha256Print[:]
+	// Fingerprints
+	out.FingerprintMD5 = MD5Fingerprint(in.Raw)
+	out.FingerprintSHA1 = SHA1Fingerprint(in.Raw)
+	out.FingerprintSHA256 = SHA256Fingerprint(in.Raw)
 
 	out.Signature = in.SignatureValue.RightAlign()
 	out.SignatureAlgorithm =
