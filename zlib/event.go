@@ -62,4 +62,5 @@ const (
 	CONNECTION_EVENT_MAIL_BANNER     = "mail_banner"
 	CONNECTION_EVENT_MODBUS          = "modbus"
 	CONNECTION_EVENT_FTP             = "ftp"
+	CONNECTION_EVENT_SSH_NAME        = "ssh"
 )

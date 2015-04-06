@@ -87,11 +87,28 @@ func init() {
 	flag.BoolVar(&config.SChannelOnly, "schannel", false, "Send only ciphers for guessing schannel version")
 	flag.IntVar(&config.GOMAXPROCS, "gomaxprocs", 3, "Set GOMAXPROCS (default 3)")
 	flag.BoolVar(&config.FTP, "ftp", false, "Read FTP banners")
+	flag.BoolVar(&config.SSH.SSH, "ssh", false, "SSH scan")
+	flag.StringVar(&config.SSH.Client, "ssh-client", "", "Mimic behavior of a specific SSH client")
+	flag.StringVar(&config.SSH.KexAlgorithms, "ssh-kex-algorithms", "", "Set SSH Key Exchange Algorithms")
+	flag.StringVar(&config.SSH.HostKeyAlgorithms, "ssh-host-key-algorithms", "", "Set SSH Host Key Algorithms")
 	flag.Parse()
 
 	// Validate Go Runtime config
 	if config.GOMAXPROCS < 1 {
 		zlog.Fatalf("Invalid GOMAXPROCS (must be at least 1, given %d)", config.GOMAXPROCS)
+	}
+
+	// Validate SSH related flags
+	if config.SSH.SSH {
+		if _, ok := config.SSH.GetClientImplementation(); !ok {
+			zlog.Fatalf("Unknown SSH client %s", config.SSH.Client)
+		}
+		if _, err := config.SSH.MakeKexNameList(); err != nil {
+			zlog.Fatalf("Bad SSH Key Exchange Algorithms: %s", err.Error())
+		}
+		if _, err := config.SSH.MakeHostKeyNameList(); err != nil {
+			zlog.Fatalf("Bad SSH Host Key Algorithms: %s", err.Error())
+		}
 	}
 
 	// Validate FTP
