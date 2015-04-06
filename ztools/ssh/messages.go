@@ -333,3 +333,34 @@ func (dhr *KeyExchangeDHInitReply) Unmarshal(raw []byte) bool {
 	}
 	return true
 }
+
+/*
+byte    SSH_MSG_KEY_DH_GEX_REQUEST
+uint32  min, minimal size in bits of an acceptable group
+uint32  n, preferred size in bits of the group the server will send
+uint32  max, maximal size in bits of an acceptable group
+*/
+type KeyExchangeDHGroupRequest struct {
+	Min       uint32
+	Preferred uint32
+	Max       uint32
+}
+
+func (gex *KeyExchangeDHGroupRequest) MsgType() byte {
+	return SSH_MSG_KEY_DH_GEX_REQUEST
+}
+
+func (gex *KeyExchangeDHGroupRequest) Marshal() ([]byte, error) {
+	out := make([]byte, 12)
+	b := out
+	binary.BigEndian.PutUint32(b, gex.Min)
+	b = b[4:]
+	binary.BigEndian.PutUint32(b, gex.Preferred)
+	b = b[4:]
+	binary.BigEndian.PutUint32(b, gex.Max)
+	return out, nil
+}
+
+func (gex *KeyExchangeDHGroupRequest) Unmarshal([]byte) error {
+	return errors.New("unimplemented gex req unmarshal")
+}

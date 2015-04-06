@@ -25,7 +25,8 @@ type Conn struct {
 
 	currentCipher cipher
 
-	kexAlgorithm string
+	kexAlgorithm     string
+	hostKeyAlgorithm string
 }
 
 type sshPayload interface {
@@ -87,8 +88,20 @@ func (c *Conn) ClientHandshake() error {
 	if c.kexAlgorithm, err = chooseAlgorithm(ckxi.KexAlgorithms, serverKex.KexAlgorithms); err != nil {
 		return err
 	}
-	c.handshakeLog.KexAlgorithm = c.kexAlgorithm
-	if err := c.dhGroup1Kex(); err != nil {
+
+	c.handshakeLog.Algorithms = new(AlgorithmSelection)
+	c.handshakeLog.Algorithms.KexAlgorithm = c.kexAlgorithm
+
+	if c.hostKeyAlgorithm, err = chooseAlgorithm(ckxi.HostKeyAlgorithms, serverKex.HostKeyAlgorithms); err != nil {
+		return err
+	}
+	c.handshakeLog.Algorithms.HostKeyAlgorithm = c.hostKeyAlgorithm
+	/*
+		if err := c.dhGroup1Kex(); err != nil {
+			return err
+		}
+	*/
+	if err := c.dhGroupExchange(); err != nil {
 		return err
 	}
 	return nil
@@ -228,14 +241,25 @@ func (c *Conn) writePacket(payload sshPayload) error {
 	return nil
 }
 
-func (c *Conn) dhGroup1Kex() error {
-	x, err := rand.Int(c.config.getRandom(), dhOakleyGroup1.order)
+func (c *Conn) dhGroupExchange() error {
+	gexRequest := new(KeyExchangeDHGroupRequest)
+	gexRequest.Min = 1024
+	gexRequest.Preferred = 2048
+	gexRequest.Max = 4096
+	if err := c.writePacket(gexRequest); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Conn) dhExchange(params *DHParams) error {
+	x, err := rand.Int(c.config.getRandom(), params.order)
 	if err != nil {
 		return err
 	}
 	dhi := new(KeyExchangeDHInit)
 	E := big.NewInt(0)
-	E.Exp(dhOakleyGroup2.Generator, x, dhOakleyGroup2.Prime)
+	E.Exp(params.Generator, x, params.Prime)
 	dhi.E.Set(E)
 	c.writePacket(dhi)
 	rawReply, errRead := c.readPacket()
@@ -252,4 +276,12 @@ func (c *Conn) dhGroup1Kex() error {
 
 	c.handshakeLog.DHReply = dhReply
 	return nil
+}
+
+func (c *Conn) dhGroup1Kex() error {
+	return c.dhExchange(&dhOakleyGroup2)
+}
+
+func (c *Conn) dhGroup14Kex() error {
+	return c.dhExchange(&dhOakleyGroup14)
 }

@@ -174,7 +174,7 @@ func GenerateKeyExchangeInit(c *Config) (*KeyExchangeInit, error) {
 	if n, err := randReader.Read(kxi.Cookie[:]); n != len(kxi.Cookie) || err != nil {
 		return nil, errors.New("Could not read random source")
 	}
-	kxi.KexAlgorithms = NameList([]string{KEX_DH_GROUP1_SHA1})
+	kxi.KexAlgorithms = NameList([]string{KEX_DH_SHA1, KEX_DH_SHA256})
 	kxi.HostKeyAlgorithms = c.getHostKeyAlgorithms()
 	kxi.EncryptionClientToServer = c.getClientEncryption()
 	kxi.EncryptionServerToClient = c.getServerEncryption()

@@ -23,10 +23,16 @@ func Client(c net.Conn, config *Config) *Conn {
 }
 
 // SSH message types. These are usually the first byte of the payload
+
 const (
-	SSH_MSG_KEXINIT     byte = 20
-	SSH_MSG_KEXDH_INIT  byte = 30
-	SSH_MSG_KEXDH_REPLY byte = 31
+	SSH_MSG_KEXINIT                byte = 20
+	SSH_MSG_KEXDH_INIT             byte = 30
+	SSH_MSG_KEXDH_REPLY            byte = 31
+	SSH_MSG_KEX_DH_GEX_REQUEST_OLD byte = 30
+	SSH_MSG_KEY_DH_GEX_REQUEST     byte = 34
+	SSH_MSG_KEX_DH_GEX_GROUP       byte = 31
+	SSH_MSG_KEX_DH_GEX_INIT        byte = 32
+	SSH_MSG_KEX_DH_GEX_REPLY       byte = 33
 )
 
 type Config struct {
