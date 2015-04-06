@@ -7,8 +7,6 @@ import (
 	"errors"
 	"math/big"
 	"net"
-
-	"github.com/zmap/zgrab/ztools/zlog"
 )
 
 type Conn struct {
@@ -38,7 +36,6 @@ type sshPayload interface {
 func (c *Conn) ClientHandshake() error {
 	clientProtocol := MakeZGrabProtocolAgreement()
 	clientProtocolBytes := clientProtocol.Marshal()
-	c.handshakeLog.ClientProtocol = clientProtocol
 	c.conn.Write(clientProtocolBytes)
 
 	buf := make([]byte, 1024)
@@ -134,7 +131,6 @@ func (c *Conn) readPacket(expected sshPayload) error {
 	}
 	var p packet
 	p.packetLength = binary.BigEndian.Uint32(buf[0:4])
-	zlog.Debug(p.packetLength)
 	if p.packetLength > 35000 {
 		return errLongPacket
 	}
@@ -155,14 +151,12 @@ func (c *Conn) readPacket(expected sshPayload) error {
 	}
 	p.paddingLength = b[0]
 	b = b[1:]
-	zlog.Debug(p.paddingLength)
 	if uint32(p.paddingLength) > p.packetLength-1 {
 		return errInvalidPadding
 	}
 
 	// Read the payload
 	payloadLength := p.packetLength - uint32(p.paddingLength) - 1
-	zlog.Debug(payloadLength)
 	p.msgType = b[0]
 	p.payload = b[1:payloadLength]
 	b = b[payloadLength:]
@@ -173,14 +167,12 @@ func (c *Conn) readPacket(expected sshPayload) error {
 
 	// Read the MAC, if applicable
 	if uint32(len(b)) != c.macLength {
-		zlog.Debug(len(b))
 		return errShortPacket
 	}
 
 	if c.macLength > 0 {
 		p.mac = b[0:c.macLength]
 	}
-	zlog.Debug(p)
 	if len(p.payload) < 1 {
 		return errShortPacket
 	}
@@ -258,8 +250,6 @@ func (c *Conn) dhGroupExchange() error {
 		return err
 	}
 	c.handshakeLog.KexDHGroupParams = gexParams
-	zlog.Debug(gexParams.Prime.String())
-	zlog.Debug(gexParams.Generator.String())
 
 	gexInit := new(KeyExchangeDHGroupInit)
 	g := big.NewInt(0).SetBytes(gexParams.Generator.Bytes())
@@ -270,9 +260,7 @@ func (c *Conn) dhGroupExchange() error {
 	if err != nil {
 		return err
 	}
-	zlog.Debug(x.String())
 	gexInit.E.Exp(g, x, p)
-	zlog.Debug(gexInit.E.String())
 	if err = c.writePacket(gexInit); err != nil {
 		return err
 	}
@@ -296,8 +284,6 @@ func (c *Conn) dhExchange(params *DHParams) error {
 	c.writePacket(dhi)
 	dhReply := new(KeyExchangeDHInitReply)
 	if err = c.readPacket(dhReply); err != nil {
-		zlog.Debug("waaaaat")
-		zlog.Debug(err.Error())
 		return err
 	}
 

@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-
-	"github.com/zmap/zgrab/ztools/zlog"
 )
 
 type ProtocolVersion string
@@ -217,7 +215,6 @@ func (kxi *KeyExchangeInit) Unmarshal(raw []byte) bool {
 	if len(b) < 1 {
 		return false
 	}
-	zlog.Debug(b)
 
 	kxi.FirstKexPacketFollows = (b[0] != 0)
 	b = b[1:]
@@ -231,8 +228,6 @@ func (kxi *KeyExchangeInit) Unmarshal(raw []byte) bool {
 
 	// We should be done
 	if len(b) != 0 {
-		zlog.Debug("WAAAT")
-		zlog.Debug(len(b))
 		return false
 	}
 	return true

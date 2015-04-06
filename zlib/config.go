@@ -61,7 +61,6 @@ func (sc *SSHScanConfig) MakeConfig() *ssh.Config {
 	config := new(ssh.Config)
 	config.KexAlgorithms, _ = sc.MakeKexNameList()
 	config.HostKeyAlgorithms, _ = sc.MakeHostKeyNameList()
-	zlog.Debug(config)
 	return config
 }
 
