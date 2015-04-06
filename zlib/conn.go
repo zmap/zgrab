@@ -57,6 +57,9 @@ type Conn struct {
 
 	// Encoding type
 	ReadEncoding string
+
+	// SSH
+	sshScan *SSHScanConfig
 }
 
 func (c *Conn) getUnderlyingConn() net.Conn {
@@ -466,7 +469,7 @@ func (c *Conn) GetFTPBanner() error {
 }
 
 func (c *Conn) SSHHandshake() error {
-	config := new(ssh.Config)
+	config := c.sshScan.MakeConfig()
 	client := ssh.Client(c.conn, config)
 	err := client.ClientHandshake()
 	handshakeLog := client.HandshakeLog()

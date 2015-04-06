@@ -32,6 +32,7 @@ type Conn struct {
 type sshPayload interface {
 	MsgType() byte
 	Marshal() ([]byte, error)
+	Unmarshal([]byte) bool
 }
 
 func (c *Conn) ClientHandshake() error {
@@ -74,15 +75,12 @@ func (c *Conn) ClientHandshake() error {
 	}
 
 	// Read the key options
-	var packet interface{}
-	packet, err = c.readPacket()
+	serverKex := new(KeyExchangeInit)
+	err = c.readPacket(serverKex)
 	if err != nil {
 		return err
 	}
-	serverKex, ok := packet.(*KeyExchangeInit)
-	if !ok {
-		return errUnexpectedMessage
-	}
+
 	c.handshakeLog.ServerKeyExchangeInit = serverKex
 
 	if c.kexAlgorithm, err = chooseAlgorithm(ckxi.KexAlgorithms, serverKex.KexAlgorithms); err != nil {
@@ -96,13 +94,22 @@ func (c *Conn) ClientHandshake() error {
 		return err
 	}
 	c.handshakeLog.Algorithms.HostKeyAlgorithm = c.hostKeyAlgorithm
-	/*
+
+	switch c.kexAlgorithm {
+	case KEX_DH_GROUP1_SHA1:
 		if err := c.dhGroup1Kex(); err != nil {
 			return err
 		}
-	*/
-	if err := c.dhGroupExchange(); err != nil {
-		return err
+	case KEX_DH_GROUP14_SHA1:
+		if err := c.dhGroup14Kex(); err != nil {
+			return err
+		}
+	case KEX_DH_SHA1, KEX_DH_SHA256:
+		if err := c.dhGroupExchange(); err != nil {
+			return err
+		}
+	default:
+		return errors.New("unimplemented kex method")
 	}
 	return nil
 }
@@ -111,32 +118,32 @@ func (c *Conn) HandshakeLog() *HandshakeLog {
 	return &c.handshakeLog
 }
 
-func (c *Conn) readPacket() (interface{}, error) {
+func (c *Conn) readPacket(expected sshPayload) error {
 	// Make a buffer of max packet size
 	buf := make([]byte, 35001)
 	totalRead, err := c.conn.Read(buf[0:4])
 	if err != nil {
-		return nil, err
+		return err
 	}
 	for totalRead < 4 {
 		n, err := c.conn.Read(buf[totalRead:4])
 		totalRead += n
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 	var p packet
 	p.packetLength = binary.BigEndian.Uint32(buf[0:4])
 	zlog.Debug(p.packetLength)
 	if p.packetLength > 35000 {
-		return nil, errLongPacket
+		return errLongPacket
 	}
 	totalLength := expectedLength(p.packetLength, c.macLength)
 	for totalRead < totalLength {
 		n, err := c.conn.Read(buf[totalRead:totalLength])
 		totalRead += n
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 	// Fill out the rest of the packet
@@ -144,13 +151,13 @@ func (c *Conn) readPacket() (interface{}, error) {
 
 	// Read padding length
 	if len(b) < 1 {
-		return nil, errShortPacket
+		return errShortPacket
 	}
 	p.paddingLength = b[0]
 	b = b[1:]
 	zlog.Debug(p.paddingLength)
 	if uint32(p.paddingLength) > p.packetLength-1 {
-		return nil, errInvalidPadding
+		return errInvalidPadding
 	}
 
 	// Read the payload
@@ -167,7 +174,7 @@ func (c *Conn) readPacket() (interface{}, error) {
 	// Read the MAC, if applicable
 	if uint32(len(b)) != c.macLength {
 		zlog.Debug(len(b))
-		return nil, errShortPacket
+		return errShortPacket
 	}
 
 	if c.macLength > 0 {
@@ -175,19 +182,16 @@ func (c *Conn) readPacket() (interface{}, error) {
 	}
 	zlog.Debug(p)
 	if len(p.payload) < 1 {
-		return nil, errShortPacket
+		return errShortPacket
 	}
-	switch p.msgType {
-	case SSH_MSG_KEXINIT:
-		var kxi KeyExchangeInit
-		kxi.Unmarshal(p.payload)
-		return &kxi, nil
-	case SSH_MSG_KEXDH_REPLY:
-		var dhir KeyExchangeDHInitReply
-		dhir.Unmarshal(p.payload)
-		return &dhir, nil
+	if p.msgType != expected.MsgType() {
+		return errUnexpectedMessage
 	}
-	return nil, errors.New("unimplemented")
+	if ok := expected.Unmarshal(p.payload); !ok {
+		return errors.New("could not unmarshal")
+	}
+
+	return nil
 }
 
 func (c *Conn) writePacket(payload sshPayload) error {
@@ -249,6 +253,34 @@ func (c *Conn) dhGroupExchange() error {
 	if err := c.writePacket(gexRequest); err != nil {
 		return err
 	}
+	gexParams := new(KeyExchangeDHGroupParameters)
+	if err := c.readPacket(gexParams); err != nil {
+		return err
+	}
+	c.handshakeLog.KexDHGroupParams = gexParams
+	zlog.Debug(gexParams.Prime.String())
+	zlog.Debug(gexParams.Generator.String())
+
+	gexInit := new(KeyExchangeDHGroupInit)
+	g := big.NewInt(0).SetBytes(gexParams.Generator.Bytes())
+	p := big.NewInt(0).SetBytes(gexParams.Prime.Bytes())
+	order := big.NewInt(0)
+	order.Sub(p, big.NewInt(1))
+	x, err := rand.Int(c.config.getRandom(), order)
+	if err != nil {
+		return err
+	}
+	zlog.Debug(x.String())
+	gexInit.E.Exp(g, x, p)
+	zlog.Debug(gexInit.E.String())
+	if err = c.writePacket(gexInit); err != nil {
+		return err
+	}
+	gexReply := new(KeyExchangeDHGroupReply)
+	if err = c.readPacket(gexReply); err != nil {
+		return err
+	}
+	c.handshakeLog.KexDHGroupReply = gexReply
 	return nil
 }
 
@@ -262,17 +294,12 @@ func (c *Conn) dhExchange(params *DHParams) error {
 	E.Exp(params.Generator, x, params.Prime)
 	dhi.E.Set(E)
 	c.writePacket(dhi)
-	rawReply, errRead := c.readPacket()
-	if errRead != nil {
+	dhReply := new(KeyExchangeDHInitReply)
+	if err = c.readPacket(dhReply); err != nil {
 		zlog.Debug("waaaaat")
-		zlog.Debug(errRead.Error())
-		return errRead
+		zlog.Debug(err.Error())
+		return err
 	}
-	dhReply, ok := rawReply.(*KeyExchangeDHInitReply)
-	if !ok {
-		return errUnexpectedMessage
-	}
-	zlog.Debug(rawReply)
 
 	c.handshakeLog.DHReply = dhReply
 	return nil

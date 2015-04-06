@@ -281,9 +281,9 @@ func (dhi *KeyExchangeDHInit) Unmarshal(raw []byte) bool {
 type KeyExchangeDHInitReply struct {
 	raw []byte
 
-	K_S       []byte
-	F         mpint
-	Signature []byte
+	K_S       []byte `json:"k_s"`
+	F         mpint  `json:"f"`
+	Signature []byte `json:"signature"`
 }
 
 func (dhr *KeyExchangeDHInitReply) MsgType() byte {
@@ -341,9 +341,9 @@ uint32  n, preferred size in bits of the group the server will send
 uint32  max, maximal size in bits of an acceptable group
 */
 type KeyExchangeDHGroupRequest struct {
-	Min       uint32
-	Preferred uint32
-	Max       uint32
+	Min       uint32 `json:"min"`
+	Preferred uint32 `json:"preferred"`
+	Max       uint32 `json:"max"`
 }
 
 func (gex *KeyExchangeDHGroupRequest) MsgType() byte {
@@ -361,6 +361,49 @@ func (gex *KeyExchangeDHGroupRequest) Marshal() ([]byte, error) {
 	return out, nil
 }
 
-func (gex *KeyExchangeDHGroupRequest) Unmarshal([]byte) error {
-	return errors.New("unimplemented gex req unmarshal")
+func (gex *KeyExchangeDHGroupRequest) Unmarshal([]byte) bool {
+	panic("unimplemented")
+}
+
+type KeyExchangeDHGroupParameters struct {
+	Prime     mpint `json:"prime"`
+	Generator mpint `json:"generator"`
+}
+
+func (gex *KeyExchangeDHGroupParameters) MsgType() byte {
+	return SSH_MSG_KEX_DH_GEX_GROUP
+}
+
+func (gex *KeyExchangeDHGroupParameters) Marshal() ([]byte, error) {
+	return nil, errors.New("unimplemented")
+}
+
+func (gex *KeyExchangeDHGroupParameters) Unmarshal(raw []byte) (ok bool) {
+	b := raw
+	if b, ok = gex.Prime.Unmarshal(b); !ok {
+		return
+	}
+	if b, ok = gex.Generator.Unmarshal(b); !ok {
+		return
+	}
+	if len(b) > 0 {
+		return
+	}
+	return true
+}
+
+type KeyExchangeDHGroupInit struct {
+	KeyExchangeDHInit
+}
+
+func (gex *KeyExchangeDHGroupInit) MsgType() byte {
+	return SSH_MSG_KEX_DH_GEX_INIT
+}
+
+type KeyExchangeDHGroupReply struct {
+	KeyExchangeDHInitReply
+}
+
+func (gex *KeyExchangeDHGroupReply) MsgType() byte {
+	return SSH_MSG_KEX_DH_GEX_REPLY
 }
