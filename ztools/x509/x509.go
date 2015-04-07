@@ -933,11 +933,6 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 	}
 
 	out.PublicKeyAlgorithmOID = in.TBSCertificate.PublicKey.Algorithm.Algorithm
-
-	if in.TBSCertificate.SerialNumber.Sign() < 0 {
-		return nil, errors.New("x509: negative serial number")
-	}
-
 	out.Version = in.TBSCertificate.Version + 1
 	out.SerialNumber = in.TBSCertificate.SerialNumber
 

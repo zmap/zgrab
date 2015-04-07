@@ -1,6 +1,9 @@
 package processing
 
-import "io"
+import (
+	"io"
+	"sync"
+)
 
 type Decoder interface {
 	DecodeNext() (interface{}, error)
@@ -23,8 +26,13 @@ type Handler func(interface{}) interface{}
 func Process(in Decoder, out io.Writer, w Worker, m Marshaler, workers uint) {
 	processQueue := make(chan interface{}, workers*4)
 	outputQueue := make(chan []byte, workers*4)
-	workerDone := make(chan int, workers)
-	outputDone := make(chan int, 1)
+
+	// Create wait groups
+	var workerDone sync.WaitGroup
+	var outputDone sync.WaitGroup
+	workerDone.Add(int(workers))
+	outputDone.Add(1)
+
 	// Start the output encoder
 	go func() {
 		for result := range outputQueue {
@@ -35,7 +43,7 @@ func Process(in Decoder, out io.Writer, w Worker, m Marshaler, workers uint) {
 				panic(err.Error())
 			}
 		}
-		outputDone <- 1
+		outputDone.Done()
 	}()
 	// Start all the workers
 	for i := uint(0); i < workers; i++ {
@@ -49,7 +57,7 @@ func Process(in Decoder, out io.Writer, w Worker, m Marshaler, workers uint) {
 				}
 				outputQueue <- enc
 			}
-			workerDone <- 1
+			workerDone.Done()
 		}(handler)
 	}
 	// Read the input, send to workers
@@ -61,10 +69,8 @@ func Process(in Decoder, out io.Writer, w Worker, m Marshaler, workers uint) {
 		processQueue <- obj
 	}
 	close(processQueue)
-	for i := uint(0); i < workers; i++ {
-		<-workerDone
-	}
+	workerDone.Wait()
 	close(outputQueue)
-	<-outputDone
+	outputDone.Wait()
 	w.Done()
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/x509"
 	"github.com/zmap/zgrab/ztools/ztls"
 )
@@ -59,6 +60,9 @@ type Conn struct {
 
 	// Encoding type
 	ReadEncoding string
+
+	// SSH
+	sshScan *SSHScanConfig
 }
 
 func (c *Conn) getUnderlyingConn() net.Conn {
@@ -487,6 +491,17 @@ func (c *Conn) GetFTPBanner() error {
 	res := make([]byte, 1024)
 	n, err := c.readUntilRegex(res, ftpEndRegex)
 	event.Banner = string(res[0:n])
+	c.appendEvent(event, err)
+	return err
+}
+
+func (c *Conn) SSHHandshake() error {
+	config := c.sshScan.MakeConfig()
+	client := ssh.Client(c.conn, config)
+	err := client.ClientHandshake()
+	handshakeLog := client.HandshakeLog()
+	event := new(SSHEvent)
+	event.Handshake = handshakeLog
 	c.appendEvent(event, err)
 	return err
 }
