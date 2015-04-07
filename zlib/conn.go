@@ -207,7 +207,6 @@ func (c *Conn) TLSHandshake() error {
 	if c.chromeCiphers {
 		tlsConfig.CipherSuites = ztls.ChromeCiphers
 		tlsConfig.ForceSuites = true
-
 	}
 	if c.chromeNoDHE {
 		tlsConfig.CipherSuites = ztls.ChromeNoDHECiphers
@@ -216,8 +215,21 @@ func (c *Conn) TLSHandshake() error {
 	if c.firefoxCiphers {
 		tlsConfig.CipherSuites = ztls.FirefoxCiphers
 		tlsConfig.ForceSuites = true
-
 	}
+	if c.firefoxNoDHECiphers {
+		tlsConfig.CipherSuites = ztls.FirefoxNoDHECiphers
+		tlsConfig.ForceSuites = true
+	}
+
+	if c.safariCiphers {
+		tlsConfig.CipherSuites = ztls.SafariCiphers
+		tlsConfig.ForceSuites = true
+	}
+	if c.safariNoDHECiphers {
+		tlsConfig.CipherSuites = ztls.SafariNoDHECiphers
+		tlsConfig.ForceSuites = true
+	}
+
 	c.tlsConn = ztls.Client(c.conn, tlsConfig)
 	c.tlsConn.SetReadDeadline(c.readDeadline)
 	c.tlsConn.SetWriteDeadline(c.writeDeadline)
