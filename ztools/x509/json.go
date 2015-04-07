@@ -134,34 +134,26 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 
 	// Pull out the key
 	keyMap := make(map[string]interface{})
-	switch c.PublicKeyAlgorithm {
-	case RSA:
-		rsaKey, ok := c.PublicKey.(*rsa.PublicKey)
-		if ok {
-			keyMap["modulus"] = rsaKey.N.Bytes()
-			keyMap["exponent"] = rsaKey.E
-			keyMap["length"] = rsaKey.N.BitLen()
-		}
-	case DSA:
-		dsaKey, ok := c.PublicKey.(*dsa.PublicKey)
-		if ok {
-			keyMap["p"] = dsaKey.P.String()
-			keyMap["q"] = dsaKey.Q.String()
-			keyMap["g"] = dsaKey.G.String()
-			keyMap["y"] = dsaKey.Y.String()
-		}
-	case ECDSA:
-		ecdsaKey, ok := c.PublicKey.(*ecdsa.PublicKey)
-		if ok {
-			params := ecdsaKey.Params()
-			keyMap["P"] = params.P.String()
-			keyMap["N"] = params.N.String()
-			keyMap["B"] = params.B.String()
-			keyMap["Gx"] = params.Gx.String()
-			keyMap["Gy"] = params.Gy.String()
-			keyMap["X"] = ecdsaKey.X.String()
-			keyMap["Y"] = ecdsaKey.Y.String()
-		}
+
+	switch key := c.PublicKey.(type) {
+	case *rsa.PublicKey:
+		keyMap["modulus"] = key.N.Bytes()
+		keyMap["exponent"] = key.E
+		keyMap["length"] = key.N.BitLen()
+	case *dsa.PublicKey:
+		keyMap["p"] = key.P.String()
+		keyMap["q"] = key.Q.String()
+		keyMap["g"] = key.G.String()
+		keyMap["y"] = key.Y.String()
+	case *ecdsa.PublicKey:
+		params := key.Params()
+		keyMap["P"] = params.P.String()
+		keyMap["N"] = params.N.String()
+		keyMap["B"] = params.B.String()
+		keyMap["Gx"] = params.Gx.String()
+		keyMap["Gy"] = params.Gy.String()
+		keyMap["X"] = key.X.String()
+		keyMap["Y"] = key.Y.String()
 	}
 	jc.Certificate.SubjectKeyInfo.PublicKey = keyMap
 	jc.Certificate.Extensions = c.jsonifyExtensions()
