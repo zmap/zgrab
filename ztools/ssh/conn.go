@@ -240,8 +240,8 @@ func (c *Conn) writePacket(payload sshPayload) error {
 func (c *Conn) dhGroupExchange() error {
 	gexRequest := new(KeyExchangeDHGroupRequest)
 	gexRequest.Min = 1024
-	gexRequest.Preferred = 2048
-	gexRequest.Max = 4096
+	gexRequest.Preferred = 3072
+	gexRequest.Max = 8192
 	if err := c.writePacket(gexRequest); err != nil {
 		return err
 	}
