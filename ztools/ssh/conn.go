@@ -7,6 +7,8 @@ import (
 	"errors"
 	"math/big"
 	"net"
+	"regexp"
+	"strconv"
 )
 
 type Conn struct {
@@ -25,6 +27,8 @@ type Conn struct {
 
 	kexAlgorithm     string
 	hostKeyAlgorithm string
+
+	dropbearCompatMode bool
 }
 
 type sshPayload interface {
@@ -32,6 +36,8 @@ type sshPayload interface {
 	Marshal() ([]byte, error)
 	Unmarshal([]byte) bool
 }
+
+var dropbearRegex = regexp.MustCompile(`^dropbear_([\d]+)\.([\d]+)`)
 
 func (c *Conn) ClientHandshake() error {
 	clientProtocol := MakeZGrabProtocolAgreement()
@@ -60,25 +66,42 @@ func (c *Conn) ClientHandshake() error {
 	serverProtocol.ParseRawBanner()
 	c.handshakeLog.ServerProtocol = &serverProtocol
 
+	serverSoftware := serverProtocol.SoftwareVersion
+	if matches := dropbearRegex.FindStringSubmatch(serverSoftware); len(matches) == 3 {
+		major, errMajor := strconv.Atoi(matches[1])
+		minor, errMinor := strconv.Atoi(matches[2])
+		if errMajor == nil && errMinor == nil && major == 0 && minor <= 46 {
+			c.dropbearCompatMode = true
+		}
+	}
+
 	// See if it matches????
+
+	// Read the key options
+	serverKex := new(KeyExchangeInit)
+	err := c.readPacket(serverKex)
+	if err != nil {
+		return err
+	}
+
+	c.handshakeLog.ServerKeyExchangeInit = serverKex
 
 	//
 	ckxi, err := GenerateKeyExchangeInit(c.config)
 	if err != nil {
 		return err
 	}
+	if c.dropbearCompatMode {
+		ckxi.KexAlgorithms = dropbear_0_46.kexAlgorithms
+		ckxi.HostKeyAlgorithms = dropbear_0_46.hostKeyAlgorithms
+		ckxi.EncryptionClientToServer = dropbear_0_46.encryptionAlgorithms
+		ckxi.EncryptionServerToClient = dropbear_0_46.encryptionAlgorithms
+		ckxi.MACClientToServer = dropbear_0_46.macAlgorithms
+		ckxi.MACClientToServer = dropbear_0_46.macAlgorithms
+	}
 	if err = c.writePacket(ckxi); err != nil {
 		return err
 	}
-
-	// Read the key options
-	serverKex := new(KeyExchangeInit)
-	err = c.readPacket(serverKex)
-	if err != nil {
-		return err
-	}
-
-	c.handshakeLog.ServerKeyExchangeInit = serverKex
 
 	if c.kexAlgorithm, err = chooseAlgorithm(ckxi.KexAlgorithms, serverKex.KexAlgorithms); err != nil {
 		return err

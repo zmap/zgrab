@@ -1,8 +1,13 @@
 package ssh
 
 type ClientImplementation struct {
-	kexAlgorithms     []string
-	hostKeyAlgorithms []string
+	kexAlgorithms        []string
+	hostKeyAlgorithms    []string
+	encryptionAlgorithms []string
+	macAlgorithms        []string
+	minDHGroupSize       uint32
+	preferredDHGroupSize uint32
+	maxDHGroupSize       uint32
 }
 
 var clientImplementations = make(map[string]*ClientImplementation)
@@ -46,6 +51,26 @@ var OpenSSH_6_6p1 = ClientImplementation{
 		HOST_KEY_ED_25519,
 		HOST_KEY_RSA,
 		HOST_KEY_DSS,
+	},
+	minDHGroupSize:       1024,
+	preferredDHGroupSize: 3072,
+	maxDHGroupSize:       8072,
+}
+
+var dropbear_0_46 = ClientImplementation{
+	kexAlgorithms: []string{
+		KEX_DH_GROUP1_SHA1,
+	},
+	hostKeyAlgorithms: []string{
+		HOST_KEY_RSA,
+		HOST_KEY_DSS,
+	},
+	encryptionAlgorithms: []string{
+		ENCRYPTION_3DES_CBC,
+	},
+	macAlgorithms: []string{
+		MAC_HMAC_SHA1,
+		MAC_HMAC_MD5,
 	},
 }
 

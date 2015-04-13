@@ -44,15 +44,20 @@ func MakeZGrabProtocolAgreement() *ProtocolAgreement {
 // contents of the RawBanner field.
 func (h *ProtocolAgreement) ParseRawBanner() {
 	matches := serverBannerRegex.FindStringSubmatch(h.RawBanner)
-	if len(matches) >= 2 {
+	if len(matches) != 6 {
+		return
+	}
+	if matches[1] != "" {
 		h.ProtocolVersion = matches[1]
+	} else if matches[4] != "" {
+		h.ProtocolVersion = matches[4]
 	}
-	if len(matches) >= 3 {
+	if matches[2] != "" {
 		h.SoftwareVersion = matches[2]
+	} else if matches[5] != "" {
+		h.SoftwareVersion = matches[5]
 	}
-	if len(matches) >= 4 {
-		h.Comments = matches[3]
-	}
+	h.Comments = matches[3]
 }
 
 // Marshal returns a byte array suitable for a call to write
