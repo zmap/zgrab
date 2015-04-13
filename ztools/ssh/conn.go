@@ -92,7 +92,9 @@ func (c *Conn) ClientHandshake() error {
 		return err
 	}
 	if c.dropbearCompatMode {
-		ckxi.KexAlgorithms = dropbear_0_46.kexAlgorithms
+		if len(c.config.HostKeyAlgorithms) == 0 {
+			ckxi.KexAlgorithms = dropbear_0_46.kexAlgorithms
+		}
 		ckxi.HostKeyAlgorithms = dropbear_0_46.hostKeyAlgorithms
 		ckxi.EncryptionClientToServer = dropbear_0_46.encryptionAlgorithms
 		ckxi.EncryptionServerToClient = dropbear_0_46.encryptionAlgorithms
