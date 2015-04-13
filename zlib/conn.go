@@ -54,6 +54,7 @@ type Conn struct {
 	firefoxNoDHECiphers bool
 	safariCiphers       bool
 	safariNoDHECiphers  bool
+	noSNI               bool
 
 	domain string
 
@@ -120,6 +121,10 @@ func (c *Conn) SetDomain(domain string) {
 	c.domain = domain
 }
 
+func (c *Conn) SetNoSNI() {
+	c.noSNI = true
+}
+
 // Layer in the regular conn methods
 func (c *Conn) LocalAddr() net.Addr {
 	return c.getUnderlyingConn().LocalAddr()
@@ -183,7 +188,7 @@ func (c *Conn) TLSHandshake() error {
 	tlsConfig.MinVersion = ztls.VersionSSL30
 	tlsConfig.MaxVersion = c.maxTlsVersion
 	tlsConfig.RootCAs = c.caPool
-	if c.domain != "" {
+	if !c.noSNI && c.domain != "" {
 		tlsConfig.ServerName = c.domain
 	}
 	if c.onlyCBC {

@@ -68,6 +68,7 @@ func init() {
 	flag.BoolVar(&config.IMAP, "imap", false, "Conform to IMAP rules when sending STARTTLS")
 	flag.BoolVar(&config.POP3, "pop3", false, "Conform to POP3 rules when sending STARTTLS")
 	flag.BoolVar(&config.Modbus, "modbus", false, "Send some modbus data")
+	flag.BoolVar(&config.NoSNI, "no-sni", false, "Do not send domain name in TLS handshake regardless of whether known")
 
 	flag.BoolVar(&config.ExportsOnly, "export-ciphers", false, "Send only export ciphers")
 	flag.BoolVar(&config.ExportsDHOnly, "export-dhe-ciphers", false, "Send only export DHE ciphers")
@@ -78,7 +79,7 @@ func init() {
 
 	flag.BoolVar(&config.FirefoxOnly, "firefox-ciphers", false, "Send Firefox Ordered Cipher Suites")
 
-	flag.BoolVar(&config.SafariOnly,  "safari-ciphers", false, "Send Safari Ordered Cipher Suites")
+	flag.BoolVar(&config.SafariOnly, "safari-ciphers", false, "Send Safari Ordered Cipher Suites")
 	flag.BoolVar(&config.SafariNoDHE, "safari-no-dhe-ciphers", false, "Send Safari ciphers minus DHE suites")
 
 	flag.BoolVar(&config.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
@@ -290,6 +291,7 @@ func main() {
 		Timeout:    config.Timeout,
 		TLSVersion: tlsVersion,
 		MailType:   mailType,
+		SNISupport: !config.NoSNI,
 	}
 	enc := json.NewEncoder(metadataFile)
 	if err := enc.Encode(&s); err != nil {

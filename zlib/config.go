@@ -32,7 +32,7 @@ type Config struct {
 	ChromeNoDHE   bool
 	SafariOnly    bool
 	SafariNoDHE   bool
-
+	NoSNI         bool
 
 	// Banners and Data
 	Banners  bool

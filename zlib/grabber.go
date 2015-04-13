@@ -106,6 +106,9 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 		if config.SafariNoDHE {
 			c.SetSafariNoDHECiphers()
 		}
+		if config.NoSNI {
+			c.SetNoSNI()
+		}
 
 		c.ReadEncoding = config.Encoding
 		if config.TLS {
