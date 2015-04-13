@@ -110,6 +110,9 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 			c.SetNoSNI()
 		}
 
+		if config.SSH.SSH {
+			c.sshScan = &config.SSH
+		}
 		c.ReadEncoding = config.Encoding
 		if config.TLS {
 			if err := c.TLSHandshake(); err != nil {
@@ -138,6 +141,12 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 
 		if config.FTP {
 			if err := c.GetFTPBanner(); err != nil {
+				return err
+			}
+		}
+
+		if config.SSH.SSH {
+			if err := c.SSHHandshake(); err != nil {
 				return err
 			}
 		}

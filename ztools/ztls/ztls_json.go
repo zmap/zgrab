@@ -53,32 +53,14 @@ func (cs CipherSuite) MarshalJSON() ([]byte, error) {
 	enc := strings.ToUpper(hex.EncodeToString(buf))
 	m := make(map[string]interface{}, 3)
 	m["hex"] = fmt.Sprintf("0x%s", enc)
-	num := int(cs)
-	if name, ok := cipherSuiteNames[num]; ok {
-		m["name"] = name
-	} else {
-		m["name"] = "unknown"
-	}
-	m["value"] = num
+	m["name"] = cs.String()
+	m["value"] = int(cs)
 	return json.Marshal(m)
 }
 
 func (v TLSVersion) MarshalJSON() ([]byte, error) {
-	var name string
-	switch v {
-	case 768:
-		name = "SSLv3"
-	case 769:
-		name = "TLSv1.0"
-	case 770:
-		name = "TLSv1.1"
-	case 771:
-		name = "TLSv1.2"
-	default:
-		name = "unknown"
-	}
 	m := make(map[string]interface{})
-	m["name"] = name
+	m["name"] = v.String()
 	m["value"] = int(v)
 	return json.Marshal(m)
 }
