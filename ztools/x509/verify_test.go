@@ -15,6 +15,8 @@ import (
 	"github.com/zmap/ztools/x509/pkix"
 )
 
+var supportSHA2 = true
+
 type verifyTest struct {
 	leaf                 string
 	intermediates        []string
@@ -24,6 +26,7 @@ type verifyTest struct {
 	systemSkip           bool
 	keyUsages            []ExtKeyUsage
 	testSystemRootsError bool
+	sha2                 bool
 
 	errorCallback  func(*testing.T, int, error) bool
 	expectedChains [][]string
@@ -219,6 +222,7 @@ var verifyTests = []verifyTest{
 		currentTime:   1397502195,
 		dnsName:       "api.moip.com.br",
 
+		sha2: true,
 		expectedChains: [][]string{
 			{
 				"api.moip.com.br",
@@ -296,6 +300,9 @@ func testVerify(t *testing.T, useSystemRoots bool) {
 			continue
 		}
 		if runtime.GOOS == "windows" && test.testSystemRootsError {
+			continue
+		}
+		if useSystemRoots && !supportSHA2 && test.sha2 {
 			continue
 		}
 

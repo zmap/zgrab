@@ -1,8 +1,19 @@
+// Copyright 2013 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package x509
 
-import "testing"
+import (
+	"runtime"
+	"testing"
+)
 
 func TestSystemRoots(t *testing.T) {
+	if runtime.GOARCH == "arm" {
+		t.Skipf("skipping on %s/%s", runtime.GOOS, runtime.GOARCH)
+	}
+
 	sysRoots := systemRootsPool()         // actual system roots
 	execRoots, err := execSecurityRoots() // non-cgo roots
 
