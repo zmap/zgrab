@@ -84,7 +84,7 @@ func (s *CertPool) AddCert(cert *Certificate) {
 // of root CAs in a format suitable for this function.
 func (s *CertPool) AppendCertsFromPEM(pemCerts []byte) (ok bool) {
 	for len(pemCerts) > 0 {
-		ok = false // Added for zgrab
+		ok = false
 		var block *pem.Block
 		block, pemCerts = pem.Decode(pemCerts)
 		if block == nil {
