@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/zmap/ztools/zlog"
+	"github.com/zmap/zgrab/ztools/zlog"
 	. "gopkg.in/check.v1"
 )
 

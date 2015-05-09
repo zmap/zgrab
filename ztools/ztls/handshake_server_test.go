@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zmap/ztools/x509"
+	"github.com/zmap/zgrab/ztools/x509"
 )
 
 // zeroSource is an io.Reader that returns an unlimited number of zero bytes.

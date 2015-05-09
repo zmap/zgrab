@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zmap/ztools/x509/pkix"
+	"github.com/zmap/zgrab/ztools/x509/pkix"
 )
 
 type verifyTest struct {

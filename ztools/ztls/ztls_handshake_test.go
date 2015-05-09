@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
+	"github.com/zmap/zgrab/ztools/x509/pkix"
 	"io"
 	"testing"
 
@@ -41,10 +41,12 @@ func (s *ZTLSHandshakeSuite) TestEncodeCertificate(c *C) {
 	ec := new(encodedCertificates)
 	decodingErr := json.Unmarshal(b, ec)
 	c.Assert(decodingErr, IsNil)
-	c.Check(ec.Issuer, IsNil)
-	c.Check(ec.AltNames, IsNil)
-	c.Check(ec.CommonName, IsNil)
-	c.Check(ec.ValidationError, IsNil)
+
+	cert := ec.ParsedCertificate
+	c.Check(cert.Issuer, IsNil)
+	c.Check(cert.DNSNames, IsNil)
+	c.Check(cert.Subject.CommonName, IsNil)
+	//c.Check(cert.ValidationError, IsNil)
 }
 
 func (s *ZTLSHandshakeSuite) TestDecodeCertificate(c *C) {
@@ -61,9 +63,9 @@ func (s *ZTLSHandshakeSuite) TestDecodeCertificateComplicated(c *C) {
 	for idx, cert := range getValidCertChainBase64() {
 		sc.Certificates[idx], _ = base64.StdEncoding.DecodeString(cert)
 	}
-	sc.Issuer = "Example CA"
-	sc.CommonName = "example.com"
-	sc.AltNames = []string{"www.example.com", "example.com"}
+	sc.ParsedCertificates[0].Issuer = pkix.Name{CommonName: "Example CA"}
+	sc.ParsedCertificates[0].Subject = pkix.Name{CommonName: "example.com"}
+	sc.ParsedCertificates[0].DNSNames = []string{"www.example.com", "example.com"}
 	var d Certificates
 	marshalAndUnmarshal(sc, &d, c)
 }
@@ -95,8 +97,8 @@ func (sh *ServerHello) saneDefaults() *ServerHello {
 
 func (c *Certificates) saneDefaults() *Certificates {
 	c.Certificates = make([][]byte, 0)
-	c.Valid = false
-	c.ValidationError = errors.New("Certificate chain does not exist")
+	//c.Valid = false
+	//c.ValidationError = errors.New("Certificate chain does not exist")
 	return c
 }
 

@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zmap/ztools/x509"
+	"github.com/zmap/zgrab/ztools/x509"
 )
 
 // Note: see comment in handshake_test.go for details of how the reference
