@@ -6,8 +6,6 @@ package ztls
 
 import "bytes"
 
-type CipherSuite uint16
-
 type clientHelloMsg struct {
 	raw                 []byte
 	vers                uint16
@@ -18,14 +16,18 @@ type clientHelloMsg struct {
 	nextProtoNeg        bool
 	serverName          string
 	ocspStapling        bool
+	scts                bool
 	supportedCurves     []CurveID
 	supportedPoints     []uint8
 	ticketSupported     bool
 	sessionTicket       []uint8
 	signatureAndHashes  []signatureAndHash
 	secureRenegotiation bool
-	heartbeatEnabled    bool
-	heartbeatMode       uint8
+	alpnProtocols       []string
+
+	// zgrab
+	heartbeatEnabled bool
+	heartbeatMode    uint8
 }
 
 func (m *clientHelloMsg) equal(i interface{}) bool {
@@ -43,12 +45,16 @@ func (m *clientHelloMsg) equal(i interface{}) bool {
 		m.nextProtoNeg == m1.nextProtoNeg &&
 		m.serverName == m1.serverName &&
 		m.ocspStapling == m1.ocspStapling &&
+		m.scts == m1.scts &&
 		eqCurveIDs(m.supportedCurves, m1.supportedCurves) &&
 		bytes.Equal(m.supportedPoints, m1.supportedPoints) &&
 		m.ticketSupported == m1.ticketSupported &&
 		bytes.Equal(m.sessionTicket, m1.sessionTicket) &&
 		eqSignatureAndHashes(m.signatureAndHashes, m1.signatureAndHashes) &&
 		m.secureRenegotiation == m1.secureRenegotiation &&
+		//eqStrings(m.alpnProtocols, m1.alpnProtocols)
+		// zgrab
+		eqStrings(m.alpnProtocols, m1.alpnProtocols) &&
 		m.heartbeatEnabled == m1.heartbeatEnabled &&
 		m.heartbeatMode == m1.heartbeatMode
 }
@@ -92,8 +98,23 @@ func (m *clientHelloMsg) marshal() []byte {
 		extensionsLength += 1
 		numExtensions++
 	}
+	// zgrab
 	if m.heartbeatEnabled {
 		extensionsLength += 1
+		numExtensions++
+	}
+	if len(m.alpnProtocols) > 0 {
+		extensionsLength += 2
+		for _, s := range m.alpnProtocols {
+			if l := len(s); l == 0 || l > 255 {
+				panic("invalid ALPN protocol")
+			}
+			extensionsLength++
+			extensionsLength += len(s)
+		}
+		numExtensions++
+	}
+	if m.scts {
 		numExtensions++
 	}
 	if numExtensions > 0 {
@@ -247,6 +268,7 @@ func (m *clientHelloMsg) marshal() []byte {
 		z[3] = 1
 		z = z[5:]
 	}
+	// zgrab
 	if m.heartbeatEnabled {
 		z[0] = byte(extensionHeartbeat >> 8)
 		z[1] = byte(extensionHeartbeat)
@@ -256,6 +278,35 @@ func (m *clientHelloMsg) marshal() []byte {
 		z[4] = m.heartbeatMode
 		z = z[5:]
 	}
+	if len(m.alpnProtocols) > 0 {
+		z[0] = byte(extensionALPN >> 8)
+		z[1] = byte(extensionALPN & 0xff)
+		lengths := z[2:]
+		z = z[6:]
+
+		stringsLength := 0
+		for _, s := range m.alpnProtocols {
+			l := len(s)
+			z[0] = byte(l)
+			copy(z[1:], s)
+			z = z[1+l:]
+			stringsLength += 1 + l
+		}
+
+		lengths[2] = byte(stringsLength >> 8)
+		lengths[3] = byte(stringsLength)
+		stringsLength += 2
+		lengths[0] = byte(stringsLength >> 8)
+		lengths[1] = byte(stringsLength)
+	}
+	if m.scts {
+		// https://tools.ietf.org/html/rfc6962#section-3.3.1
+		z[0] = byte(extensionSCT >> 8)
+		z[1] = byte(extensionSCT)
+		// zero uint16 for the zero-length extension_data
+		z = z[4:]
+	}
+
 	m.raw = x
 
 	return x
@@ -309,6 +360,9 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 	m.ticketSupported = false
 	m.sessionTicket = nil
 	m.signatureAndHashes = nil
+	m.alpnProtocols = nil
+	m.scts = false
+	// zgrab
 	m.heartbeatEnabled = false
 
 	if len(data) == 0 {
@@ -414,11 +468,35 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 				m.signatureAndHashes[i].signature = d[1]
 				d = d[2:]
 			}
-		case extensionRenegotiationInfo + 1:
+		case extensionRenegotiationInfo:
 			if length != 1 || data[0] != 0 {
 				return false
 			}
 			m.secureRenegotiation = true
+		case extensionALPN:
+			if length < 2 {
+				return false
+			}
+			l := int(data[0])<<8 | int(data[1])
+			if l != length-2 {
+				return false
+			}
+			d := data[2:length]
+			for len(d) != 0 {
+				stringLen := int(d[0])
+				d = d[1:]
+				if stringLen == 0 || stringLen > len(d) {
+					return false
+				}
+				m.alpnProtocols = append(m.alpnProtocols, string(d[:stringLen]))
+				d = d[stringLen:]
+			}
+		case extensionSCT:
+			m.scts = true
+			if length != 0 {
+				return false
+			}
+		// zgrab
 		case extensionHeartbeat:
 			// https://tools.ietf.org/html/rfc6520
 			if length != 1 {
@@ -448,16 +526,29 @@ type serverHelloMsg struct {
 	nextProtoNeg        bool
 	nextProtos          []string
 	ocspStapling        bool
+	scts                [][]byte
 	ticketSupported     bool
 	secureRenegotiation bool
-	heartbeatEnabled    bool
-	heartbeatMode       uint8
+	alpnProtocol        string
+
+	// zgrab
+	heartbeatEnabled bool
+	heartbeatMode    uint8
 }
 
 func (m *serverHelloMsg) equal(i interface{}) bool {
 	m1, ok := i.(*serverHelloMsg)
 	if !ok {
 		return false
+	}
+
+	if len(m.scts) != len(m1.scts) {
+		return false
+	}
+	for i, sct := range m.scts {
+		if !bytes.Equal(sct, m1.scts[i]) {
+			return false
+		}
 	}
 
 	return bytes.Equal(m.raw, m1.raw) &&
@@ -470,7 +561,8 @@ func (m *serverHelloMsg) equal(i interface{}) bool {
 		eqStrings(m.nextProtos, m1.nextProtos) &&
 		m.ocspStapling == m1.ocspStapling &&
 		m.ticketSupported == m1.ticketSupported &&
-		m.secureRenegotiation == m1.secureRenegotiation
+		m.secureRenegotiation == m1.secureRenegotiation &&
+		m.alpnProtocol == m1.alpnProtocol
 }
 
 func (m *serverHelloMsg) marshal() []byte {
@@ -491,6 +583,11 @@ func (m *serverHelloMsg) marshal() []byte {
 		nextProtoLen += len(m.nextProtos)
 		extensionsLength += nextProtoLen
 	}
+	// zgrab
+	if m.heartbeatEnabled {
+		extensionsLength += 1
+		numExtensions++
+	}
 	if m.ocspStapling {
 		numExtensions++
 	}
@@ -501,10 +598,27 @@ func (m *serverHelloMsg) marshal() []byte {
 		extensionsLength += 1
 		numExtensions++
 	}
+	if alpnLen := len(m.alpnProtocol); alpnLen > 0 {
+		if alpnLen >= 256 {
+			panic("invalid ALPN protocol")
+		}
+		extensionsLength += 2 + 1 + alpnLen
+		numExtensions++
+	}
+	sctLen := 0
+	if len(m.scts) > 0 {
+		for _, sct := range m.scts {
+			sctLen += len(sct) + 2
+		}
+		extensionsLength += 2 + sctLen
+		numExtensions++
+	}
+	// zgrab
 	if m.heartbeatEnabled {
 		extensionsLength += 1
 		numExtensions++
 	}
+
 	if numExtensions > 0 {
 		extensionsLength += 4 * numExtensions
 		length += 2 + extensionsLength
@@ -565,6 +679,38 @@ func (m *serverHelloMsg) marshal() []byte {
 		z[3] = 1
 		z = z[5:]
 	}
+	if alpnLen := len(m.alpnProtocol); alpnLen > 0 {
+		z[0] = byte(extensionALPN >> 8)
+		z[1] = byte(extensionALPN & 0xff)
+		l := 2 + 1 + alpnLen
+		z[2] = byte(l >> 8)
+		z[3] = byte(l)
+		l -= 2
+		z[4] = byte(l >> 8)
+		z[5] = byte(l)
+		l -= 1
+		z[6] = byte(l)
+		copy(z[7:], []byte(m.alpnProtocol))
+		z = z[7+alpnLen:]
+	}
+	if sctLen > 0 {
+		z[0] = byte(extensionSCT >> 8)
+		z[1] = byte(extensionSCT)
+		l := sctLen + 2
+		z[2] = byte(l >> 8)
+		z[3] = byte(l)
+		z[4] = byte(sctLen >> 8)
+		z[5] = byte(sctLen)
+
+		z = z[6:]
+		for _, sct := range m.scts {
+			z[0] = byte(len(sct) >> 8)
+			z[1] = byte(len(sct))
+			copy(z[2:], sct)
+			z = z[len(sct)+2:]
+		}
+	}
+	// zgrab
 	if m.heartbeatEnabled {
 		z[0] = byte(extensionHeartbeat >> 8)
 		z[1] = byte(extensionHeartbeat)
@@ -602,7 +748,10 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 	m.nextProtoNeg = false
 	m.nextProtos = nil
 	m.ocspStapling = false
+	m.scts = nil
 	m.ticketSupported = false
+	m.alpnProtocol = ""
+	// zgrab
 	m.heartbeatEnabled = false
 
 	if len(data) == 0 {
@@ -658,6 +807,51 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 				return false
 			}
 			m.secureRenegotiation = true
+		case extensionALPN:
+			d := data[:length]
+			if len(d) < 3 {
+				return false
+			}
+			l := int(d[0])<<8 | int(d[1])
+			if l != len(d)-2 {
+				return false
+			}
+			d = d[2:]
+			l = int(d[0])
+			if l != len(d)-1 {
+				return false
+			}
+			d = d[1:]
+			m.alpnProtocol = string(d)
+		case extensionSCT:
+			d := data[:length]
+
+			if len(d) < 2 {
+				return false
+			}
+			l := int(d[0])<<8 | int(d[1])
+			d = d[2:]
+			if len(d) != l {
+				return false
+			}
+			if l == 0 {
+				continue
+			}
+
+			m.scts = make([][]byte, 0, 3)
+			for len(d) != 0 {
+				if len(d) < 2 {
+					return false
+				}
+				sctLen := int(d[0])<<8 | int(d[1])
+				d = d[2:]
+				if len(d) < sctLen {
+					return false
+				}
+				m.scts = append(m.scts, d[:sctLen])
+				d = d[sctLen:]
+			}
+		// zgrab
 		case extensionHeartbeat:
 			m.heartbeatEnabled = true
 			m.heartbeatMode = data[0]

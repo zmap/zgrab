@@ -1,5 +1,28 @@
 package x509
 
+var signatureAlgorithmNames = []string{
+	"unknown_algorithm",
+	"MD2WithRSA",
+	"MD5WithRSA",
+	"SHA1WithRSA",
+	"SHA256WithRSA",
+	"SHA384WithRSA",
+	"SHA512WithRSA",
+	"DSAWithSHA1",
+	"DSAWithSHA256",
+	"ECDSAWithSHA1",
+	"ECDSAWithSHA256",
+	"ECDSAWitHSHA384",
+	"ECDSAWithSHA512",
+}
+
+var keyAlgorithmNames = []string{
+	"unknown_algorithm",
+	"RSA",
+	"DSA",
+	"ECDSA",
+}
+
 func (s SignatureAlgorithm) String() string {
 	if s >= total_signature_algorithms || s < 0 {
 		s = UnknownSignatureAlgorithm

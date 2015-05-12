@@ -36,13 +36,17 @@ type Conn struct {
 	handshakeComplete bool
 	didResume         bool // whether this connection was a session resumption
 	cipherSuite       uint16
-	ocspResponse      []byte // stapled OCSP response
+	ocspResponse      []byte   // stapled OCSP response
+	scts              [][]byte // signed certificate timestamps from server
 	peerCertificates  []*x509.Certificate
 	// verifiedChains contains the certificate chains that we built, as
 	// opposed to the ones presented by the server.
 	verifiedChains [][]*x509.Certificate
 	// serverName contains the server name indicated by the client, if any.
 	serverName string
+	// firstFinished contains the first Finished hash sent during the
+	// handshake. This is the "tls-unique" channel binding value.
+	firstFinished [12]byte
 
 	clientProtocol         string
 	clientProtocolFallback bool
@@ -55,7 +59,7 @@ type Conn struct {
 
 	tmp [16]byte
 
-	// ztls
+	// zgrab
 	heartbeat     bool
 	handshakeLog  *ServerHandshake
 	heartbleedLog *Heartbleed
@@ -70,6 +74,7 @@ type Conn struct {
 	clientHelloRaw []byte
 }
 
+// zgrab
 func (c *Conn) ClientHelloRaw() []byte {
 	if c.clientHelloRaw == nil {
 		return []byte{}
@@ -77,6 +82,7 @@ func (c *Conn) ClientHelloRaw() []byte {
 	return c.clientHelloRaw
 }
 
+// zgrab
 func (c *Conn) ClientCiphers() []CipherSuite {
 	if c.clientCiphers == nil {
 		return []CipherSuite{}
@@ -552,6 +558,7 @@ func (c *Conn) readRecord(want recordType) error {
 			c.sendAlert(alertInternalError)
 			return c.in.setErrorLocked(errors.New("tls: handshake or ChangeCipherSpec requested after handshake complete"))
 		}
+	//case recordTypeApplicationData:
 	case recordTypeApplicationData, recordTypeHeartbeat:
 		if !c.handshakeComplete {
 			c.sendAlert(alertInternalError)
@@ -600,15 +607,11 @@ Again:
 		return c.in.setErrorLocked(fmt.Errorf("tls: oversized record received with length %d", n))
 	}
 	if !c.haveVers {
-		// First message, be extra suspicious:
-		// this might not be a TLS client.
-		// Bail out before reading a full 'body', if possible.
-		// The current max version is 3.1.
-		// If the version is >= 16.0, it's probably not real.
-		// Similarly, a clientHello message encodes in
-		// well under a kilobyte.  If the length is >= 12 kB,
+		// First message, be extra suspicious: this might not be a TLS
+		// client. Bail out before reading a full 'body', if possible.
+		// The current max version is 3.3 so if the version is >= 16.0,
 		// it's probably not real.
-		if (typ != recordTypeAlert && typ != want) || vers >= 0x1000 || n >= 0x3000 {
+		if (typ != recordTypeAlert && typ != want) || vers >= 0x1000 {
 			c.sendAlert(alertUnexpectedMessage)
 			return c.in.setErrorLocked(fmt.Errorf("tls: first record does not look like a TLS handshake"))
 		}
@@ -685,6 +688,8 @@ Again:
 			return c.in.setErrorLocked(c.sendAlert(alertNoRenegotiation))
 		}
 		c.hand.Write(data)
+
+	// zgrab
 	case recordTypeHeartbeat:
 		if want != recordTypeHeartbeat {
 			return c.sendAlert(alertUnexpectedMessage)
@@ -1034,6 +1039,11 @@ func (c *Conn) ConnectionState() ConnectionState {
 		state.PeerCertificates = c.peerCertificates
 		state.VerifiedChains = c.verifiedChains
 		state.ServerName = c.serverName
+		state.SignedCertificateTimestamps = c.scts
+		state.OCSPResponse = c.ocspResponse
+		if !c.didResume {
+			state.TLSUnique = c.firstFinished[:]
+		}
 	}
 
 	return state
