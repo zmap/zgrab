@@ -58,6 +58,7 @@ func init() {
 	flag.StringVar(&tlsVersion, "tls-version", "", "Max TLS version to use (implies --tls)")
 	flag.BoolVar(&udp, "udp", false, "Grab over UDP")
 	flag.UintVar(&config.Senders, "senders", 1000, "Number of send coroutines to use")
+	flag.UintVar(&config.ConnectionsPerHost, "connections-per-host", 1, "Number of times to connect to each host (results in more output)")
 	flag.BoolVar(&config.Banners, "banners", false, "Read banner upon connection creation")
 	flag.StringVar(&messageFileName, "data", "", "Send a message and read response (%s will be replaced with destination IP)")
 
@@ -97,6 +98,11 @@ func init() {
 	// Validate Go Runtime config
 	if config.GOMAXPROCS < 1 {
 		zlog.Fatalf("Invalid GOMAXPROCS (must be at least 1, given %d)", config.GOMAXPROCS)
+	}
+
+	// Stop the lowliest idiot from using this to DoS people
+	if config.ConnectionsPerHost > 50 || config.ConnectionsPerHost < 1 {
+		zlog.Fatalf("--connections-per-host must be in the range [0,50]")
 	}
 
 	// Validate SSH related flags

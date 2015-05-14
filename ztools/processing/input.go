@@ -19,6 +19,7 @@ type Worker interface {
 	Failure() uint
 	Total() uint
 	Done()
+	RunCount() uint
 }
 
 type Handler func(interface{}) interface{}
@@ -48,14 +49,17 @@ func Process(in Decoder, out io.Writer, w Worker, m Marshaler, workers uint) {
 	// Start all the workers
 	for i := uint(0); i < workers; i++ {
 		handler := w.MakeHandler(i)
+		runCount := w.RunCount()
 		go func(handler Handler) {
 			for obj := range processQueue {
-				result := handler(obj)
-				enc, err := m.Marshal(result)
-				if err != nil {
-					panic(err.Error())
+				for run := uint(0); run < runCount; run++ {
+					result := handler(obj)
+					enc, err := m.Marshal(result)
+					if err != nil {
+						panic(err.Error())
+					}
+					outputQueue <- enc
 				}
-				outputQueue <- enc
 			}
 			workerDone.Done()
 		}(handler)

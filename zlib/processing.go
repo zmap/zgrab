@@ -35,6 +35,10 @@ func (g *GrabWorker) Total() uint {
 	return g.success + g.failure
 }
 
+func (g *GrabWorker) RunCount() uint {
+	return g.config.ConnectionsPerHost
+}
+
 func (g *GrabWorker) Done() {
 	close(g.statuses)
 }

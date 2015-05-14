@@ -66,9 +66,10 @@ func (sc *SSHScanConfig) MakeConfig() *ssh.Config {
 
 type Config struct {
 	// Connection
-	Port    uint16
-	Timeout time.Duration
-	Senders uint
+	Port               uint16
+	Timeout            time.Duration
+	Senders            uint
+	ConnectionsPerHost uint
 
 	// Encoding
 	Encoding string
