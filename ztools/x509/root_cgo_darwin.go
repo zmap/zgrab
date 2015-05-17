@@ -20,7 +20,7 @@ package x509
 //
 // Note: The CFDataRef returned in pemRoots must be released (using CFRelease) after
 // we've consumed its content.
-int FetchPEMRoots(CFDataRef *pemRoots) {
+int ZToolsFetchPEMRoots(CFDataRef *pemRoots) {
 	if (pemRoots == NULL) {
 		return -1;
 	}
@@ -67,7 +67,7 @@ func initSystemRoots() {
 	roots := NewCertPool()
 
 	var data C.CFDataRef = nil
-	err := C.FetchPEMRoots(&data)
+	err := C.ZToolsFetchPEMRoots(&data)
 	if err == -1 {
 		return
 	}
