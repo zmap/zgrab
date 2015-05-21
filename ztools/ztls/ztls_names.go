@@ -357,12 +357,20 @@ func init() {
 	cipherSuiteNames[0xFF85] = "OP_PCL_TLS10_AES_128_CBC_SHA512"
 }
 
+func (cs CipherSuite) Bytes() []byte {
+	return []byte{uint8(cs >> 8), uint8(cs & 0xff)}
+}
+
 func (cs CipherSuite) String() string {
 	if name, ok := cipherSuiteNames[int(cs)]; ok {
 		return name
 	} else {
 		return "unknown"
 	}
+}
+
+func (v TLSVersion) Bytes() []byte {
+	return []byte{uint8(v >> 8), uint8(v & 0xff)}
 }
 
 func (v TLSVersion) String() string {

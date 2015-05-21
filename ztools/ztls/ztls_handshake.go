@@ -10,6 +10,7 @@ import (
 )
 
 type TLSVersion uint16
+type CipherSuite uint16
 
 type ServerHello struct {
 	Version             TLSVersion  `json:"version"`
@@ -50,6 +51,27 @@ type ServerHandshake struct {
 	DHExportParams     *DHParams          `json:"dh_export_params,omitempty"`
 	DHParams           *DHParams          `json:"dh_params,omitempty"`
 	ServerFinished     *Finished          `json:"server_finished"`
+}
+
+func (hs *ServerHandshake) setSkx(skx *serverKeyExchangeMsg, cipher uint16) {
+	hs.ServerKeyExchange = skx.MakeLog()
+	// Check the cipher suite to see if it's RSA or DHE
+	if cipherInList(cipher, RSAExportCiphers) {
+		var p rsaExportParams
+		if p.unmarshal(skx.key) {
+			hs.RSAExportParams = p.MakeLog()
+		}
+	} else if cipherInList(cipher, DHEExportCiphers) {
+		p := new(DHParams)
+		if p.unmarshal(skx.key) {
+			hs.DHExportParams = p
+		}
+	} else if cipherInList(cipher, DHECiphers) {
+		p := new(DHParams)
+		if p.unmarshal(skx.key) {
+			hs.DHParams = p
+		}
+	}
 }
 
 func (c *Conn) GetHandshakeLog() *ServerHandshake {

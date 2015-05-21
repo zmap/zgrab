@@ -200,15 +200,7 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
 	return nil
 }
 
-// Verify attempts to verify c by building one or more chains from c to a
-// certificate in opts.Roots, using certificates in opts.Intermediates if
-// needed. If successful, it returns one or more chains where the first
-// element of the chain is c and the last element is from opts.Roots.
-//
-// If opts.Roots is nil and system roots are unavailable the returned error
-// will be of type SystemRootsError.
-//
-// WARNING: this doesn't do any revocation checking.
+// zgrab: the original Verify() method is now doVerify()
 func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, err error) {
 	chains, err = c.doVerify(opts)
 	if err == nil {
@@ -218,10 +210,23 @@ func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, err e
 	return
 }
 
+// Verify attempts to verify c by building one or more chains from c to a
+// certificate in opts.Roots, using certificates in opts.Intermediates if
+// needed. If successful, it returns one or more chains where the first
+// element of the chain is c and the last element is from opts.Roots.
+//
+// If opts.Roots is nil and system roots are unavailable the returned error
+// will be of type SystemRootsError.
+//
+// WARNING: this doesn't do any revocation checking.
 func (c *Certificate) doVerify(opts VerifyOptions) (chains [][]*Certificate, err error) {
 	// Use Windows's own verification and chain building.
 	if opts.Roots == nil && runtime.GOOS == "windows" {
-		chains, err = c.systemVerify(&opts)
+		return c.systemVerify(&opts)
+	}
+
+	if len(c.UnhandledCriticalExtensions) > 0 {
+		return nil, UnhandledCriticalExtension{}
 	}
 
 	if opts.Roots == nil {
@@ -332,6 +337,9 @@ nextIntermediate:
 }
 
 func matchHostnames(pattern, host string) bool {
+	host = strings.TrimSuffix(host, ".")
+	pattern = strings.TrimSuffix(pattern, ".")
+
 	if len(pattern) == 0 || len(host) == 0 {
 		return false
 	}
@@ -344,7 +352,7 @@ func matchHostnames(pattern, host string) bool {
 	}
 
 	for i, patternPart := range patternParts {
-		if patternPart == "*" {
+		if i == 0 && patternPart == "*" {
 			continue
 		}
 		if patternPart != hostParts[i] {
