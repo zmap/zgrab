@@ -6,7 +6,7 @@ go:
 
 env:
   global:
-  - GOPATH="$HOME/gopath"
+    - GOPATH="$HOME/gopath"
 
 before_script:
   # Create symlink to make it running for forks
