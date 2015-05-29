@@ -309,6 +309,9 @@ type Config struct {
 
 	// Export RSA Key
 	ExportRSAKey *rsa.PrivateKey
+
+	// HeartbeatEnabled sets whether the heartbeat extension is sent
+	HeartbeatEnabled bool
 }
 
 func (c *Config) serverInit() {

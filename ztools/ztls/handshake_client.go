@@ -51,8 +51,11 @@ func (c *Conn) clientHandshake() error {
 		supportedPoints:     []uint8{pointFormatUncompressed},
 		nextProtoNeg:        len(c.config.NextProtos) > 0,
 		secureRenegotiation: true,
-		heartbeatEnabled:    true,
-		heartbeatMode:       heartbeatModePeerAllowed,
+	}
+
+	if c.config.HeartbeatEnabled {
+		hello.heartbeatEnabled = true
+		hello.heartbeatMode = heartbeatModePeerAllowed
 	}
 
 	possibleCipherSuites := c.config.cipherSuites()
