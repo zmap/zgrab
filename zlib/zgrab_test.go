@@ -14,7 +14,7 @@ func TestZGrabSuite(t *testing.T) { TestingT(t) }
 
 type ZGrabSuite struct{}
 
-var _ = Suite(&ZGrabSuite{})
+//var _ = Suite(&ZGrabSuite{})
 
 func (s *ZGrabSuite) TestDecodeEmptyGrab(c *C) {
 	g := new(Grab)
