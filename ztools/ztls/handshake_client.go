@@ -314,27 +314,6 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 	}
 
 	skx, ok := msg.(*serverKeyExchangeMsg)
-	if c.config.ForceSuites && ok {
-		// XXX hijacking this variable to mean exports
-		// Check the cipher suite to see if it's RSA or DHE
-		cipher := hs.serverHello.cipherSuite
-		if cipherInList(cipher, RSAExportCiphers) {
-			var p rsaExportParams
-			if p.unmarshal(skx.key) {
-				c.handshakeLog.RSAExportParams = p.MakeLog()
-			}
-		} else if cipherInList(cipher, DHEExportCiphers) {
-			p := new(DHParams)
-			if p.unmarshal(skx.key) {
-				c.handshakeLog.DHExportParams = p
-			}
-		} else if cipherInList(cipher, DHECiphers) {
-			p := new(DHParams)
-			if p.unmarshal(skx.key) {
-				c.handshakeLog.DHParams = p
-			}
-		}
-	}
 
 	if c.cipherError != nil {
 		return c.cipherError
