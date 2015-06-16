@@ -138,6 +138,7 @@ func (c *Conn) clientHandshake() error {
 	}
 
 	c.writeRecord(recordTypeHandshake, hello.marshal())
+	c.handshakeLog.ClientHello = hello.MakeLog()
 
 	msg, err := c.readHandshake()
 	if err != nil {
