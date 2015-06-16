@@ -11,6 +11,11 @@ import (
 
 type TLSVersion uint16
 
+type ClientHello struct {
+	Random    []byte `json:"random"`
+	SessionID []byte `json:"session_id,omitempty"`
+}
+
 type ServerHello struct {
 	Version             TLSVersion  `json:"version"`
 	Random              []byte      `json:"random"`
@@ -43,6 +48,7 @@ type Finished struct {
 // ServerHandshake stores all of the messages sent by the server during a standard TLS Handshake.
 // It implements zgrab.EventData interface
 type ServerHandshake struct {
+	ClientHello        *ClientHello       `json:"client_hello,omitempty"`
 	ServerHello        *ServerHello       `json:"server_hello"`
 	ServerCertificates *Certificates      `json:"server_certificates"`
 	ServerKeyExchange  *ServerKeyExchange `json:"server_key_exchange"`
@@ -54,6 +60,15 @@ type ServerHandshake struct {
 
 func (c *Conn) GetHandshakeLog() *ServerHandshake {
 	return c.handshakeLog
+}
+
+func (m *clientHelloMsg) MakeLog() *ClientHello {
+	ch := new(ClientHello)
+	ch.Random = make([]byte, len(m.random))
+	copy(ch.Random, m.random)
+	ch.SessionID = make([]byte, len(m.sessionId))
+	copy(ch.SessionID, m.sessionId)
+	return ch
 }
 
 func (m *serverHelloMsg) MakeLog() *ServerHello {
