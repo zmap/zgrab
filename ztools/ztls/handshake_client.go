@@ -167,7 +167,7 @@ func (c *Conn) clientHandshake() error {
 	suite := mutualCipherSuite(c.config.cipherSuites(), serverHello.cipherSuite)
 	if suite == nil {
 		c.sendAlert(alertHandshakeFailure)
-		c.cipherError = fmt.Errorf("tls: server selected an unsupported cipher suite")
+		c.cipherError = ErrUnimplementedCipher
 	}
 
 	hs := &clientHandshakeState{
@@ -333,9 +333,6 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 			if p.unmarshal(skx.key) {
 				c.handshakeLog.DHParams = p
 			}
-		} else {
-			// Other export cipher?
-			return errors.New("unknown (export?) kex")
 		}
 	}
 

@@ -4,10 +4,13 @@ import (
 	"crypto/rsa"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"math/big"
 
 	"github.com/zmap/zgrab/ztools/x509"
 )
+
+var ErrUnimplementedCipher error = errors.New("unimplemented cipher suite")
 
 type TLSVersion uint16
 

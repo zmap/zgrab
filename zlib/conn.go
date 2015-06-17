@@ -245,6 +245,9 @@ func (c *Conn) TLSHandshake() error {
 	c.tlsConn.SetWriteDeadline(c.writeDeadline)
 	c.isTls = true
 	err := c.tlsConn.Handshake()
+	if err == ztls.ErrUnimplementedCipher {
+		err = nil
+	}
 	hl := c.tlsConn.GetHandshakeLog()
 	ts := TLSHandshakeEvent{handshakeLog: hl}
 	event := ConnectionEvent{
