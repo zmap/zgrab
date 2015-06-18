@@ -562,9 +562,9 @@ type Certificate struct {
 	FingerprintSHA256 CertificateFingerprint
 
 	// Internal
-	valid           bool
-	validationError error
-	matchesDomain   *bool
+	valid            bool
+	validationErrors []error
+	matchesDomain    *bool
 }
 
 // ErrUnsupportedAlgorithm results from attempting to perform an operation that

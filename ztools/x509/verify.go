@@ -143,13 +143,15 @@ const (
 )
 
 // isValid performs validity checks on the c.
-func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *VerifyOptions) error {
+func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *VerifyOptions) []error {
+	errors := make([]error, 0)
+
 	now := opts.CurrentTime
 	if now.IsZero() {
 		now = time.Now()
 	}
 	if now.Before(c.NotBefore) || now.After(c.NotAfter) {
-		return CertificateInvalidError{c, Expired}
+		errors = append(errors, CertificateInvalidError{c, Expired})
 	}
 
 	if len(c.PermittedDNSDomains) > 0 {
@@ -165,7 +167,7 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
 		}
 
 		if !ok {
-			return CertificateInvalidError{c, CANotAuthorizedForThisName}
+			errors = append(errors, CertificateInvalidError{c, CANotAuthorizedForThisName})
 		}
 	}
 
@@ -187,17 +189,14 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
 	// encryption key could only be used for Diffie-Hellman key agreement.
 
 	if certType == intermediateCertificate && (!c.BasicConstraintsValid || !c.IsCA) {
-		return CertificateInvalidError{c, NotAuthorizedToSign}
+		errors = append(errors, CertificateInvalidError{c, NotAuthorizedToSign})
 	}
 
-	if c.BasicConstraintsValid && c.MaxPathLen >= 0 {
-		numIntermediates := len(currentChain) - 1
-		if numIntermediates > c.MaxPathLen {
-			return CertificateInvalidError{c, TooManyIntermediates}
-		}
+	if c.BasicConstraintsValid && c.MaxPathLen >= 0 && len(currentChain) > c.MaxPathLen+1 {
+		errors = append(errors, CertificateInvalidError{c, TooManyIntermediates})
 	}
 
-	return nil
+	return errors
 }
 
 // Verify attempts to verify c by building one or more chains from c to a
@@ -209,42 +208,45 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
 // will be of type SystemRootsError.
 //
 // WARNING: this doesn't do any revocation checking.
-func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, err error) {
-	chains, err = c.doVerify(opts)
-	if err == nil {
+func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, errors []error) {
+	chains, errors = c.doVerify(opts)
+	if len(errors) == 0 {
 		c.valid = true
 	}
-	c.validationError = err
+	c.validationErrors = errors
 	return
 }
 
-func (c *Certificate) doVerify(opts VerifyOptions) (chains [][]*Certificate, err error) {
+func (c *Certificate) doVerify(opts VerifyOptions) (chains [][]*Certificate, errors []error) {
 	// Use Windows's own verification and chain building.
 	if opts.Roots == nil && runtime.GOOS == "windows" {
-		chains, err = c.systemVerify(&opts)
+		chains, _ = c.systemVerify(&opts)
 	}
 
 	if opts.Roots == nil {
 		opts.Roots = systemRootsPool()
 		if opts.Roots == nil {
-			return nil, SystemRootsError{}
+			errors = []error{SystemRootsError{}}
+			return
 		}
 	}
 
-	err = c.isValid(leafCertificate, nil, &opts)
-	if err != nil {
+	errors = c.isValid(leafCertificate, nil, &opts)
+	if len(errors) > 0 {
 		return
 	}
 
 	if len(opts.DNSName) > 0 {
-		err = c.VerifyHostname(opts.DNSName)
+		err := c.VerifyHostname(opts.DNSName)
 		if err != nil {
+			errors = []error{err}
 			return
 		}
 	}
 
 	candidateChains, err := c.buildChains(make(map[int][][]*Certificate), []*Certificate{c}, &opts)
 	if err != nil {
+		errors = []error{err}
 		return
 	}
 
@@ -268,7 +270,8 @@ func (c *Certificate) doVerify(opts VerifyOptions) (chains [][]*Certificate, err
 	}
 
 	if len(chains) == 0 {
-		err = CertificateInvalidError{c, IncompatibleUsage}
+		errors = []error{CertificateInvalidError{c, IncompatibleUsage}}
+		return
 	}
 
 	return
@@ -285,8 +288,8 @@ func (c *Certificate) buildChains(cache map[int][][]*Certificate, currentChain [
 	possibleRoots, failedRoot, rootErr := opts.Roots.findVerifiedParents(c)
 	for _, rootNum := range possibleRoots {
 		root := opts.Roots.certs[rootNum]
-		err = root.isValid(rootCertificate, currentChain, opts)
-		if err != nil {
+		errors := root.isValid(rootCertificate, currentChain, opts)
+		if len(errors) > 0 {
 			continue
 		}
 		chains = append(chains, appendToFreshChain(currentChain, root))
@@ -301,8 +304,8 @@ nextIntermediate:
 				continue nextIntermediate
 			}
 		}
-		err = intermediate.isValid(intermediateCertificate, currentChain, opts)
-		if err != nil {
+		errors := intermediate.isValid(intermediateCertificate, currentChain, opts)
+		if len(errors) > 0 {
 			continue
 		}
 		var childChains [][]*Certificate

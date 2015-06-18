@@ -272,15 +272,14 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 			}
 			opts.Intermediates.AddCert(cert)
 		}
-		c.verifiedChains, err = certs[0].Verify(opts)
+		var errors []error
+		c.verifiedChains, errors = certs[0].Verify(opts)
 		c.handshakeLog.ServerCertificates.ParsedCertificates = certs
 
 		// If actually verifying and invalid, reject
-		if !c.config.InsecureSkipVerify {
-			if err != nil {
-				c.sendAlert(alertBadCertificate)
-				return err
-			}
+		if !c.config.InsecureSkipVerify && len(errors) > 0 {
+			c.sendAlert(alertBadCertificate)
+			return errors[0]
 		}
 	}
 

@@ -81,11 +81,11 @@ type jsonTBSCertificate struct {
 }
 
 type jsonSignature struct {
-	Value           []byte `json:"value"`
-	Valid           bool   `json:"valid"`
-	ValidationError string `json:"validation_error,omitempty"`
-	Matches         *bool  `json:"matches_domain"`
-	SelfSigned      bool   `json:"self_signed"`
+	Value            []byte   `json:"value"`
+	Valid            bool     `json:"valid"`
+	ValidationErrors []string `json:"validation_errors"`
+	Matches          *bool    `json:"matches_domain"`
+	SelfSigned       bool     `json:"self_signed"`
 }
 
 type jsonCertificate struct {
@@ -139,8 +139,12 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.SignatureAlgorithm = jc.Certificate.SignatureAlgorithm
 	jc.Signature.Value = c.Signature
 	jc.Signature.Valid = c.valid
-	if c.validationError != nil {
-		jc.Signature.ValidationError = c.validationError.Error()
+	if len(c.validationErrors) > 0 {
+		errors := make([]string, len(c.validationErrors))
+		for i, err := range c.validationErrors {
+			errors[i] = err.Error()
+		}
+		jc.Signature.ValidationErrors = errors
 	}
 	if c.Subject.CommonName == c.Issuer.CommonName {
 		jc.Signature.SelfSigned = true
