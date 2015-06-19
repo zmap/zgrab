@@ -426,6 +426,24 @@ func (c *Config) getCertificateForName(name string) *Certificate {
 	return &c.Certificates[0]
 }
 
+func (c *Config) signatureAndHashesForServer() []signatureAndHash {
+	/*
+		if c != nil && c.SignatureAndHashes != nil {
+			return c.SignatureAndHashes
+		}
+	*/
+	return supportedClientCertSignatureAlgorithms
+}
+
+func (c *Config) signatureAndHashesForClient() []signatureAndHash {
+	/*
+		if c != nil && c.SignatureAndHashes != nil {
+			return c.SignatureAndHashes
+		}
+	*/
+	return supportedSKXSignatureAlgorithms
+}
+
 // BuildNameToCertificate parses c.Certificates and builds c.NameToCertificate
 // from the CommonName and SubjectAlternateName fields of each of the leaf
 // certificates.
@@ -575,4 +593,13 @@ func initDefaultCipherSuites() {
 
 func unexpectedMessageError(wanted, got interface{}) error {
 	return fmt.Errorf("tls: received unexpected handshake message of type %T when waiting for %T", got, wanted)
+}
+
+func isSupportedSignatureAndHash(sigHash signatureAndHash, sigHashes []signatureAndHash) bool {
+	for _, s := range sigHashes {
+		if s == sigHash {
+			return true
+		}
+	}
+	return false
 }

@@ -69,7 +69,7 @@ func (ka rsaKeyAgreement) generateServerKeyExchange(config *Config, cert *Certif
 	var tls12HashId uint8
 	var err error
 	if ka.version >= VersionTLS12 {
-		if tls12HashId, err = pickTLS12HashForSignature(signatureRSA, clientHello.signatureAndHashes); err != nil {
+		if tls12HashId, err = pickTLS12HashForSignature(signatureRSA, clientHello.signatureAndHashes, config.signatureAndHashesForServer()); err != nil {
 			return nil, err
 		}
 	}
@@ -266,20 +266,19 @@ func hashForServerKeyExchange(sigType, hashFunc uint8, version uint16, slices ..
 // pickTLS12HashForSignature returns a TLS 1.2 hash identifier for signing a
 // ServerKeyExchange given the signature type being used and the client's
 // advertised list of supported signature and hash combinations.
-func pickTLS12HashForSignature(sigType uint8, clientSignatureAndHashes []signatureAndHash) (uint8, error) {
-	if len(clientSignatureAndHashes) == 0 {
+func pickTLS12HashForSignature(sigType uint8, clientList, serverList []signatureAndHash) (uint8, error) {
+	if len(clientList) == 0 {
 		// If the client didn't specify any signature_algorithms
 		// extension then we can assume that it supports SHA1. See
 		// http://tools.ietf.org/html/rfc5246#section-7.4.1.4.1
 		return hashSHA1, nil
 	}
 
-	for _, sigAndHash := range clientSignatureAndHashes {
+	for _, sigAndHash := range clientList {
 		if sigAndHash.signature != sigType {
 			continue
 		}
-		switch sigAndHash.hash {
-		case hashSHA1, hashSHA256:
+		if isSupportedSignatureAndHash(sigAndHash, serverList) {
 			return sigAndHash.hash, nil
 		}
 	}
@@ -298,6 +297,156 @@ func curveForCurveID(id CurveID) (elliptic.Curve, bool) {
 	default:
 		return nil, false
 	}
+}
+
+// keyAgreementAuthentication is a helper interface that specifies how
+// to authenticate the ServerKeyExchange parameters.
+type keyAgreementAuthentication interface {
+	signParameters(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg, params []byte) (*serverKeyExchangeMsg, error)
+	verifyParameters(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, params []byte, sig []byte) error
+}
+
+// nilKeyAgreementAuthentication does not authenticate the key
+// agreement parameters.
+type nilKeyAgreementAuthentication struct{}
+
+func (ka *nilKeyAgreementAuthentication) signParameters(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg, params []byte) (*serverKeyExchangeMsg, error) {
+	skx := new(serverKeyExchangeMsg)
+	skx.key = params
+	return skx, nil
+}
+
+func (ka *nilKeyAgreementAuthentication) verifyParameters(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, params []byte, sig []byte) error {
+	return nil
+}
+
+// signedKeyAgreement signs the ServerKeyExchange parameters with the
+// server's private key.
+type signedKeyAgreement struct {
+	version uint16
+	sigType uint8
+}
+
+func (ka *signedKeyAgreement) signParameters(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg, params []byte) (*serverKeyExchangeMsg, error) {
+	var tls12HashId uint8
+	var err error
+	if ka.version >= VersionTLS12 {
+		if tls12HashId, err = pickTLS12HashForSignature(ka.sigType, clientHello.signatureAndHashes, config.signatureAndHashesForServer()); err != nil {
+			return nil, err
+		}
+	}
+
+	digest, hashFunc, err := hashForServerKeyExchange(ka.sigType, tls12HashId, ka.version, clientHello.random, hello.random, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var sig []byte
+	switch ka.sigType {
+	case signatureECDSA:
+		privKey, ok := cert.PrivateKey.(*ecdsa.PrivateKey)
+		if !ok {
+			return nil, errors.New("ECDHE ECDSA requires an ECDSA server private key")
+		}
+		r, s, err := ecdsa.Sign(config.rand(), privKey, digest)
+		if err != nil {
+			return nil, errors.New("failed to sign ECDHE parameters: " + err.Error())
+		}
+		sig, err = asn1.Marshal(ecdsaSignature{r, s})
+	case signatureRSA:
+		privKey, ok := cert.PrivateKey.(*rsa.PrivateKey)
+		if !ok {
+			return nil, errors.New("ECDHE RSA requires a RSA server private key")
+		}
+		sig, err = rsa.SignPKCS1v15(config.rand(), privKey, hashFunc, digest)
+		if err != nil {
+			return nil, errors.New("failed to sign ECDHE parameters: " + err.Error())
+		}
+	default:
+		return nil, errors.New("unknown ECDHE signature algorithm")
+	}
+
+	skx := new(serverKeyExchangeMsg)
+	sigAndHashLen := 0
+	if ka.version >= VersionTLS12 {
+		sigAndHashLen = 2
+	}
+	skx.key = make([]byte, len(params)+sigAndHashLen+2+len(sig))
+	copy(skx.key, params)
+	k := skx.key[len(params):]
+	if ka.version >= VersionTLS12 {
+		k[0] = tls12HashId
+		k[1] = ka.sigType
+		k = k[2:]
+	}
+	k[0] = byte(len(sig) >> 8)
+	k[1] = byte(len(sig))
+	copy(k[2:], sig)
+
+	return skx, nil
+}
+
+func (ka *signedKeyAgreement) verifyParameters(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, params []byte, sig []byte) error {
+	if len(sig) < 2 {
+		return errServerKeyExchange
+	}
+
+	var tls12HashId uint8
+	if ka.version >= VersionTLS12 {
+		// handle SignatureAndHashAlgorithm
+		var sigAndHash []uint8
+		sigAndHash, sig = sig[:2], sig[2:]
+		if sigAndHash[1] != ka.sigType {
+			return errServerKeyExchange
+		}
+		tls12HashId = sigAndHash[0]
+		if len(sig) < 2 {
+			return errServerKeyExchange
+		}
+
+		if !isSupportedSignatureAndHash(signatureAndHash{ka.sigType, tls12HashId}, config.signatureAndHashesForClient()) {
+			return errors.New("tls: unsupported hash function for ServerKeyExchange")
+		}
+	}
+	sigLen := int(sig[0])<<8 | int(sig[1])
+	if sigLen+2 != len(sig) {
+		return errServerKeyExchange
+	}
+	sig = sig[2:]
+
+	digest, hashFunc, err := hashForServerKeyExchange(ka.sigType, tls12HashId, ka.version, clientHello.random, serverHello.random, params)
+	if err != nil {
+		return err
+	}
+	switch ka.sigType {
+	case signatureECDSA:
+		pubKey, ok := cert.PublicKey.(*ecdsa.PublicKey)
+		if !ok {
+			return errors.New("ECDHE ECDSA requires a ECDSA server public key")
+		}
+		ecdsaSig := new(ecdsaSignature)
+		if _, err := asn1.Unmarshal(sig, ecdsaSig); err != nil {
+			return err
+		}
+		if ecdsaSig.R.Sign() <= 0 || ecdsaSig.S.Sign() <= 0 {
+			return errors.New("ECDSA signature contained zero or negative values")
+		}
+		if !ecdsa.Verify(pubKey, digest, ecdsaSig.R, ecdsaSig.S) {
+			return errors.New("ECDSA verification failure")
+		}
+	case signatureRSA:
+		pubKey, ok := cert.PublicKey.(*rsa.PublicKey)
+		if !ok {
+			return errors.New("ECDHE RSA requires a RSA server public key")
+		}
+		if err := rsa.VerifyPKCS1v15(pubKey, hashFunc, digest, sig); err != nil {
+			return err
+		}
+	default:
+		return errors.New("unknown ECDHE signature algorithm")
+	}
+
+	return nil
 }
 
 // ecdheRSAKeyAgreement implements a TLS key agreement where the server
@@ -353,7 +502,7 @@ NextCandidate:
 
 	var tls12HashId uint8
 	if ka.version >= VersionTLS12 {
-		if tls12HashId, err = pickTLS12HashForSignature(ka.sigType, clientHello.signatureAndHashes); err != nil {
+		if tls12HashId, err = pickTLS12HashForSignature(ka.sigType, clientHello.signatureAndHashes, config.signatureAndHashesForServer()); err != nil {
 			return nil, err
 		}
 	}
