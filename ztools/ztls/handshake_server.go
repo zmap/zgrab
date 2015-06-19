@@ -438,7 +438,7 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 		hs.finishedHash.Write(certVerify.marshal())
 	}
 
-	preMasterSecret, err := keyAgreement.processClientKeyExchange(config, hs.cert, ckx, c.vers)
+	preMasterSecret, err := keyAgreement.processClientKeyExchange(config, hs.cert, ckx)
 	if err != nil {
 		c.sendAlert(alertHandshakeFailure)
 		return err
