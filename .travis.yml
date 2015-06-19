@@ -15,3 +15,9 @@ before_script:
 
 script:
   - go test -v ./...
+
+notifications:
+  email:
+    - zmap-devel@umich.edu
+  slack:
+    secure: gLiX4zUhlYMJ0l7kJlb5Wf5CmAynj+WQufThSBPP7XlLZddl6Vql72sJuqwl1ZV75xEsqP05QDulBMJc9AaED7BP53vhngHHgWLwjt026ne5sbA/s98U735jT/qwwFvKWBCYPZ5BQdTmJO3KCyuBJH+tQnptiolog9abksG1WZk=
