@@ -342,6 +342,7 @@ func init() {
 	cipherSuiteNames[0xC0AD] = "TLS_ECDHE_ECDSA_WITH_AES_256_CCM"
 	cipherSuiteNames[0xC0AE] = "TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8"
 	cipherSuiteNames[0xC0AF] = "TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8"
+	cipherSuiteNames[0xCAFE] = "TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256"
 	cipherSuiteNames[0xCC13] = "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
 	cipherSuiteNames[0xCC14] = "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"
 	cipherSuiteNames[0xCC15] = "TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
@@ -360,9 +361,8 @@ func init() {
 func (cs CipherSuite) String() string {
 	if name, ok := cipherSuiteNames[int(cs)]; ok {
 		return name
-	} else {
-		return "unknown"
 	}
+	return "unknown"
 }
 
 func (v TLSVersion) String() string {
