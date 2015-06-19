@@ -104,8 +104,8 @@ func (c *Certificates) saneDefaults() *Certificates {
 }
 
 func (skx *ServerKeyExchange) saneDefaults() *ServerKeyExchange {
-	skx.Key = make([]byte, 8)
-	io.ReadFull(rand.Reader, skx.Key)
+	skx.Raw = make([]byte, 8)
+	io.ReadFull(rand.Reader, skx.Raw)
 	return skx
 }
 
