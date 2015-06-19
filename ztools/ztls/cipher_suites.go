@@ -231,13 +231,6 @@ func (s tls10MAC) MAC(digestBuf, seq, header, data []byte) []byte {
 	return s.h.Sum(digestBuf[:0])
 }
 
-func rsaExportKA(version uint16) keyAgreement {
-	return &rsaEphemeralKeyAgreement{
-		sigType: signatureRSA,
-		version: version,
-	}
-}
-
 func rsaKA(version uint16) keyAgreement {
 	return rsaKeyAgreement{}
 }
