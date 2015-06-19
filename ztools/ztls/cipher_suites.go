@@ -327,18 +327,29 @@ func (s tls10MAC) MAC(digestBuf, seq, header, data []byte) []byte {
 }
 
 func rsaKA(version uint16) keyAgreement {
-	return rsaKeyAgreement{}
+	return rsaKeyAgreement{
+		auth: &signedKeyAgreement{
+			sigType: signatureRSA,
+			version: version,
+		},
+	}
 }
 
 func ecdheECDSAKA(version uint16) keyAgreement {
 	return &ecdheKeyAgreement{
-		auth: new(signedKeyAgreement),
+		auth: &signedKeyAgreement{
+			sigType: signatureECDSA,
+			version: version,
+		},
 	}
 }
 
 func ecdheRSAKA(version uint16) keyAgreement {
 	return &ecdheKeyAgreement{
-		auth: new(signedKeyAgreement),
+		auth: &signedKeyAgreement{
+			sigType: signatureRSA,
+			version: version,
+		},
 	}
 }
 

@@ -38,6 +38,8 @@ type rsaKeyAgreement struct {
 func (ka rsaKeyAgreement) generateServerKeyExchange(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
 	// Only send a server key agreement when the cipher is an RSA export
 	// TODO: Make this a configuration parameter
+	ka.clientVersion = clientHello.vers
+	ka.version = hello.vers
 	cipherSuite := hello.cipherSuite
 	if !cipherInList(cipherSuite, RSAExportCiphers) {
 		ka.privateKey = cert.PrivateKey.(*rsa.PrivateKey)
@@ -422,7 +424,6 @@ func (ka *signedKeyAgreement) verifyParameters(config *Config, clientHello *clie
 // either be ECDSA or RSA.
 type ecdheKeyAgreement struct {
 	auth       keyAgreementAuthentication
-	version    uint16
 	privateKey []byte
 	curve      elliptic.Curve
 	x, y       *big.Int
@@ -531,15 +532,9 @@ func (ka *ecdheKeyAgreement) generateClientKeyExchange(config *Config, clientHel
 
 	ckx := new(clientKeyExchangeMsg)
 	var body []byte
-	// TODO: confirm if this is the right behavior
-	if ka.version == VersionSSL30 {
-		ckx.ciphertext = make([]byte, len(serialized))
-		body = ckx.ciphertext
-	} else {
-		ckx.ciphertext = make([]byte, 1+len(serialized))
-		ckx.ciphertext[0] = byte(len(serialized))
-		body = ckx.ciphertext[1:]
-	}
+	ckx.ciphertext = make([]byte, 1+len(serialized))
+	ckx.ciphertext[0] = byte(len(serialized))
+	body = ckx.ciphertext[1:]
 	copy(body, serialized)
 
 	return preMasterSecret, ckx, nil
