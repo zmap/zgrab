@@ -1,23 +1,17 @@
 language: go
-
 go:
-  - 1.4
-
+- 1.4
 env:
   global:
-    - GOPATH="$HOME/gopath"
-
+  - GOPATH="$HOME/gopath"
 before_script:
-  # Create symlink to make it running for forks
-  - mkdir -p $HOME/gopath/src/github.com/zmap
-  - ln -s $TRAVIS_BUILD_DIR $HOME/gopath/src/github.com/zmap/ || true
-  - go get gopkg.in/check.v1
-
+- mkdir -p $HOME/gopath/src/github.com/zmap
+- ln -s $TRAVIS_BUILD_DIR $HOME/gopath/src/github.com/zmap/ || true
+- go get gopkg.in/check.v1
 script:
-  - go test -v ./...
-
+- go test -v ./...
 notifications:
   email:
-    - zmap-devel@umich.edu
+  - zmap-devel@umich.edu
   slack:
-    secure: gLiX4zUhlYMJ0l7kJlb5Wf5CmAynj+WQufThSBPP7XlLZddl6Vql72sJuqwl1ZV75xEsqP05QDulBMJc9AaED7BP53vhngHHgWLwjt026ne5sbA/s98U735jT/qwwFvKWBCYPZ5BQdTmJO3KCyuBJH+tQnptiolog9abksG1WZk=
+    secure: C9nvJpSXSBuqfyv7z+vt+d0CQ4ZC5JklQj9iY9g1jpObDeBG13/THKxINTAAkKIjrgZHkeSVRjOSAE+pz6XbGKFBoFwsKqx9kc4rM7rZumlRalXgyTMc2nInWVcCwlQBGHTAmqPudXR4zMD8xRM9iNxpzOIb2cjOkPRAHw1cCXY=
