@@ -28,10 +28,9 @@ var errUnexpectedServerKeyExchange = errors.New("tls: unexpected ServerKeyExchan
 // rsaKeyAgreement implements the standard TLS key agreement where the client
 // encrypts the pre-master secret to the server's public key.
 type rsaKeyAgreement struct {
-	version       uint16
-	clientVersion uint16
-	privateKey    *rsa.PrivateKey
-	publicKey     *rsa.PublicKey
+	auth       keyAgreementAuthentication
+	privateKey *rsa.PrivateKey
+	publicKey  *rsa.PublicKey
 }
 
 func (ka rsaKeyAgreement) generateServerKeyExchange(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
@@ -42,8 +41,6 @@ func (ka rsaKeyAgreement) generateServerKeyExchange(config *Config, cert *Certif
 		ka.privateKey = cert.PrivateKey.(*rsa.PrivateKey)
 		return nil, nil
 	}
-	// Save the client version for comparison later.
-	ka.clientVersion = clientHello.vers
 
 	// Generate an ephemeral RSA key or use the one in the config
 	if config.ExportRSAKey != nil {
@@ -66,45 +63,7 @@ func (ka rsaKeyAgreement) generateServerKeyExchange(config *Config, cert *Certif
 	serverRSAParams = append(serverRSAParams, byte(len(exponent)>>8), byte(len(exponent)))
 	serverRSAParams = append(serverRSAParams, exponent...)
 
-	var tls12HashId uint8
-	var err error
-	if ka.version >= VersionTLS12 {
-		if tls12HashId, err = pickTLS12HashForSignature(signatureRSA, clientHello.signatureAndHashes, config.signatureAndHashesForServer()); err != nil {
-			return nil, err
-		}
-	}
-
-	digest, hashFunc, err := hashForServerKeyExchange(signatureRSA, tls12HashId, ka.version, clientHello.random, hello.random, serverRSAParams)
-	if err != nil {
-		return nil, err
-	}
-	privKey, ok := cert.PrivateKey.(*rsa.PrivateKey)
-	if !ok {
-		return nil, errors.New("RSA ephemeral key requires an RSA server private key")
-	}
-	sig, err := rsa.SignPKCS1v15(config.rand(), privKey, hashFunc, digest)
-	if err != nil {
-		return nil, errors.New("failed to sign RSA parameters: " + err.Error())
-	}
-
-	skx := new(serverKeyExchangeMsg)
-	sigAndHashLen := 0
-	if ka.version >= VersionTLS12 {
-		sigAndHashLen = 2
-	}
-	skx.key = make([]byte, len(serverRSAParams)+sigAndHashLen+2+len(sig))
-	copy(skx.key, serverRSAParams)
-	k := skx.key[len(serverRSAParams):]
-	if ka.version >= VersionTLS12 {
-		k[0] = tls12HashId
-		k[1] = signatureRSA
-		k = k[2:]
-	}
-	k[0] = byte(len(sig) >> 8)
-	k[1] = byte(len(sig))
-	copy(k[2:], sig)
-
-	return skx, nil
+	return ka.auth.signParameters(config, cert, clientHello, hello, serverRSAParams)
 }
 
 func (ka rsaKeyAgreement) processClientKeyExchange(config *Config, cert *Certificate, ckx *clientKeyExchangeMsg, version uint16) ([]byte, error) {
@@ -176,6 +135,8 @@ func (ka rsaKeyAgreement) processServerKeyExchange(config *Config, clientHello *
 	}
 	ka.publicKey.E = exponent
 	ka.publicKey.N = modulus
+
+	// TODO: check the signature
 	return nil
 }
 
