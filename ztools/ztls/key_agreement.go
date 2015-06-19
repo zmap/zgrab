@@ -136,8 +136,12 @@ func (ka rsaKeyAgreement) processServerKeyExchange(config *Config, clientHello *
 	ka.publicKey.E = exponent
 	ka.publicKey.N = modulus
 
-	// TODO: check the signature
-	return nil
+	paramsLen := 2 + exponentLength + 2 + modulusLen
+
+	serverRSAParams := skx.key[:paramsLen]
+	sig := skx.key[paramsLen:]
+
+	return ka.auth.verifyParameters(config, clientHello, serverHello, cert, serverRSAParams, sig)
 }
 
 func (ka rsaKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate, version uint16) ([]byte, *clientKeyExchangeMsg, error) {
