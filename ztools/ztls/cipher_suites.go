@@ -49,6 +49,17 @@ const (
 	// suiteTLS12 indicates that the cipher suite should only be advertised
 	// and accepted when using TLS 1.2.
 	suiteTLS12
+	// suiteSHA384 indicates that the cipher suite uses SHA384 as the
+	// handshake hash.
+	suiteSHA384
+	// suiteNoDTLS indicates that the cipher suite cannot be used
+	// in DTLS.
+	suiteNoDTLS
+	// suitePSK indicates that the cipher suite authenticates with
+	// a pre-shared key rather than a server private key.
+	suitePSK
+	// suiteExport indicates that the cipher suite is an export suite
+	suiteExport
 )
 
 // A cipherSuite is a specific combination of key agreement, cipher and MAC
@@ -221,7 +232,7 @@ func (s tls10MAC) MAC(digestBuf, seq, header, data []byte) []byte {
 }
 
 func rsaExportKA(version uint16) keyAgreement {
-	return &rsaExportKeyAgreement{
+	return &rsaEphemeralKeyAgreement{
 		sigType: signatureRSA,
 		version: version,
 	}
