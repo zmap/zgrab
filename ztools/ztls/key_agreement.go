@@ -22,6 +22,7 @@ import (
 
 var errClientKeyExchange = errors.New("tls: invalid ClientKeyExchange message")
 var errServerKeyExchange = errors.New("tls: invalid ServerKeyExchange message")
+var errUnexpectedServerKeyExchange = errors.New("tls: unexpected ServerKeyExchange message")
 
 // rsaKeyAgreement implements the standard TLS key agreement where the client
 // encrypts the pre-master secret to the server's public key.
@@ -139,8 +140,42 @@ func (ka rsaKeyAgreement) processClientKeyExchange(config *Config, cert *Certifi
 }
 
 func (ka rsaKeyAgreement) processServerKeyExchange(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, skx *serverKeyExchangeMsg) error {
-	// TODO
-	return errors.New("tls: unexpected ServerKeyExchange")
+	if !cipherInList(serverHello.cipherSuite, RSAExportCiphers) {
+		return errUnexpectedServerKeyExchange
+	}
+
+	k := skx.key
+	// Read the modulus
+	if len(k) < 2 {
+		return errServerKeyExchange
+	}
+	modulusLen := (int(k[0]) << 8) | int(k[1])
+	k = k[2:]
+	if len(k) < modulusLen {
+		return errServerKeyExchange
+	}
+	modulus := new(big.Int).SetBytes(k[:modulusLen])
+	k = k[modulusLen:]
+
+	// Read the exponent
+	if len(k) < 2 {
+		return errServerKeyExchange
+	}
+	exponentLength := (int(k[0]) << 8) | int(k[1])
+	k = k[2:]
+	if len(k) < exponentLength || exponentLength > 4 {
+		return errServerKeyExchange
+	}
+	rawExponent := k[0:exponentLength]
+	k = k[exponentLength:]
+	exponent := 0
+	for _, b := range rawExponent {
+		exponent <<= 8
+		exponent |= int(b)
+	}
+	ka.publicKey.E = exponent
+	ka.publicKey.N = modulus
+	return nil
 }
 
 func (ka rsaKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate, version uint16) ([]byte, *clientKeyExchangeMsg, error) {
