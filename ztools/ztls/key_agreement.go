@@ -26,10 +26,83 @@ var errServerKeyExchange = errors.New("tls: invalid ServerKeyExchange message")
 // rsaKeyAgreement implements the standard TLS key agreement where the client
 // encrypts the pre-master secret to the server's public key.
 type rsaKeyAgreement struct {
+	version       uint16
+	clientVersion uint16
+	privateKey    *rsa.PrivateKey
+	publicKey     *rsa.PublicKey
 }
 
 func (ka rsaKeyAgreement) generateServerKeyExchange(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
-	return nil, nil
+	// Only send a server key agreement when the cipher is an RSA export
+	// TODO: Make this a configuration parameter
+	cipherSuite := hello.cipherSuite
+	if !cipherInList(cipherSuite, RSAExportCiphers) {
+		ka.privateKey = cert.PrivateKey.(*rsa.PrivateKey)
+		return nil, nil
+	}
+	// Save the client version for comparison later.
+	ka.clientVersion = clientHello.vers
+
+	// Generate an ephemeral RSA key or use the one in the config
+	if config.ExportRSAKey != nil {
+		ka.privateKey = config.ExportRSAKey
+	} else {
+		key, err := rsa.GenerateKey(config.rand(), 512)
+		if err != nil {
+			return nil, err
+		}
+		ka.privateKey = key
+	}
+
+	// Serialize the key parameters to a nice byte array. The byte array can be
+	// positioned later.
+	modulus := ka.privateKey.N.Bytes()
+	exponent := big.NewInt(int64(ka.privateKey.E)).Bytes()
+	serverRSAParams := make([]byte, 0, 2+len(modulus)+2+len(exponent))
+	serverRSAParams = append(serverRSAParams, byte(len(modulus)>>8), byte(len(modulus)))
+	serverRSAParams = append(serverRSAParams, modulus...)
+	serverRSAParams = append(serverRSAParams, byte(len(exponent)>>8), byte(len(exponent)))
+	serverRSAParams = append(serverRSAParams, exponent...)
+
+	var tls12HashId uint8
+	var err error
+	if ka.version >= VersionTLS12 {
+		if tls12HashId, err = pickTLS12HashForSignature(signatureRSA, clientHello.signatureAndHashes); err != nil {
+			return nil, err
+		}
+	}
+
+	digest, hashFunc, err := hashForServerKeyExchange(signatureRSA, tls12HashId, ka.version, clientHello.random, hello.random, serverRSAParams)
+	if err != nil {
+		return nil, err
+	}
+	privKey, ok := cert.PrivateKey.(*rsa.PrivateKey)
+	if !ok {
+		return nil, errors.New("RSA ephemeral key requires an RSA server private key")
+	}
+	sig, err := rsa.SignPKCS1v15(config.rand(), privKey, hashFunc, digest)
+	if err != nil {
+		return nil, errors.New("failed to sign RSA parameters: " + err.Error())
+	}
+
+	skx := new(serverKeyExchangeMsg)
+	sigAndHashLen := 0
+	if ka.version >= VersionTLS12 {
+		sigAndHashLen = 2
+	}
+	skx.key = make([]byte, len(serverRSAParams)+sigAndHashLen+2+len(sig))
+	copy(skx.key, serverRSAParams)
+	k := skx.key[len(serverRSAParams):]
+	if ka.version >= VersionTLS12 {
+		k[0] = tls12HashId
+		k[1] = signatureRSA
+		k = k[2:]
+	}
+	k[0] = byte(len(sig) >> 8)
+	k[1] = byte(len(sig))
+	copy(k[2:], sig)
+
+	return skx, nil
 }
 
 func (ka rsaKeyAgreement) processClientKeyExchange(config *Config, cert *Certificate, ckx *clientKeyExchangeMsg, version uint16) ([]byte, error) {
@@ -52,7 +125,7 @@ func (ka rsaKeyAgreement) processClientKeyExchange(config *Config, cert *Certifi
 		ciphertext = ckx.ciphertext[2:]
 	}
 
-	err = rsa.DecryptPKCS1v15SessionKey(config.rand(), cert.PrivateKey.(*rsa.PrivateKey), ciphertext, preMasterSecret)
+	err = rsa.DecryptPKCS1v15SessionKey(config.rand(), ka.privateKey, ciphertext, preMasterSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -66,6 +139,7 @@ func (ka rsaKeyAgreement) processClientKeyExchange(config *Config, cert *Certifi
 }
 
 func (ka rsaKeyAgreement) processServerKeyExchange(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, skx *serverKeyExchangeMsg) error {
+	// TODO
 	return errors.New("tls: unexpected ServerKeyExchange")
 }
 
@@ -77,8 +151,13 @@ func (ka rsaKeyAgreement) generateClientKeyExchange(config *Config, clientHello 
 	if err != nil {
 		return nil, nil, err
 	}
-
-	encrypted, err := rsa.EncryptPKCS1v15(config.rand(), cert.PublicKey.(*rsa.PublicKey), preMasterSecret)
+	var publicKey *rsa.PublicKey
+	if ka.publicKey != nil {
+		publicKey = ka.publicKey
+	} else {
+		publicKey = cert.PublicKey.(*rsa.PublicKey)
+	}
+	encrypted, err := rsa.EncryptPKCS1v15(config.rand(), publicKey, preMasterSecret)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -284,10 +363,12 @@ func (ka *rsaEphemeralKeyAgreement) processClientKeyExchange(config *Config, cer
 		ciphertext = ckx.ciphertext[2:]
 	}
 
-	err = rsa.DecryptPKCS1v15SessionKey(config.rand(), config.ExportRSAKey, ciphertext, preMasterSecret)
+	key := ka.privateKey
+	err = rsa.DecryptPKCS1v15SessionKey(config.rand(), key, ciphertext, preMasterSecret)
 	if err != nil {
 		return nil, err
 	}
+
 	// We don't check the version number in the premaster secret.  For one,
 	// by checking it, we would leak information about the validity of the
 	// encrypted pre-master secret. Secondly, it provides only a small
