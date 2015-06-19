@@ -13,6 +13,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/asn1"
+	"encoding/binary"
 	"errors"
 	"io"
 	"math/big"
@@ -25,8 +26,7 @@ var errServerKeyExchange = errors.New("tls: invalid ServerKeyExchange message")
 
 // rsaKeyAgreement implements the standard TLS key agreement where the client
 // encrypts the pre-master secret to the server's public key.
-type rsaKeyAgreement struct {
-}
+type rsaKeyAgreement struct{}
 
 func (ka rsaKeyAgreement) generateServerKeyExchange(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
 	return nil, nil
@@ -186,58 +186,57 @@ func curveForCurveID(id CurveID) (elliptic.Curve, bool) {
 
 }
 
-type rsaEphemeralKeyAgreement struct {
-	version       uint16
-	clientVersion uint16
-	sigType       uint8
-	privateKey    *rsa.PrivateKey
-	publicKey     *rsa.PublicKey
+type rsaExportKeyAgreement struct {
+	version uint16
+	sigType uint8
 }
 
-func (ka *rsaEphemeralKeyAgreement) generateServerKeyExchange(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
-	// Save the client version for comparison later.
-	ka.clientVersion = clientHello.vers
-
-	// Generate an ephemeral RSA key or use the one in the config
-	if config.ExportRSAKey != nil {
-		ka.privateKey = config.ExportRSAKey
-	} else {
-		key, err := rsa.GenerateKey(config.rand(), 512)
-		if err != nil {
-			return nil, err
+func (ka *rsaExportKeyAgreement) generateServerKeyExchange(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
+	modulus := config.ExportRSAKey.N.Bytes()
+	exponent := make([]byte, 4)
+	binary.BigEndian.PutUint32(exponent, uint32(config.ExportRSAKey.E))
+	exponentLength := 4
+	for _, v := range exponent {
+		if v == byte(0) {
+			exponentLength--
+		} else {
+			break
 		}
-		ka.privateKey = key
 	}
+	exponent = exponent[4-exponentLength:]
 
-	// Serialize the key parameters to a nice byte array. The byte array can be
-	// positioned later.
-	modulus := ka.privateKey.N.Bytes()
-	exponent := big.NewInt(int64(ka.privateKey.E)).Bytes()
-	serverRSAParams := make([]byte, 0, 2+len(modulus)+2+len(exponent))
-	serverRSAParams = append(serverRSAParams, byte(len(modulus)>>8), byte(len(modulus)))
-	serverRSAParams = append(serverRSAParams, modulus...)
-	serverRSAParams = append(serverRSAParams, byte(len(exponent)>>8), byte(len(exponent)))
-	serverRSAParams = append(serverRSAParams, exponent...)
+	serverRSAParams := make([]byte, 2+len(modulus)+2+len(exponent))
+	binary.BigEndian.PutUint16(serverRSAParams, uint16(len(modulus)))
+	copy(serverRSAParams[2:], modulus)
+	exponentOffset := 2 + len(modulus)
+	binary.BigEndian.PutUint16(serverRSAParams[exponentOffset:], uint16(len(exponent)))
+	copy(serverRSAParams[exponentOffset+2:], exponent)
 
 	var tls12HashId uint8
 	var err error
 	if ka.version >= VersionTLS12 {
-		if tls12HashId, err = pickTLS12HashForSignature(signatureRSA, clientHello.signatureAndHashes); err != nil {
+		if tls12HashId, err = pickTLS12HashForSignature(ka.sigType, clientHello.signatureAndHashes); err != nil {
 			return nil, err
 		}
 	}
 
-	digest, hashFunc, err := hashForServerKeyExchange(signatureRSA, tls12HashId, ka.version, clientHello.random, hello.random, serverRSAParams)
+	digest, hashFunc, err := hashForServerKeyExchange(ka.sigType, tls12HashId, ka.version, clientHello.random, hello.random, serverRSAParams)
 	if err != nil {
 		return nil, err
 	}
-	privKey, ok := cert.PrivateKey.(*rsa.PrivateKey)
-	if !ok {
-		return nil, errors.New("RSA ephemeral key requires an RSA server private key")
-	}
-	sig, err := rsa.SignPKCS1v15(config.rand(), privKey, hashFunc, digest)
-	if err != nil {
-		return nil, errors.New("failed to sign RSA parameters: " + err.Error())
+	var sig []byte
+	switch ka.sigType {
+	case signatureRSA:
+		privKey, ok := cert.PrivateKey.(*rsa.PrivateKey)
+		if !ok {
+			return nil, errors.New("ECDHE RSA requires a RSA server private key")
+		}
+		sig, err = rsa.SignPKCS1v15(config.rand(), privKey, hashFunc, digest)
+		if err != nil {
+			return nil, errors.New("failed to sign ECDHE parameters: " + err.Error())
+		}
+	default:
+		return nil, errors.New("not an rsa export signature algorithm")
 	}
 
 	skx := new(serverKeyExchangeMsg)
@@ -250,21 +249,20 @@ func (ka *rsaEphemeralKeyAgreement) generateServerKeyExchange(config *Config, ce
 	k := skx.key[len(serverRSAParams):]
 	if ka.version >= VersionTLS12 {
 		k[0] = tls12HashId
-		k[1] = signatureRSA
+		k[1] = ka.sigType
 		k = k[2:]
 	}
 	k[0] = byte(len(sig) >> 8)
 	k[1] = byte(len(sig))
 	copy(k[2:], sig)
-
 	return skx, nil
 }
 
-func (ka *rsaEphemeralKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate, version uint16) ([]byte, *clientKeyExchangeMsg, error) {
+func (ka *rsaExportKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate, version uint16) ([]byte, *clientKeyExchangeMsg, error) {
 	return nil, nil, errors.New("export client ciphers are not implemented")
 }
 
-func (ka *rsaEphemeralKeyAgreement) processClientKeyExchange(config *Config, cert *Certificate, ckx *clientKeyExchangeMsg, version uint16) ([]byte, error) {
+func (ka *rsaExportKeyAgreement) processClientKeyExchange(config *Config, cert *Certificate, ckx *clientKeyExchangeMsg, version uint16) ([]byte, error) {
 	preMasterSecret := make([]byte, 48)
 	_, err := io.ReadFull(config.rand(), preMasterSecret[2:])
 	if err != nil {
@@ -297,7 +295,7 @@ func (ka *rsaEphemeralKeyAgreement) processClientKeyExchange(config *Config, cer
 	return preMasterSecret, nil
 }
 
-func (ka *rsaEphemeralKeyAgreement) processServerKeyExchange(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, skx *serverKeyExchangeMsg) error {
+func (ka *rsaExportKeyAgreement) processServerKeyExchange(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, skx *serverKeyExchangeMsg) error {
 	return errors.New("tls: client export suites are not supported")
 }
 
