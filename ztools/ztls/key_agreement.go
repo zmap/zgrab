@@ -31,18 +31,16 @@ type rsaKeyAgreement struct {
 	auth          keyAgreementAuthentication
 	version       uint16
 	clientVersion uint16
+	ephemeral     bool
 	privateKey    *rsa.PrivateKey
 	publicKey     *rsa.PublicKey
 }
 
-func (ka rsaKeyAgreement) generateServerKeyExchange(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
+func (ka *rsaKeyAgreement) generateServerKeyExchange(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
 	// Only send a server key agreement when the cipher is an RSA export
 	// TODO: Make this a configuration parameter
 	ka.clientVersion = clientHello.vers
-	ka.version = hello.vers
-	cipherSuite := hello.cipherSuite
-	if !cipherIDInCipherIDList(cipherSuite, RSAExportCiphers) {
-		ka.privateKey = cert.PrivateKey.(*rsa.PrivateKey)
+	if !ka.ephemeral {
 		return nil, nil
 	}
 
@@ -70,7 +68,7 @@ func (ka rsaKeyAgreement) generateServerKeyExchange(config *Config, cert *Certif
 	return ka.auth.signParameters(config, cert, clientHello, hello, serverRSAParams)
 }
 
-func (ka rsaKeyAgreement) processClientKeyExchange(config *Config, cert *Certificate, ckx *clientKeyExchangeMsg) ([]byte, error) {
+func (ka *rsaKeyAgreement) processClientKeyExchange(config *Config, cert *Certificate, ckx *clientKeyExchangeMsg) ([]byte, error) {
 	preMasterSecret := make([]byte, 48)
 	_, err := io.ReadFull(config.rand(), preMasterSecret[2:])
 	if err != nil {
@@ -108,9 +106,9 @@ func (ka rsaKeyAgreement) processClientKeyExchange(config *Config, cert *Certifi
 	return preMasterSecret, nil
 }
 
-func (ka rsaKeyAgreement) processServerKeyExchange(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, skx *serverKeyExchangeMsg) error {
-	if !cipherIDInCipherIDList(serverHello.cipherSuite, RSAExportCiphers) {
-		return errUnexpectedServerKeyExchange
+func (ka *rsaKeyAgreement) processServerKeyExchange(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, skx *serverKeyExchangeMsg) error {
+	if !ka.ephemeral {
+		return nil
 	}
 
 	k := skx.key
@@ -153,7 +151,7 @@ func (ka rsaKeyAgreement) processServerKeyExchange(config *Config, clientHello *
 	return ka.auth.verifyParameters(config, clientHello, serverHello, cert, serverRSAParams, sig)
 }
 
-func (ka rsaKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate) ([]byte, *clientKeyExchangeMsg, error) {
+func (ka *rsaKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate) ([]byte, *clientKeyExchangeMsg, error) {
 	preMasterSecret := make([]byte, 48)
 	preMasterSecret[0] = byte(clientHello.vers >> 8)
 	preMasterSecret[1] = byte(clientHello.vers)
@@ -552,7 +550,10 @@ type dheKeyAgreement struct {
 	auth    keyAgreementAuthentication
 	p, g    *big.Int
 	yTheirs *big.Int
+	yOurs   *big.Int
 	xOurs   *big.Int
+	yServer *big.Int
+	yClient *big.Int
 }
 
 func (ka *dheKeyAgreement) generateServerKeyExchange(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
@@ -570,6 +571,8 @@ func (ka *dheKeyAgreement) generateServerKeyExchange(config *Config, cert *Certi
 		return nil, err
 	}
 	yOurs := new(big.Int).Exp(ka.g, ka.xOurs, ka.p)
+	ka.yOurs = yOurs
+	ka.yServer = new(big.Int).Set(yOurs)
 
 	// http://tools.ietf.org/html/rfc5246#section-7.4.3
 	pBytes := ka.p.Bytes()
@@ -595,6 +598,7 @@ func (ka *dheKeyAgreement) processClientKeyExchange(config *Config, cert *Certif
 		return nil, errClientKeyExchange
 	}
 	yTheirs := new(big.Int).SetBytes(ckx.ciphertext[2:])
+	ka.yClient = new(big.Int).Set(yTheirs)
 	if yTheirs.Sign() <= 0 || yTheirs.Cmp(ka.p) >= 0 {
 		return nil, errClientKeyExchange
 	}
@@ -637,6 +641,7 @@ func (ka *dheKeyAgreement) processServerKeyExchange(config *Config, clientHello 
 		return errServerKeyExchange
 	}
 	ka.yTheirs = new(big.Int).SetBytes(k[:yLen])
+	ka.yServer = new(big.Int).Set(ka.yTheirs)
 	k = k[yLen:]
 	if ka.yTheirs.Sign() <= 0 || ka.yTheirs.Cmp(ka.p) >= 0 {
 		return errServerKeyExchange
@@ -659,6 +664,8 @@ func (ka *dheKeyAgreement) generateClientKeyExchange(config *Config, clientHello
 	preMasterSecret := new(big.Int).Exp(ka.yTheirs, xOurs, ka.p).Bytes()
 
 	yOurs := new(big.Int).Exp(ka.g, xOurs, ka.p)
+	ka.yOurs = yOurs
+	ka.yClient = new(big.Int).Set(yOurs)
 	yBytes := yOurs.Bytes()
 	ckx := new(clientKeyExchangeMsg)
 	ckx.ciphertext = make([]byte, 2+len(yBytes))

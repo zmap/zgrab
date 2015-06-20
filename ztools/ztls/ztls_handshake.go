@@ -37,7 +37,7 @@ type Certificates struct {
 
 // ServerKeyExchange represents the raw key data sent by the server in TLS key exchange message
 type ServerKeyExchange struct {
-	Raw       []byte             `json:"raw"`
+	Raw       []byte             `json:"-"`
 	RSAParams *keys.RSAPublicKey `json:"rsa_params,omitempty"`
 	DHParams  *keys.DHParams     `json:"dh_params,omitempty"`
 }
@@ -96,10 +96,18 @@ func (m *certificateMsg) MakeLog() *Certificates {
 	return sc
 }
 
-func (m *serverKeyExchangeMsg) MakeLog() *ServerKeyExchange {
+func (m *serverKeyExchangeMsg) MakeLog(ka keyAgreement) *ServerKeyExchange {
 	skx := new(ServerKeyExchange)
 	skx.Raw = make([]byte, len(m.key))
 	copy(skx.Raw, m.key)
+	switch ka := ka.(type) {
+	case *rsaKeyAgreement:
+	case *dheKeyAgreement:
+		skx.DHParams = ka.DHParams()
+	case *ecdheKeyAgreement:
+	default:
+		break
+	}
 	return skx
 }
 

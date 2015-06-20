@@ -2,6 +2,7 @@ package keys
 
 import (
 	"encoding/json"
+	"math/big"
 	"testing"
 
 	. "gopkg.in/check.v1"
@@ -14,31 +15,33 @@ var test1024Prime = []byte{0x00, 0xAE, 0x6A, 0xFA, 0xE1, 0x1D, 0x60, 0x76, 0x64,
 var testGenerator = []byte{0x02}
 
 type DHESuite struct {
-	prime1024 *CryptoParameter
-	generator *CryptoParameter
+	prime1024 *cryptoParameter
+	generator *cryptoParameter
 	param1024 *DHParams
 }
 
 var _ = Suite(&DHESuite{})
 
 func (s *DHESuite) SetUpTest(c *C) {
-	s.prime1024 = new(CryptoParameter)
+	s.prime1024 = new(cryptoParameter)
+	s.prime1024.Int = new(big.Int)
 	s.prime1024.SetBytes(test1024Prime)
-	s.generator = new(CryptoParameter)
+	s.generator = new(cryptoParameter)
+	s.generator.Int = new(big.Int)
 	s.generator.SetBytes(testGenerator)
 	s.param1024 = new(DHParams)
-	s.param1024.Prime = s.prime1024
-	s.param1024.Generator = s.generator
+	s.param1024.Prime = s.prime1024.Int
+	s.param1024.Generator = s.generator.Int
 }
 
 func (s *DHESuite) TestEncodeDecodeCryptoParameter(c *C) {
 	b, err := json.Marshal(s.prime1024)
 	c.Assert(err, IsNil)
 	c.Assert(b, NotNil)
-	var dec CryptoParameter
+	var dec cryptoParameter
 	err = json.Unmarshal(b, &dec)
 	c.Assert(err, IsNil)
-	cmp := dec.Cmp(&s.prime1024.Int)
+	cmp := dec.Cmp(s.prime1024.Int)
 	c.Check(cmp, Equals, 0)
 }
 
@@ -49,6 +52,6 @@ func (s *DHESuite) TestEncodeDecodeDHParams(c *C) {
 	var dec DHParams
 	err = json.Unmarshal(b, &dec)
 	c.Assert(err, IsNil)
-	c.Check(dec.Prime.Cmp(&s.param1024.Prime.Int), Equals, 0)
-	c.Check(dec.Generator.Cmp(&s.param1024.Generator.Int), Equals, 0)
+	c.Check(dec.Prime.Cmp(s.param1024.Prime), Equals, 0)
+	c.Check(dec.Generator.Cmp(s.param1024.Generator), Equals, 0)
 }

@@ -332,8 +332,8 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 	if ok {
 		hs.finishedHash.Write(skx.marshal())
 
-		c.handshakeLog.ServerKeyExchange = skx.MakeLog()
 		err = keyAgreement.processServerKeyExchange(c.config, hs.hello, hs.serverHello, certs[0], skx)
+		c.handshakeLog.ServerKeyExchange = skx.MakeLog(keyAgreement)
 		if err != nil {
 			c.sendAlert(alertUnexpectedMessage)
 			return err
