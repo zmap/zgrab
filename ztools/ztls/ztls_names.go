@@ -358,6 +358,11 @@ func init() {
 	cipherSuiteNames[0xFF85] = "OP_PCL_TLS10_AES_128_CBC_SHA512"
 }
 
+func nameForSuite(cs uint16) string {
+	cipher := CipherSuite(cs)
+	return cipher.String()
+}
+
 func (cs CipherSuite) String() string {
 	if name, ok := cipherSuiteNames[int(cs)]; ok {
 		return name

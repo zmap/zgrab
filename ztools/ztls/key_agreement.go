@@ -41,7 +41,7 @@ func (ka rsaKeyAgreement) generateServerKeyExchange(config *Config, cert *Certif
 	ka.clientVersion = clientHello.vers
 	ka.version = hello.vers
 	cipherSuite := hello.cipherSuite
-	if !cipherInList(cipherSuite, RSAExportCiphers) {
+	if !cipherIDInCipherIDList(cipherSuite, RSAExportCiphers) {
 		ka.privateKey = cert.PrivateKey.(*rsa.PrivateKey)
 		return nil, nil
 	}
@@ -90,7 +90,12 @@ func (ka rsaKeyAgreement) processClientKeyExchange(config *Config, cert *Certifi
 		ciphertext = ckx.ciphertext[2:]
 	}
 
-	err = rsa.DecryptPKCS1v15SessionKey(config.rand(), ka.privateKey, ciphertext, preMasterSecret)
+	key := ka.privateKey
+	if key == nil {
+		key = cert.PrivateKey.(*rsa.PrivateKey)
+	}
+
+	err = rsa.DecryptPKCS1v15SessionKey(config.rand(), key, ciphertext, preMasterSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +109,7 @@ func (ka rsaKeyAgreement) processClientKeyExchange(config *Config, cert *Certifi
 }
 
 func (ka rsaKeyAgreement) processServerKeyExchange(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, skx *serverKeyExchangeMsg) error {
-	if !cipherInList(serverHello.cipherSuite, RSAExportCiphers) {
+	if !cipherIDInCipherIDList(serverHello.cipherSuite, RSAExportCiphers) {
 		return errUnexpectedServerKeyExchange
 	}
 

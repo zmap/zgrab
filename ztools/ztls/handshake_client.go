@@ -67,7 +67,7 @@ func (c *Conn) clientHandshake() error {
 
 	NextCipherSuite:
 		for _, suiteId := range possibleCipherSuites {
-			for _, suite := range cipherSuites {
+			for _, suite := range implementedCipherSuites {
 				if suite.id != suiteId {
 					continue
 				}

@@ -585,8 +585,8 @@ func defaultCipherSuites() []uint16 {
 }
 
 func initDefaultCipherSuites() {
-	varDefaultCipherSuites = make([]uint16, len(cipherSuites))
-	for i, suite := range cipherSuites {
+	varDefaultCipherSuites = make([]uint16, len(stdlibCipherSuites))
+	for i, suite := range stdlibCipherSuites {
 		varDefaultCipherSuites[i] = suite.id
 	}
 }

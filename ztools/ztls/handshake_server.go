@@ -629,7 +629,7 @@ func (c *Conn) tryCipherSuite(id uint16, supportedCipherSuites []uint16, version
 		if id == supported {
 			var candidate *cipherSuite
 
-			for _, s := range cipherSuites {
+			for _, s := range implementedCipherSuites {
 				if s.id == id {
 					candidate = s
 					break

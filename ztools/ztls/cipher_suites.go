@@ -86,7 +86,7 @@ type tlsAead struct {
 	explicitNonce bool
 }
 
-var boringSSLcipherSuites = []*cipherSuite{
+var implementedCipherSuites = []*cipherSuite{
 	{TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, 32, 0, 0, ecdheECDSAKA, suiteECDHE | suiteECDSA | suiteTLS12, nil, nil, aeadCHACHA20POLY1305},
 	{TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, 32, 0, 0, ecdheRSAKA, suiteECDHE | suiteTLS12, nil, nil, aeadCHACHA20POLY1305},
 	{TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, 16, 0, 4, ecdheRSAKA, suiteECDHE | suiteTLS12, nil, nil, aeadAESGCM},
@@ -129,7 +129,7 @@ var boringSSLcipherSuites = []*cipherSuite{
 	//{TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA, 32, 20, 16, ecdhePSKKA, suiteECDHE | suitePSK, cipherAES, macSHA1, nil},
 }
 
-var cipherSuites = []*cipherSuite{
+var stdlibCipherSuites = []*cipherSuite{
 	// Ciphersuite order is chosen so that ECDHE comes before plain RSA
 	// and RC4 comes before AES (because of the Lucky13 attack).
 	{TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, 16, 0, 4, ecdheRSAKA, suiteECDHE | suiteTLS12, nil, nil, aeadAESGCM},
@@ -146,8 +146,6 @@ var cipherSuites = []*cipherSuite{
 	{TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, 24, 20, 8, ecdheRSAKA, suiteECDHE, cipher3DES, macSHA1, nil},
 	{TLS_RSA_WITH_3DES_EDE_CBC_SHA, 24, 20, 8, rsaKA, 0, cipher3DES, macSHA1, nil},
 }
-
-var knownCiphers = append(cipherSuites, &cipherSuite{TLS_RSA_WITH_AES_128_GCM_SHA256, 16, 0, 4, rsaKA, 0, nil, nil, aeadAESGCM})
 
 func cipherRC4(key, iv []byte, isRead bool) interface{} {
 	cipher, _ := rc4.NewCipher(key)
@@ -328,6 +326,7 @@ func (s tls10MAC) MAC(digestBuf, seq, header, data []byte) []byte {
 
 func rsaKA(version uint16) keyAgreement {
 	return rsaKeyAgreement{
+		version: version,
 		auth: &signedKeyAgreement{
 			sigType: signatureRSA,
 			version: version,
@@ -367,7 +366,7 @@ func dheRSAKA(version uint16) keyAgreement {
 func mutualCipherSuite(have []uint16, want uint16) *cipherSuite {
 	for _, id := range have {
 		if id == want {
-			for _, suite := range knownCiphers {
+			for _, suite := range implementedCipherSuites {
 				if suite.id == want {
 					return suite
 				}
@@ -990,9 +989,18 @@ var SafariNoDHECiphers []uint16 = []uint16{
 	TLS_RSA_WITH_RC4_128_MD5,
 }
 
-func cipherInList(cipher uint16, cipherList []uint16) bool {
-	for _, val := range cipherList {
+func cipherIDInCipherIDList(cipher uint16, cipherIDList []uint16) bool {
+	for _, val := range cipherIDList {
 		if cipher == val {
+			return true
+		}
+	}
+	return false
+}
+
+func cipherIDInCipherList(cipherID uint16, cipherList []*cipherSuite) bool {
+	for _, cipher := range cipherList {
+		if cipherID == cipher.id {
 			return true
 		}
 	}
