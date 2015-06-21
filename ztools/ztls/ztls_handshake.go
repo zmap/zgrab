@@ -40,6 +40,7 @@ type ServerKeyExchange struct {
 	Raw       []byte             `json:"-"`
 	RSAParams *keys.RSAPublicKey `json:"rsa_params,omitempty"`
 	DHParams  *keys.DHParams     `json:"dh_params,omitempty"`
+	Signature *Signature         `json:"signature,omitempty"`
 }
 
 // Finished represents a TLS Finished message
@@ -99,15 +100,29 @@ func (m *certificateMsg) MakeLog() *Certificates {
 func (m *serverKeyExchangeMsg) MakeLog(ka keyAgreement) *ServerKeyExchange {
 	skx := new(ServerKeyExchange)
 	skx.Raw = make([]byte, len(m.key))
+	var auth keyAgreementAuthentication
 	copy(skx.Raw, m.key)
+
+	// Write out parameters
 	switch ka := ka.(type) {
 	case *rsaKeyAgreement:
+		skx.RSAParams = ka.RSAParams()
 	case *dheKeyAgreement:
 		skx.DHParams = ka.DHParams()
+		auth = ka.auth
 	case *ecdheKeyAgreement:
 	default:
 		break
 	}
+
+	// Write out signature
+	switch auth := auth.(type) {
+	case *signedKeyAgreement:
+		skx.Signature = auth.Signature()
+	default:
+		break
+	}
+
 	return skx
 }
 

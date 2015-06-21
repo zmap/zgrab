@@ -19,3 +19,21 @@ func (ka *dheKeyAgreement) DHParams() *keys.DHParams {
 	}
 	return out
 }
+
+func (ka *rsaKeyAgreement) RSAParams() *keys.RSAPublicKey {
+	out := new(keys.RSAPublicKey)
+	out.PublicKey = ka.publicKey
+	return out
+}
+
+type Signature struct {
+	Raw   []byte `json:"raw"`
+	Valid bool   `json:"valid"`
+}
+
+func (ka *signedKeyAgreement) Signature() *Signature {
+	return &Signature{
+		Raw:   ka.raw,
+		Valid: ka.valid,
+	}
+}

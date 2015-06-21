@@ -297,6 +297,8 @@ func (ka *nilKeyAgreementAuthentication) verifyParameters(config *Config, client
 type signedKeyAgreement struct {
 	version uint16
 	sigType uint8
+	raw     []byte
+	valid   bool
 }
 
 func (ka *signedKeyAgreement) signParameters(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg, params []byte) (*serverKeyExchangeMsg, error) {
@@ -385,6 +387,7 @@ func (ka *signedKeyAgreement) verifyParameters(config *Config, clientHello *clie
 		return errServerKeyExchange
 	}
 	sig = sig[2:]
+	ka.raw = sig
 
 	digest, hashFunc, err := hashForServerKeyExchange(ka.sigType, tls12HashId, ka.version, clientHello.random, serverHello.random, params)
 	if err != nil {
@@ -417,7 +420,7 @@ func (ka *signedKeyAgreement) verifyParameters(config *Config, clientHello *clie
 	default:
 		return errors.New("unknown ECDHE signature algorithm")
 	}
-
+	ka.valid = true
 	return nil
 }
 
