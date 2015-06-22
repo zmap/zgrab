@@ -122,13 +122,18 @@ const (
 
 // Hash functions for TLS 1.2 (See RFC 5246, section A.4.1)
 const (
+	hashMD5    uint8 = 1
 	hashSHA1   uint8 = 2
+	hashSHA224 uint8 = 3
 	hashSHA256 uint8 = 4
+	hashSHA384 uint8 = 5
+	hashSHA512 uint8 = 6
 )
 
 // Signature algorithms for TLS 1.2 (See RFC 5246, section A.4.1)
 const (
 	signatureRSA   uint8 = 1
+	signatureDSA   uint8 = 2
 	signatureECDSA uint8 = 3
 )
 

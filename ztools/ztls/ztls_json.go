@@ -1,10 +1,7 @@
 package ztls
 
 import (
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"strings"
 
 	"github.com/zmap/zgrab/ztools/x509"
 )
@@ -44,23 +41,4 @@ func (c *Certificates) UnmarshalJSON(b []byte) error {
 	}
 	c.FromEncoded(ec)
 	return nil
-}
-
-func (cs CipherSuite) MarshalJSON() ([]byte, error) {
-	buf := make([]byte, 2)
-	buf[0] = byte(cs >> 8)
-	buf[1] = byte(cs)
-	enc := strings.ToUpper(hex.EncodeToString(buf))
-	m := make(map[string]interface{}, 3)
-	m["hex"] = fmt.Sprintf("0x%s", enc)
-	m["name"] = cs.String()
-	m["value"] = int(cs)
-	return json.Marshal(m)
-}
-
-func (v TLSVersion) MarshalJSON() ([]byte, error) {
-	m := make(map[string]interface{})
-	m["name"] = v.String()
-	m["value"] = int(v)
-	return json.Marshal(m)
 }

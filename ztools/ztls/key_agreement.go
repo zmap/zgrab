@@ -299,6 +299,7 @@ type signedKeyAgreement struct {
 	sigType uint8
 	raw     []byte
 	valid   bool
+	sh      signatureAndHash
 }
 
 func (ka *signedKeyAgreement) signParameters(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg, params []byte) (*serverKeyExchangeMsg, error) {
@@ -308,8 +309,9 @@ func (ka *signedKeyAgreement) signParameters(config *Config, cert *Certificate, 
 		if tls12HashId, err = pickTLS12HashForSignature(ka.sigType, clientHello.signatureAndHashes, config.signatureAndHashesForServer()); err != nil {
 			return nil, err
 		}
+		ka.sh.hash = tls12HashId
 	}
-
+	ka.sh.signature = ka.sigType
 	digest, hashFunc, err := hashForServerKeyExchange(ka.sigType, tls12HashId, ka.version, clientHello.random, hello.random, params)
 	if err != nil {
 		return nil, err
@@ -370,10 +372,12 @@ func (ka *signedKeyAgreement) verifyParameters(config *Config, clientHello *clie
 		// handle SignatureAndHashAlgorithm
 		var sigAndHash []uint8
 		sigAndHash, sig = sig[:2], sig[2:]
+		tls12HashId = sigAndHash[0]
+		ka.sh.hash = tls12HashId
+		ka.sh.signature = sigAndHash[1]
 		if sigAndHash[1] != ka.sigType {
 			return errServerKeyExchange
 		}
-		tls12HashId = sigAndHash[0]
 		if len(sig) < 2 {
 			return errServerKeyExchange
 		}

@@ -1,8 +1,25 @@
 package ztls
 
+import "strconv"
+
+var signatureNames map[uint8]string
+var hashNames map[uint8]string
 var cipherSuiteNames map[int]string
 
 func init() {
+	signatureNames = make(map[uint8]string, 8)
+	signatureNames[signatureRSA] = "rsa"
+	signatureNames[signatureDSA] = "dsa"
+	signatureNames[signatureECDSA] = "ecdsa"
+
+	hashNames = make(map[uint8]string, 16)
+	hashNames[hashMD5] = "md5"
+	hashNames[hashSHA1] = "sha1"
+	hashNames[hashSHA224] = "sha224"
+	hashNames[hashSHA256] = "sha256"
+	hashNames[hashSHA384] = "sha384"
+	hashNames[hashSHA512] = "sha512"
+
 	cipherSuiteNames = make(map[int]string, 512)
 	cipherSuiteNames[0x0000] = "TLS_NULL_WITH_NULL_NULL"
 	cipherSuiteNames[0x0001] = "TLS_RSA_WITH_NULL_MD5"
@@ -356,6 +373,21 @@ func init() {
 	cipherSuiteNames[0xFF83] = "SSL_RSA_WITH_3DES_EDE_CBC_MD5"
 	cipherSuiteNames[0xFF03] = "SSL_EN_RC2_128_CBC_WITH_MD5"
 	cipherSuiteNames[0xFF85] = "OP_PCL_TLS10_AES_128_CBC_SHA512"
+}
+
+func nameForSignature(s uint8) string {
+	if name, ok := signatureNames[s]; ok {
+		return name
+	}
+	return "unknown." + strconv.Itoa(int(s))
+}
+
+func nameForHash(h uint8) string {
+	if name, ok := hashNames[h]; ok {
+		return name
+	}
+	num := strconv.Itoa(int(h))
+	return "unknown." + num
 }
 
 func nameForSuite(cs uint16) string {

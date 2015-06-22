@@ -1,7 +1,11 @@
 package ztls
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/zmap/zgrab/ztools/keys"
 	"github.com/zmap/zgrab/ztools/x509"
@@ -10,6 +14,8 @@ import (
 var ErrUnimplementedCipher error = errors.New("unimplemented cipher suite")
 
 type TLSVersion uint16
+
+type CipherSuite uint16
 
 type ClientHello struct {
 	Random    []byte `json:"random"`
@@ -28,7 +34,7 @@ type ServerHello struct {
 	HeartbeatSupported  bool        `json:"heartbeat"`
 }
 
-// ServerCertificates represents a TLS certificates message in a format friendly to the golang JSON library.
+// Certificates represents a TLS certificates message in a format friendly to the golang JSON library.
 // ValidationError should be non-nil whenever Valid is false.
 type Certificates struct {
 	Certificates       [][]byte
@@ -56,6 +62,69 @@ type ServerHandshake struct {
 	ServerCertificates *Certificates      `json:"server_certificates,omitempty"`
 	ServerKeyExchange  *ServerKeyExchange `json:"server_key_exchange,omitempty"`
 	ServerFinished     *Finished          `json:"server_finished,omitempty"`
+}
+
+// MarshalJSON implements the json.Marshler interface
+func (v *TLSVersion) MarshalJSON() ([]byte, error) {
+	aux := struct {
+		Name  string `json:"name"`
+		Value int    `json:"value"`
+	}{
+		Name:  v.String(),
+		Value: int(*v),
+	}
+	return json.Marshal(&aux)
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (v *TLSVersion) UnmarshalJSON(b []byte) error {
+	aux := struct {
+		Name  string `json:"name"`
+		Value int    `json:"value"`
+	}{}
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	*v = TLSVersion(aux.Value)
+	if expectedName := v.String(); expectedName != aux.Name {
+		return fmt.Errorf("mismatched tls version and name: version: %d, name: %s, expected name: %s", aux.Value, aux.Name, expectedName)
+	}
+	return nil
+}
+
+// MarshalJSON implements the json.Marshler interface
+func (cs *CipherSuite) MarshalJSON() ([]byte, error) {
+	buf := make([]byte, 2)
+	buf[0] = byte(*cs >> 8)
+	buf[1] = byte(*cs)
+	enc := strings.ToUpper(hex.EncodeToString(buf))
+	aux := struct {
+		Hex   string `json:"hex"`
+		Name  string `json:"name"`
+		Value int    `json:"value"`
+	}{
+		Hex:   fmt.Sprintf("0x%s", enc),
+		Name:  cs.String(),
+		Value: int(*cs),
+	}
+	return json.Marshal(&aux)
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (cs *CipherSuite) UnmarshalJSON(b []byte) error {
+	aux := struct {
+		Hex   string `json:"hex"`
+		Name  string `json:"name"`
+		Value uint16 `json:"value"`
+	}{}
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	if expectedName := nameForSuite(aux.Value); expectedName != aux.Name {
+		return fmt.Errorf("mismatched cipher suite and name, suite: %d, name: %s, expected name: %s", aux.Value, aux.Name, expectedName)
+	}
+	*cs = CipherSuite(aux.Value)
+	return nil
 }
 
 func (c *Conn) GetHandshakeLog() *ServerHandshake {

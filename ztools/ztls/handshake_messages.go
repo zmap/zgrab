@@ -6,8 +6,6 @@ package ztls
 
 import "bytes"
 
-type CipherSuite uint16
-
 type clientHelloMsg struct {
 	raw                 []byte
 	vers                uint16
