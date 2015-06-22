@@ -39,4 +39,8 @@ func TestCipherSuiteEncodeDecode(t *testing.T) {
 	v := CipherSuite(TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256)
 	var dec CipherSuite
 	marshalAndUnmarshalAndCheckEquality(&v, &dec, t)
+	expectedName := nameForSuite(TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256)
+	if decodedName := dec.String(); decodedName != expectedName {
+		t.Errorf("decoded wrong name, got %s, expected %s", decodedName, expectedName)
+	}
 }
