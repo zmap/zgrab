@@ -59,15 +59,23 @@ func (ka *rsaKeyAgreement) RSAParams() *keys.RSAPublicKey {
 	return out
 }
 
-type Signature struct {
-	Raw              []byte
-	Valid            bool
-	Version          TLSVersion
-	SigHashExtension *SignatureAndHash
+// Signature represents a signature for a digitally-signed-struct in the TLS
+// record protocol. It is dependent on the version of TLS in use. In TLS 1.2,
+// the first two bytes of the signature specify the signature and hash
+// algorithms. These are contained the TLSSignature.Raw field, but also parsed
+// out into TLSSignature.SigHashExtension. In older versions of TLS, the
+// signature and hash extension is not used, and so
+// TLSSignature.SigHashExtension will be empty. The version string is stored in
+// TLSSignature.TLSVersion.
+type DigitalSignature struct {
+	Raw              []byte            `json:"raw"`
+	Valid            bool              `json:"valid"`
+	SigHashExtension *SignatureAndHash `json:"signature_and_hash_type,omitempty"`
+	Version          TLSVersion        `json:"tls_version"`
 }
 
-func (ka *signedKeyAgreement) Signature() *Signature {
-	out := Signature{
+func (ka *signedKeyAgreement) Signature() *DigitalSignature {
+	out := DigitalSignature{
 		Raw:     ka.raw,
 		Valid:   ka.valid,
 		Version: TLSVersion(ka.version),

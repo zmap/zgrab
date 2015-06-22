@@ -34,6 +34,7 @@ type rsaKeyAgreement struct {
 	ephemeral     bool
 	privateKey    *rsa.PrivateKey
 	publicKey     *rsa.PublicKey
+	verifyError   error
 }
 
 func (ka *rsaKeyAgreement) generateServerKeyExchange(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
@@ -148,7 +149,11 @@ func (ka *rsaKeyAgreement) processServerKeyExchange(config *Config, clientHello 
 	serverRSAParams := skx.key[:paramsLen]
 	sig := skx.key[paramsLen:]
 
-	return ka.auth.verifyParameters(config, clientHello, serverHello, cert, serverRSAParams, sig)
+	ka.verifyError = ka.auth.verifyParameters(config, clientHello, serverHello, cert, serverRSAParams, sig)
+	if config.InsecureSkipVerify || ka.verifyError == nil {
+		return nil
+	}
+	return ka.verifyError
 }
 
 func (ka *rsaKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate) ([]byte, *clientKeyExchangeMsg, error) {
@@ -433,10 +438,11 @@ func (ka *signedKeyAgreement) verifyParameters(config *Config, clientHello *clie
 // pre-master secret is then calculated using ECDH. The signature may
 // either be ECDSA or RSA.
 type ecdheKeyAgreement struct {
-	auth       keyAgreementAuthentication
-	privateKey []byte
-	curve      elliptic.Curve
-	x, y       *big.Int
+	auth        keyAgreementAuthentication
+	privateKey  []byte
+	curve       elliptic.Curve
+	x, y        *big.Int
+	verifyError error
 }
 
 func (ka *ecdheKeyAgreement) generateServerKeyExchange(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
@@ -522,7 +528,11 @@ func (ka *ecdheKeyAgreement) processServerKeyExchange(config *Config, clientHell
 	serverECDHParams := skx.key[:4+publicLen]
 
 	sig := skx.key[4+publicLen:]
-	return ka.auth.verifyParameters(config, clientHello, serverHello, cert, serverECDHParams, sig)
+	ka.verifyError = ka.auth.verifyParameters(config, clientHello, serverHello, cert, serverECDHParams, sig)
+	if config.InsecureSkipVerify {
+		return nil
+	}
+	return ka.verifyError
 }
 
 func (ka *ecdheKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate) ([]byte, *clientKeyExchangeMsg, error) {
@@ -554,13 +564,14 @@ func (ka *ecdheKeyAgreement) generateClientKeyExchange(config *Config, clientHel
 // an ephemeral Diffie-Hellman public/private key pair and signs it. The
 // pre-master secret is then calculated using Diffie-Hellman.
 type dheKeyAgreement struct {
-	auth    keyAgreementAuthentication
-	p, g    *big.Int
-	yTheirs *big.Int
-	yOurs   *big.Int
-	xOurs   *big.Int
-	yServer *big.Int
-	yClient *big.Int
+	auth        keyAgreementAuthentication
+	p, g        *big.Int
+	yTheirs     *big.Int
+	yOurs       *big.Int
+	xOurs       *big.Int
+	yServer     *big.Int
+	yClient     *big.Int
+	verifyError error
 }
 
 func (ka *dheKeyAgreement) generateServerKeyExchange(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
@@ -656,7 +667,11 @@ func (ka *dheKeyAgreement) processServerKeyExchange(config *Config, clientHello 
 
 	sig := k
 	serverDHParams := skx.key[:len(skx.key)-len(sig)]
-	return ka.auth.verifyParameters(config, clientHello, serverHello, cert, serverDHParams, sig)
+	ka.verifyError = ka.auth.verifyParameters(config, clientHello, serverHello, cert, serverDHParams, sig)
+	if config.InsecureSkipVerify {
+		return nil
+	}
+	return ka.verifyError
 }
 
 func (ka *dheKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate) ([]byte, *clientKeyExchangeMsg, error) {

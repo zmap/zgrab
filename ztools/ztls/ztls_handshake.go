@@ -43,10 +43,11 @@ type Certificates struct {
 
 // ServerKeyExchange represents the raw key data sent by the server in TLS key exchange message
 type ServerKeyExchange struct {
-	Raw       []byte             `json:"-"`
-	RSAParams *keys.RSAPublicKey `json:"rsa_params,omitempty"`
-	DHParams  *keys.DHParams     `json:"dh_params,omitempty"`
-	Signature *Signature         `json:"signature,omitempty"`
+	Raw            []byte             `json:"-"`
+	RSAParams      *keys.RSAPublicKey `json:"rsa_params,omitempty"`
+	DHParams       *keys.DHParams     `json:"dh_params,omitempty"`
+	Signature      *DigitalSignature  `json:"signature,omitempty"`
+	SignatureError string             `json:"signature_error,omitempty"`
 }
 
 // Finished represents a TLS Finished message
@@ -170,16 +171,21 @@ func (m *serverKeyExchangeMsg) MakeLog(ka keyAgreement) *ServerKeyExchange {
 	skx := new(ServerKeyExchange)
 	skx.Raw = make([]byte, len(m.key))
 	var auth keyAgreementAuthentication
+	var errAuth error
 	copy(skx.Raw, m.key)
 
 	// Write out parameters
 	switch ka := ka.(type) {
 	case *rsaKeyAgreement:
 		skx.RSAParams = ka.RSAParams()
+		errAuth = ka.verifyError
 	case *dheKeyAgreement:
 		skx.DHParams = ka.DHParams()
 		auth = ka.auth
+		errAuth = ka.verifyError
 	case *ecdheKeyAgreement:
+		auth = ka.auth
+		errAuth = ka.verifyError
 	default:
 		break
 	}
@@ -190,6 +196,11 @@ func (m *serverKeyExchangeMsg) MakeLog(ka keyAgreement) *ServerKeyExchange {
 		skx.Signature = auth.Signature()
 	default:
 		break
+	}
+
+	// Write the signature validation error
+	if errAuth != nil {
+		skx.SignatureError = errAuth.Error()
 	}
 
 	return skx
