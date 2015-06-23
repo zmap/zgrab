@@ -192,7 +192,7 @@ func keysFromMasterSecret(version uint16, masterSecret, clientRandom, serverRand
 }
 
 // The crypto wars must have been the worst
-func exportKeysFromMasterSecret30(version uint16, masterSecret, clientRandom, serverRandom []byte, macLen, keyLen, ivLen int) (clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV []byte) {
+func exportKeysFromMasterSecret30(version uint16, masterSecret, clientRandom, serverRandom []byte, macLen, keyLen, ivLen, expandedKeyLen int) (clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV []byte) {
 	var seed [tlsRandomLength * 2]byte
 	copy(seed[0:len(clientRandom)], serverRandom)
 	copy(seed[len(serverRandom):], clientRandom)
@@ -210,12 +210,12 @@ func exportKeysFromMasterSecret30(version uint16, masterSecret, clientRandom, se
 	var exportSeed [tlsRandomLength * 2]byte
 	copy(exportSeed[0:len(serverRandom)], clientRandom)
 	copy(exportSeed[len(clientRandom):], serverRandom)
-	finalKeyBlock := make([]byte, 2*16)
-	exportPRF30(finalKeyBlock[:16], clientKey, clientFinalKeyLabel, exportSeed[0:])
-	clientKey = finalKeyBlock[:16]
-	finalKeyBlock = finalKeyBlock[16:]
-	exportPRF30(finalKeyBlock[:16], serverKey, serverFinalKeyLabel, seed[0:])
-	serverKey = finalKeyBlock[:16]
+	finalKeyBlock := make([]byte, 2*expandedKeyLen)
+	exportPRF30(finalKeyBlock[:expandedKeyLen], clientKey, clientFinalKeyLabel, exportSeed[0:])
+	clientKey = finalKeyBlock[:expandedKeyLen]
+	finalKeyBlock = finalKeyBlock[expandedKeyLen:]
+	exportPRF30(finalKeyBlock[:expandedKeyLen], serverKey, serverFinalKeyLabel, seed[0:])
+	serverKey = finalKeyBlock[:expandedKeyLen]
 	ivBlock := make([]byte, 2*ivLen)
 	clientIV = ivBlock[:ivLen]
 	exportPRF30(clientIV, []byte{}, finalIVLabel, exportSeed[0:])
@@ -226,7 +226,7 @@ func exportKeysFromMasterSecret30(version uint16, masterSecret, clientRandom, se
 }
 
 // If a cryptographer kills me in the night, let it be known I was sorry
-func exportKeysFromMasterSecretTLS(version uint16, masterSecret, clientRandom, serverRandom []byte, macLen, keyLen, ivLen int) (clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV []byte) {
+func exportKeysFromMasterSecretTLS(version uint16, masterSecret, clientRandom, serverRandom []byte, macLen, keyLen, ivLen, expandedKeyLen int) (clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV []byte) {
 	var seed [tlsRandomLength * 2]byte
 	copy(seed[0:len(clientRandom)], serverRandom)
 	copy(seed[len(serverRandom):], clientRandom)
@@ -242,30 +242,30 @@ func exportKeysFromMasterSecretTLS(version uint16, masterSecret, clientRandom, s
 	keyMaterial = keyMaterial[keyLen:]
 	serverKey = keyMaterial[:keyLen]
 	keyMaterial = keyMaterial[keyLen:]
-	finalKeyBlock := make([]byte, 2*16)
+	finalKeyBlock := make([]byte, 2*expandedKeyLen)
 	var exportSeed [tlsRandomLength * 2]byte
 	copy(exportSeed[0:len(serverRandom)], clientRandom)
 	copy(exportSeed[len(clientRandom):], serverRandom)
-	prf(finalKeyBlock[:16], clientKey, clientFinalKeyLabel, exportSeed[0:])
-	clientKey = finalKeyBlock[:16]
-	finalKeyBlock = finalKeyBlock[16:]
-	prf(finalKeyBlock[:16], serverKey, serverFinalKeyLabel, exportSeed[0:])
-	serverKey = finalKeyBlock[:16]
+	prf(finalKeyBlock[:expandedKeyLen], clientKey, clientFinalKeyLabel, exportSeed[0:])
+	clientKey = finalKeyBlock[:expandedKeyLen]
+	finalKeyBlock = finalKeyBlock[expandedKeyLen:]
+	prf(finalKeyBlock[:expandedKeyLen], serverKey, serverFinalKeyLabel, exportSeed[0:])
+	serverKey = finalKeyBlock[:expandedKeyLen]
 	ivBlock := make([]byte, 2*ivLen)
 	zlog.Debug(ivLen)
-	prf(ivBlock, []byte{}, finalIVLabel, seed[0:])
+	prf(ivBlock, []byte{}, finalIVLabel, exportSeed[0:])
 	clientIV = ivBlock[:ivLen]
 	ivBlock = ivBlock[ivLen:]
 	serverIV = ivBlock[:ivLen]
 	return
 }
 
-func exportKeysFromMasterSecret(version uint16, masterSecret, clientRandom, serverRandom []byte, macLen, keyLen, ivLen int) (clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV []byte) {
+func exportKeysFromMasterSecret(version uint16, masterSecret, clientRandom, serverRandom []byte, macLen, keyLen, ivLen, expandedKeyLen int) (clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV []byte) {
 	switch version {
 	case VersionSSL30:
-		return exportKeysFromMasterSecret30(version, masterSecret, clientRandom, serverRandom, macLen, keyLen, ivLen)
+		return exportKeysFromMasterSecret30(version, masterSecret, clientRandom, serverRandom, macLen, keyLen, ivLen, expandedKeyLen)
 	case VersionTLS10, VersionTLS11, VersionTLS12:
-		return exportKeysFromMasterSecretTLS(version, masterSecret, clientRandom, serverRandom, macLen, keyLen, ivLen)
+		return exportKeysFromMasterSecretTLS(version, masterSecret, clientRandom, serverRandom, macLen, keyLen, ivLen, expandedKeyLen)
 	default:
 		panic("unknown version")
 	}

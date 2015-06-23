@@ -494,7 +494,7 @@ func (hs *clientHandshakeState) establishKeys() error {
 
 	var clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV []byte
 	if hs.suite.flags&suiteExport > 0 {
-		clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV = exportKeysFromMasterSecret(c.vers, hs.masterSecret, hs.hello.random, hs.serverHello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen)
+		clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV = exportKeysFromMasterSecret(c.vers, hs.masterSecret, hs.hello.random, hs.serverHello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen, hs.suite.expandedKeyLen)
 	} else {
 		clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV = keysFromMasterSecret(c.vers, hs.masterSecret, hs.hello.random, hs.serverHello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen)
 	}
