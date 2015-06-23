@@ -58,7 +58,7 @@ func (c *Conn) clientHandshake() error {
 		hello.heartbeatMode = heartbeatModePeerAllowed
 	}
 
-	possibleCipherSuites := []uint16{TLS_RSA_EXPORT_WITH_RC4_40_MD5}
+	possibleCipherSuites := c.config.cipherSuites()
 	hello.cipherSuites = make([]uint16, 0, len(possibleCipherSuites))
 
 	if c.config.ForceSuites {
