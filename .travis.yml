@@ -8,6 +8,7 @@ before_script:
 - mkdir -p $HOME/gopath/src/github.com/zmap
 - ln -s $TRAVIS_BUILD_DIR $HOME/gopath/src/github.com/zmap/ || true
 - go get gopkg.in/check.v1
+- go get github.com/tqbf/rc2
 script:
 - go test -v ./...
 notifications:
