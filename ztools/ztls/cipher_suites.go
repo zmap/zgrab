@@ -149,6 +149,14 @@ var stdlibCipherSuites = []*cipherSuite{
 	{TLS_RSA_WITH_3DES_EDE_CBC_SHA, 24, 20, 8, rsaKA, 0, cipher3DES, macSHA1, nil},
 }
 
+func cipherDES(key, iv []byte, isRead bool) interface{} {
+	block, _ := des.NewCipher(key)
+	if isRead {
+		return cipher.NewCBCDecrypter(block, iv)
+	}
+	return cipher.NewCBCEncrypter(block, iv)
+}
+
 func cipherRC2(key, iv []byte, isRead bool) interface{} {
 	k := [8]byte{}
 	copy(k[:], key)
