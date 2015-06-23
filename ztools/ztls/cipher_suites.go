@@ -134,6 +134,7 @@ var implementedCipherSuites = []*cipherSuite{
 	//{TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA, 32, 20, 16, ecdhePSKKA, suiteECDHE | suitePSK, cipherAES, macSHA1, nil},
 	{TLS_RSA_EXPORT_WITH_RC4_40_MD5, 5, 16, 0, 16, rsaEphemeralKA, suiteExport, cipherRC4, macMD5, nil},
 	{TLS_RSA_EXPORT_WITH_DES40_CBC_SHA, 5, 20, 8, 8, rsaEphemeralKA, suiteExport, cipherDES, macSHA1, nil},
+	//{TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5, 5, 16, 8, 16, rsaEphemeralKA, suiteExport, cipherRC2, macMD5, nil},
 }
 
 var stdlibCipherSuites = []*cipherSuite{
