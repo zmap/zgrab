@@ -58,7 +58,7 @@ func (c *Conn) clientHandshake() error {
 		hello.heartbeatMode = heartbeatModePeerAllowed
 	}
 
-	possibleCipherSuites := c.config.cipherSuites()
+	possibleCipherSuites := []uint16{TLS_RSA_EXPORT_WITH_RC4_40_MD5}
 	hello.cipherSuites = make([]uint16, 0, len(possibleCipherSuites))
 
 	if c.config.ForceSuites {
@@ -492,8 +492,12 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 func (hs *clientHandshakeState) establishKeys() error {
 	c := hs.c
 
-	clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV :=
-		keysFromMasterSecret(c.vers, hs.masterSecret, hs.hello.random, hs.serverHello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen)
+	var clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV []byte
+	if hs.suite.flags&suiteExport > 0 {
+		clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV = exportKeysFromMasterSecret(c.vers, hs.masterSecret, hs.hello.random, hs.serverHello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen)
+	} else {
+		clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV = keysFromMasterSecret(c.vers, hs.masterSecret, hs.hello.random, hs.serverHello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen)
+	}
 	var clientCipher, serverCipher interface{}
 	var clientHash, serverHash macFunction
 	if hs.suite.cipher != nil {

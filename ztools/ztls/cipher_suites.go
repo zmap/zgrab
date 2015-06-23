@@ -16,6 +16,7 @@ import (
 	"crypto/sha512"
 	"hash"
 
+	"github.com/tqbf/rc2"
 	"github.com/zmap/zgrab/ztools/x509"
 )
 
@@ -127,6 +128,7 @@ var implementedCipherSuites = []*cipherSuite{
 	//{TLS_PSK_WITH_AES_256_CBC_SHA, 32, 20, 16, pskKA, suitePSK, cipherAES, macSHA1, nil},
 	//{TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA, 16, 20, 16, ecdhePSKKA, suiteECDHE | suitePSK, cipherAES, macSHA1, nil},
 	//{TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA, 32, 20, 16, ecdhePSKKA, suiteECDHE | suitePSK, cipherAES, macSHA1, nil},
+	{TLS_RSA_EXPORT_WITH_RC4_40_MD5, 5, 16, 0, rsaEphemeralKA, suiteExport, cipherRC4, macMD5, nil},
 }
 
 var stdlibCipherSuites = []*cipherSuite{
@@ -145,6 +147,16 @@ var stdlibCipherSuites = []*cipherSuite{
 	{TLS_RSA_WITH_AES_256_CBC_SHA, 32, 20, 16, rsaKA, 0, cipherAES, macSHA1, nil},
 	{TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, 24, 20, 8, ecdheRSAKA, suiteECDHE, cipher3DES, macSHA1, nil},
 	{TLS_RSA_WITH_3DES_EDE_CBC_SHA, 24, 20, 8, rsaKA, 0, cipher3DES, macSHA1, nil},
+}
+
+func cipherRC2(key, iv []byte, isRead bool) interface{} {
+	k := [8]byte{}
+	copy(k[:], key)
+	block := rc2.NewCipher(k)
+	if isRead {
+		return cipher.NewCBCDecrypter(block, iv)
+	}
+	return cipher.NewCBCEncrypter(block, iv)
 }
 
 func cipherRC4(key, iv []byte, isRead bool) interface{} {

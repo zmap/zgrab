@@ -141,6 +141,7 @@ func (ka *rsaKeyAgreement) processServerKeyExchange(config *Config, clientHello 
 		exponent <<= 8
 		exponent |= int(b)
 	}
+	ka.publicKey = new(rsa.PublicKey)
 	ka.publicKey.E = exponent
 	ka.publicKey.N = modulus
 
@@ -150,7 +151,7 @@ func (ka *rsaKeyAgreement) processServerKeyExchange(config *Config, clientHello 
 	sig := skx.key[paramsLen:]
 
 	ka.verifyError = ka.auth.verifyParameters(config, clientHello, serverHello, cert, serverRSAParams, sig)
-	if config.InsecureSkipVerify || ka.verifyError == nil {
+	if config.InsecureSkipVerify {
 		return nil
 	}
 	return ka.verifyError
