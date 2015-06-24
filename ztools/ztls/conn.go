@@ -860,6 +860,8 @@ func (c *Conn) readHandshake() (interface{}, error) {
 	data = c.hand.Next(4 + n)
 	var m handshakeMessage
 	switch data[0] {
+	case typeHelloRequest:
+		m = new(helloRequestMsg)
 	case typeClientHello:
 		m = new(clientHelloMsg)
 	case typeServerHello:
