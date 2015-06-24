@@ -18,7 +18,6 @@ import (
 	"strconv"
 
 	"github.com/zmap/zgrab/ztools/x509"
-	"github.com/zmap/zgrab/ztools/zlog"
 )
 
 type clientHandshakeState struct {
@@ -516,7 +515,6 @@ func (hs *clientHandshakeState) establishKeys() error {
 	if hs.suite.flags&suiteExport > 0 {
 		clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV = exportKeysFromMasterSecret(c.vers, hs.masterSecret, hs.hello.random, hs.serverHello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen, hs.suite.expandedKeyLen)
 	} else {
-		zlog.Debug("yes")
 		clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV = keysFromMasterSecret(c.vers, hs.masterSecret, hs.hello.random, hs.serverHello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen)
 	}
 	var clientCipher, serverCipher interface{}
