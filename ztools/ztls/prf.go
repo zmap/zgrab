@@ -11,8 +11,6 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"hash"
-
-	"github.com/zmap/zgrab/ztools/zlog"
 )
 
 // Split a premaster secret in two as specified in RFC 4346, section 5.
@@ -252,7 +250,6 @@ func exportKeysFromMasterSecretTLS(version uint16, masterSecret, clientRandom, s
 	prf(finalKeyBlock[:expandedKeyLen], serverKey, serverFinalKeyLabel, exportSeed[0:])
 	serverKey = finalKeyBlock[:expandedKeyLen]
 	ivBlock := make([]byte, 2*ivLen)
-	zlog.Debug(ivLen)
 	prf(ivBlock, []byte{}, finalIVLabel, exportSeed[0:])
 	clientIV = ivBlock[:ivLen]
 	ivBlock = ivBlock[ivLen:]
