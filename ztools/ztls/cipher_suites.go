@@ -245,7 +245,7 @@ func macSHA384(version uint16, key []byte) macFunction {
 
 type macFunction interface {
 	Size() int
-	MAC(digestBuf, seq, header, data []byte) []byte
+	MAC(digestBuf, seq, header, length, data []byte) []byte
 }
 
 // fixedNonceAEAD wraps an AEAD and prefixes a fixed portion of the nonce to
@@ -311,7 +311,7 @@ var ssl30Pad1 = [48]byte{0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0
 
 var ssl30Pad2 = [48]byte{0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c}
 
-func (s ssl30MAC) MAC(digestBuf, seq, header, data []byte) []byte {
+func (s ssl30MAC) MAC(digestBuf, seq, header, length, data []byte) []byte {
 	padLength := 48
 	if s.h.Size() == 20 {
 		padLength = 40
@@ -322,7 +322,7 @@ func (s ssl30MAC) MAC(digestBuf, seq, header, data []byte) []byte {
 	s.h.Write(ssl30Pad1[:padLength])
 	s.h.Write(seq)
 	s.h.Write(header[:1])
-	s.h.Write(header[3:5])
+	s.h.Write(length)
 	s.h.Write(data)
 	digestBuf = s.h.Sum(digestBuf[:0])
 
@@ -342,10 +342,11 @@ func (s tls10MAC) Size() int {
 	return s.h.Size()
 }
 
-func (s tls10MAC) MAC(digestBuf, seq, header, data []byte) []byte {
+func (s tls10MAC) MAC(digestBuf, seq, header, length, data []byte) []byte {
 	s.h.Reset()
 	s.h.Write(seq)
 	s.h.Write(header)
+	s.h.Write(length)
 	s.h.Write(data)
 	return s.h.Sum(digestBuf[:0])
 }

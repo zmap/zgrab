@@ -27,10 +27,11 @@ const (
 )
 
 const (
-	maxPlaintext    = 16384        // maximum plaintext payload length
-	maxCiphertext   = 16384 + 2048 // maximum ciphertext payload length
-	recordHeaderLen = 5            // record header length
-	maxHandshake    = 65536        // maximum handshake we support (protocol max is 16 MB)
+	maxPlaintext        = 16384        // maximum plaintext payload length
+	maxCiphertext       = 16384 + 2048 // maximum ciphertext payload length
+	tlsRecordHeaderLen  = 5            // record header length
+	dtlsRecordHeaderLen = 13
+	maxHandshake        = 65536 // maximum handshake we support (protocol max is 16 MB)
 
 	minVersion = VersionSSL30
 	maxVersion = VersionTLS12
