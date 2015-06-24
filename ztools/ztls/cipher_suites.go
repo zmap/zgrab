@@ -139,8 +139,9 @@ var implementedCipherSuites = []*cipherSuite{
 	{TLS_RSA_EXPORT_WITH_DES40_CBC_SHA, 5, 20, 8, 8, rsaEphemeralKA, suiteExport, cipherDES, macSHA1, nil},
 	{TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5, 5, 16, 8, 16, rsaEphemeralKA, suiteExport, cipherRC2, macMD5, nil},
 	{TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA, 5, 20, 8, 8, dheRSAKA, suiteExport, cipherDES, macSHA1, nil},
-	//{TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA, 5, 20, 8, 8, dheDSSKA, suiteExport, cipherDES, macSHA1, nil},
+	{TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA, 5, 20, 8, 8, dheDSSKA, suiteExport, cipherDES, macSHA1, nil},
 	{TLS_DH_ANON_EXPORT_WITH_DES40_CBC_SHA, 5, 20, 8, 8, dhAnonKA, suiteExport | suiteAnon, cipherDES, macSHA1, nil},
+	{TLS_DH_ANON_EXPORT_WITH_RC4_40_MD5, 5, 16, 0, 16, dhAnonKA, suiteExport | suiteAnon, cipherRC4, macMD5, nil},
 }
 
 var stdlibCipherSuites = []*cipherSuite{
@@ -398,6 +399,15 @@ func dheRSAKA(version uint16) keyAgreement {
 	return &dheKeyAgreement{
 		auth: &signedKeyAgreement{
 			sigType: signatureRSA,
+			version: version,
+		},
+	}
+}
+
+func dheDSSKA(version uint16) keyAgreement {
+	return &dheKeyAgreement{
+		auth: &signedKeyAgreement{
+			sigType: signatureDSA,
 			version: version,
 		},
 	}

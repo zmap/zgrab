@@ -6,6 +6,7 @@ package ztls
 
 import (
 	"bytes"
+	"crypto/dsa"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/subtle"
@@ -317,7 +318,7 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		serverCert = certs[0]
 
 		switch serverCert.PublicKey.(type) {
-		case *rsa.PublicKey, *ecdsa.PublicKey:
+		case *rsa.PublicKey, *ecdsa.PublicKey, *dsa.PublicKey:
 			break
 		default:
 			c.sendAlert(alertUnsupportedCertificate)

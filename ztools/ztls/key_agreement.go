@@ -6,6 +6,7 @@ package ztls
 
 import (
 	"crypto"
+	"crypto/dsa"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/md5"
@@ -235,7 +236,7 @@ func hashForServerKeyExchange(sigType, hashFunc uint8, version uint16, slices ..
 			return nil, crypto.Hash(0), errors.New("tls: unknown hash function used by peer")
 		}
 	}
-	if sigType == signatureECDSA {
+	if sigType == signatureECDSA || sigType == signatureDSA {
 		return sha1Hash(slices), crypto.SHA1, nil
 	}
 	return md5SHA1Hash(slices), crypto.MD5SHA1, nil
@@ -426,6 +427,21 @@ func (ka *signedKeyAgreement) verifyParameters(config *Config, clientHello *clie
 		}
 		if err := rsa.VerifyPKCS1v15(pubKey, hashFunc, digest, sig); err != nil {
 			return err
+		}
+	case signatureDSA:
+		pubKey, ok := cert.PublicKey.(*dsa.PublicKey)
+		if !ok {
+			return errors.New("DSS ciphers require a DSA server public key")
+		}
+		dsaSig := new(dsaSignature)
+		if _, err := asn1.Unmarshal(sig, dsaSig); err != nil {
+			return err
+		}
+		if dsaSig.R.Sign() <= 0 || dsaSig.S.Sign() <= 0 {
+			return errors.New("DSA signature contained zero or negative values")
+		}
+		if !dsa.Verify(pubKey, digest, dsaSig.R, dsaSig.S) {
+			return errors.New("DSA verification failure")
 		}
 	default:
 		return errors.New("unknown ECDHE signature algorithm")

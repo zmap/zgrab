@@ -151,6 +151,7 @@ var supportedSKXSignatureAlgorithms = []signatureAndHash{
 	{signatureECDSA, hashSHA256},
 	{signatureRSA, hashSHA1},
 	{signatureECDSA, hashSHA1},
+	{signatureDSA, hashSHA1},
 }
 
 // supportedClientCertSignatureAlgorithms contains the signature and hash
