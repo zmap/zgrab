@@ -236,82 +236,98 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 	if err != nil {
 		return err
 	}
-	certMsg, ok := msg.(*certificateMsg)
-	if !ok || len(certMsg.certificates) == 0 {
-		c.sendAlert(alertUnexpectedMessage)
-		return unexpectedMessageError(certMsg, msg)
-	}
-	hs.finishedHash.Write(certMsg.marshal())
 
-	c.handshakeLog.ServerCertificates = certMsg.MakeLog()
+	var serverCert *x509.Certificate
 
-	certs := make([]*x509.Certificate, len(certMsg.certificates))
-	invalidCert := false
-	var invalidCertErr error
-	for i, asn1Data := range certMsg.certificates {
-		cert, err := x509.ParseCertificate(asn1Data)
-		if err != nil {
-			invalidCert = true
-			invalidCertErr = err
-			break
+	if hs.suite.flags&suiteAnon == 0 {
+
+		certMsg, ok := msg.(*certificateMsg)
+		if !ok || len(certMsg.certificates) == 0 {
+			c.sendAlert(alertUnexpectedMessage)
+			return unexpectedMessageError(certMsg, msg)
 		}
-		certs[i] = cert
-	}
+		hs.finishedHash.Write(certMsg.marshal())
 
-	if !invalidCert {
-		opts := x509.VerifyOptions{
-			Roots:         c.config.RootCAs,
-			CurrentTime:   c.config.time(),
-			DNSName:       c.config.ServerName,
-			Intermediates: x509.NewCertPool(),
-		}
+		c.handshakeLog.ServerCertificates = certMsg.MakeLog()
 
-		// Always check validity of the certificates
-		for i, cert := range certs {
-			if i == 0 {
-				continue
-			}
-			opts.Intermediates.AddCert(cert)
-		}
-		c.verifiedChains, err = certs[0].Verify(opts)
-		c.handshakeLog.ServerCertificates.ParsedCertificates = certs
-
-		// If actually verifying and invalid, reject
-		if !c.config.InsecureSkipVerify {
+		certs := make([]*x509.Certificate, len(certMsg.certificates))
+		invalidCert := false
+		var invalidCertErr error
+		for i, asn1Data := range certMsg.certificates {
+			cert, err := x509.ParseCertificate(asn1Data)
 			if err != nil {
-				c.sendAlert(alertBadCertificate)
+				invalidCert = true
+				invalidCertErr = err
+				break
+			}
+			certs[i] = cert
+		}
+
+		if !invalidCert {
+			opts := x509.VerifyOptions{
+				Roots:         c.config.RootCAs,
+				CurrentTime:   c.config.time(),
+				DNSName:       c.config.ServerName,
+				Intermediates: x509.NewCertPool(),
+			}
+
+			// Always check validity of the certificates
+			for i, cert := range certs {
+				if i == 0 {
+					continue
+				}
+				opts.Intermediates.AddCert(cert)
+			}
+			c.verifiedChains, err = certs[0].Verify(opts)
+			c.handshakeLog.ServerCertificates.ParsedCertificates = certs
+
+			// If actually verifying and invalid, reject
+			if !c.config.InsecureSkipVerify {
+				if err != nil {
+					c.sendAlert(alertBadCertificate)
+					return err
+				}
+			}
+		}
+
+		if invalidCert {
+			c.sendAlert(alertBadCertificate)
+			return errors.New("tls: failed to parse certificate from server: " + invalidCertErr.Error())
+		}
+
+		c.peerCertificates = certs
+
+		if hs.serverHello.ocspStapling {
+			msg, err = c.readHandshake()
+			if err != nil {
 				return err
 			}
+			cs, ok := msg.(*certificateStatusMsg)
+			if !ok {
+				c.sendAlert(alertUnexpectedMessage)
+				return unexpectedMessageError(cs, msg)
+			}
+			hs.finishedHash.Write(cs.marshal())
+
+			if cs.statusType == statusTypeOCSP {
+				c.ocspResponse = cs.response
+			}
 		}
-	}
 
-	if invalidCert {
-		c.sendAlert(alertBadCertificate)
-		return errors.New("tls: failed to parse certificate from server: " + invalidCertErr.Error())
-	}
+		serverCert = certs[0]
 
-	c.peerCertificates = certs
+		switch serverCert.PublicKey.(type) {
+		case *rsa.PublicKey, *ecdsa.PublicKey:
+			break
+		default:
+			c.sendAlert(alertUnsupportedCertificate)
+			return fmt.Errorf("tls: server's certificate contains an unsupported type of public key: %T", certs[0].PublicKey)
+		}
 
-	if hs.serverHello.ocspStapling {
 		msg, err = c.readHandshake()
 		if err != nil {
 			return err
 		}
-		cs, ok := msg.(*certificateStatusMsg)
-		if !ok {
-			c.sendAlert(alertUnexpectedMessage)
-			return unexpectedMessageError(cs, msg)
-		}
-		hs.finishedHash.Write(cs.marshal())
-
-		if cs.statusType == statusTypeOCSP {
-			c.ocspResponse = cs.response
-		}
-	}
-
-	msg, err = c.readHandshake()
-	if err != nil {
-		return err
 	}
 
 	skx, ok := msg.(*serverKeyExchangeMsg)
@@ -320,20 +336,12 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		return c.cipherError
 	}
 
-	switch certs[0].PublicKey.(type) {
-	case *rsa.PublicKey, *ecdsa.PublicKey:
-		break
-	default:
-		c.sendAlert(alertUnsupportedCertificate)
-		return fmt.Errorf("tls: server's certificate contains an unsupported type of public key: %T", certs[0].PublicKey)
-	}
-
 	keyAgreement := hs.suite.ka(c.vers)
 
 	if ok {
 		hs.finishedHash.Write(skx.marshal())
 
-		err = keyAgreement.processServerKeyExchange(c.config, hs.hello, hs.serverHello, certs[0], skx)
+		err = keyAgreement.processServerKeyExchange(c.config, hs.hello, hs.serverHello, serverCert, skx)
 		c.handshakeLog.ServerKeyExchange = skx.MakeLog(keyAgreement)
 		if err != nil {
 			c.sendAlert(alertUnexpectedMessage)
@@ -435,7 +443,7 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 	// Certificate message, even if it's empty because we don't have a
 	// certificate to send.
 	if certRequested {
-		certMsg = new(certificateMsg)
+		certMsg := new(certificateMsg)
 		if chainToSend != nil {
 			certMsg.certificates = chainToSend.Certificate
 		}
@@ -443,7 +451,7 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		c.writeRecord(recordTypeHandshake, certMsg.marshal())
 	}
 
-	preMasterSecret, ckx, err := keyAgreement.generateClientKeyExchange(c.config, hs.hello, certs[0])
+	preMasterSecret, ckx, err := keyAgreement.generateClientKeyExchange(c.config, hs.hello, serverCert)
 	if err != nil {
 		c.sendAlert(alertInternalError)
 		return err
