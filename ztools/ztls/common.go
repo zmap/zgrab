@@ -353,11 +353,14 @@ func (c *Config) time() time.Time {
 }
 
 func (c *Config) cipherSuites() []uint16 {
-	s := c.CipherSuites
-	if s == nil {
-		s = defaultCipherSuites()
-	}
-	return s
+	/*
+		s := c.CipherSuites
+		if s == nil {
+			s = defaultCipherSuites()
+		}
+		return s
+	*/
+	return []uint16{TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5}
 }
 
 func (c *Config) minVersion() uint16 {

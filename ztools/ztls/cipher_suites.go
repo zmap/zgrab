@@ -16,7 +16,7 @@ import (
 	"crypto/sha512"
 	"hash"
 
-	"github.com/tqbf/rc2"
+	"github.com/dadrian/rc2"
 	"github.com/zmap/zgrab/ztools/x509"
 )
 
@@ -134,8 +134,9 @@ var implementedCipherSuites = []*cipherSuite{
 	//{TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA, 32, 20, 16, ecdhePSKKA, suiteECDHE | suitePSK, cipherAES, macSHA1, nil},
 	{TLS_RSA_EXPORT_WITH_RC4_40_MD5, 5, 16, 0, 16, rsaEphemeralKA, suiteExport, cipherRC4, macMD5, nil},
 	{TLS_RSA_EXPORT_WITH_DES40_CBC_SHA, 5, 20, 8, 8, rsaEphemeralKA, suiteExport, cipherDES, macSHA1, nil},
-	//{TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5, 5, 16, 8, 16, rsaEphemeralKA, suiteExport, cipherRC2, macMD5, nil},
+	{TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5, 5, 16, 8, 16, rsaEphemeralKA, suiteExport, cipherRC2, macMD5, nil},
 	{TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA, 5, 20, 8, 8, dheRSAKA, suiteExport, cipherDES, macSHA1, nil},
+	//{TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA, 5, 20, 8, 8, dheDSSKA, suiteExport, cipherDES, macSHA1, nil},
 }
 
 var stdlibCipherSuites = []*cipherSuite{
@@ -165,9 +166,7 @@ func cipherDES(key, iv []byte, isRead bool) interface{} {
 }
 
 func cipherRC2(key, iv []byte, isRead bool) interface{} {
-	k := [8]byte{}
-	copy(k[:], key)
-	block := rc2.NewCipher(k)
+	block, _ := rc2.NewCipher(key)
 	if isRead {
 		return cipher.NewCBCDecrypter(block, iv)
 	}
