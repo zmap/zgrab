@@ -147,6 +147,7 @@ var implementedCipherSuites = []*cipherSuite{
 	{TLS_DH_ANON_EXPORT_WITH_DES40_CBC_SHA, 5, 20, 8, 8, dhAnonKA, suiteExport | suiteAnon, cipherDES, macSHA1, nil},
 	{TLS_DH_ANON_EXPORT_WITH_RC4_40_MD5, 5, 16, 0, 16, dhAnonKA, suiteExport | suiteAnon, cipherRC4, macMD5, nil},
 	{TLS_DHE_DSS_WITH_AES_128_CBC_SHA, 16, 20, 16, 16, dheDSSKA, suiteDSS, cipherAES, macSHA1, nil},
+	{TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA, 24, 20, 8, 24, ecdheECDSAKA, suiteECDHE | suiteECDSA, cipher3DES, macSHA1, nil},
 }
 
 var stdlibCipherSuites = []*cipherSuite{
