@@ -317,12 +317,22 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 
 		serverCert = certs[0]
 
+		var supportedCertKeyType bool
 		switch serverCert.PublicKey.(type) {
-		case *rsa.PublicKey, *ecdsa.PublicKey, *dsa.PublicKey:
+		case *rsa.PublicKey, *ecdsa.PublicKey:
+			supportedCertKeyType = true
 			break
+		case *dsa.PublicKey:
+			if c.config.ClientDSAEnabled {
+				supportedCertKeyType = true
+			}
 		default:
+			break
+		}
+
+		if !supportedCertKeyType {
 			c.sendAlert(alertUnsupportedCertificate)
-			return fmt.Errorf("tls: server's certificate contains an unsupported type of public key: %T", certs[0].PublicKey)
+			return fmt.Errorf("tls: server's certificate contains an unsupported type of public key: %T", serverCert.PublicKey)
 		}
 
 		msg, err = c.readHandshake()

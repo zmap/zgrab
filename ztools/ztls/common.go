@@ -154,6 +154,13 @@ var supportedSKXSignatureAlgorithms = []signatureAndHash{
 	{signatureDSA, hashSHA1},
 }
 
+var defaultSKXSignatureAlgorithms = []signatureAndHash{
+	{signatureRSA, hashSHA256},
+	{signatureECDSA, hashSHA256},
+	{signatureRSA, hashSHA1},
+	{signatureECDSA, hashSHA1},
+}
+
 // supportedClientCertSignatureAlgorithms contains the signature and hash
 // algorithms that the code advertises as supported in a TLS 1.2
 // CertificateRequest.
@@ -319,6 +326,10 @@ type Config struct {
 
 	// HeartbeatEnabled sets whether the heartbeat extension is sent
 	HeartbeatEnabled bool
+
+	// ClientDSAEnabled sets whether a TLS client will accept server DSA keys
+	// and DSS signatures
+	ClientDSAEnabled bool
 }
 
 func (c *Config) serverInit() {
@@ -448,7 +459,10 @@ func (c *Config) signatureAndHashesForClient() []signatureAndHash {
 			return c.SignatureAndHashes
 		}
 	*/
-	return supportedSKXSignatureAlgorithms
+	if c.ClientDSAEnabled {
+		return supportedSKXSignatureAlgorithms
+	}
+	return defaultSKXSignatureAlgorithms
 }
 
 // BuildNameToCertificate parses c.Certificates and builds c.NameToCertificate

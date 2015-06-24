@@ -193,6 +193,7 @@ func (c *Conn) TLSHandshake() error {
 	tlsConfig.MaxVersion = c.maxTlsVersion
 	tlsConfig.RootCAs = c.caPool
 	tlsConfig.HeartbeatEnabled = true
+	tlsConfig.ClientDSAEnabled = true
 	if !c.noSNI && c.domain != "" {
 		tlsConfig.ServerName = c.domain
 	}
