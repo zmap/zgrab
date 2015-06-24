@@ -67,6 +67,10 @@ const (
 
 	// suiteAnon indicates the cipher suite is anonymous
 	suiteAnon
+
+	// suiteDSS indicates the cipher suite uses DSS signatures and requires a
+	// DSA server key
+	suiteDSS
 )
 
 // A cipherSuite is a specific combination of key agreement, cipher and MAC
@@ -139,9 +143,10 @@ var implementedCipherSuites = []*cipherSuite{
 	{TLS_RSA_EXPORT_WITH_DES40_CBC_SHA, 5, 20, 8, 8, rsaEphemeralKA, suiteExport, cipherDES, macSHA1, nil},
 	{TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5, 5, 16, 8, 16, rsaEphemeralKA, suiteExport, cipherRC2, macMD5, nil},
 	{TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA, 5, 20, 8, 8, dheRSAKA, suiteExport, cipherDES, macSHA1, nil},
-	{TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA, 5, 20, 8, 8, dheDSSKA, suiteExport, cipherDES, macSHA1, nil},
+	{TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA, 5, 20, 8, 8, dheDSSKA, suiteExport | suiteDSS, cipherDES, macSHA1, nil},
 	{TLS_DH_ANON_EXPORT_WITH_DES40_CBC_SHA, 5, 20, 8, 8, dhAnonKA, suiteExport | suiteAnon, cipherDES, macSHA1, nil},
 	{TLS_DH_ANON_EXPORT_WITH_RC4_40_MD5, 5, 16, 0, 16, dhAnonKA, suiteExport | suiteAnon, cipherRC4, macMD5, nil},
+	{TLS_DHE_DSS_WITH_AES_128_CBC_SHA, 16, 20, 16, 16, dheDSSKA, suiteDSS, cipherAES, macSHA1, nil},
 }
 
 var stdlibCipherSuites = []*cipherSuite{
