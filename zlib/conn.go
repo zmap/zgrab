@@ -44,8 +44,6 @@ type Conn struct {
 
 	caPool *x509.CertPool
 
-	onlyCBC             bool
-	onlySchannel        bool
 	onlyDHE             bool
 	onlyExports         bool
 	onlyExportsDH       bool
@@ -71,14 +69,6 @@ func (c *Conn) getUnderlyingConn() net.Conn {
 		return c.tlsConn
 	}
 	return c.conn
-}
-
-func (c *Conn) SetCBCOnly() {
-	c.onlyCBC = true
-}
-
-func (c *Conn) SetSChannelOnly() {
-	c.onlySchannel = true
 }
 
 func (c *Conn) SetDHEOnly() {
@@ -196,12 +186,6 @@ func (c *Conn) TLSHandshake() error {
 	tlsConfig.ClientDSAEnabled = true
 	if !c.noSNI && c.domain != "" {
 		tlsConfig.ServerName = c.domain
-	}
-	if c.onlyCBC {
-		tlsConfig.CipherSuites = ztls.CBCSuiteIDList
-	}
-	if c.onlySchannel {
-		tlsConfig.CipherSuites = ztls.SChannelSuites
 	}
 	if c.onlyDHE {
 		tlsConfig.CipherSuites = ztls.DHECiphers
