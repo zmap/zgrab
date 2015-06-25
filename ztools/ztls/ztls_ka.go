@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math/big"
 	"regexp"
+	"strconv"
 
 	"github.com/zmap/zgrab/ztools/keys"
 )
@@ -36,7 +37,24 @@ func (sh *SignatureAndHash) UnmarshalJSON(b []byte) error {
 	}
 	// TODO implement
 	panic("unimplemented")
-	return nil
+}
+
+func (ka *rsaKeyAgreement) RSAParams() *keys.RSAPublicKey {
+	out := new(keys.RSAPublicKey)
+	out.PublicKey = ka.publicKey
+	return out
+}
+
+func (ka *ecdheKeyAgreement) ECDHParams() *keys.ECDHParams {
+	out := new(keys.ECDHParams)
+	out.TLSCurveID = keys.TLSCurveID(ka.curveID)
+	out.ServerPublic = &keys.ECPoint{
+		X: new(big.Int),
+		Y: new(big.Int),
+	}
+	out.ServerPublic.X.Set(ka.x)
+	out.ServerPublic.Y.Set(ka.y)
+	return out
 }
 
 func (ka *dheKeyAgreement) DHParams() *keys.DHParams {
@@ -53,15 +71,9 @@ func (ka *dheKeyAgreement) DHParams() *keys.DHParams {
 	return out
 }
 
-func (ka *rsaKeyAgreement) RSAParams() *keys.RSAPublicKey {
-	out := new(keys.RSAPublicKey)
-	out.PublicKey = ka.publicKey
-	return out
-}
-
-// Signature represents a signature for a digitally-signed-struct in the TLS
-// record protocol. It is dependent on the version of TLS in use. In TLS 1.2,
-// the first two bytes of the signature specify the signature and hash
+// DigitalSignature represents a signature for a digitally-signed-struct in the
+// TLS record protocol. It is dependent on the version of TLS in use. In TLS
+// 1.2, the first two bytes of the signature specify the signature and hash
 // algorithms. These are contained the TLSSignature.Raw field, but also parsed
 // out into TLSSignature.SigHashExtension. In older versions of TLS, the
 // signature and hash extension is not used, and so
@@ -69,14 +81,30 @@ func (ka *rsaKeyAgreement) RSAParams() *keys.RSAPublicKey {
 // TLSSignature.TLSVersion.
 type DigitalSignature struct {
 	Raw              []byte            `json:"raw"`
+	Type             string            `json:"type,omitempty"`
 	Valid            bool              `json:"valid"`
 	SigHashExtension *SignatureAndHash `json:"signature_and_hash_type,omitempty"`
 	Version          TLSVersion        `json:"tls_version"`
 }
 
+func signatureTypeToName(sigType uint8) string {
+	switch sigType {
+	case signatureRSA:
+		return "rsa"
+	case signatureDSA:
+		return "dsa"
+	case signatureECDSA:
+		return "ecdsa"
+	default:
+		break
+	}
+	return "unknown." + strconv.Itoa(int(sigType))
+}
+
 func (ka *signedKeyAgreement) Signature() *DigitalSignature {
 	out := DigitalSignature{
 		Raw:     ka.raw,
+		Type:    signatureTypeToName(ka.sigType),
 		Valid:   ka.valid,
 		Version: TLSVersion(ka.version),
 	}

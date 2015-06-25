@@ -460,6 +460,7 @@ type ecdheKeyAgreement struct {
 	curve       elliptic.Curve
 	x, y        *big.Int
 	verifyError error
+	curveID     uint16
 }
 
 func (ka *ecdheKeyAgreement) generateServerKeyExchange(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
@@ -479,6 +480,7 @@ NextCandidate:
 	if curveid == 0 {
 		return nil, errors.New("tls: no supported elliptic curves offered")
 	}
+	ka.curveID = uint16(curveid)
 
 	var ok bool
 	if ka.curve, ok = curveForCurveID(curveid); !ok {
@@ -528,6 +530,7 @@ func (ka *ecdheKeyAgreement) processServerKeyExchange(config *Config, clientHell
 		return errors.New("tls: server selected unsupported curve")
 	}
 	curveid := CurveID(skx.key[1])<<8 | CurveID(skx.key[2])
+	ka.curveID = uint16(curveid)
 
 	var ok bool
 	if ka.curve, ok = curveForCurveID(curveid); !ok {

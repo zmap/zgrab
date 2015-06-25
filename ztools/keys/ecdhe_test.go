@@ -1,7 +1,9 @@
 package keys
 
 import (
+	"crypto/rand"
 	"encoding/json"
+	"math/big"
 	"testing"
 
 	. "gopkg.in/check.v1"
@@ -22,6 +24,26 @@ func (s *ECDHESuite) TestEncodeDecodeCurveID(c *C) {
 		c.Assert(errDec, IsNil)
 		c.Check(back, Equals, curve)
 	}
+}
+
+func (s *ECDHESuite) TestEncodeDecodeECPoint(c *C) {
+	max := new(big.Int)
+	max.Exp(big.NewInt(2), big.NewInt(255), nil)
+	max.Sub(max, big.NewInt(19))
+	x, errX := rand.Int(rand.Reader, max)
+	y, errY := rand.Int(rand.Reader, max)
+	c.Assert(errX, IsNil)
+	c.Assert(errY, IsNil)
+	p := ECPoint{
+		X: x,
+		Y: y,
+	}
+	out, errEnc := json.Marshal(&p)
+	c.Assert(errEnc, IsNil)
+	c.Check(len(out), Not(Equals), 0)
+	var back ECPoint
+	errDec := json.Unmarshal(out, &back)
+	c.Assert(errDec, IsNil)
 }
 
 func (s *ECDHESuite) TestCurveIDDescription(c *C) {

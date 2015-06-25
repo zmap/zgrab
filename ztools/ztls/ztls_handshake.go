@@ -46,6 +46,7 @@ type ServerKeyExchange struct {
 	Raw            []byte             `json:"-"`
 	RSAParams      *keys.RSAPublicKey `json:"rsa_params,omitempty"`
 	DHParams       *keys.DHParams     `json:"dh_params,omitempty"`
+	ECDHParams     *keys.ECDHParams   `json:"ecdh_params,omitempty"`
 	Signature      *DigitalSignature  `json:"signature,omitempty"`
 	SignatureError string             `json:"signature_error,omitempty"`
 }
@@ -185,6 +186,7 @@ func (m *serverKeyExchangeMsg) MakeLog(ka keyAgreement) *ServerKeyExchange {
 		auth = ka.auth
 		errAuth = ka.verifyError
 	case *ecdheKeyAgreement:
+		skx.ECDHParams = ka.ECDHParams()
 		auth = ka.auth
 		errAuth = ka.verifyError
 	default:
