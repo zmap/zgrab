@@ -12,6 +12,7 @@ import (
 )
 
 var ErrUnimplementedCipher error = errors.New("unimplemented cipher suite")
+var ErrNoMutualCipher error = errors.New("no mutual cipher suite")
 
 type TLSVersion uint16
 

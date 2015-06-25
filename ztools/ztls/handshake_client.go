@@ -166,9 +166,15 @@ func (c *Conn) clientHandshake() error {
 	c.haveVers = true
 
 	suite := mutualCipherSuite(c.config.cipherSuites(), serverHello.cipherSuite)
+	cipherImplemented := cipherIDInCipherList(serverHello.cipherSuite, implementedCipherSuites)
+	cipherShared := cipherIDInCipherIDList(serverHello.cipherSuite, c.config.cipherSuites())
 	if suite == nil {
-		c.sendAlert(alertHandshakeFailure)
-		c.cipherError = ErrUnimplementedCipher
+		//c.sendAlert(alertHandshakeFailure)
+		if !cipherShared {
+			c.cipherError = ErrNoMutualCipher
+		} else if !cipherImplemented {
+			c.cipherError = ErrUnimplementedCipher
+		}
 	}
 
 	hs := &clientHandshakeState{
@@ -189,6 +195,10 @@ func (c *Conn) clientHandshake() error {
 	}
 
 	if isResume {
+		if c.cipherError != nil {
+			c.sendAlert(alertHandshakeFailure)
+			return c.cipherError
+		}
 		if err := hs.establishKeys(); err != nil {
 			return err
 		}
@@ -239,7 +249,9 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 
 	var serverCert *x509.Certificate
 
-	if hs.suite.flags&suiteAnon == 0 {
+	isAnon := hs.suite != nil && (hs.suite.flags&suiteAnon > 0)
+
+	if !isAnon {
 
 		certMsg, ok := msg.(*certificateMsg)
 		if !ok || len(certMsg.certificates) == 0 {
@@ -340,11 +352,13 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		}
 	}
 
-	skx, ok := msg.(*serverKeyExchangeMsg)
-
+	// If we don't support the cipher, quit before we need to read the hs.suite
+	// variable
 	if c.cipherError != nil {
 		return c.cipherError
 	}
+
+	skx, ok := msg.(*serverKeyExchangeMsg)
 
 	keyAgreement := hs.suite.ka(c.vers)
 

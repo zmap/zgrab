@@ -209,23 +209,18 @@ func (c *Conn) TLSHandshake() error {
 	}
 	if c.onlyExports {
 		tlsConfig.CipherSuites = ztls.RSA512ExportCiphers
-		tlsConfig.ForceSuites = true
 	}
 	if c.onlyExportsDH {
 		tlsConfig.CipherSuites = ztls.DHEExportCiphers
-		tlsConfig.ForceSuites = true
 	}
 	if c.chromeCiphers {
 		tlsConfig.CipherSuites = ztls.ChromeCiphers
-		tlsConfig.ForceSuites = true
 	}
 	if c.chromeNoDHE {
 		tlsConfig.CipherSuites = ztls.ChromeNoDHECiphers
-		tlsConfig.ForceSuites = true
 	}
 	if c.firefoxCiphers {
 		tlsConfig.CipherSuites = ztls.FirefoxCiphers
-		tlsConfig.ForceSuites = true
 	}
 	if c.firefoxNoDHECiphers {
 		tlsConfig.CipherSuites = ztls.FirefoxNoDHECiphers
@@ -246,7 +241,7 @@ func (c *Conn) TLSHandshake() error {
 	c.tlsConn.SetWriteDeadline(c.writeDeadline)
 	c.isTls = true
 	err := c.tlsConn.Handshake()
-	if err == ztls.ErrUnimplementedCipher {
+	if tlsConfig.ForceSuites && err == ztls.ErrUnimplementedCipher {
 		err = nil
 	}
 	hl := c.tlsConn.GetHandshakeLog()
