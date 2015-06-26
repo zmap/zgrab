@@ -22,6 +22,15 @@ func TestFirefoxCiphersImplemented(t *testing.T) {
 	}
 }
 
+func TestDHECiphersImplemented(t *testing.T) {
+	for _, cipherID := range DHECiphers {
+		supported := cipherIDInCipherList(cipherID, implementedCipherSuites)
+		if supported != true {
+			t.Errorf("DHE cipher %d (%s) not supported", cipherID, nameForSuite(cipherID))
+		}
+	}
+}
+
 /*
 func TestSafariCiphersImplemented(t *testing.T) {
 	for _, cipherID := range SafariCiphers {

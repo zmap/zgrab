@@ -189,7 +189,6 @@ func (c *Conn) TLSHandshake() error {
 	}
 	if c.onlyDHE {
 		tlsConfig.CipherSuites = ztls.DHECiphers
-		tlsConfig.ForceSuites = true
 	}
 	if c.onlyExports {
 		tlsConfig.CipherSuites = ztls.RSA512ExportCiphers
@@ -208,7 +207,6 @@ func (c *Conn) TLSHandshake() error {
 	}
 	if c.firefoxNoDHECiphers {
 		tlsConfig.CipherSuites = ztls.FirefoxNoDHECiphers
-		tlsConfig.ForceSuites = true
 	}
 
 	if c.safariCiphers {

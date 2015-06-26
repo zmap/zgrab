@@ -114,7 +114,7 @@ func (hs *serverHandshakeState) readClientHello() (isResume bool, err error) {
 	}
 	c.haveVers = true
 
-	hs.finishedHash = newFinishedHash(c.vers)
+	hs.finishedHash = newFinishedHash(c.vers, hs.suite)
 	hs.finishedHash.Write(hs.clientHello.marshal())
 
 	hs.hello = new(serverHelloMsg)
@@ -411,8 +411,31 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 			return unexpectedMessageError(certVerify, msg)
 		}
 
+		// Determine the signature type.
+		var signatureAndHash signatureAndHash
+		if certVerify.hasSignatureAndHash {
+			signatureAndHash = certVerify.signatureAndHash
+			if !isSupportedSignatureAndHash(signatureAndHash, config.signatureAndHashesForServer()) {
+				return errors.New("tls: unsupported hash function for client certificate")
+			}
+		} else {
+			// Before TLS 1.2 the signature algorithm was implicit
+			// from the key type, and only one hash per signature
+			// algorithm was possible. Leave the hash as zero.
+			switch pub.(type) {
+			case *ecdsa.PublicKey:
+				signatureAndHash.signature = signatureECDSA
+			case *rsa.PublicKey:
+				signatureAndHash.signature = signatureRSA
+			}
+		}
+
 		switch key := pub.(type) {
 		case *ecdsa.PublicKey:
+			if signatureAndHash.signature != signatureECDSA {
+				err = errors.New("tls: bad signature type for client's ECDSA certificate")
+				break
+			}
 			ecdsaSig := new(ecdsaSignature)
 			if _, err = asn1.Unmarshal(certVerify.signature, ecdsaSig); err != nil {
 				break
@@ -421,13 +444,26 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 				err = errors.New("ECDSA signature contained zero or negative values")
 				break
 			}
-			digest, _, _ := hs.finishedHash.hashForClientCertificate(signatureECDSA)
+			var digest []byte
+			digest, _, err = hs.finishedHash.hashForClientCertificate(signatureAndHash, hs.masterSecret)
+			if err != nil {
+				break
+			}
 			if !ecdsa.Verify(key, digest, ecdsaSig.R, ecdsaSig.S) {
 				err = errors.New("ECDSA verification failure")
 				break
 			}
 		case *rsa.PublicKey:
-			digest, hashFunc, _ := hs.finishedHash.hashForClientCertificate(signatureRSA)
+			if signatureAndHash.signature != signatureRSA {
+				err = errors.New("tls: bad signature type for client's RSA certificate")
+				break
+			}
+			var digest []byte
+			var hashFunc crypto.Hash
+			digest, hashFunc, err = hs.finishedHash.hashForClientCertificate(signatureAndHash, hs.masterSecret)
+			if err != nil {
+				break
+			}
 			err = rsa.VerifyPKCS1v15(key, hashFunc, digest, certVerify.signature)
 		}
 		if err != nil {
@@ -435,7 +471,7 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 			return errors.New("could not validate signature of connection nonces: " + err.Error())
 		}
 
-		hs.finishedHash.Write(certVerify.marshal())
+		hs.writeClientHash(certVerify.marshal())
 	}
 
 	preMasterSecret, err := keyAgreement.processClientKeyExchange(config, hs.cert, ckx)
@@ -443,7 +479,7 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 		c.sendAlert(alertHandshakeFailure)
 		return err
 	}
-	hs.masterSecret = masterFromPreMasterSecret(c.vers, preMasterSecret, hs.clientHello.random, hs.hello.random)
+	hs.masterSecret = masterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, hs.clientHello.random, hs.hello.random)
 
 	return nil
 }
@@ -452,7 +488,7 @@ func (hs *serverHandshakeState) establishKeys() error {
 	c := hs.c
 
 	clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV :=
-		keysFromMasterSecret(c.vers, hs.masterSecret, hs.clientHello.random, hs.hello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen)
+		keysFromMasterSecret(c.vers, hs.suite, hs.masterSecret, hs.clientHello.random, hs.hello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen)
 
 	var clientCipher, serverCipher interface{}
 	var clientHash, serverHash macFunction
@@ -620,6 +656,20 @@ func (hs *serverHandshakeState) processCertsFromClient(certificates [][]byte) (c
 	}
 
 	return nil, nil
+}
+
+func (hs *serverHandshakeState) writeServerHash(msg []byte) {
+	// writeServerHash is called before writeRecord.
+	hs.writeHash(msg, 0)
+}
+
+func (hs *serverHandshakeState) writeClientHash(msg []byte) {
+	// writeClientHash is called after readHandshake.
+	hs.writeHash(msg, 0)
+}
+
+func (hs *serverHandshakeState) writeHash(msg []byte, seqno uint16) {
+	hs.finishedHash.Write(msg)
 }
 
 // tryCipherSuite returns a cipherSuite with the given id if that cipher suite

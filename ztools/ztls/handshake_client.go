@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net"
 	"strconv"
 
@@ -182,7 +183,7 @@ func (c *Conn) clientHandshake() error {
 		serverHello:  serverHello,
 		hello:        hello,
 		suite:        suite,
-		finishedHash: newFinishedHash(c.vers),
+		finishedHash: newFinishedHash(c.vers, suite),
 		session:      session,
 	}
 
@@ -491,20 +492,37 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 			hasSignatureAndHash: c.vers >= VersionTLS12,
 		}
 
+		// Determine the hash to sign.
+		var signatureType uint8
+		switch c.config.Certificates[0].PrivateKey.(type) {
+		case *ecdsa.PrivateKey:
+			signatureType = signatureECDSA
+		case *rsa.PrivateKey:
+			signatureType = signatureRSA
+		default:
+			c.sendAlert(alertInternalError)
+			return errors.New("unknown private key type")
+		}
+		certVerify.signatureAndHash, err = hs.finishedHash.selectClientCertSignatureAlgorithm(certReq.signatureAndHashes, c.config.signatureAndHashesForClient(), signatureType)
+		if err != nil {
+			c.sendAlert(alertInternalError)
+			return err
+		}
+		digest, hashFunc, err := hs.finishedHash.hashForClientCertificate(certVerify.signatureAndHash, hs.masterSecret)
+		if err != nil {
+			c.sendAlert(alertInternalError)
+			return err
+		}
+
 		switch key := c.config.Certificates[0].PrivateKey.(type) {
 		case *ecdsa.PrivateKey:
-			digest, _, hashId := hs.finishedHash.hashForClientCertificate(signatureECDSA)
-			r, s, err := ecdsa.Sign(c.config.rand(), key, digest)
+			var r, s *big.Int
+			r, s, err = ecdsa.Sign(c.config.rand(), key, digest)
 			if err == nil {
 				signed, err = asn1.Marshal(ecdsaSignature{r, s})
 			}
-			certVerify.signatureAndHash.signature = signatureECDSA
-			certVerify.signatureAndHash.hash = hashId
 		case *rsa.PrivateKey:
-			digest, hashFunc, hashId := hs.finishedHash.hashForClientCertificate(signatureRSA)
 			signed, err = rsa.SignPKCS1v15(c.config.rand(), key, hashFunc, digest)
-			certVerify.signatureAndHash.signature = signatureRSA
-			certVerify.signatureAndHash.hash = hashId
 		default:
 			err = errors.New("unknown private key type")
 		}
@@ -514,23 +532,18 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		}
 		certVerify.signature = signed
 
-		hs.finishedHash.Write(certVerify.marshal())
+		hs.writeClientHash(certVerify.marshal())
 		c.writeRecord(recordTypeHandshake, certVerify.marshal())
 	}
 
-	hs.masterSecret = masterFromPreMasterSecret(c.vers, preMasterSecret, hs.hello.random, hs.serverHello.random)
+	hs.masterSecret = masterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, hs.hello.random, hs.serverHello.random)
 	return nil
 }
 
 func (hs *clientHandshakeState) establishKeys() error {
 	c := hs.c
 
-	var clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV []byte
-	if hs.suite.flags&suiteExport > 0 {
-		clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV = exportKeysFromMasterSecret(c.vers, hs.masterSecret, hs.hello.random, hs.serverHello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen, hs.suite.expandedKeyLen)
-	} else {
-		clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV = keysFromMasterSecret(c.vers, hs.masterSecret, hs.hello.random, hs.serverHello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen)
-	}
+	clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV := keysFromMasterSecret(c.vers, hs.suite, hs.masterSecret, hs.hello.random, hs.serverHello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen)
 	var clientCipher, serverCipher interface{}
 	var clientHash, serverHash macFunction
 	if hs.suite.cipher != nil {
@@ -654,6 +667,20 @@ func (hs *clientHandshakeState) sendFinished() error {
 	hs.finishedHash.Write(finished.marshal())
 	c.writeRecord(recordTypeHandshake, finished.marshal())
 	return nil
+}
+
+func (hs *clientHandshakeState) writeClientHash(msg []byte) {
+	// writeClientHash is called before writeRecord.
+	hs.writeHash(msg, 0)
+}
+
+func (hs *clientHandshakeState) writeServerHash(msg []byte) {
+	// writeServerHash is called after readHandshake.
+	hs.writeHash(msg, 0)
+}
+
+func (hs *clientHandshakeState) writeHash(msg []byte, seqno uint16) {
+	hs.finishedHash.Write(msg)
 }
 
 // clientSessionCacheKey returns a key used to cache sessionTickets that could

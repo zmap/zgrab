@@ -49,13 +49,15 @@ func TestKeysFromPreMasterSecret(t *testing.T) {
 		clientRandom, _ := hex.DecodeString(test.clientRandom)
 		serverRandom, _ := hex.DecodeString(test.serverRandom)
 
-		masterSecret := masterFromPreMasterSecret(test.version, in, clientRandom, serverRandom)
+		suite := mutualCipherSuite([]uint16{TLS_RSA_WITH_AES_128_CBC_SHA}, TLS_RSA_WITH_AES_128_CBC_SHA)
+
+		masterSecret := masterFromPreMasterSecret(test.version, suite, in, clientRandom, serverRandom)
 		if s := hex.EncodeToString(masterSecret); s != test.masterSecret {
 			t.Errorf("#%d: bad master secret %s, want %s", i, s, test.masterSecret)
 			continue
 		}
 
-		clientMAC, serverMAC, clientKey, serverKey, _, _ := keysFromMasterSecret(test.version, masterSecret, clientRandom, serverRandom, test.macLen, test.keyLen, 0)
+		clientMAC, serverMAC, clientKey, serverKey, _, _ := keysFromMasterSecret(test.version, suite, masterSecret, clientRandom, serverRandom, test.macLen, test.keyLen, 0)
 		clientMACString := hex.EncodeToString(clientMAC)
 		serverMACString := hex.EncodeToString(serverMAC)
 		clientKeyString := hex.EncodeToString(clientKey)
