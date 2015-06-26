@@ -162,6 +162,9 @@ func masterFromPreMasterSecret(version uint16, suite *cipherSuite, preMasterSecr
 // secret, given the lengths of the MAC key, cipher key and IV, as defined in
 // RFC 2246, section 6.3.
 func keysFromMasterSecret(version uint16, suite *cipherSuite, masterSecret, clientRandom, serverRandom []byte, macLen, keyLen, ivLen int) (clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV []byte) {
+	if suite.flags&suiteExport > 0 {
+		return exportKeysFromMasterSecret(version, suite, masterSecret, clientRandom, serverRandom, macLen, keyLen, ivLen)
+	}
 	var seed [tlsRandomLength * 2]byte
 	copy(seed[0:len(clientRandom)], serverRandom)
 	copy(seed[len(serverRandom):], clientRandom)
@@ -253,7 +256,7 @@ func exportKeysFromMasterSecretTLS(version uint16, suite *cipherSuite, masterSec
 	return
 }
 
-func exportKeysFromMasterSecret(version uint16, suite *cipherSuite, masterSecret, clientRandom, serverRandom []byte, macLen, keyLen, ivLen, expandedKeyLen int) (clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV []byte) {
+func exportKeysFromMasterSecret(version uint16, suite *cipherSuite, masterSecret, clientRandom, serverRandom []byte, macLen, keyLen, ivLen int) (clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV []byte) {
 	switch version {
 	case VersionSSL30:
 		return exportKeysFromMasterSecret30(version, suite, masterSecret, clientRandom, serverRandom, macLen, keyLen, ivLen)
