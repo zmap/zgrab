@@ -85,8 +85,6 @@ func init() {
 
 	flag.BoolVar(&config.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
 	flag.StringVar(&rootCAFileName, "ca-file", "", "List of trusted root certificate authorities in PEM format")
-	flag.BoolVar(&config.CBCOnly, "cbc-only", false, "Send only ciphers that use CBC")
-	flag.BoolVar(&config.SChannelOnly, "schannel", false, "Send only ciphers for guessing schannel version")
 	flag.IntVar(&config.GOMAXPROCS, "gomaxprocs", 3, "Set GOMAXPROCS (default 3)")
 	flag.BoolVar(&config.FTP, "ftp", false, "Read FTP banners")
 	flag.BoolVar(&config.SSH.SSH, "ssh", false, "SSH scan")
@@ -147,11 +145,6 @@ func init() {
 		default:
 			zlog.Fatal("Invalid SSL/TLS versions")
 		}
-	}
-
-	// SChannelOnly cannot be used with CBCOnly
-	if config.SChannelOnly && config.CBCOnly {
-		zlog.Fatal("Cannot use both --schannel and --cbc-only")
 	}
 
 	// STARTTLS cannot be used with TLS

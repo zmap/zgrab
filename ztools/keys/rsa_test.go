@@ -1,6 +1,7 @@
 package keys
 
 import (
+	"crypto/rsa"
 	"encoding/json"
 	"math/big"
 	"testing"
@@ -20,6 +21,7 @@ var _ = Suite(&RSASuite{})
 
 func (s *RSASuite) SetUpTest(c *C) {
 	s.pk4096 = new(RSAPublicKey)
+	s.pk4096.PublicKey = new(rsa.PublicKey)
 	s.pk4096.E = 65537
 	s.pk4096.N = big.NewInt(0).SetBytes(test4096Modulus)
 }

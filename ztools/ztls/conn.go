@@ -178,18 +178,21 @@ func (hc *halfConn) changeCipherSpec() error {
 }
 
 // incSeq increments the sequence number.
-func (hc *halfConn) incSeq() {
-	for i := 7; i >= 0; i-- {
-		hc.seq[i]++
-		if hc.seq[i] != 0 {
-			return
-		}
+func (hc *halfConn) incSeq(isOutgoing bool) {
+	limit := 0
+	increment := uint64(1)
+	for i := 7; i >= limit; i-- {
+		increment += uint64(hc.seq[i])
+		hc.seq[i] = byte(increment)
+		increment >>= 8
 	}
 
 	// Not allowed to let sequence number wrap.
 	// Instead, must renegotiate before it does.
 	// Not likely enough to bother.
-	panic("TLS: sequence number wraparound")
+	if increment != 0 {
+		panic("TLS: sequence number wraparound")
+	}
 }
 
 // resetSeq resets the sequence number to zero.
@@ -197,6 +200,10 @@ func (hc *halfConn) resetSeq() {
 	for i := range hc.seq {
 		hc.seq[i] = 0
 	}
+}
+
+func (hc *halfConn) recordHeaderLen() int {
+	return tlsRecordHeaderLen
 }
 
 // removePadding returns an unpadded slice, in constant time, which is a prefix
@@ -267,6 +274,8 @@ type cbcMode interface {
 // success boolean, the number of bytes to skip from the start of the record in
 // order to get the application payload, and an optional alert value.
 func (hc *halfConn) decrypt(b *block) (ok bool, prefixLen int, alertValue alert) {
+	recordHeaderLen := hc.recordHeaderLen()
+
 	// pull out payload
 	payload := b.data[recordHeaderLen:]
 
@@ -278,21 +287,26 @@ func (hc *halfConn) decrypt(b *block) (ok bool, prefixLen int, alertValue alert)
 	paddingGood := byte(255)
 	explicitIVLen := 0
 
+	seq := hc.seq[:]
+
 	// decrypt
 	if hc.cipher != nil {
 		switch c := hc.cipher.(type) {
 		case cipher.Stream:
 			c.XORKeyStream(payload, payload)
-		case cipher.AEAD:
-			explicitIVLen = 8
-			if len(payload) < explicitIVLen {
-				return false, 0, alertBadRecordMAC
+		case *tlsAead:
+			nonce := seq
+			if c.explicitNonce {
+				explicitIVLen = 8
+				if len(payload) < explicitIVLen {
+					return false, 0, alertBadRecordMAC
+				}
+				nonce = payload[:8]
+				payload = payload[8:]
 			}
-			nonce := payload[:8]
-			payload = payload[8:]
 
 			var additionalData [13]byte
-			copy(additionalData[:], hc.seq[:])
+			copy(additionalData[:], seq)
 			copy(additionalData[8:], b.data[:3])
 			n := len(payload) - c.Overhead()
 			additionalData[11] = byte(n >> 8)
@@ -348,18 +362,18 @@ func (hc *halfConn) decrypt(b *block) (ok bool, prefixLen int, alertValue alert)
 
 		// strip mac off payload, b.data
 		n := len(payload) - macSize
-		b.data[3] = byte(n >> 8)
-		b.data[4] = byte(n)
+		b.data[recordHeaderLen-2] = byte(n >> 8)
+		b.data[recordHeaderLen-1] = byte(n)
 		b.resize(recordHeaderLen + explicitIVLen + n)
 		remoteMAC := payload[n:]
-		localMAC := hc.mac.MAC(hc.inDigestBuf, hc.seq[0:], b.data[:recordHeaderLen], payload[:n])
+		localMAC := hc.mac.MAC(hc.inDigestBuf, seq, b.data[:3], b.data[recordHeaderLen-2:recordHeaderLen], payload[:n])
 
 		if subtle.ConstantTimeCompare(localMAC, remoteMAC) != 1 || paddingGood != 255 {
 			return false, 0, alertBadRecordMAC
 		}
 		hc.inDigestBuf = localMAC
 	}
-	hc.incSeq()
+	hc.incSeq(false)
 
 	return true, recordHeaderLen + explicitIVLen, 0
 }
@@ -371,21 +385,25 @@ func (hc *halfConn) decrypt(b *block) (ok bool, prefixLen int, alertValue alert)
 // full block.
 func padToBlockSize(payload []byte, blockSize int) (prefix, finalBlock []byte) {
 	overrun := len(payload) % blockSize
-	paddingLen := blockSize - overrun
 	prefix = payload[:len(payload)-overrun]
-	finalBlock = make([]byte, blockSize)
-	copy(finalBlock, payload[len(payload)-overrun:])
-	for i := overrun; i < blockSize; i++ {
+
+	paddingLen := blockSize - overrun
+	finalSize := blockSize
+	finalBlock = make([]byte, finalSize)
+	for i := range finalBlock {
 		finalBlock[i] = byte(paddingLen - 1)
 	}
+	copy(finalBlock, payload[len(payload)-overrun:])
 	return
 }
 
 // encrypt encrypts and macs the data in b.
 func (hc *halfConn) encrypt(b *block, explicitIVLen int) (bool, alert) {
+	recordHeaderLen := hc.recordHeaderLen()
+
 	// mac
 	if hc.mac != nil {
-		mac := hc.mac.MAC(hc.outDigestBuf, hc.seq[0:], b.data[:recordHeaderLen], b.data[recordHeaderLen+explicitIVLen:])
+		mac := hc.mac.MAC(hc.outDigestBuf, hc.seq[0:], b.data[:3], b.data[recordHeaderLen-2:recordHeaderLen], b.data[recordHeaderLen+explicitIVLen:])
 
 		n := len(b.data)
 		b.resize(n + len(mac))
@@ -400,10 +418,13 @@ func (hc *halfConn) encrypt(b *block, explicitIVLen int) (bool, alert) {
 		switch c := hc.cipher.(type) {
 		case cipher.Stream:
 			c.XORKeyStream(payload, payload)
-		case cipher.AEAD:
+		case *tlsAead:
 			payloadLen := len(b.data) - recordHeaderLen - explicitIVLen
 			b.resize(len(b.data) + c.Overhead())
-			nonce := b.data[recordHeaderLen : recordHeaderLen+explicitIVLen]
+			nonce := hc.seq[:]
+			if c.explicitNonce {
+				nonce = b.data[recordHeaderLen : recordHeaderLen+explicitIVLen]
+			}
 			payload := b.data[recordHeaderLen+explicitIVLen:]
 			payload = payload[:payloadLen]
 
@@ -431,9 +452,9 @@ func (hc *halfConn) encrypt(b *block, explicitIVLen int) (bool, alert) {
 
 	// update length to include MAC and any block padding needed.
 	n := len(b.data) - recordHeaderLen
-	b.data[3] = byte(n >> 8)
-	b.data[4] = byte(n)
-	hc.incSeq()
+	b.data[recordHeaderLen-2] = byte(n >> 8)
+	b.data[recordHeaderLen-1] = byte(n)
+	hc.incSeq(true)
 
 	return true, 0
 }
@@ -564,7 +585,7 @@ Again:
 		c.rawInput = c.in.newBlock()
 	}
 	b := c.rawInput
-
+	recordHeaderLen := c.in.recordHeaderLen()
 	// Read header, payload.
 	if err := b.readFromUntil(c.conn, recordHeaderLen); err != nil {
 		// RFC suggests that EOF without an alertCloseNotify is
@@ -730,14 +751,19 @@ func (c *Conn) sendAlert(err alert) error {
 // to the connection and updates the record layer state.
 // c.out.Mutex <= L.
 func (c *Conn) writeRecord(typ recordType, data []byte) (n int, err error) {
+
+	recordHeaderLen := tlsRecordHeaderLen
 	b := c.out.newBlock()
-	for len(data) > 0 {
+	first := true
+	//isClientHello := typ == recordTypeHandshake && len(data) > 0 && data[0] == typeClientHello
+	for len(data) > 0 || first {
 		m := len(data)
 		if m > maxPlaintext {
 			m = maxPlaintext
 		}
 		explicitIVLen := 0
 		explicitIVIsSeq := false
+		first = false
 
 		var cbc cbcMode
 		if c.out.version >= VersionTLS11 {
@@ -747,7 +773,7 @@ func (c *Conn) writeRecord(typ recordType, data []byte) (n int, err error) {
 			}
 		}
 		if explicitIVLen == 0 {
-			if _, ok := c.out.cipher.(cipher.AEAD); ok {
+			if aead, ok := c.out.cipher.(*tlsAead); ok && aead.explicitNonce {
 				explicitIVLen = 8
 				// The AES-GCM construction in TLS has an
 				// explicit nonce so that the nonce can be
@@ -834,6 +860,8 @@ func (c *Conn) readHandshake() (interface{}, error) {
 	data = c.hand.Next(4 + n)
 	var m handshakeMessage
 	switch data[0] {
+	case typeHelloRequest:
+		m = new(helloRequestMsg)
 	case typeClientHello:
 		m = new(clientHelloMsg)
 	case typeServerHello:

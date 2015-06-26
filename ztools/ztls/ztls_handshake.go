@@ -1,18 +1,22 @@
 package ztls
 
 import (
-	"crypto/rsa"
-	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"math/big"
+	"fmt"
+	"strings"
 
+	"github.com/zmap/zgrab/ztools/keys"
 	"github.com/zmap/zgrab/ztools/x509"
 )
 
 var ErrUnimplementedCipher error = errors.New("unimplemented cipher suite")
+var ErrNoMutualCipher error = errors.New("no mutual cipher suite")
 
 type TLSVersion uint16
+
+type CipherSuite uint16
 
 type ClientHello struct {
 	Random    []byte `json:"random"`
@@ -31,7 +35,7 @@ type ServerHello struct {
 	HeartbeatSupported  bool        `json:"heartbeat"`
 }
 
-// ServerCertificates represents a TLS certificates message in a format friendly to the golang JSON library.
+// Certificates represents a TLS certificates message in a format friendly to the golang JSON library.
 // ValidationError should be non-nil whenever Valid is false.
 type Certificates struct {
 	Certificates       [][]byte
@@ -40,7 +44,12 @@ type Certificates struct {
 
 // ServerKeyExchange represents the raw key data sent by the server in TLS key exchange message
 type ServerKeyExchange struct {
-	Key []byte `json:"key"`
+	Raw            []byte             `json:"-"`
+	RSAParams      *keys.RSAPublicKey `json:"rsa_params,omitempty"`
+	DHParams       *keys.DHParams     `json:"dh_params,omitempty"`
+	ECDHParams     *keys.ECDHParams   `json:"ecdh_params,omitempty"`
+	Signature      *DigitalSignature  `json:"signature,omitempty"`
+	SignatureError string             `json:"signature_error,omitempty"`
 }
 
 // Finished represents a TLS Finished message
@@ -52,13 +61,73 @@ type Finished struct {
 // It implements zgrab.EventData interface
 type ServerHandshake struct {
 	ClientHello        *ClientHello       `json:"client_hello,omitempty"`
-	ServerHello        *ServerHello       `json:"server_hello"`
-	ServerCertificates *Certificates      `json:"server_certificates"`
-	ServerKeyExchange  *ServerKeyExchange `json:"server_key_exchange"`
-	RSAExportParams    *RSAExportParams   `json:"rsa_export_params,omitempty"`
-	DHExportParams     *DHParams          `json:"dh_export_params,omitempty"`
-	DHParams           *DHParams          `json:"dh_params,omitempty"`
-	ServerFinished     *Finished          `json:"server_finished"`
+	ServerHello        *ServerHello       `json:"server_hello,omitempty"`
+	ServerCertificates *Certificates      `json:"server_certificates,omitempty"`
+	ServerKeyExchange  *ServerKeyExchange `json:"server_key_exchange,omitempty"`
+	ServerFinished     *Finished          `json:"server_finished,omitempty"`
+}
+
+// MarshalJSON implements the json.Marshler interface
+func (v *TLSVersion) MarshalJSON() ([]byte, error) {
+	aux := struct {
+		Name  string `json:"name"`
+		Value int    `json:"value"`
+	}{
+		Name:  v.String(),
+		Value: int(*v),
+	}
+	return json.Marshal(&aux)
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (v *TLSVersion) UnmarshalJSON(b []byte) error {
+	aux := struct {
+		Name  string `json:"name"`
+		Value int    `json:"value"`
+	}{}
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	*v = TLSVersion(aux.Value)
+	if expectedName := v.String(); expectedName != aux.Name {
+		return fmt.Errorf("mismatched tls version and name: version: %d, name: %s, expected name: %s", aux.Value, aux.Name, expectedName)
+	}
+	return nil
+}
+
+// MarshalJSON implements the json.Marshler interface
+func (cs *CipherSuite) MarshalJSON() ([]byte, error) {
+	buf := make([]byte, 2)
+	buf[0] = byte(*cs >> 8)
+	buf[1] = byte(*cs)
+	enc := strings.ToUpper(hex.EncodeToString(buf))
+	aux := struct {
+		Hex   string `json:"hex"`
+		Name  string `json:"name"`
+		Value int    `json:"value"`
+	}{
+		Hex:   fmt.Sprintf("0x%s", enc),
+		Name:  cs.String(),
+		Value: int(*cs),
+	}
+	return json.Marshal(&aux)
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (cs *CipherSuite) UnmarshalJSON(b []byte) error {
+	aux := struct {
+		Hex   string `json:"hex"`
+		Name  string `json:"name"`
+		Value uint16 `json:"value"`
+	}{}
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	if expectedName := nameForSuite(aux.Value); expectedName != aux.Name {
+		return fmt.Errorf("mismatched cipher suite and name, suite: %d, name: %s, expected name: %s", aux.Value, aux.Name, expectedName)
+	}
+	*cs = CipherSuite(aux.Value)
+	return nil
 }
 
 func (c *Conn) GetHandshakeLog() *ServerHandshake {
@@ -100,10 +169,44 @@ func (m *certificateMsg) MakeLog() *Certificates {
 	return sc
 }
 
-func (m *serverKeyExchangeMsg) MakeLog() *ServerKeyExchange {
+func (m *serverKeyExchangeMsg) MakeLog(ka keyAgreement) *ServerKeyExchange {
 	skx := new(ServerKeyExchange)
-	skx.Key = make([]byte, len(m.key))
-	copy(skx.Key, m.key)
+	skx.Raw = make([]byte, len(m.key))
+	var auth keyAgreementAuthentication
+	var errAuth error
+	copy(skx.Raw, m.key)
+
+	// Write out parameters
+	switch ka := ka.(type) {
+	case *rsaKeyAgreement:
+		skx.RSAParams = ka.RSAParams()
+		auth = ka.auth
+		errAuth = ka.verifyError
+	case *dheKeyAgreement:
+		skx.DHParams = ka.DHParams()
+		auth = ka.auth
+		errAuth = ka.verifyError
+	case *ecdheKeyAgreement:
+		skx.ECDHParams = ka.ECDHParams()
+		auth = ka.auth
+		errAuth = ka.verifyError
+	default:
+		break
+	}
+
+	// Write out signature
+	switch auth := auth.(type) {
+	case *signedKeyAgreement:
+		skx.Signature = auth.Signature()
+	default:
+		break
+	}
+
+	// Write the signature validation error
+	if errAuth != nil {
+		skx.SignatureError = errAuth.Error()
+	}
+
 	return skx
 }
 
@@ -112,138 +215,4 @@ func (m *finishedMsg) MakeLog() *Finished {
 	sf.VerifyData = make([]byte, len(m.verifyData))
 	copy(sf.VerifyData, m.verifyData)
 	return sf
-}
-
-type ExportSignatureAlgorithm uint16
-
-var exportHashes = []string{
-	"MD5",
-	"SHA-1",
-	"SHA-224",
-	"SHA-256",
-	"SHA-384",
-	"SHA-512",
-}
-
-var exportAlgorithms = []string{
-	"anon",
-	"RSA",
-	"DSA",
-	"ECDSA",
-}
-
-func (esa *ExportSignatureAlgorithm) MarshalJSON() ([]byte, error) {
-	value := uint16(*esa)
-	hash := int(byte(value >> 8))
-	alg := int(byte(value))
-
-	var aux struct {
-		Value    uint16 `json:"value"`
-		HashName string `json:"hash_name,omitempty"`
-		HashID   int    `json:"hash_id"`
-		AlgName  string `json:"algorithm_name,omitempty"`
-		AlgID    int    `json:"algorithm_id"`
-	}
-	if hash < len(exportHashes) {
-		aux.HashName = exportHashes[hash]
-	}
-	if alg < len(exportAlgorithms) {
-		aux.AlgName = exportAlgorithms[alg]
-	}
-	aux.Value = value
-	aux.HashID = hash
-	aux.AlgID = alg
-	return json.Marshal(&aux)
-}
-
-type RSAExportParams struct {
-	PublicKey rsa.PublicKey `json:"-"`
-	Modulus   []byte        `json:"modulus"`
-	Exponent  uint32        `json:"exponent"`
-	Length    int           `json:"length"`
-}
-
-type DHParams struct {
-	P  *big.Int
-	G  *big.Int
-	Ys *big.Int
-}
-
-func (p *DHParams) MarshalJSON() ([]byte, error) {
-	var aux struct {
-		P        []byte `json:"prime"`
-		PrimeLen int    `json:"prime_length"`
-		G        []byte `json:"generator"`
-		Ys       []byte `json:"public_exponent"`
-	}
-	aux.P = p.P.Bytes()
-	aux.PrimeLen = p.P.BitLen()
-	aux.G = p.G.Bytes()
-	aux.Ys = p.Ys.Bytes()
-	return json.Marshal(&aux)
-}
-
-func (p *rsaExportParams) MakeLog() *RSAExportParams {
-	out := new(RSAExportParams)
-	exponent := uint32(0)
-	for _, b := range p.rawExponent {
-		exponent <<= 8
-		exponent |= uint32(b)
-	}
-	modulus := big.NewInt(0)
-	modulus.SetBytes(p.rawModulus)
-	key := rsa.PublicKey{
-		N: modulus,
-		E: int(exponent),
-	}
-	out.PublicKey = key
-	out.Modulus = modulus.Bytes()
-	out.Exponent = exponent
-	out.Length = modulus.BitLen()
-	return out
-}
-
-func (p *DHParams) unmarshal(buf []byte) bool {
-	if len(buf) < 2 {
-		return false
-	}
-	pLength := binary.BigEndian.Uint16(buf)
-	buf = buf[2:]
-
-	if len(buf) < int(pLength) {
-		return false
-	}
-	pBytes := buf[0:pLength]
-	buf = buf[pLength:]
-	p.P = big.NewInt(0)
-	p.P.SetBytes(pBytes)
-
-	if len(buf) < 2 {
-		return false
-	}
-	gLength := binary.BigEndian.Uint16(buf)
-	buf = buf[2:]
-
-	if len(buf) < int(gLength) {
-		return false
-	}
-	gBytes := buf[0:gLength]
-	buf = buf[gLength:]
-	p.G = big.NewInt(0)
-	p.G.SetBytes(gBytes)
-
-	if len(buf) < 2 {
-		return false
-	}
-	ysLength := binary.BigEndian.Uint16(buf)
-	buf = buf[2:]
-
-	if len(buf) < int(ysLength) {
-		return false
-	}
-	ysBytes := buf[0:ysLength]
-	p.Ys = big.NewInt(0)
-	p.Ys.SetBytes(ysBytes)
-
-	return true
 }

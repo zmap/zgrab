@@ -73,12 +73,6 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 		banner := make([]byte, 1024)
 		response := make([]byte, 65536)
 		c.SetCAPool(config.RootCAPool)
-		if config.CBCOnly {
-			c.SetCBCOnly()
-		}
-		if config.SChannelOnly {
-			c.SetSChannelOnly()
-		}
 		if config.DHEOnly {
 			c.SetDHEOnly()
 		}

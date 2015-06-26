@@ -27,10 +27,11 @@ const (
 )
 
 const (
-	maxPlaintext    = 16384        // maximum plaintext payload length
-	maxCiphertext   = 16384 + 2048 // maximum ciphertext payload length
-	recordHeaderLen = 5            // record header length
-	maxHandshake    = 65536        // maximum handshake we support (protocol max is 16 MB)
+	maxPlaintext        = 16384        // maximum plaintext payload length
+	maxCiphertext       = 16384 + 2048 // maximum ciphertext payload length
+	tlsRecordHeaderLen  = 5            // record header length
+	dtlsRecordHeaderLen = 13
+	maxHandshake        = 65536 // maximum handshake we support (protocol max is 16 MB)
 
 	minVersion = VersionSSL30
 	maxVersion = VersionTLS12
@@ -48,18 +49,21 @@ const (
 
 // TLS handshake message types.
 const (
-	typeClientHello        uint8 = 1
-	typeServerHello        uint8 = 2
-	typeNewSessionTicket   uint8 = 4
-	typeCertificate        uint8 = 11
-	typeServerKeyExchange  uint8 = 12
-	typeCertificateRequest uint8 = 13
-	typeServerHelloDone    uint8 = 14
-	typeCertificateVerify  uint8 = 15
-	typeClientKeyExchange  uint8 = 16
-	typeFinished           uint8 = 20
-	typeCertificateStatus  uint8 = 22
-	typeNextProtocol       uint8 = 67 // Not IANA assigned
+	typeHelloRequest        uint8 = 0
+	typeClientHello         uint8 = 1
+	typeServerHello         uint8 = 2
+	typeHelloVerifyRequest  uint8 = 3
+	typeNewSessionTicket    uint8 = 4
+	typeCertificate         uint8 = 11
+	typeServerKeyExchange   uint8 = 12
+	typeCertificateRequest  uint8 = 13
+	typeServerHelloDone     uint8 = 14
+	typeCertificateVerify   uint8 = 15
+	typeClientKeyExchange   uint8 = 16
+	typeFinished            uint8 = 20
+	typeCertificateStatus   uint8 = 22
+	typeNextProtocol        uint8 = 67  // Not IANA assigned
+	typeEncryptedExtensions uint8 = 203 // Not IANA assigned
 )
 
 // TLS compression types.
@@ -122,37 +126,50 @@ const (
 
 // Hash functions for TLS 1.2 (See RFC 5246, section A.4.1)
 const (
+	hashMD5    uint8 = 1
 	hashSHA1   uint8 = 2
+	hashSHA224 uint8 = 3
 	hashSHA256 uint8 = 4
+	hashSHA384 uint8 = 5
+	hashSHA512 uint8 = 6
 )
 
 // Signature algorithms for TLS 1.2 (See RFC 5246, section A.4.1)
 const (
 	signatureRSA   uint8 = 1
+	signatureDSA   uint8 = 2
 	signatureECDSA uint8 = 3
 )
 
 // signatureAndHash mirrors the TLS 1.2, SignatureAndHashAlgorithm struct. See
 // RFC 5246, section A.4.1.
 type signatureAndHash struct {
-	hash, signature uint8
+	signature, hash uint8
 }
 
 // supportedSKXSignatureAlgorithms contains the signature and hash algorithms
 // that the code advertises as supported in a TLS 1.2 ClientHello.
 var supportedSKXSignatureAlgorithms = []signatureAndHash{
-	{hashSHA256, signatureRSA},
-	{hashSHA256, signatureECDSA},
-	{hashSHA1, signatureRSA},
-	{hashSHA1, signatureECDSA},
+	{signatureRSA, hashSHA256},
+	{signatureECDSA, hashSHA256},
+	{signatureRSA, hashSHA1},
+	{signatureECDSA, hashSHA1},
+	{signatureDSA, hashSHA1},
+}
+
+var defaultSKXSignatureAlgorithms = []signatureAndHash{
+	{signatureRSA, hashSHA256},
+	{signatureECDSA, hashSHA256},
+	{signatureRSA, hashSHA1},
+	{signatureECDSA, hashSHA1},
 }
 
 // supportedClientCertSignatureAlgorithms contains the signature and hash
 // algorithms that the code advertises as supported in a TLS 1.2
 // CertificateRequest.
 var supportedClientCertSignatureAlgorithms = []signatureAndHash{
-	{hashSHA256, signatureRSA},
-	{hashSHA256, signatureECDSA},
+	{signatureRSA, hashSHA256},
+	{signatureECDSA, hashSHA256},
 }
 
 // ConnectionState records basic TLS details about the connection.
@@ -312,6 +329,10 @@ type Config struct {
 
 	// HeartbeatEnabled sets whether the heartbeat extension is sent
 	HeartbeatEnabled bool
+
+	// ClientDSAEnabled sets whether a TLS client will accept server DSA keys
+	// and DSS signatures
+	ClientDSAEnabled bool
 }
 
 func (c *Config) serverInit() {
@@ -424,6 +445,27 @@ func (c *Config) getCertificateForName(name string) *Certificate {
 
 	// If nothing matches, return the first certificate.
 	return &c.Certificates[0]
+}
+
+func (c *Config) signatureAndHashesForServer() []signatureAndHash {
+	/*
+		if c != nil && c.SignatureAndHashes != nil {
+			return c.SignatureAndHashes
+		}
+	*/
+	return supportedClientCertSignatureAlgorithms
+}
+
+func (c *Config) signatureAndHashesForClient() []signatureAndHash {
+	/*
+		if c != nil && c.SignatureAndHashes != nil {
+			return c.SignatureAndHashes
+		}
+	*/
+	if c.ClientDSAEnabled {
+		return supportedSKXSignatureAlgorithms
+	}
+	return defaultSKXSignatureAlgorithms
 }
 
 // BuildNameToCertificate parses c.Certificates and builds c.NameToCertificate
@@ -567,12 +609,21 @@ func defaultCipherSuites() []uint16 {
 }
 
 func initDefaultCipherSuites() {
-	varDefaultCipherSuites = make([]uint16, len(cipherSuites))
-	for i, suite := range cipherSuites {
+	varDefaultCipherSuites = make([]uint16, len(stdlibCipherSuites))
+	for i, suite := range stdlibCipherSuites {
 		varDefaultCipherSuites[i] = suite.id
 	}
 }
 
 func unexpectedMessageError(wanted, got interface{}) error {
 	return fmt.Errorf("tls: received unexpected handshake message of type %T when waiting for %T", got, wanted)
+}
+
+func isSupportedSignatureAndHash(sigHash signatureAndHash, sigHashes []signatureAndHash) bool {
+	for _, s := range sigHashes {
+		if s == sigHash {
+			return true
+		}
+	}
+	return false
 }

@@ -44,8 +44,6 @@ type Conn struct {
 
 	caPool *x509.CertPool
 
-	onlyCBC             bool
-	onlySchannel        bool
 	onlyDHE             bool
 	onlyExports         bool
 	onlyExportsDH       bool
@@ -71,14 +69,6 @@ func (c *Conn) getUnderlyingConn() net.Conn {
 		return c.tlsConn
 	}
 	return c.conn
-}
-
-func (c *Conn) SetCBCOnly() {
-	c.onlyCBC = true
-}
-
-func (c *Conn) SetSChannelOnly() {
-	c.onlySchannel = true
 }
 
 func (c *Conn) SetDHEOnly() {
@@ -193,42 +183,30 @@ func (c *Conn) TLSHandshake() error {
 	tlsConfig.MaxVersion = c.maxTlsVersion
 	tlsConfig.RootCAs = c.caPool
 	tlsConfig.HeartbeatEnabled = true
+	tlsConfig.ClientDSAEnabled = true
 	if !c.noSNI && c.domain != "" {
 		tlsConfig.ServerName = c.domain
 	}
-	if c.onlyCBC {
-		tlsConfig.CipherSuites = ztls.CBCSuiteIDList
-	}
-	if c.onlySchannel {
-		tlsConfig.CipherSuites = ztls.SChannelSuites
-	}
 	if c.onlyDHE {
 		tlsConfig.CipherSuites = ztls.DHECiphers
-		tlsConfig.ForceSuites = true
 	}
 	if c.onlyExports {
 		tlsConfig.CipherSuites = ztls.RSA512ExportCiphers
-		tlsConfig.ForceSuites = true
 	}
 	if c.onlyExportsDH {
 		tlsConfig.CipherSuites = ztls.DHEExportCiphers
-		tlsConfig.ForceSuites = true
 	}
 	if c.chromeCiphers {
 		tlsConfig.CipherSuites = ztls.ChromeCiphers
-		tlsConfig.ForceSuites = true
 	}
 	if c.chromeNoDHE {
 		tlsConfig.CipherSuites = ztls.ChromeNoDHECiphers
-		tlsConfig.ForceSuites = true
 	}
 	if c.firefoxCiphers {
 		tlsConfig.CipherSuites = ztls.FirefoxCiphers
-		tlsConfig.ForceSuites = true
 	}
 	if c.firefoxNoDHECiphers {
 		tlsConfig.CipherSuites = ztls.FirefoxNoDHECiphers
-		tlsConfig.ForceSuites = true
 	}
 
 	if c.safariCiphers {
@@ -245,7 +223,7 @@ func (c *Conn) TLSHandshake() error {
 	c.tlsConn.SetWriteDeadline(c.writeDeadline)
 	c.isTls = true
 	err := c.tlsConn.Handshake()
-	if err == ztls.ErrUnimplementedCipher {
+	if tlsConfig.ForceSuites && err == ztls.ErrUnimplementedCipher {
 		err = nil
 	}
 	hl := c.tlsConn.GetHandshakeLog()

@@ -6,6 +6,7 @@ package ztls
 
 import (
 	"bytes"
+	"crypto/dsa"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/subtle"
@@ -13,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net"
 	"strconv"
 
@@ -67,7 +69,7 @@ func (c *Conn) clientHandshake() error {
 
 	NextCipherSuite:
 		for _, suiteId := range possibleCipherSuites {
-			for _, suite := range cipherSuites {
+			for _, suite := range implementedCipherSuites {
 				if suite.id != suiteId {
 					continue
 				}
@@ -89,7 +91,7 @@ func (c *Conn) clientHandshake() error {
 	}
 
 	if hello.vers >= VersionTLS12 {
-		hello.signatureAndHashes = supportedSKXSignatureAlgorithms
+		hello.signatureAndHashes = c.config.signatureAndHashesForClient()
 	}
 
 	var session *ClientSessionState
@@ -165,9 +167,15 @@ func (c *Conn) clientHandshake() error {
 	c.haveVers = true
 
 	suite := mutualCipherSuite(c.config.cipherSuites(), serverHello.cipherSuite)
+	cipherImplemented := cipherIDInCipherList(serverHello.cipherSuite, implementedCipherSuites)
+	cipherShared := cipherIDInCipherIDList(serverHello.cipherSuite, c.config.cipherSuites())
 	if suite == nil {
-		c.sendAlert(alertHandshakeFailure)
-		c.cipherError = ErrUnimplementedCipher
+		//c.sendAlert(alertHandshakeFailure)
+		if !cipherShared {
+			c.cipherError = ErrNoMutualCipher
+		} else if !cipherImplemented {
+			c.cipherError = ErrUnimplementedCipher
+		}
 	}
 
 	hs := &clientHandshakeState{
@@ -175,7 +183,7 @@ func (c *Conn) clientHandshake() error {
 		serverHello:  serverHello,
 		hello:        hello,
 		suite:        suite,
-		finishedHash: newFinishedHash(c.vers),
+		finishedHash: newFinishedHash(c.vers, suite),
 		session:      session,
 	}
 
@@ -188,6 +196,10 @@ func (c *Conn) clientHandshake() error {
 	}
 
 	if isResume {
+		if c.cipherError != nil {
+			c.sendAlert(alertHandshakeFailure)
+			return c.cipherError
+		}
 		if err := hs.establishKeys(); err != nil {
 			return err
 		}
@@ -235,126 +247,127 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 	if err != nil {
 		return err
 	}
-	certMsg, ok := msg.(*certificateMsg)
-	if !ok || len(certMsg.certificates) == 0 {
-		c.sendAlert(alertUnexpectedMessage)
-		return unexpectedMessageError(certMsg, msg)
-	}
-	hs.finishedHash.Write(certMsg.marshal())
 
-	c.handshakeLog.ServerCertificates = certMsg.MakeLog()
+	var serverCert *x509.Certificate
 
-	certs := make([]*x509.Certificate, len(certMsg.certificates))
-	invalidCert := false
-	var invalidCertErr error
-	for i, asn1Data := range certMsg.certificates {
-		cert, err := x509.ParseCertificate(asn1Data)
-		if err != nil {
-			invalidCert = true
-			invalidCertErr = err
-			break
+	isAnon := hs.suite != nil && (hs.suite.flags&suiteAnon > 0)
+
+	if !isAnon {
+
+		certMsg, ok := msg.(*certificateMsg)
+		if !ok || len(certMsg.certificates) == 0 {
+			c.sendAlert(alertUnexpectedMessage)
+			return unexpectedMessageError(certMsg, msg)
 		}
-		certs[i] = cert
-	}
+		hs.finishedHash.Write(certMsg.marshal())
 
-	if !invalidCert {
-		opts := x509.VerifyOptions{
-			Roots:         c.config.RootCAs,
-			CurrentTime:   c.config.time(),
-			DNSName:       c.config.ServerName,
-			Intermediates: x509.NewCertPool(),
-		}
+		c.handshakeLog.ServerCertificates = certMsg.MakeLog()
 
-		// Always check validity of the certificates
-		for i, cert := range certs {
-			if i == 0 {
-				continue
-			}
-			opts.Intermediates.AddCert(cert)
-		}
-		c.verifiedChains, err = certs[0].Verify(opts)
-		c.handshakeLog.ServerCertificates.ParsedCertificates = certs
-
-		// If actually verifying and invalid, reject
-		if !c.config.InsecureSkipVerify {
+		certs := make([]*x509.Certificate, len(certMsg.certificates))
+		invalidCert := false
+		var invalidCertErr error
+		for i, asn1Data := range certMsg.certificates {
+			cert, err := x509.ParseCertificate(asn1Data)
 			if err != nil {
-				c.sendAlert(alertBadCertificate)
+				invalidCert = true
+				invalidCertErr = err
+				break
+			}
+			certs[i] = cert
+		}
+
+		if !invalidCert {
+			opts := x509.VerifyOptions{
+				Roots:         c.config.RootCAs,
+				CurrentTime:   c.config.time(),
+				DNSName:       c.config.ServerName,
+				Intermediates: x509.NewCertPool(),
+			}
+
+			// Always check validity of the certificates
+			for i, cert := range certs {
+				if i == 0 {
+					continue
+				}
+				opts.Intermediates.AddCert(cert)
+			}
+			c.verifiedChains, err = certs[0].Verify(opts)
+			c.handshakeLog.ServerCertificates.ParsedCertificates = certs
+
+			// If actually verifying and invalid, reject
+			if !c.config.InsecureSkipVerify {
+				if err != nil {
+					c.sendAlert(alertBadCertificate)
+					return err
+				}
+			}
+		}
+
+		if invalidCert {
+			c.sendAlert(alertBadCertificate)
+			return errors.New("tls: failed to parse certificate from server: " + invalidCertErr.Error())
+		}
+
+		c.peerCertificates = certs
+
+		if hs.serverHello.ocspStapling {
+			msg, err = c.readHandshake()
+			if err != nil {
 				return err
 			}
+			cs, ok := msg.(*certificateStatusMsg)
+			if !ok {
+				c.sendAlert(alertUnexpectedMessage)
+				return unexpectedMessageError(cs, msg)
+			}
+			hs.finishedHash.Write(cs.marshal())
+
+			if cs.statusType == statusTypeOCSP {
+				c.ocspResponse = cs.response
+			}
 		}
-	}
 
-	if invalidCert {
-		c.sendAlert(alertBadCertificate)
-		return errors.New("tls: failed to parse certificate from server: " + invalidCertErr.Error())
-	}
+		serverCert = certs[0]
 
-	c.peerCertificates = certs
+		var supportedCertKeyType bool
+		switch serverCert.PublicKey.(type) {
+		case *rsa.PublicKey, *ecdsa.PublicKey:
+			supportedCertKeyType = true
+			break
+		case *dsa.PublicKey:
+			if c.config.ClientDSAEnabled {
+				supportedCertKeyType = true
+			}
+		default:
+			break
+		}
 
-	if hs.serverHello.ocspStapling {
+		if !supportedCertKeyType {
+			c.sendAlert(alertUnsupportedCertificate)
+			return fmt.Errorf("tls: server's certificate contains an unsupported type of public key: %T", serverCert.PublicKey)
+		}
+
 		msg, err = c.readHandshake()
 		if err != nil {
 			return err
 		}
-		cs, ok := msg.(*certificateStatusMsg)
-		if !ok {
-			c.sendAlert(alertUnexpectedMessage)
-			return unexpectedMessageError(cs, msg)
-		}
-		hs.finishedHash.Write(cs.marshal())
-
-		if cs.statusType == statusTypeOCSP {
-			c.ocspResponse = cs.response
-		}
 	}
 
-	msg, err = c.readHandshake()
-	if err != nil {
-		return err
-	}
-
-	skx, ok := msg.(*serverKeyExchangeMsg)
-	if c.config.ForceSuites && ok {
-		// XXX hijacking this variable to mean exports
-		// Check the cipher suite to see if it's RSA or DHE
-		cipher := hs.serverHello.cipherSuite
-		if cipherInList(cipher, RSAExportCiphers) {
-			var p rsaExportParams
-			if p.unmarshal(skx.key) {
-				c.handshakeLog.RSAExportParams = p.MakeLog()
-			}
-		} else if cipherInList(cipher, DHEExportCiphers) {
-			p := new(DHParams)
-			if p.unmarshal(skx.key) {
-				c.handshakeLog.DHExportParams = p
-			}
-		} else if cipherInList(cipher, DHECiphers) {
-			p := new(DHParams)
-			if p.unmarshal(skx.key) {
-				c.handshakeLog.DHParams = p
-			}
-		}
-	}
-
+	// If we don't support the cipher, quit before we need to read the hs.suite
+	// variable
 	if c.cipherError != nil {
 		return c.cipherError
 	}
 
-	switch certs[0].PublicKey.(type) {
-	case *rsa.PublicKey, *ecdsa.PublicKey:
-		break
-	default:
-		c.sendAlert(alertUnsupportedCertificate)
-		return fmt.Errorf("tls: server's certificate contains an unsupported type of public key: %T", certs[0].PublicKey)
-	}
+	skx, ok := msg.(*serverKeyExchangeMsg)
 
 	keyAgreement := hs.suite.ka(c.vers)
 
 	if ok {
 		hs.finishedHash.Write(skx.marshal())
 
-		c.handshakeLog.ServerKeyExchange = skx.MakeLog()
-		err = keyAgreement.processServerKeyExchange(c.config, hs.hello, hs.serverHello, certs[0], skx)
+		err = keyAgreement.processServerKeyExchange(c.config, hs.hello, hs.serverHello, serverCert, skx)
+		c.handshakeLog.ServerKeyExchange = skx.MakeLog(keyAgreement)
 		if err != nil {
 			c.sendAlert(alertUnexpectedMessage)
 			return err
@@ -455,7 +468,7 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 	// Certificate message, even if it's empty because we don't have a
 	// certificate to send.
 	if certRequested {
-		certMsg = new(certificateMsg)
+		certMsg := new(certificateMsg)
 		if chainToSend != nil {
 			certMsg.certificates = chainToSend.Certificate
 		}
@@ -463,7 +476,7 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		c.writeRecord(recordTypeHandshake, certMsg.marshal())
 	}
 
-	preMasterSecret, ckx, err := keyAgreement.generateClientKeyExchange(c.config, hs.hello, certs[0], c.vers)
+	preMasterSecret, ckx, err := keyAgreement.generateClientKeyExchange(c.config, hs.hello, serverCert)
 	if err != nil {
 		c.sendAlert(alertInternalError)
 		return err
@@ -479,20 +492,37 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 			hasSignatureAndHash: c.vers >= VersionTLS12,
 		}
 
+		// Determine the hash to sign.
+		var signatureType uint8
+		switch c.config.Certificates[0].PrivateKey.(type) {
+		case *ecdsa.PrivateKey:
+			signatureType = signatureECDSA
+		case *rsa.PrivateKey:
+			signatureType = signatureRSA
+		default:
+			c.sendAlert(alertInternalError)
+			return errors.New("unknown private key type")
+		}
+		certVerify.signatureAndHash, err = hs.finishedHash.selectClientCertSignatureAlgorithm(certReq.signatureAndHashes, c.config.signatureAndHashesForClient(), signatureType)
+		if err != nil {
+			c.sendAlert(alertInternalError)
+			return err
+		}
+		digest, hashFunc, err := hs.finishedHash.hashForClientCertificate(certVerify.signatureAndHash, hs.masterSecret)
+		if err != nil {
+			c.sendAlert(alertInternalError)
+			return err
+		}
+
 		switch key := c.config.Certificates[0].PrivateKey.(type) {
 		case *ecdsa.PrivateKey:
-			digest, _, hashId := hs.finishedHash.hashForClientCertificate(signatureECDSA)
-			r, s, err := ecdsa.Sign(c.config.rand(), key, digest)
+			var r, s *big.Int
+			r, s, err = ecdsa.Sign(c.config.rand(), key, digest)
 			if err == nil {
 				signed, err = asn1.Marshal(ecdsaSignature{r, s})
 			}
-			certVerify.signatureAndHash.signature = signatureECDSA
-			certVerify.signatureAndHash.hash = hashId
 		case *rsa.PrivateKey:
-			digest, hashFunc, hashId := hs.finishedHash.hashForClientCertificate(signatureRSA)
 			signed, err = rsa.SignPKCS1v15(c.config.rand(), key, hashFunc, digest)
-			certVerify.signatureAndHash.signature = signatureRSA
-			certVerify.signatureAndHash.hash = hashId
 		default:
 			err = errors.New("unknown private key type")
 		}
@@ -502,19 +532,18 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		}
 		certVerify.signature = signed
 
-		hs.finishedHash.Write(certVerify.marshal())
+		hs.writeClientHash(certVerify.marshal())
 		c.writeRecord(recordTypeHandshake, certVerify.marshal())
 	}
 
-	hs.masterSecret = masterFromPreMasterSecret(c.vers, preMasterSecret, hs.hello.random, hs.serverHello.random)
+	hs.masterSecret = masterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, hs.hello.random, hs.serverHello.random)
 	return nil
 }
 
 func (hs *clientHandshakeState) establishKeys() error {
 	c := hs.c
 
-	clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV :=
-		keysFromMasterSecret(c.vers, hs.masterSecret, hs.hello.random, hs.serverHello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen)
+	clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV := keysFromMasterSecret(c.vers, hs.suite, hs.masterSecret, hs.hello.random, hs.serverHello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen)
 	var clientCipher, serverCipher interface{}
 	var clientHash, serverHash macFunction
 	if hs.suite.cipher != nil {
@@ -638,6 +667,20 @@ func (hs *clientHandshakeState) sendFinished() error {
 	hs.finishedHash.Write(finished.marshal())
 	c.writeRecord(recordTypeHandshake, finished.marshal())
 	return nil
+}
+
+func (hs *clientHandshakeState) writeClientHash(msg []byte) {
+	// writeClientHash is called before writeRecord.
+	hs.writeHash(msg, 0)
+}
+
+func (hs *clientHandshakeState) writeServerHash(msg []byte) {
+	// writeServerHash is called after readHandshake.
+	hs.writeHash(msg, 0)
+}
+
+func (hs *clientHandshakeState) writeHash(msg []byte, seqno uint16) {
+	hs.finishedHash.Write(msg)
 }
 
 // clientSessionCacheKey returns a key used to cache sessionTickets that could

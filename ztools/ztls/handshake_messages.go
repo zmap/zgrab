@@ -6,8 +6,6 @@ package ztls
 
 import "bytes"
 
-type CipherSuite uint16
-
 type clientHelloMsg struct {
 	raw                 []byte
 	vers                uint16
@@ -1329,6 +1327,17 @@ func (m *newSessionTicketMsg) unmarshal(data []byte) bool {
 	m.ticket = data[10:]
 
 	return true
+}
+
+type helloRequestMsg struct {
+}
+
+func (*helloRequestMsg) marshal() []byte {
+	return []byte{typeHelloRequest, 0, 0, 0}
+}
+
+func (*helloRequestMsg) unmarshal(data []byte) bool {
+	return len(data) == 4
 }
 
 func eqUint16s(x, y []uint16) bool {
