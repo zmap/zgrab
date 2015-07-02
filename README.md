@@ -46,3 +46,7 @@ If you are using ZGrab code in another Go program, import ZGrab using [gopkg.in]
 ```
 gopkg.in/zmap/zgrab.v0.0.1
 ```
+
+## License
+
+ZGrab is licensed under Apache 2.0 and ISC. For more information, see the LICENSE file.

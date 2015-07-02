@@ -1,6 +1,0 @@
-banner-grab requires Go v1.2.1 or higher installed
-
-To build, navigate to the root of the source directory and run `go build`
-
-Go v1.2.1 has binaries available at http://code.google.com/p/go/downloads/list
-It can also be installed in Ubuntu 14.04 via apt-get, and on Mac OS X via Homebrew.

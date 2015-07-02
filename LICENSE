@@ -1,3 +1,31 @@
+ZGrab is an original work created at the University of Michigan, and is
+licensed under the Apache 2.0 license. However, ZGrab contains a fork of
+several packages from Golang standard library, as well as code from the
+BoringSSL test runner. Files that were created by Google, and new files in
+forks of packages maintained by Google have a Google copyright and fall under
+the ISC license.  All other files are copyright Regents of the University of
+Michigan, and fall under the Apache 2.0 license. Both licenses are reproduced
+at the bottom of this file.
+
+--------
+
+ISC License used for Google code
+
+/* Copyright (c) 2015, Google Inc.
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+ * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+ * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+ * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+
+
 Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
@@ -186,7 +214,7 @@ Apache License
       same "printed page" as the copyright notice for easier
       identification within third-party archives.
 
-   Copyright {yyyy} {name of copyright owner}
+   ZGrab Copyright 2015 Regents of the University of Michigan
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
