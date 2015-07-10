@@ -10,7 +10,6 @@ package zlib
 
 import (
 	"encoding/json"
-	"errors"
 	"net"
 	"time"
 )
@@ -28,14 +27,13 @@ type ConnectionEvent struct {
 }
 
 type encodedGrab struct {
-	Host   string            `json:"host"`
-	Domain *string           `json:"domain"`
-	Time   string            `json:"time"`
-	Log    []ConnectionEvent `json:"log"`
+	Host   string                 `json:"host"`
+	Domain *string                `json:"domain,omitempty"`
+	Time   string                 `json:"time"`
+	Data   map[string]interface{} `json:"grab"`
 }
 
 type encodedConnectionEvent struct {
-	Type  EventType `json:"type"`
 	Data  EventData `json:"data"`
 	Error *string   `json:"error"`
 }
@@ -46,14 +44,12 @@ type partialConnectionEvent struct {
 }
 
 func (ce *ConnectionEvent) MarshalJSON() ([]byte, error) {
-	t := ce.Data.GetType()
 	var esp *string
 	if ce.Error != nil {
 		es := ce.Error.Error()
 		esp = &es
 	}
 	obj := encodedConnectionEvent{
-		Type:  t,
 		Data:  ce.Data,
 		Error: esp,
 	}
@@ -61,25 +57,7 @@ func (ce *ConnectionEvent) MarshalJSON() ([]byte, error) {
 }
 
 func (ce *ConnectionEvent) UnmarshalJSON(b []byte) error {
-	ece := new(partialConnectionEvent)
-	tn := struct {
-		TypeName string `json:"type"`
-	}{}
-	if err := json.Unmarshal(b, &tn); err != nil {
-		return err
-	}
-	t, typeErr := EventTypeFromName(tn.TypeName)
-	if typeErr != nil {
-		return typeErr
-	}
-	ece.Data = t.GetEmptyInstance()
-	if err := json.Unmarshal(b, &ece); err != nil {
-		return err
-	}
-	ce.Data = ece.Data
-	if ece.Error != nil {
-		ce.Error = errors.New(*ece.Error)
-	}
+	panic("unimplemented")
 	return nil
 }
 
@@ -93,7 +71,10 @@ func (g *Grab) MarshalJSON() ([]byte, error) {
 		Host:   g.Host.String(),
 		Domain: domainPtr,
 		Time:   time,
-		Log:    g.Log,
+		Data:   make(map[string]interface{}, 2*len(g.Log)),
+	}
+	for idx, val := range g.Log {
+		obj.Data[val.Data.GetType().TypeName] = &g.Log[idx]
 	}
 	return json.Marshal(obj)
 }
@@ -111,7 +92,7 @@ func (g *Grab) UnmarshalJSON(b []byte) error {
 	if g.Time, err = time.Parse(time.RFC3339, eg.Time); err != nil {
 		return err
 	}
-	g.Log = eg.Log
+	panic("unimplemented")
 	return nil
 }
 
