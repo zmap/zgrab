@@ -25,58 +25,38 @@ var (
 	oidExtAuthorityInfoAccess = oidExtensionAuthorityInfoAccess
 )
 
+type encodedKnownExtensions struct {
+	KeyUsage              KeyUsage              `json:"key_usage,omitempty"`
+	BasicConstraints      *BasicConstraints     `json:"basic_constraints,omitempty"`
+	SubjectAltName        *SubjectAltName       `json:"subject_alt_name,omitempty"`
+	NameConstriants       *NameConstriants      `json:"name_constraints,omitempty"`
+	CRLDistributionPoints CRLDistributionPoints `json:"crl_distribution_points,omitempty"`
+	AuthKeyID             AuthKeyId             `json:"authority_key_id,omitempty"`
+	ExtendedKeyUsage      ExtendedKeyUsage      `json:"extended_key_usage,omitempty"`
+	CertificatePolicies   CertificatePolicies   `json:"certificate_policies,omitmepty"`
+	AuthorityInfoAccess   *AuthorityInfoAccess  `json:"authority_info_access,omitempty"`
+}
+
+type encodedUnknownExtensions []encodedUnknownExtension
+
 type CertificateExtensions struct {
-	KeyUsage              KeyUsage
-	BasicConstraints      *BasicConstraints
-	SubjectAltName        *SubjectAltName
-	NameConstriants       *NameConstriants
-	CRLDistributionPoints CRLDistributionPoints
-	AuthKeyId             AuthKeyId
-	ExtendedKeyUsage      ExtendedKeyUsage
-	CertificatePolicies   CertificatePolicies
-	AuthorityInfoAccess   *AuthorityInfoAccess
-	UnknownExtensions     []pkix.Extension
+	KeyUsage              KeyUsage              `json:"key_usage,omitempty"`
+	BasicConstraints      *BasicConstraints     `json:"basic_constraints,omitempty"`
+	SubjectAltName        *SubjectAltName       `json:"subject_alt_name,omitempty"`
+	NameConstriants       *NameConstriants      `json:"name_constraints,omitempty"`
+	CRLDistributionPoints CRLDistributionPoints `json:"crl_distribution_points,omitempty"`
+	AuthKeyID             AuthKeyId             `json:"authority_key_id,omitempty"`
+	ExtendedKeyUsage      ExtendedKeyUsage      `json:"extended_key_usage,omitempty"`
+	CertificatePolicies   CertificatePolicies   `json:"certificate_policies,omitmepty"`
+	AuthorityInfoAccess   *AuthorityInfoAccess  `json:"authority_info_access,omitempty"`
 }
 
-type jsonUnknownExtension struct {
+type UnknownCertificateExtensions []pkix.Extension
+
+type encodedUnknownExtension struct {
+	OID      string `json:"oid"`
 	Critical bool   `json:"critical"`
-	Value    []byte `json:"value"`
-}
-
-func (ce *CertificateExtensions) MarshalJSON() ([]byte, error) {
-	enc := make(map[string]interface{})
-	if ce.KeyUsage != 0 {
-		enc["key_usage"] = ce.KeyUsage
-	}
-	if ce.BasicConstraints != nil {
-		enc["basic_constraints"] = ce.BasicConstraints
-	}
-	if ce.SubjectAltName != nil {
-		enc["subject_alt_name"] = ce.SubjectAltName
-	}
-	if ce.CRLDistributionPoints != nil {
-		enc["crl_distribution_points"] = ce.CRLDistributionPoints
-	}
-	if ce.AuthKeyId != nil {
-		enc["authority_key_id"] = ce.AuthKeyId
-	}
-	if ce.ExtendedKeyUsage != nil {
-		enc["extended_key_usage"] = ce.ExtendedKeyUsage
-	}
-	if ce.CertificatePolicies != nil {
-		enc["certificate_policies"] = ce.CertificatePolicies
-	}
-	if ce.AuthorityInfoAccess != nil {
-		enc["authority_info_access"] = ce.AuthorityInfoAccess
-	}
-	for _, e := range ce.UnknownExtensions {
-		unk := jsonUnknownExtension{
-			Critical: e.Critical,
-			Value:    e.Value,
-		}
-		enc[e.Id.String()] = unk
-	}
-	return json.Marshal(enc)
+	Value    []byte `json:"raw"`
 }
 
 type BasicConstraints struct {
@@ -124,8 +104,9 @@ type AuthorityInfoAccess struct {
 	IssuingCertificateURL []string `json:"issuer_urls,omitempty"`
 }
 
-func (c *Certificate) jsonifyExtensions() *CertificateExtensions {
+func (c *Certificate) jsonifyExtensions() (*CertificateExtensions, UnknownCertificateExtensions) {
 	exts := new(CertificateExtensions)
+	unk := make([]pkix.Extension, 0, 2)
 	for _, e := range c.Extensions {
 		if e.Id.Equal(oidExtKeyUsage) {
 			exts.KeyUsage = c.KeyUsage
@@ -148,7 +129,7 @@ func (c *Certificate) jsonifyExtensions() *CertificateExtensions {
 		} else if e.Id.Equal(oidCRLDistributionPoints) {
 			exts.CRLDistributionPoints = c.CRLDistributionPoints
 		} else if e.Id.Equal(oidExtAuthKeyId) {
-			exts.AuthKeyId = c.AuthorityKeyId
+			exts.AuthKeyID = c.AuthorityKeyId
 		} else if e.Id.Equal(oidExtExtendedKeyUsage) {
 			exts.ExtendedKeyUsage = c.ExtKeyUsage
 		} else if e.Id.Equal(oidExtCertificatePolicy) {
@@ -159,8 +140,8 @@ func (c *Certificate) jsonifyExtensions() *CertificateExtensions {
 			exts.AuthorityInfoAccess.IssuingCertificateURL = c.IssuingCertificateURL
 		} else {
 			// Unknown extension
-			exts.UnknownExtensions = append(exts.UnknownExtensions, e)
+			unk = append(unk, e)
 		}
 	}
-	return exts
+	return exts, unk
 }
