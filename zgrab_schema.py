@@ -1,4 +1,4 @@
-from zchema import *
+from zschema import *
 
 zgrab_subj_issuer = SubRecord({
     "serial_number":String(),
