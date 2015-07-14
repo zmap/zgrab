@@ -166,6 +166,13 @@ func (c *Conn) Write(b []byte) (int, error) {
 	return n, err
 }
 
+func (c *Conn) BasicBanner() (string, error) {
+	b := make([]byte, 1024)
+	n, err := c.getUnderlyingConn().Read(b)
+	c.grabData.Banner = string(b[0:n])
+	return c.grabData.Banner, err
+}
+
 func (c *Conn) Read(b []byte) (int, error) {
 	n, err := c.getUnderlyingConn().Read(b)
 	c.grabData.Read = b[0:n]

@@ -135,7 +135,7 @@ func makeGrabber(config *Config) func(*Conn) error {
 					return err
 				}
 			} else {
-				if _, err := c.Read(banner); err != nil {
+				if _, err := c.BasicBanner(); err != nil {
 					return err
 				}
 			}
