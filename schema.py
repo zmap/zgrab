@@ -46,6 +46,7 @@ zgrab_base = Record({
     "timestamp":DateTime(required=True),
     "data":SubRecord({})
     "error":String()
+    "error_component":String()
 })
 
 zgrab_banner = Record({
