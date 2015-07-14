@@ -66,7 +66,7 @@ func (s *JSONSuite) TestEncodeDecodeAuxOID(c *C) {
 	var dec AuxOID
 	errDec := json.Unmarshal(b, &dec)
 	c.Assert(errDec, IsNil)
-	c.Check(dec.Equals(&oid), Equals, true)
+	c.Check(dec.Equal(&oid), Equals, true)
 }
 
 func (s *JSONSuite) TestNegativeOIDFailsNicely(c *C) {

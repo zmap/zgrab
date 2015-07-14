@@ -76,8 +76,8 @@ func (k *KeyUsage) UnmarshalJSON(b []byte) error {
 }
 
 type auxSignatureAlgorithm struct {
-	Name string                `json:"name,omitempty"`
-	OID  asn1.ObjectIdentifier `json:"oid"`
+	Name string      `json:"name,omitempty"`
+	OID  pkix.AuxOID `json:"oid"`
 }
 
 // MarshalJSON implements the json.Marshaler interface
@@ -103,8 +103,9 @@ func (s *SignatureAlgorithm) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	*s = UnknownSignatureAlgorithm
+	oid := asn1.ObjectIdentifier(aux.OID.AsSlice())
 	for _, val := range signatureAlgorithmDetails {
-		if val.oid.Equal(aux.OID) {
+		if val.oid.Equal(oid) {
 			*s = val.algo
 			break
 		}
