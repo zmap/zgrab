@@ -37,10 +37,11 @@ type encodedGrab struct {
 
 type GrabData struct {
 	Banner       string                `json:"banner,omitempty"`
-	Read         []byte                `json:"read,omitempty"`
-	EHLO         *EHLOEvent            `json:"ehlo,omitempty"`
+	Read         string                `json:"read,omitempty"`
+	Write        string                `json:"write,omitempty"`
+	EHLO         string                `json:"ehlo,omitempty"`
 	SMTPHelp     *SMTPHelpEvent        `json:"smtp_help,omitempty"`
-	StartTLS     *StartTLSEvent        `json:"starttls,omitempty"`
+	StartTLS     string                `json:"starttls,omitempty"`
 	TLSHandshake *ztls.ServerHandshake `json:"tls,omitempty"`
 	Heartbleed   *ztls.Heartbleed      `json:"heartbleed,omitempty"`
 	Modbus       *ModbusEvent          `json:"modbus,omitempty"`

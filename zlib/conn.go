@@ -157,6 +157,7 @@ func (c *Conn) SetWriteDeadline(t time.Time) error {
 // Delegate here, but record all the things
 func (c *Conn) Write(b []byte) (int, error) {
 	n, err := c.getUnderlyingConn().Write(b)
+	c.grabData.Write = string(b[0:n])
 	return n, err
 }
 
@@ -169,7 +170,7 @@ func (c *Conn) BasicBanner() (string, error) {
 
 func (c *Conn) Read(b []byte) (int, error) {
 	n, err := c.getUnderlyingConn().Read(b)
-	c.grabData.Read = b[0:n]
+	c.grabData.Read = string(b[0:n])
 	return n, err
 }
 
@@ -253,18 +254,15 @@ func (c *Conn) sendStartTLSCommand(command string) error {
 
 // Do a STARTTLS handshake
 func (c *Conn) SMTPStartTLSHandshake() error {
-	// Make the state
-	ss := &StartTLSEvent{Command: SMTP_COMMAND}
 
 	// Send the command
 	if err := c.sendStartTLSCommand(SMTP_COMMAND); err != nil {
-		c.grabData.StartTLS = ss
 		return err
 	}
 	// Read the response on a successful send
 	buf := make([]byte, 256)
 	n, err := c.readSmtpResponse(buf)
-	ss.Response = string(buf[0:n])
+	c.grabData.StartTLS = string(buf[0:n])
 
 	// Actually check return code
 	if n < 5 {
@@ -272,14 +270,11 @@ func (c *Conn) SMTPStartTLSHandshake() error {
 	}
 	if err == nil {
 		var ret int
-		ret, err = strconv.Atoi(ss.Response[0:3])
+		ret, err = strconv.Atoi(c.grabData.StartTLS[0:3])
 		if err != nil || ret < 200 || ret >= 300 {
 			err = errors.New("Bad return code for STARTTLS")
 		}
 	}
-
-	// Record everything no matter the result
-	c.grabData.StartTLS = ss
 
 	// Stop if we failed already
 	if err != nil {
@@ -291,21 +286,18 @@ func (c *Conn) SMTPStartTLSHandshake() error {
 }
 
 func (c *Conn) POP3StartTLSHandshake() error {
-	ss := &StartTLSEvent{Command: POP3_COMMAND}
 	if err := c.sendStartTLSCommand(POP3_COMMAND); err != nil {
-		c.grabData.StartTLS = ss
 		return err
 	}
 
 	buf := make([]byte, 512)
 	n, err := c.readPop3Response(buf)
-	ss.Response = string(buf[0:n])
+	c.grabData.StartTLS = string(buf[0:n])
 	if err == nil {
-		if !strings.HasPrefix(ss.Response, "+") {
+		if !strings.HasPrefix(c.grabData.StartTLS, "+") {
 			err = errors.New("Server did not indicate support for STARTTLS")
 		}
 	}
-	c.grabData.StartTLS = ss
 
 	if err != nil {
 		return err
@@ -314,21 +306,18 @@ func (c *Conn) POP3StartTLSHandshake() error {
 }
 
 func (c *Conn) IMAPStartTLSHandshake() error {
-	ss := &StartTLSEvent{Command: IMAP_COMMAND}
 	if err := c.sendStartTLSCommand(IMAP_COMMAND); err != nil {
-		c.grabData.StartTLS = ss
 		return err
 	}
 
 	buf := make([]byte, 512)
 	n, err := c.readImapStatusResponse(buf)
-	ss.Response = string(buf[0:n])
+	c.grabData.StartTLS = string(buf[0:n])
 	if err == nil {
-		if !strings.HasPrefix(ss.Response, "a001 OK") {
+		if !strings.HasPrefix(c.grabData.StartTLS, "a001 OK") {
 			err = errors.New("Server did not indicate support for STARTTLS")
 		}
 	}
-	c.grabData.StartTLS = ss
 
 	if err != nil {
 		return err
@@ -368,16 +357,13 @@ func (c *Conn) SMTPBanner(b []byte) (int, error) {
 
 func (c *Conn) EHLO(domain string) error {
 	cmd := []byte("EHLO " + domain + "\r\n")
-	ee := &EHLOEvent{}
 	if _, err := c.getUnderlyingConn().Write(cmd); err != nil {
-		c.grabData.EHLO = ee
 		return err
 	}
 
 	buf := make([]byte, 512)
 	n, err := c.readSmtpResponse(buf)
-	ee.Response = string(buf[0:n])
-	c.grabData.EHLO = ee
+	c.grabData.EHLO = string(buf[0:n])
 	return err
 }
 
