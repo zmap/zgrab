@@ -35,6 +35,19 @@ func (s *JSONSuite) SetUpTest(c *C) {
 	c.Assert(err, IsNil)
 }
 
+func (s *JSONSuite) TestEncodeDecodeSignatureAlgorithmInt(c *C) {
+	algo := SHA256WithRSA
+	b, errEnc := json.Marshal(&algo)
+	c.Assert(errEnc, IsNil)
+	c.Assert(b, Not(IsNil))
+	c.Assert(len(b) > 0, Equals, true)
+	fmt.Println(string(b))
+	var dec SignatureAlgorithm
+	errDec := json.Unmarshal(b, &dec)
+	c.Assert(errDec, IsNil)
+	c.Check(dec, DeepEquals, algo)
+}
+
 func (s *JSONSuite) TestEncodeCertificate(c *C) {
 	b, err := json.Marshal(s.parsedCert)
 	c.Assert(err, IsNil)
