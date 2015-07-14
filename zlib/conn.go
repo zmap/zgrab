@@ -40,6 +40,8 @@ type Conn struct {
 	tlsConn *ztls.Conn
 	isTls   bool
 
+	grabData GrabData
+
 	// Max TLS version
 	maxTlsVersion uint16
 
@@ -166,11 +168,7 @@ func (c *Conn) Write(b []byte) (int, error) {
 
 func (c *Conn) Read(b []byte) (int, error) {
 	n, err := c.getUnderlyingConn().Read(b)
-	r := ReadEvent{
-		Response: b[0:n],
-		encoding: c.ReadEncoding,
-	}
-	c.appendEvent(&r, err)
+	c.grabData.Read = b[0:n]
 	return n, err
 }
 
@@ -235,12 +233,7 @@ func (c *Conn) TLSHandshake() error {
 		err = nil
 	}
 	hl := c.tlsConn.GetHandshakeLog()
-	ts := TLSHandshakeEvent{handshakeLog: hl}
-	event := ConnectionEvent{
-		Data:  &ts,
-		Error: err,
-	}
-	c.operations = append(c.operations, event)
+	c.grabData.TLSHandshake = hl
 	return err
 }
 
@@ -260,11 +253,11 @@ func (c *Conn) sendStartTLSCommand(command string) error {
 // Do a STARTTLS handshake
 func (c *Conn) SMTPStartTLSHandshake() error {
 	// Make the state
-	ss := StartTLSEvent{Command: SMTP_COMMAND}
+	ss := &StartTLSEvent{Command: SMTP_COMMAND}
 
 	// Send the command
 	if err := c.sendStartTLSCommand(SMTP_COMMAND); err != nil {
-		c.appendEvent(&ss, err)
+		c.grabData.StartTLS = ss
 		return err
 	}
 	// Read the response on a successful send
@@ -285,7 +278,7 @@ func (c *Conn) SMTPStartTLSHandshake() error {
 	}
 
 	// Record everything no matter the result
-	c.appendEvent(&ss, err)
+	c.grabData.StartTLS = ss
 
 	// Stop if we failed already
 	if err != nil {
@@ -297,9 +290,9 @@ func (c *Conn) SMTPStartTLSHandshake() error {
 }
 
 func (c *Conn) POP3StartTLSHandshake() error {
-	ss := StartTLSEvent{Command: POP3_COMMAND}
+	ss := &StartTLSEvent{Command: POP3_COMMAND}
 	if err := c.sendStartTLSCommand(POP3_COMMAND); err != nil {
-		c.appendEvent(&ss, err)
+		c.grabData.StartTLS = ss
 		return err
 	}
 
@@ -311,7 +304,7 @@ func (c *Conn) POP3StartTLSHandshake() error {
 			err = errors.New("Server did not indicate support for STARTTLS")
 		}
 	}
-	c.appendEvent(&ss, err)
+	c.grabData.StartTLS = ss
 
 	if err != nil {
 		return err
@@ -320,9 +313,9 @@ func (c *Conn) POP3StartTLSHandshake() error {
 }
 
 func (c *Conn) IMAPStartTLSHandshake() error {
-	ss := StartTLSEvent{Command: IMAP_COMMAND}
+	ss := &StartTLSEvent{Command: IMAP_COMMAND}
 	if err := c.sendStartTLSCommand(IMAP_COMMAND); err != nil {
-		c.appendEvent(&ss, err)
+		c.grabData.StartTLS = ss
 		return err
 	}
 
@@ -334,7 +327,7 @@ func (c *Conn) IMAPStartTLSHandshake() error {
 			err = errors.New("Server did not indicate support for STARTTLS")
 		}
 	}
-	c.appendEvent(&ss, err)
+	c.grabData.StartTLS = ss
 
 	if err != nil {
 		return err
@@ -368,24 +361,22 @@ func (c *Conn) readSmtpResponse(res []byte) (int, error) {
 
 func (c *Conn) SMTPBanner(b []byte) (int, error) {
 	n, err := c.readSmtpResponse(b)
-	mb := MailBannerEvent{}
-	mb.Banner = string(b[0:n])
-	c.appendEvent(&mb, err)
+	c.grabData.Banner = string(b[0:n])
 	return n, err
 }
 
 func (c *Conn) EHLO(domain string) error {
 	cmd := []byte("EHLO " + domain + "\r\n")
-	ee := EHLOEvent{}
+	ee := &EHLOEvent{}
 	if _, err := c.getUnderlyingConn().Write(cmd); err != nil {
-		c.appendEvent(&ee, err)
+		c.grabData.EHLO = ee
 		return err
 	}
 
 	buf := make([]byte, 512)
 	n, err := c.readSmtpResponse(buf)
 	ee.Response = string(buf[0:n])
-	c.appendEvent(&ee, err)
+	c.grabData.EHLO = ee
 	return err
 }
 
@@ -393,13 +384,13 @@ func (c *Conn) SMTPHelp() error {
 	cmd := []byte("HELP\r\n")
 	h := new(SMTPHelpEvent)
 	if _, err := c.getUnderlyingConn().Write(cmd); err != nil {
-		c.appendEvent(h, err)
+		c.grabData.SMTPHelp = h
 		return err
 	}
 	buf := make([]byte, 512)
 	n, err := c.readSmtpResponse(buf)
 	h.Response = string(buf[0:n])
-	c.appendEvent(h, err)
+	c.grabData.SMTPHelp = h
 	return err
 }
 
@@ -409,10 +400,7 @@ func (c *Conn) readPop3Response(res []byte) (int, error) {
 
 func (c *Conn) POP3Banner(b []byte) (int, error) {
 	n, err := c.readPop3Response(b)
-	mb := MailBannerEvent{
-		Banner: string(b[0:n]),
-	}
-	c.appendEvent(&mb, err)
+	c.grabData.Banner = string(b[0:n])
 	return n, err
 }
 
@@ -422,10 +410,7 @@ func (c *Conn) readImapStatusResponse(res []byte) (int, error) {
 
 func (c *Conn) IMAPBanner(b []byte) (int, error) {
 	n, err := c.readImapStatusResponse(b)
-	mb := MailBannerEvent{
-		Banner: string(b[0:n]),
-	}
-	c.appendEvent(&mb, err)
+	c.grabData.Banner = string(b[0:n])
 	return n, err
 }
 
@@ -440,11 +425,7 @@ func (c *Conn) CheckHeartbleed(b []byte) (int, error) {
 	if err == ztls.HeartbleedError {
 		err = nil
 	}
-	event := ConnectionEvent{
-		Data:  &HeartbleedEvent{heartbleedLog: hb},
-		Error: err,
-	}
-	c.operations = append(c.operations, event)
+	c.grabData.Heartbleed = hb
 	return n, err
 }
 
@@ -465,7 +446,7 @@ func (c *Conn) SendModbusEcho() (int, error) {
 		written, err := c.getUnderlyingConn().Write(data[w:]) // TODO verify write
 		w += written
 		if err != nil {
-			c.appendEvent(event, err)
+			c.grabData.Modbus = event
 			return w, errors.New("Could not write modbus request")
 		}
 	}
@@ -477,16 +458,14 @@ func (c *Conn) SendModbusEcho() (int, error) {
 	event.Response = res.Data
 	event.ParseSelf()
 	// make sure the whole thing gets appended to the operation log
-	c.appendEvent(event, err)
+	c.grabData.Modbus = event
 	return w, err
 }
 
 func (c *Conn) GetFTPBanner() error {
-	event := new(FTPBannerEvent)
 	res := make([]byte, 1024)
 	n, err := c.readUntilRegex(res, ftpEndRegex)
-	event.Banner = string(res[0:n])
-	c.appendEvent(event, err)
+	c.grabData.Banner = string(res[0:n])
 	return err
 }
 
@@ -495,20 +474,6 @@ func (c *Conn) SSHHandshake() error {
 	client := ssh.Client(c.conn, config)
 	err := client.ClientHandshake()
 	handshakeLog := client.HandshakeLog()
-	event := new(SSHEvent)
-	event.Handshake = handshakeLog
-	c.appendEvent(event, err)
+	c.grabData.SSH = handshakeLog
 	return err
-}
-
-func (c *Conn) States() []ConnectionEvent {
-	return c.operations
-}
-
-func (c *Conn) appendEvent(data EventData, err error) {
-	event := ConnectionEvent{
-		Data:  data,
-		Error: err,
-	}
-	c.operations = append(c.operations, event)
 }

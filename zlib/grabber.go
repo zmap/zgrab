@@ -75,7 +75,7 @@ func makeDialer(c *Config) func(string) (*Conn, error) {
 	}
 }
 
-func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
+func makeGrabber(config *Config) func(*Conn) error {
 	// Do all the hard work here
 	g := func(c *Conn) error {
 		banner := make([]byte, 1024)
@@ -206,13 +206,13 @@ func makeGrabber(config *Config) func(*Conn) ([]ConnectionEvent, error) {
 		return nil
 	}
 	// Wrap the whole thing in a logger
-	return func(c *Conn) ([]ConnectionEvent, error) {
+	return func(c *Conn) error {
 		err := g(c)
 		if err != nil {
 			config.ErrorLog.Errorf("Conversation error with remote host %s: %s",
 				c.RemoteAddr().String(), err.Error())
 		}
-		return c.States(), err
+		return err
 	}
 }
 
@@ -235,14 +235,15 @@ func GrabBanner(config *Config, target *GrabTarget) *Grab {
 			Host:   target.Addr,
 			Domain: target.Domain,
 			Time:   t,
-			Log:    conn.States(),
+			Error:  dialErr,
 		}
 	}
-	grabStates, _ := grabber(conn)
+	err := grabber(conn)
 	return &Grab{
 		Host:   target.Addr,
 		Domain: target.Domain,
 		Time:   t,
-		Log:    grabStates,
+		Data:   conn.grabData,
+		Error:  err,
 	}
 }
