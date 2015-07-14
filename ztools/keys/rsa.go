@@ -11,6 +11,7 @@ package keys
 import (
 	"crypto/rsa"
 	"encoding/json"
+	"fmt"
 	"math/big"
 )
 
@@ -21,6 +22,7 @@ type RSAPublicKey struct {
 type auxRSAPublicKey struct {
 	Exponent int    `json:"exponent"`
 	Modulus  []byte `json:"modulus"`
+	Length   int    `json:"length"`
 }
 
 // MarshalJSON implements the json.Marshal interface
@@ -29,6 +31,7 @@ func (rp *RSAPublicKey) MarshalJSON() ([]byte, error) {
 	if rp.PublicKey != nil {
 		aux.Exponent = rp.E
 		aux.Modulus = rp.N.Bytes()
+		aux.Length = len(aux.Modulus) * 8
 	}
 	return json.Marshal(&aux)
 }
@@ -44,5 +47,8 @@ func (rp *RSAPublicKey) UnmarshalJSON(b []byte) error {
 	}
 	rp.E = aux.Exponent
 	rp.N = big.NewInt(0).SetBytes(aux.Modulus)
+	if len(aux.Modulus)*8 != aux.Length {
+		return fmt.Errorf("mismatched length (got %d, field specified %d)", len(aux.Modulus), aux.Length)
+	}
 	return nil
 }
