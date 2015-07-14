@@ -55,7 +55,7 @@ zgrab_banner = Record({
     })
 }, extends=zgrab_base)
 
-zgrab_ftp = zgrab_banner
+register_schema("zgrab-ftp", zgrab_banner)
 
 zgrab_smtp = Record({
     "data":SubRecord({
@@ -64,6 +64,7 @@ zgrab_smtp = Record({
         "tls":zgrab_tls
     })
 }, extends=zgrab_banner)
+register_schema("zgrab-smtp", zgrab_smtp)
 
 zgrab_starttls = Record({
     "data":SubRecord({
@@ -71,11 +72,15 @@ zgrab_starttls = Record({
         "tls":zgrab_tls
     })
 }, extends=zgrab_banner)
-                 
-zgrab_imap = zgrab_pop3 = zgrab_starttls
+
+register_schema("zgrab-imap", zgrab_starttls)
+register_schema("zgrab-pop3", zgrab_starttls)
 
 zgrab_https = Record({
     "data":SubRecord({
         "tls":zgrab_tls
     })
 })
+
+register_schema("zgrab-https", zgrab_https)
+
