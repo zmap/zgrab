@@ -35,15 +35,16 @@ zgrab_tls = SubRecord({
     "server_hello":SubRecord({
     
     }),
-    "server_certificates":SubRecord([
+    "server_certificates":SubRecord({
         "certificate":zgrab_certificate,
         "chain":ListOf(zgrab_certificate)
-    ])
+    })
 })
 
 zgrab_base = Record({
     "host":IPv4Address(required=True),
     "timestamp":DateTime(required=True),
+    "domain":String(),
     "data":SubRecord({}),
     "error":String(),
     "error_component":String()
