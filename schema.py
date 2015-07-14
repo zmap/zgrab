@@ -44,8 +44,8 @@ zgrab_tls = SubRecord({
 zgrab_base = Record({
     "host":IPv4Address(required=True),
     "timestamp":DateTime(required=True),
-    "data":SubRecord({})
-    "error":String()
+    "data":SubRecord({}),
+    "error":String(),
     "error_component":String()
 })
 
