@@ -98,8 +98,8 @@ type cryptoParameter struct {
 }
 
 type auxCryptoParameter struct {
-	Raw    []byte `json:"b64"`
-	Length int    `json:"bit_length"`
+	Raw    []byte `json:"value"`
+	Length int    `json:"length"`
 }
 
 // MarshalJSON implements the json.Marshaler interface
