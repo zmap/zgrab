@@ -1,81 +1,80 @@
 from zchema import *
 
 zgrab_subj_issuer = SubRecord({
-   "serial_number":String(),
-   "country":String(),
-   "locality":String(),
-   "province":String(),
-   "street_address":String(),
-   "organization":String(),
-   "organizational_unit":String(),
-   "postal_code":String(),
+    "serial_number":String(),
+    "country":String(),
+    "locality":String(),
+    "province":String(),
+    "street_address":String(),
+    "organization":String(),
+    "organizational_unit":String(),
+    "postal_code":String(),
 })
 
 zgrab_parsed_certificate = SubRecord({
-                                "subject":zgrab_subj_issuer,
-                                "issuer":zgrab_subj_issuer,
-                                "version":Integer,
-                                "serial_number":String(),
-                                "validity":SubRecord({
-                                                "start":DateTime(),
-                                                "end":DateTime()
-                                })
-                            })
-
+    "subject":zgrab_subj_issuer,
+    "issuer":zgrab_subj_issuer,
+    "version":Integer,
+    "serial_number":String(),
+    "validity":SubRecord({
+        "start":DateTime(),
+        "end":DateTime()
+    })
+})
 
 zgrab_certificate = SubRecord({
-                        "raw":Binary(),
-                        "parsed":zgrab_parsed_certificate,
-                        "signature":SubRecord({})
-                    })
+    "raw":Binary(),
+    "parsed":zgrab_parsed_certificate,
+    "signature":SubRecord({})
+})
 
 zgrab_tls = SubRecord({
-                "client_hello":SubRecord({
-                    "random":Binary()
-                }),
-                "server_hello":SubRecord({
-                    
-                }),
-                "server_certificates":SubRecord([
-                    "certificate":zgrab_certificate,
-                    "chain":ListOf(zgrab_certificate)
-                ])
-            })
+    "client_hello":SubRecord({
+        "random":Binary()
+    }),
+    "server_hello":SubRecord({
+    
+    }),
+    "server_certificates":SubRecord([
+        "certificate":zgrab_certificate,
+        "chain":ListOf(zgrab_certificate)
+    ])
+})
 
 zgrab_base = Record({
-                "host":IPv4Address(required=True),
-                "timestamp":DateTime(required=True),
-                "data":SubRecord({})
-                "error":String()
-             })
+    "host":IPv4Address(required=True),
+    "timestamp":DateTime(required=True),
+    "data":SubRecord({})
+    "error":String()
+})
 
 zgrab_banner = Record({
-                  "data":SubRecord({
-                            "banner":String()
-                       })
-                  }, extends=zgrab_base)
+    "data":SubRecord({
+        "banner":String()
+    })
+}, extends=zgrab_base)
 
 zgrab_ftp = zgrab_banner
 
 zgrab_smtp = Record({
-                "data":SubRecord({
-                        "ehlo":String(),
-                        "starttls":String(),
-                        "tls":zgrab_tls
-                })
-             }, extends=zgrab_banner)
+    "data":SubRecord({
+        "ehlo":String(),
+        "starttls":String(),
+        "tls":zgrab_tls
+    })
+}, extends=zgrab_banner)
 
 zgrab_starttls = Record({
-                    "data":SubRecord({
-                                "starttls":String(),
-                                "tls":zgrab_tls
-                    })
-                 }, extends=zgrab_banner)
+    "data":SubRecord({
+        "starttls":String(),
+        "tls":zgrab_tls
+    })
+}, extends=zgrab_banner)
                  
 zgrab_imap = zgrab_pop3 = zgrab_starttls
 
 zgrab_https = Record({
-                "data":SubRecord({
-                          "tls":zgrab_tls
-                })
-              })
+    "data":SubRecord({
+        "tls":zgrab_tls
+    })
+})
