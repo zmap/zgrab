@@ -33,7 +33,7 @@ type ConnectionEvent struct {
 type encodedGrab struct {
 	Host   string    `json:"host"`
 	Domain string    `json:"domain,omitempty"`
-	Time   string    `json:"time"`
+	Time   string    `json:"timestamp"`
 	Data   *GrabData `json:"data"`
 	Error  *string   `json:"error,omitempty"`
 }
