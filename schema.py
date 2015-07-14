@@ -1,14 +1,14 @@
 from zchema import *
 
 zgrab_subj_issuer = SubRecord({
-   "SerialNumber":String(),
-   "Country":String(),
-   "Locality":String(),
-   "Province":String(),
-   "StreetAddress":String(),
-   "Organization":String(),
-   "OrganizationalUnit":String(),
-   "PostalCode":String(),
+   "serial_number":String(),
+   "country":String(),
+   "locality":String(),
+   "province":String(),
+   "street_address":String(),
+   "organization":String(),
+   "organizational_unit":String(),
+   "postal_code":String(),
 })
 
 zgrab_parsed_certificate = SubRecord({
