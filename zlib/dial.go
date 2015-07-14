@@ -22,7 +22,7 @@ type Dialer struct {
 }
 
 func (d *Dialer) Dial(network, address string) (*Conn, error) {
-	c := &Conn{operations: make([]ConnectionEvent, 0, 8)}
+	c := &Conn{}
 	netDialer := net.Dialer{
 		Deadline:  d.Deadline,
 		Timeout:   d.Timeout,
@@ -31,10 +31,5 @@ func (d *Dialer) Dial(network, address string) (*Conn, error) {
 	}
 	var err error
 	c.conn, err = netDialer.Dial(network, address)
-	event := ConnectionEvent{
-		Data:  &ConnectEvent{},
-		Error: err,
-	}
-	c.operations = append(c.operations, event)
 	return c, err
 }

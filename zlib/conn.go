@@ -45,9 +45,6 @@ type Conn struct {
 	// Max TLS version
 	maxTlsVersion uint16
 
-	// Keep track of state / network operations
-	operations []ConnectionEvent
-
 	// Cache the deadlines so we can reapply after TLS handshake
 	readDeadline  time.Time
 	writeDeadline time.Time
@@ -157,12 +154,6 @@ func (c *Conn) SetWriteDeadline(t time.Time) error {
 // Delegate here, but record all the things
 func (c *Conn) Write(b []byte) (int, error) {
 	n, err := c.getUnderlyingConn().Write(b)
-	w := WriteEvent{Sent: b}
-	event := ConnectionEvent{
-		Data:  &w,
-		Error: err,
-	}
-	c.operations = append(c.operations, event)
 	return n, err
 }
 

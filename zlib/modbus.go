@@ -172,15 +172,6 @@ func parseMEIObject(objectBytes []byte) (int, *MEIObject) {
 	return 2 + objLen, &obj
 }
 
-var ModbusEventType = EventType{
-	TypeName:         CONNECTION_EVENT_MODBUS,
-	GetEmptyInstance: func() EventData { return new(ModbusEvent) },
-}
-
-func (m *ModbusEvent) GetType() EventType {
-	return ModbusEventType
-}
-
 type FunctionCode byte
 type ExceptionFunctionCode byte
 type ExceptionCode byte

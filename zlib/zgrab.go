@@ -25,11 +25,6 @@ type Grab struct {
 	Error  error     `json:"error,omitempty"`
 }
 
-type ConnectionEvent struct {
-	Data  EventData
-	Error error
-}
-
 type encodedGrab struct {
 	Host   string    `json:"host"`
 	Domain string    `json:"domain,omitempty"`
