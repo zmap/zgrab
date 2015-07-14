@@ -8,6 +8,7 @@ import (
 	"crypto/dsa"
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"encoding/asn1"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -15,44 +16,103 @@ import (
 	"github.com/zmap/zgrab/ztools/x509/pkix"
 )
 
+type auxKeyUsage struct {
+	DigitalSignature  bool   `json:"digital_signature,omitempty"`
+	ContentCommitment bool   `json:"content_commitment,omitempty"`
+	KeyEncipherment   bool   `json:"key_encipherment,omitempty"`
+	DataEncipherment  bool   `json:"data_encipherment,omitempty"`
+	KeyAgreement      bool   `json:"key_agreement,omitempty"`
+	CertificateSign   bool   `json:"certificate_sign,omitempty"`
+	CRLSign           bool   `json:"crl_sign,omitempty"`
+	EncipherOnly      bool   `json:"encipher_only,omitempty"`
+	DecipherOnly      bool   `json:"decipher_only,omitempty"`
+	Value             uint32 `json:"value"`
+}
+
+// MarshalJSON implements the json.Marshaler interface
 func (k KeyUsage) MarshalJSON() ([]byte, error) {
-	enc := make(map[string]interface{})
-	enc["value"] = int(k)
+	var enc auxKeyUsage
+	enc.Value = uint32(k)
 	if k&KeyUsageDigitalSignature > 0 {
-		enc["digital_signature"] = true
+		enc.DigitalSignature = true
 	}
 	if k&KeyUsageContentCommitment > 0 {
-		enc["content_commitment"] = true
+		enc.ContentCommitment = true
 	}
 	if k&KeyUsageKeyEncipherment > 0 {
-		enc["key_encipherment"] = true
+		enc.KeyEncipherment = true
 	}
 	if k&KeyUsageDataEncipherment > 0 {
-		enc["data_encipherment"] = true
+		enc.DataEncipherment = true
 	}
 	if k&KeyUsageKeyAgreement > 0 {
-		enc["key_agreement"] = true
+		enc.KeyAgreement = true
 	}
 	if k&KeyUsageCertSign > 0 {
-		enc["cert_sign"] = true
+		enc.CertificateSign = true
 	}
 	if k&KeyUsageCRLSign > 0 {
-		enc["crl_sign"] = true
+		enc.CRLSign = true
 	}
 	if k&KeyUsageEncipherOnly > 0 {
-		enc["encipher_only"] = true
+		enc.EncipherOnly = true
 	}
 	if k&KeyUsageDecipherOnly > 0 {
-		enc["decipher_only"] = true
+		enc.DecipherOnly = true
 	}
-	return json.Marshal(enc)
+	return json.Marshal(&enc)
 }
 
-func (s SignatureAlgorithm) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.String())
+// UnmarshalJSON implements the json.Unmarshler interface
+func (k *KeyUsage) UnmarshalJSON(b []byte) error {
+	var aux auxKeyUsage
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	// TODO: validate the flags match
+	v := int(aux.Value)
+	*k = KeyUsage(v)
+	return nil
 }
 
-func (p PublicKeyAlgorithm) MarshalJSON() ([]byte, error) {
+type auxSignatureAlgorithm struct {
+	Name string                `json:"name,omitempty"`
+	OID  asn1.ObjectIdentifier `json:"oid"`
+}
+
+// MarshalJSON implements the json.Marshaler interface
+func (s *SignatureAlgorithm) MarshalJSON() ([]byte, error) {
+	aux := auxSignatureAlgorithm{
+		Name: s.String(),
+	}
+	for _, val := range signatureAlgorithmDetails {
+		if val.algo == *s {
+			aux.OID = make([]int, len(val.oid))
+			for idx := range val.oid {
+				aux.OID[idx] = val.oid[idx]
+			}
+		}
+	}
+	return json.Marshal(&aux)
+}
+
+// UnmarshalJSON implements the json.Unmarshler interface
+func (s *SignatureAlgorithm) UnmarshalJSON(b []byte) error {
+	var aux auxSignatureAlgorithm
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	*s = UnknownSignatureAlgorithm
+	for _, val := range signatureAlgorithmDetails {
+		if val.oid.Equal(aux.OID) {
+			*s = val.algo
+			break
+		}
+	}
+	return nil
+}
+
+func (p *PublicKeyAlgorithm) MarshalJSON() ([]byte, error) {
 	return json.Marshal(p.String())
 }
 
