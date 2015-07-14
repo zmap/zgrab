@@ -18,19 +18,21 @@ import (
 )
 
 type Grab struct {
-	Host   net.IP    `json:"host"`
-	Domain string    `json:"domain"`
-	Time   time.Time `json:"timestamp"`
-	Data   GrabData  `json:"log"`
-	Error  error     `json:"error,omitempty"`
+	Host           net.IP
+	Domain         string
+	Time           time.Time
+	Data           GrabData
+	Error          error
+	ErrorComponent string
 }
 
 type encodedGrab struct {
-	Host   string    `json:"host"`
-	Domain string    `json:"domain,omitempty"`
-	Time   string    `json:"timestamp"`
-	Data   *GrabData `json:"data"`
-	Error  *string   `json:"error,omitempty"`
+	Host           string    `json:"host"`
+	Domain         string    `json:"domain,omitempty"`
+	Time           string    `json:"timestamp"`
+	Data           *GrabData `json:"data"`
+	Error          *string   `json:"error,omitempty"`
+	ErrorComponent string    `json:"error_component,omitempty"`
 }
 
 type GrabData struct {
@@ -53,11 +55,12 @@ func (g *Grab) MarshalJSON() ([]byte, error) {
 		errString = &s
 	}
 	obj := encodedGrab{
-		Host:   g.Host.String(),
-		Domain: g.Domain,
-		Time:   time,
-		Data:   &g.Data,
-		Error:  errString,
+		Host:           g.Host.String(),
+		Domain:         g.Domain,
+		Time:           time,
+		Data:           &g.Data,
+		Error:          errString,
+		ErrorComponent: g.ErrorComponent,
 	}
 	return json.Marshal(obj)
 }

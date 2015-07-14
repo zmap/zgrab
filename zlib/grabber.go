@@ -118,24 +118,29 @@ func makeGrabber(config *Config) func(*Conn) error {
 		c.ReadEncoding = config.Encoding
 		if config.TLS {
 			if err := c.TLSHandshake(); err != nil {
+				c.erroredComponent = "tls"
 				return err
 			}
 		}
 		if config.Banners {
 			if config.SMTP {
 				if _, err := c.SMTPBanner(banner); err != nil {
+					c.erroredComponent = "banner"
 					return err
 				}
 			} else if config.POP3 {
 				if _, err := c.POP3Banner(banner); err != nil {
+					c.erroredComponent = "banner"
 					return err
 				}
 			} else if config.IMAP {
 				if _, err := c.IMAPBanner(banner); err != nil {
+					c.erroredComponent = "banner"
 					return err
 				}
 			} else {
 				if _, err := c.BasicBanner(); err != nil {
+					c.erroredComponent = "banner"
 					return err
 				}
 			}
@@ -143,12 +148,14 @@ func makeGrabber(config *Config) func(*Conn) error {
 
 		if config.FTP {
 			if err := c.GetFTPBanner(); err != nil {
+				c.erroredComponent = "ftp"
 				return err
 			}
 		}
 
 		if config.SSH.SSH {
 			if err := c.SSHHandshake(); err != nil {
+				c.erroredComponent = "ssh"
 				return err
 			}
 		}
@@ -158,34 +165,41 @@ func makeGrabber(config *Config) func(*Conn) error {
 			msg := bytes.Replace(config.Data, []byte("%s"), []byte(host), -1)
 			msg = bytes.Replace(msg, []byte("%d"), []byte(c.domain), -1)
 			if _, err := c.Write(msg); err != nil {
+				c.erroredComponent = "write"
 				return err
 			}
 			if _, err := c.Read(response); err != nil {
+				c.erroredComponent = "read"
 				return err
 			}
 		}
 
 		if config.EHLO {
 			if err := c.EHLO(config.EHLODomain); err != nil {
+				c.erroredComponent = "ehlo"
 				return err
 			}
 		}
 		if config.SMTPHelp {
 			if err := c.SMTPHelp(); err != nil {
+				c.erroredComponent = "smtp_help"
 				return err
 			}
 		}
 		if config.StartTLS {
 			if config.IMAP {
 				if err := c.IMAPStartTLSHandshake(); err != nil {
+					c.erroredComponent = "starttls"
 					return err
 				}
 			} else if config.POP3 {
 				if err := c.POP3StartTLSHandshake(); err != nil {
+					c.erroredComponent = "starttls"
 					return err
 				}
 			} else {
 				if err := c.SMTPStartTLSHandshake(); err != nil {
+					c.erroredComponent = "starttls"
 					return err
 				}
 			}
@@ -193,6 +207,7 @@ func makeGrabber(config *Config) func(*Conn) error {
 
 		if config.Modbus {
 			if _, err := c.SendModbusEcho(); err != nil {
+				c.erroredComponent = "modbus"
 				return err
 			}
 		}
@@ -200,6 +215,7 @@ func makeGrabber(config *Config) func(*Conn) error {
 		if config.Heartbleed {
 			buf := make([]byte, 256)
 			if _, err := c.CheckHeartbleed(buf); err != nil {
+				c.erroredComponent = "heartbleed"
 				return err
 			}
 		}
@@ -232,18 +248,20 @@ func GrabBanner(config *Config, target *GrabTarget) *Grab {
 		config.ErrorLog.Errorf("Could not connect to %s remote host %s: %s",
 			target.Domain, addr, dialErr.Error())
 		return &Grab{
-			Host:   target.Addr,
-			Domain: target.Domain,
-			Time:   t,
-			Error:  dialErr,
+			Host:           target.Addr,
+			Domain:         target.Domain,
+			Time:           t,
+			Error:          dialErr,
+			ErrorComponent: "connect",
 		}
 	}
 	err := grabber(conn)
 	return &Grab{
-		Host:   target.Addr,
-		Domain: target.Domain,
-		Time:   t,
-		Data:   conn.grabData,
-		Error:  err,
+		Host:           target.Addr,
+		Domain:         target.Domain,
+		Time:           t,
+		Data:           conn.grabData,
+		Error:          err,
+		ErrorComponent: conn.erroredComponent,
 	}
 }

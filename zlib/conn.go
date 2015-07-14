@@ -69,6 +69,9 @@ type Conn struct {
 
 	// SSH
 	sshScan *SSHScanConfig
+
+	// Errored component
+	erroredComponent string
 }
 
 func (c *Conn) getUnderlyingConn() net.Conn {
