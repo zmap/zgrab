@@ -113,8 +113,27 @@ func (s *SignatureAlgorithm) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+type auxPublicKeyAlgorithm struct {
+	Name string      `json:"name,omitempty"`
+	OID  pkix.AuxOID `json:"oid"`
+}
+
+// MarshalJSON implements the json.Marshaler interface
 func (p *PublicKeyAlgorithm) MarshalJSON() ([]byte, error) {
-	return json.Marshal(p.String())
+	aux := auxPublicKeyAlgorithm{
+		Name: p.String(),
+	}
+	return json.Marshal(&aux)
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (p *PublicKeyAlgorithm) UnmarshalJSON(b []byte) error {
+	var aux auxPublicKeyAlgorithm
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	panic("unimplemented")
+	return nil
 }
 
 type jsonValidity struct {
