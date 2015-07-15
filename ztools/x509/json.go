@@ -170,18 +170,6 @@ type jsonSubjectKeyInfo struct {
 	ECDSAPublicKey interface{}        `json:"ecdsa_public_key,omitempty"`
 }
 
-type jsonTBSCertificate struct {
-	Version            int                          `json:"version"`
-	SerialNumber       string                       `json:"serial_number"`
-	SignatureAlgorithm SignatureAlgorithm           `json:"signature_algorithm"`
-	Issuer             pkix.Name                    `json:"issuer"`
-	Validity           validity                     `json:"validity"`
-	Subject            pkix.Name                    `json:"subject"`
-	SubjectKeyInfo     jsonSubjectKeyInfo           `json:"subject_key_info"`
-	Extensions         *CertificateExtensions       `json:"extensions,omitempty"`
-	UnknownExtensions  UnknownCertificateExtensions `json:"unknown_extensions,omitempty"`
-}
-
 type jsonSignature struct {
 	SignatureAlgorithm SignatureAlgorithm `json:"signature_algorithm"`
 	Value              []byte             `json:"value"`
@@ -192,9 +180,23 @@ type jsonSignature struct {
 	ValidationError    string             `json:"validation_error,omitempty"`
 }
 
+type jsonTBSCertificate struct {
+	Version            int                          `json:"version"`
+	SerialNumber       string                       `json:"serial_number"`
+	SignatureAlgorithm SignatureAlgorithm           `json:"signature_algorithm"`
+	Issuer             pkix.Name                    `json:"issuer"`
+	Validity           validity                     `json:"validity"`
+	Subject            pkix.Name                    `json:"subject"`
+	SubjectKeyInfo     jsonSubjectKeyInfo           `json:"subject_key_info"`
+	Extensions         *CertificateExtensions       `json:"extensions,omitempty"`
+	UnknownExtensions  UnknownCertificateExtensions `json:"unknown_extensions,omitempty"`
+	Signature          jsonSignature                `json:"signature"`
+}
+
 type jsonCertificate struct {
-	Certificate       jsonTBSCertificate     `json:"certificate"`
-	Signature         jsonSignature          `json:"signature"`
+	Raw               []byte                 `json:"raw"`
+	Certificate       jsonTBSCertificate     `json:"parsed"`
+	Validation        Validation             `json:"validation"`
 	FingerprintMD5    CertificateFingerprint `json:"fingerprint_md5"`
 	FingerprintSHA1   CertificateFingerprint `json:"fingerprint_sha1"`
 	FingerprintSHA256 CertificateFingerprint `json:"fingerprint_sha256"`
@@ -241,14 +243,14 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.Certificate.Extensions, jc.Certificate.UnknownExtensions = c.jsonifyExtensions()
 
 	// TODO: Handle the fact this might not match
-	jc.Signature.SignatureAlgorithm = jc.Certificate.SignatureAlgorithm
-	jc.Signature.Value = c.Signature
-	jc.Signature.Valid = c.valid
+	jc.Certificate.Signature.SignatureAlgorithm = jc.Certificate.SignatureAlgorithm
+	jc.Certificate.Signature.Value = c.Signature
+	jc.Certificate.Signature.Valid = c.valid
 	if c.validationError != nil {
-		jc.Signature.ValidationError = c.validationError.Error()
+		jc.Certificate.Signature.ValidationError = c.validationError.Error()
 	}
 	if c.Subject.CommonName == c.Issuer.CommonName {
-		jc.Signature.SelfSigned = true
+		jc.Certificate.Signature.SelfSigned = true
 	}
 	jc.FingerprintMD5 = c.FingerprintMD5
 	jc.FingerprintSHA1 = c.FingerprintSHA1

@@ -67,20 +67,18 @@ zgrab_parsed_certificate = SubRecord({
             "ocsp_urls":ListOf(String()),
             "issuer_urls":ListOf(String())
         })
-    })
+    }),
+    "signature":SubRecord({
+        "algorithm":String(),
+        "value":Binary(),
+        "valid":Boolean(),
+        "self_signed":Boolean(),
+    }),
 })
 
 zgrab_certificate = SubRecord({
     "raw":Binary(),
     "parsed":zgrab_parsed_certificate,
-    "signature":SubRecord({
-        "algorithm":String(),
-        "value":Binary(),
-        "valid":Boolean(),
-        "validation_error":String(),
-        "matches_domain":Boolean(),
-        "self_signed":Boolean()
-    })
 })
 
 zgrab_tls = SubRecord({
@@ -106,7 +104,12 @@ zgrab_tls = SubRecord({
     }),
     "server_certificates":SubRecord({
         "certificate":zgrab_certificate,
-        "chain":ListOf(zgrab_certificate)
+        "chain":ListOf(zgrab_certificate),
+        "validation":SubRecord({
+            "browser_trusted":Bool(),
+            "browser_error":String(),
+            "matches_domain":Boolean(),
+        }),
     }),
     "server_finished":SubRecord({
         "verify_data":Binary()
@@ -156,4 +159,3 @@ zgrab_https = Record({
 })
 
 register_schema("zgrab-https", zgrab_https)
-

@@ -221,7 +221,8 @@ func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, err e
 func (c *Certificate) doVerify(opts VerifyOptions) (chains [][]*Certificate, err error) {
 	// Use Windows's own verification and chain building.
 	if opts.Roots == nil && runtime.GOOS == "windows" {
-		chains, err = c.systemVerify(&opts)
+		panic("ztls does not support windows")
+		//chains, err = c.systemVerify(&opts)
 	}
 
 	if opts.Roots == nil {
@@ -236,13 +237,6 @@ func (c *Certificate) doVerify(opts VerifyOptions) (chains [][]*Certificate, err
 		return
 	}
 
-	if len(opts.DNSName) > 0 {
-		err = c.VerifyHostname(opts.DNSName)
-		if err != nil {
-			return
-		}
-	}
-
 	candidateChains, err := c.buildChains(make(map[int][][]*Certificate), []*Certificate{c}, &opts)
 	if err != nil {
 		return
@@ -254,12 +248,18 @@ func (c *Certificate) doVerify(opts VerifyOptions) (chains [][]*Certificate, err
 	}
 
 	// If any key usage is acceptable then we're done.
-	for _, usage := range keyUsages {
-		if usage == ExtKeyUsageAny {
-			chains = candidateChains
-			return
+
+	// dadrian: This gets checked later on in checkChainForKeyUsage. In ztls,
+	// we want to do hostname checking absolutely last, so we'll skip this
+	// step where we quit early and move hostname checking down.
+	/*
+		for _, usage := range keyUsages {
+			if usage == ExtKeyUsageAny {
+				chains = candidateChains
+				break
+			}
 		}
-	}
+	*/
 
 	for _, candidate := range candidateChains {
 		if checkChainForKeyUsage(candidate, keyUsages) {
@@ -269,6 +269,15 @@ func (c *Certificate) doVerify(opts VerifyOptions) (chains [][]*Certificate, err
 
 	if len(chains) == 0 {
 		err = CertificateInvalidError{c, IncompatibleUsage}
+		return
+	}
+
+	if len(opts.DNSName) > 0 {
+		err = c.VerifyHostname(opts.DNSName)
+		if err != nil {
+			chains = nil
+			return
+		}
 	}
 
 	return
