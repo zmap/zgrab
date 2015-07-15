@@ -15,20 +15,20 @@ zgrab_parsed_certificate = SubRecord({
     "subject":zgrab_subj_issuer,
     "issuer":zgrab_subj_issuer,
     "version":Integer,
-    "serial_number":String(),
+    "serial_number":String(doc="Serial number as an unsigned decimal integer. Stored as string to support >uint lengths. Negative values are allowed."),
     "validity":SubRecord({
-        "start":DateTime(),
-        "end":DateTime()
+        "start":DateTime(doc="Timestamp of when certificate is first valid. Timezone is UTC."),
+        "end":DateTime(doc="Timestamp of when certificate expires. Timezone is UTC.")
     }),
     "subject_key_info":SubRecord({
         "key_algorithm":SubRecord({
-            "name":String(),
-            "oid":String()
+            "name":String(doc="Name of public key type, e.g., RSA or ECDSA. More information is available the named SubRecord (e.g., rsa_public_key)."),
+            "oid":String(doc="OID of the public key on the certificate. This is helpful when an unknown type is present. This field is reserved and not current populated.")
          }),
         "rsa_public_key":SubRecord({
             "exponent":Integer(),
             "modulus":Binary(),
-            "length":Integer()
+            "length":Integer(doc="Bit-length of modulus.")
          }),
         "dsa_public_key":SubRecord({
             "p":Binary(),
@@ -66,7 +66,7 @@ zgrab_parsed_certificate = SubRecord({
         "authority_info_access":SubRecord({
             "ocsp_urls":ListOf(String()),
             "issuer_urls":ListOf(String())
-        })        
+        })
     })
 })
 
