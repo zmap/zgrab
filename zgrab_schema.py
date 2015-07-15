@@ -19,13 +19,45 @@ zgrab_parsed_certificate = SubRecord({
     "validity":SubRecord({
         "start":DateTime(),
         "end":DateTime()
+    }),
+    "subject_key_info":SubRecord({
+        "key_algorithm":String()
+    }),
+    "extensions":SubRecord({
+        "certificate_policies":ListOf(String()),
+        "key_usage":SubRecord({
+            "digital_signature":Boolean(),
+            "key_encipherment":Boolean(),
+            "value":Integer()
+        }),
+        "basic_constraints":SubField({
+            "is_ca":Boolean()
+        }),
+        "subject_alt_names":SubRecord({
+            "dns_names":ListOf(String())
+        })
+        "crl_distribution_points":ListOf(String()),
+        "authority_key_id":String(), # is this actdually binary?
+        "extended_key_usage":ListOf(Integer()),
+        "certificate_policies":ListOf(String()),
+        "authority_info_access":SubRecord({
+            "ocsp_urls":ListOf(String()),
+            "issuer_urls":ListOf(String())
+        })        
     })
 })
 
 zgrab_certificate = SubRecord({
     "raw":Binary(),
     "parsed":zgrab_parsed_certificate,
-    "signature":SubRecord({})
+    "signature":SubRecord({
+        "algorithm":String(),
+        "value":Binary(),
+        "valid":Boolean(),
+        "validation_error":String(),
+        "matches_domain":Boolean(),
+        "self_signed":Boolean()
+    })
 })
 
 zgrab_tls = SubRecord({
@@ -33,11 +65,28 @@ zgrab_tls = SubRecord({
         "random":Binary()
     }),
     "server_hello":SubRecord({
-    
+        "version":SubRecord({
+            "name":String(),
+            "value":Integer()
+        }),
+        "random":Binary(),
+        "cipher_suite":SubRecord({
+            "hex":String(),
+            "name":String(),
+            "value":Integer(),
+        }),
+        "compresssion_method":Integer(),
+        "ocsp_stapling":Boolean(),
+        "ticket":Boolean(),
+        "secure_renegotiation":Boolean(),
+        "heartbeat":Boolean(),
     }),
     "server_certificates":SubRecord({
         "certificate":zgrab_certificate,
         "chain":ListOf(zgrab_certificate)
+    }),
+    "server_finished":SubRecord({
+        "verify_data":Binary()
     })
 })
 
