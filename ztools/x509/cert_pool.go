@@ -43,6 +43,7 @@ func (s *CertPool) findVerifiedParents(cert *Certificate) (parents []int, errCer
 
 	for _, c := range candidates {
 		if err = cert.CheckSignatureFrom(s.certs[c]); err == nil {
+			cert.validSignature = true
 			parents = append(parents, c)
 		} else {
 			errCert = s.certs[c]

@@ -17,7 +17,7 @@ type Validation struct {
 // ValidateWithStupidDetail fills out a Validation struct given a leaf
 // certificate and intermediates / roots. If opts.DNSName is set, then it will
 // also check if the domain matches.
-func (c *Certificate) ValidateWithStupidDetail(opts VerifyOptions) *Validation {
+func (c *Certificate) ValidateWithStupidDetail(opts VerifyOptions) (chains [][]*Certificate, validation *Validation, err error) {
 
 	// Manually set the time, so that all verifies we do get the same time
 	if opts.CurrentTime.IsZero() {
@@ -29,7 +29,7 @@ func (c *Certificate) ValidateWithStupidDetail(opts VerifyOptions) *Validation {
 	out := new(Validation)
 	out.Domain = opts.DNSName
 
-	if _, err := c.Verify(opts); err != nil {
+	if chains, err = c.Verify(opts); err != nil {
 		switch err := err.(type) {
 		case HostnameError:
 			out.BrowserTrusted = true
@@ -44,6 +44,7 @@ func (c *Certificate) ValidateWithStupidDetail(opts VerifyOptions) *Validation {
 			out.MatchesDomain = true
 		}
 	}
+	validation = out
 
-	return out
+	return
 }

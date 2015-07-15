@@ -261,8 +261,6 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		}
 		hs.finishedHash.Write(certMsg.marshal())
 
-		c.handshakeLog.ServerCertificates = certMsg.MakeLog()
-
 		certs := make([]*x509.Certificate, len(certMsg.certificates))
 		invalidCert := false
 		var invalidCertErr error
@@ -276,6 +274,8 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 			certs[i] = cert
 		}
 
+		c.handshakeLog.ServerCertificates = certMsg.MakeLog()
+
 		if !invalidCert {
 			opts := x509.VerifyOptions{
 				Roots:         c.config.RootCAs,
@@ -285,14 +285,17 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 			}
 
 			// Always check validity of the certificates
-			for i, cert := range certs {
-				if i == 0 {
-					continue
-				}
+			for _, cert := range certs {
+				/*
+					if i == 0 {
+						continue
+					}
+				*/
 				opts.Intermediates.AddCert(cert)
 			}
-			c.verifiedChains, err = certs[0].Verify(opts)
-			c.handshakeLog.ServerCertificates.ParsedCertificates = certs
+			var validation *x509.Validation
+			c.verifiedChains, validation, err = certs[0].ValidateWithStupidDetail(opts)
+			c.handshakeLog.ServerCertificates.addParsed(certs, validation)
 
 			// If actually verifying and invalid, reject
 			if !c.config.InsecureSkipVerify {
