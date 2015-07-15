@@ -106,7 +106,7 @@ zgrab_tls = SubRecord({
         "certificate":zgrab_certificate,
         "chain":ListOf(zgrab_certificate),
         "validation":SubRecord({
-            "browser_trusted":Bool(),
+            "browser_trusted":Boolean(),
             "browser_error":String(),
             "matches_domain":Boolean(),
         }),
