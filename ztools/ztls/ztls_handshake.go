@@ -39,11 +39,18 @@ type ServerHello struct {
 	HeartbeatSupported  bool        `json:"heartbeat"`
 }
 
+// SimpleCertificate holds a *x509.Certificate and a []byte for the certificate
+type SimpleCertificate struct {
+	Raw    []byte            `json:"raw"`
+	Parsed *x509.Certificate `json:"parsed"`
+}
+
 // Certificates represents a TLS certificates message in a format friendly to the golang JSON library.
 // ValidationError should be non-nil whenever Valid is false.
 type Certificates struct {
-	Certificates       [][]byte
-	ParsedCertificates []*x509.Certificate
+	Certificate SimpleCertificate   `json:"certificate"`
+	Chain       []SimpleCertificate `json:"chain"`
+	Validation  *x509.Validation    `json:"validation"`
 }
 
 // ServerKeyExchange represents the raw key data sent by the server in TLS key exchange message
@@ -165,12 +172,35 @@ func (m *serverHelloMsg) MakeLog() *ServerHello {
 
 func (m *certificateMsg) MakeLog() *Certificates {
 	sc := new(Certificates)
-	sc.Certificates = make([][]byte, len(m.certificates))
-	for idx, cert := range m.certificates {
-		sc.Certificates[idx] = make([]byte, len(cert))
-		copy(sc.Certificates[idx], cert)
+	if len(m.certificates) >= 1 {
+		cert := m.certificates[0]
+		sc.Certificate.Raw = make([]byte, len(cert))
+		copy(sc.Certificate.Raw, cert)
+	}
+	if len(m.certificates) >= 2 {
+		chain := m.certificates[1:]
+		sc.Chain = make([]SimpleCertificate, len(chain))
+		for idx, cert := range chain {
+			sc.Chain[idx].Raw = make([]byte, len(cert))
+			copy(sc.Chain[idx].Raw, cert)
+		}
 	}
 	return sc
+}
+
+// addParsed sets the parsed certificates and the validation. It assumes the
+// chain slice has already been allocated.
+func (c *Certificates) addParsed(certs []*x509.Certificate, validation *x509.Validation) {
+	if len(certs) >= 1 {
+		c.Certificate.Parsed = certs[0]
+	}
+	if len(certs) >= 2 {
+		chain := certs[1:]
+		for idx, cert := range chain {
+			c.Chain[idx].Parsed = cert
+		}
+	}
+	c.Validation = validation
 }
 
 func (m *serverKeyExchangeMsg) MakeLog(ka keyAgreement) *ServerKeyExchange {

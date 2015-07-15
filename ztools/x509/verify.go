@@ -210,15 +210,7 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
 //
 // WARNING: this doesn't do any revocation checking.
 func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, err error) {
-	chains, err = c.doVerify(opts)
-	if err == nil {
-		c.valid = true
-	}
-	c.validationError = err
-	return
-}
 
-func (c *Certificate) doVerify(opts VerifyOptions) (chains [][]*Certificate, err error) {
 	// Use Windows's own verification and chain building.
 	if opts.Roots == nil && runtime.GOOS == "windows" {
 		panic("ztls does not support windows")
