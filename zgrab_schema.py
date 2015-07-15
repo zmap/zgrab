@@ -53,12 +53,12 @@ zgrab_parsed_certificate = SubRecord({
             "key_encipherment":Boolean(),
             "value":Integer()
         }),
-        "basic_constraints":SubField({
+        "basic_constraints":SubRecord({
             "is_ca":Boolean()
         }),
         "subject_alt_names":SubRecord({
             "dns_names":ListOf(String())
-        })
+        }),
         "crl_distribution_points":ListOf(String()),
         "authority_key_id":String(), # is this actdually binary?
         "extended_key_usage":ListOf(Integer()),
