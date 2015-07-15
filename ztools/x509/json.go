@@ -142,8 +142,8 @@ type auxValidity struct {
 
 func (v *validity) MarshalJSON() ([]byte, error) {
 	aux := auxValidity{
-		Start: v.NotBefore.Format(time.RFC3339),
-		End:   v.NotAfter.Format(time.RFC3339),
+		Start: v.NotBefore.UTC().Format(time.RFC3339),
+		End:   v.NotAfter.UTC().Format(time.RFC3339),
 	}
 	return json.Marshal(&aux)
 }
