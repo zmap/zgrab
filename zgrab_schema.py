@@ -21,7 +21,30 @@ zgrab_parsed_certificate = SubRecord({
         "end":DateTime()
     }),
     "subject_key_info":SubRecord({
-        "key_algorithm":String()
+        "key_algorithm":SubRecord({
+            "name":String(),
+            "oid":String()
+         }),
+        "rsa_public_key":SubRecord({
+            "exponent":Integer(),
+            "modulus":Binary(),
+            "length":Integer()
+         }),
+        "dsa_public_key":SubRecord({
+            "p":Binary(),
+            "q":Binary(),
+            "g":Binary(),
+            "y":Binary(),
+        }),
+        "ecdsa_public_key":SubRecord({
+            "b":Binary(),
+            "gx":Binary(),
+            "gy":Binary(),
+            "n":Binary(),
+            "p":Binary(),
+            "x":Binary(),
+            "y":Binary(),
+        })
     }),
     "extensions":SubRecord({
         "certificate_policies":ListOf(String()),
