@@ -14,7 +14,7 @@ zgrab_subj_issuer = SubRecord({
 zgrab_parsed_certificate = SubRecord({
     "subject":zgrab_subj_issuer,
     "issuer":zgrab_subj_issuer,
-    "version":Integer,
+    "version":Integer(),
     "serial_number":String(doc="Serial number as an unsigned decimal integer. Stored as string to support >uint lengths. Negative values are allowed."),
     "validity":SubRecord({
         "start":DateTime(doc="Timestamp of when certificate is first valid. Timezone is UTC."),
