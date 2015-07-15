@@ -10,9 +10,9 @@ import (
 	"crypto/rsa"
 	"encoding/asn1"
 	"encoding/json"
-	"fmt"
 	"time"
 
+	"github.com/zmap/zgrab/ztools/keys"
 	"github.com/zmap/zgrab/ztools/x509/pkix"
 )
 
@@ -133,32 +133,49 @@ func (p *PublicKeyAlgorithm) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	panic("unimplemented")
+}
+
+type auxValidity struct {
+	Start string `json:"start"`
+	End   string `json:"end"`
+}
+
+func (v *validity) MarshalJSON() ([]byte, error) {
+	aux := auxValidity{
+		Start: v.NotBefore.Format(time.RFC3339),
+		End:   v.NotAfter.Format(time.RFC3339),
+	}
+	return json.Marshal(&aux)
+}
+
+func (v *validity) UnmarshalJSON(b []byte) error {
+	var aux auxValidity
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	var err error
+	if v.NotBefore, err = time.Parse(time.RFC3339, aux.Start); err != nil {
+		return err
+	}
+	if v.NotAfter, err = time.Parse(time.RFC3339, aux.End); err != nil {
+		return err
+	}
 	return nil
 }
 
-type jsonValidity struct {
-	NotBefore time.Time `json:"start"`
-	NotAfter  time.Time `json:"end"`
-}
-
 type jsonSubjectKeyInfo struct {
-	KeyAlgorithm interface{}            `json:"key_algorithm"`
-	PublicKey    map[string]interface{} `json:"public_key"`
-}
-
-func (jv *jsonValidity) MarshalJSON() ([]byte, error) {
-	start := jv.NotBefore.Format(time.RFC3339)
-	end := jv.NotAfter.Format(time.RFC3339)
-	s := fmt.Sprintf(`{"start":"%s","end":"%s"}`, start, end)
-	return []byte(s), nil
+	KeyAlgorithm   PublicKeyAlgorithm `json:"key_algorithm"`
+	RSAPublicKey   *keys.RSAPublicKey `json:"rsa_public_key,omitempty"`
+	DSAPublicKey   interface{}        `json:"dsa_public_key,omitempty"`
+	ECDSAPublicKey interface{}        `json:"ecdsa_public_key,omitempty"`
 }
 
 type jsonTBSCertificate struct {
 	Version            int                          `json:"version"`
 	SerialNumber       string                       `json:"serial_number"`
-	SignatureAlgorithm interface{}                  `json:"signature_algorithm"`
+	SignatureAlgorithm SignatureAlgorithm           `json:"signature_algorithm"`
 	Issuer             pkix.Name                    `json:"issuer"`
-	Validity           jsonValidity                 `json:"validity"`
+	Validity           validity                     `json:"validity"`
 	Subject            pkix.Name                    `json:"subject"`
 	SubjectKeyInfo     jsonSubjectKeyInfo           `json:"subject_key_info"`
 	Extensions         *CertificateExtensions       `json:"extensions,omitempty"`
@@ -166,20 +183,21 @@ type jsonTBSCertificate struct {
 }
 
 type jsonSignature struct {
-	Value           []byte `json:"value"`
-	Valid           bool   `json:"valid"`
-	ValidationError string `json:"validation_error,omitempty"`
-	Matches         *bool  `json:"matches_domain"`
-	SelfSigned      bool   `json:"self_signed"`
+	SignatureAlgorithm SignatureAlgorithm `json:"signature_algorithm"`
+	Value              []byte             `json:"value"`
+	Valid              bool               `json:"signature_valid"`
+	BrowswerTrusted    bool               `json:"browser_trusted"`
+	SelfSigned         bool               `json:"self_signed"`
+	MatchesDomain      *bool              `json:"matches_domain,omitempty"`
+	ValidationError    string             `json:"validation_error,omitempty"`
 }
 
 type jsonCertificate struct {
-	Certificate        jsonTBSCertificate     `json:"certificate"`
-	SignatureAlgorithm interface{}            `json:"signature_algorithm"`
-	Signature          jsonSignature          `json:"signature"`
-	FingerprintMD5     CertificateFingerprint `json:"fingerprint_md5"`
-	FingerprintSHA1    CertificateFingerprint `json:"fingerprint_sha1"`
-	FingerprintSHA256  CertificateFingerprint `json:"fingerprint_sha256"`
+	Certificate       jsonTBSCertificate     `json:"certificate"`
+	Signature         jsonSignature          `json:"signature"`
+	FingerprintMD5    CertificateFingerprint `json:"fingerprint_md5"`
+	FingerprintSHA1   CertificateFingerprint `json:"fingerprint_sha1"`
+	FingerprintSHA256 CertificateFingerprint `json:"fingerprint_sha256"`
 }
 
 func (c *Certificate) MarshalJSON() ([]byte, error) {
@@ -187,41 +205,43 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc := new(jsonCertificate)
 	jc.Certificate.Version = c.Version
 	jc.Certificate.SerialNumber = c.SerialNumber.String()
-	jc.Certificate.SignatureAlgorithm = c.SignatureAlgorithmName()
+	jc.Certificate.SignatureAlgorithm = c.SignatureAlgorithm
 	jc.Certificate.Issuer = c.Issuer
 	jc.Certificate.Validity.NotBefore = c.NotBefore
 	jc.Certificate.Validity.NotAfter = c.NotAfter
 	jc.Certificate.Subject = c.Subject
-	jc.Certificate.SubjectKeyInfo.KeyAlgorithm = c.PublicKeyAlgorithmName()
+	jc.Certificate.SubjectKeyInfo.KeyAlgorithm = c.PublicKeyAlgorithm
 
 	// Pull out the key
 	keyMap := make(map[string]interface{})
 
 	switch key := c.PublicKey.(type) {
 	case *rsa.PublicKey:
-		keyMap["modulus"] = key.N.Bytes()
-		keyMap["exponent"] = key.E
-		keyMap["length"] = key.N.BitLen()
+		rsaKey := new(keys.RSAPublicKey)
+		rsaKey.PublicKey = key
+		jc.Certificate.SubjectKeyInfo.RSAPublicKey = rsaKey
 	case *dsa.PublicKey:
-		keyMap["p"] = key.P.String()
-		keyMap["q"] = key.Q.String()
-		keyMap["g"] = key.G.String()
-		keyMap["y"] = key.Y.String()
+		keyMap["p"] = key.P.Bytes()
+		keyMap["q"] = key.Q.Bytes()
+		keyMap["g"] = key.G.Bytes()
+		keyMap["y"] = key.Y.Bytes()
+		jc.Certificate.SubjectKeyInfo.DSAPublicKey = keyMap
 	case *ecdsa.PublicKey:
 		params := key.Params()
-		keyMap["P"] = params.P.String()
-		keyMap["N"] = params.N.String()
-		keyMap["B"] = params.B.String()
-		keyMap["Gx"] = params.Gx.String()
-		keyMap["Gy"] = params.Gy.String()
-		keyMap["X"] = key.X.String()
-		keyMap["Y"] = key.Y.String()
+		keyMap["p"] = params.P.Bytes()
+		keyMap["n"] = params.N.Bytes()
+		keyMap["b"] = params.B.Bytes()
+		keyMap["gx"] = params.Gx.Bytes()
+		keyMap["gy"] = params.Gy.Bytes()
+		keyMap["x"] = key.X.Bytes()
+		keyMap["y"] = key.Y.Bytes()
+		jc.Certificate.SubjectKeyInfo.ECDSAPublicKey = keyMap
 	}
-	jc.Certificate.SubjectKeyInfo.PublicKey = keyMap
+
 	jc.Certificate.Extensions, jc.Certificate.UnknownExtensions = c.jsonifyExtensions()
 
 	// TODO: Handle the fact this might not match
-	jc.SignatureAlgorithm = jc.Certificate.SignatureAlgorithm
+	jc.Signature.SignatureAlgorithm = jc.Certificate.SignatureAlgorithm
 	jc.Signature.Value = c.Signature
 	jc.Signature.Valid = c.valid
 	if c.validationError != nil {
