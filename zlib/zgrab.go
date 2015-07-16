@@ -30,7 +30,7 @@ type encodedGrab struct {
 	IP             string    `json:"ip"`
 	Domain         string    `json:"domain,omitempty"`
 	Time           string    `json:"timestamp"`
-	Data           *GrabData `json:"data"`
+	Data           *GrabData `json:"data,omitempty"`
 	Error          *string   `json:"error,omitempty"`
 	ErrorComponent string    `json:"error_component,omitempty"`
 }

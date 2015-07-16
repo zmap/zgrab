@@ -20,7 +20,7 @@ type MEIResponse struct {
 	ConformityLevel int          `json:"conformity_level"`
 	MoreFollows     bool         `json:"more_follows"`
 	ObjectCount     int          `json:"object_count"`
-	Objects         MEIObjectSet `json:"objects"`
+	Objects         MEIObjectSet `json:"objects,omitempty"`
 }
 
 type MEIObjectSet []MEIObject

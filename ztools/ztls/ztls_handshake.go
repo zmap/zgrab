@@ -41,16 +41,16 @@ type ServerHello struct {
 
 // SimpleCertificate holds a *x509.Certificate and a []byte for the certificate
 type SimpleCertificate struct {
-	Raw    []byte            `json:"raw"`
+	Raw    []byte            `json:"raw,omitempty"`
 	Parsed *x509.Certificate `json:"parsed,omitempty"`
 }
 
 // Certificates represents a TLS certificates message in a format friendly to the golang JSON library.
 // ValidationError should be non-nil whenever Valid is false.
 type Certificates struct {
-	Certificate SimpleCertificate   `json:"certificate"`
+	Certificate SimpleCertificate   `json:"certificate,omitempty"`
 	Chain       []SimpleCertificate `json:"chain,omitempty"`
-	Validation  *x509.Validation    `json:"validation"`
+	Validation  *x509.Validation    `json:"validation,omitempty"`
 }
 
 // ServerKeyExchange represents the raw key data sent by the server in TLS key exchange message
