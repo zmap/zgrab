@@ -193,7 +193,6 @@ type jsonTBSCertificate struct {
 type jsonCertificate struct {
 	Raw               []byte                 `json:"raw"`
 	Certificate       jsonTBSCertificate     `json:"parsed"`
-	Validation        Validation             `json:"validation"`
 	FingerprintMD5    CertificateFingerprint `json:"fingerprint_md5"`
 	FingerprintSHA1   CertificateFingerprint `json:"fingerprint_sha1"`
 	FingerprintSHA256 CertificateFingerprint `json:"fingerprint_sha256"`

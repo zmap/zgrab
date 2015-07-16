@@ -40,7 +40,7 @@ func (c *Certificate) ValidateWithStupidDetail(opts VerifyOptions) (chains [][]*
 		}
 	} else {
 		out.BrowserTrusted = true
-		if opts.DNSName != "" {
+		if len(opts.DNSName) > 0 {
 			out.MatchesDomain = true
 		}
 	}
