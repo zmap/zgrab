@@ -10,7 +10,7 @@ import "time"
 type Validation struct {
 	BrowserTrusted bool   `json:"browser_trusted"`
 	BrowserError   string `json:"browser_error,omitempty"`
-	MatchesDomain  bool   `json:"-"`
+	MatchesDomain  bool   `json:"matches_domain,omitempty"`
 	Domain         string `json:"-"`
 }
 
