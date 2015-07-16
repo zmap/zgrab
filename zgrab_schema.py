@@ -1,14 +1,21 @@
 from zschema import *
 
 zgrab_subj_issuer = SubRecord({
-    "serial_number":String(),
-    "country":String(),
-    "locality":String(),
-    "province":String(),
-    "street_address":String(),
-    "organization":String(),
-    "organizational_unit":String(),
-    "postal_code":String(),
+    "serial_number":ListOf(String()),
+    "common_name":ListOf(String()),
+    "country":ListOf(String()),
+    "locality":ListOf(String()),
+    "province":ListOf(String()),
+    "street_address":ListOf(String()),
+    "organization":ListOf(String()),
+    "organizational_unit":ListOf(String()),
+    "postal_code":ListOf(String()),
+})
+
+unknown_extensions = SubRecord({
+    "id":String(),
+    "critical":Boolean(),
+    "value":Binary(),
 })
 
 zgrab_parsed_certificate = SubRecord({
@@ -19,6 +26,10 @@ zgrab_parsed_certificate = SubRecord({
     "validity":SubRecord({
         "start":DateTime(doc="Timestamp of when certificate is first valid. Timezone is UTC."),
         "end":DateTime(doc="Timestamp of when certificate expires. Timezone is UTC.")
+    }),
+    "signature_algorithm":SubRecord({
+        "name":String(),
+        "oid":String(),
     }),
     "subject_key_info":SubRecord({
         "key_algorithm":SubRecord({
@@ -47,16 +58,16 @@ zgrab_parsed_certificate = SubRecord({
         })
     }),
     "extensions":SubRecord({
-        "certificate_policies":ListOf(String()),
         "key_usage":SubRecord({
-            "digital_signature":Boolean(),
-            "key_encipherment":Boolean(),
-            "value":Integer()
+            "certificate_sign":Boolean(),
+            "crl_sign":Boolean(),
+            "value":Integer(),
         }),
         "basic_constraints":SubRecord({
-            "is_ca":Boolean()
+            "is_ca":Boolean(),
+            "max_path_len":Integer(),
         }),
-        "subject_alt_names":SubRecord({
+        "subject_alt_name":SubRecord({
             "dns_names":ListOf(String())
         }),
         "crl_distribution_points":ListOf(String()),
@@ -68,12 +79,19 @@ zgrab_parsed_certificate = SubRecord({
             "issuer_urls":ListOf(String())
         })
     }),
+    "unknown_extensions":ListOf(unknown_extensions),
     "signature":SubRecord({
-        "algorithm":String(),
+        "signature_algorithm":SubRecord({
+            "name":String(),
+            "oid":String(),
+        }),
         "value":Binary(),
         "valid":Boolean(),
         "self_signed":Boolean(),
     }),
+    "fingerprint_md5":Binary(),
+    "fingerprint_sha1":Binary(),
+    "fingerprint_sha256":Binary(),
 })
 
 zgrab_certificate = SubRecord({
@@ -91,12 +109,13 @@ zgrab_tls = SubRecord({
             "value":Integer()
         }),
         "random":Binary(),
+        "session_id": Binary(),
         "cipher_suite":SubRecord({
             "hex":String(),
             "name":String(),
             "value":Integer(),
         }),
-        "compresssion_method":Integer(),
+        "compression_method":Integer(),
         "ocsp_stapling":Boolean(),
         "ticket":Boolean(),
         "secure_renegotiation":Boolean(),
@@ -111,13 +130,44 @@ zgrab_tls = SubRecord({
             "matches_domain":Boolean(),
         }),
     }),
+    "server_key_exchange":SubRecord({
+        "ecdh_params":SubRecord({
+            "curve_id":SubRecord({
+                "name":String(),
+                "id":Integer(),
+            }), 
+            "server_public":SubRecord({
+                "x":SubRecord({
+                    "value":Binary(),
+                    "length":Integer(),
+                }),
+                "y":SubRecord({
+                    "value":Binary(),
+                    "length":Integer(),
+                }),
+            }),
+        }),
+        "signature":SubRecord({
+            "raw":Binary(),
+            "type":String(),
+            "valid":Boolean(),
+            "signature_and_hash_type":SubRecord({
+                "signature_algorithm":String(),
+                "hash_algorithm":String(),
+            }),
+            "tls_version":SubRecord({
+                "name":String(),
+                "value":Integer()
+            }),
+        }),
+    }),
     "server_finished":SubRecord({
         "verify_data":Binary()
     })
 })
 
 zgrab_base = Record({
-    "host":IPv4Address(required=True),
+    "ip":IPv4Address(required=True),
     "timestamp":DateTime(required=True),
     "domain":String(),
     "data":SubRecord({}),
