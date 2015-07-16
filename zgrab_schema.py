@@ -59,16 +59,25 @@ zgrab_parsed_certificate = SubRecord({
     }),
     "extensions":SubRecord({
         "key_usage":SubRecord({
+            "digital_signature":Boolean(),
             "certificate_sign":Boolean(),
             "crl_sign":Boolean(),
+            "content_commitment":Boolean(),
+            "key_encipherment":Boolean(),
             "value":Integer(),
+            "data_encipherment":Boolean(),
+            "key_agreement":Boolean(),
+            "decipher_only":Boolean(),
+            "encipher_only":Boolean(),
         }),
         "basic_constraints":SubRecord({
             "is_ca":Boolean(),
             "max_path_len":Integer(),
         }),
         "subject_alt_name":SubRecord({
-            "dns_names":ListOf(String())
+            "dns_names":ListOf(String()),
+            "email_addresses":ListOf(String()),
+            "ip_addresses":ListOf(String()),
         }),
         "crl_distribution_points":ListOf(String()),
         "authority_key_id":String(), # is this actdually binary?
@@ -77,7 +86,11 @@ zgrab_parsed_certificate = SubRecord({
         "authority_info_access":SubRecord({
             "ocsp_urls":ListOf(String()),
             "issuer_urls":ListOf(String())
-        })
+        }),
+        "name_constraints":SubRecord({
+            "critical":Boolean(),
+            "permitted_names":ListOf(String()),
+        }),
     }),
     "unknown_extensions":ListOf(unknown_extensions),
     "signature":SubRecord({
@@ -147,6 +160,11 @@ zgrab_tls = SubRecord({
                 }),
             }),
         }),
+        "rsa_params":SubRecord({
+            "exponent":Integer(),
+            "modulus":Binary(),
+            "length":Integer(),
+        }),
         "signature":SubRecord({
             "raw":Binary(),
             "type":String(),
@@ -160,6 +178,7 @@ zgrab_tls = SubRecord({
                 "value":Integer()
             }),
         }),
+        "signature_error":String(),
     }),
     "server_finished":SubRecord({
         "verify_data":Binary()
