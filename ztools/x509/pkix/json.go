@@ -4,53 +4,49 @@
 
 package pkix
 
-import (
-	"encoding/json"
-
-	"github.com/zmap/zgrab/ztools/zson"
-)
+import "encoding/json"
 
 type jsonName struct {
-	CommonName         zson.StringOrArray
-	SerialNumber       zson.StringOrArray
-	Country            zson.StringOrArray
-	Locality           zson.StringOrArray
-	Province           zson.StringOrArray
-	StreetAddress      zson.StringOrArray
-	Organization       zson.StringOrArray
-	OrganizationalUnit zson.StringOrArray
-	PostalCode         zson.StringOrArray
+	CommonName         []string
+	SerialNumber       []string
+	Country            []string
+	Locality           []string
+	Province           []string
+	StreetAddress      []string
+	Organization       []string
+	OrganizationalUnit []string
+	PostalCode         []string
 	UnknownAttributes  []AttributeTypeAndValue
 }
 
 func (jn *jsonName) MarshalJSON() ([]byte, error) {
 	enc := make(map[string]interface{})
-	if !jn.CommonName.Empty() {
+	if len(jn.CommonName) > 0 {
 		enc["common_name"] = jn.CommonName
 	}
-	if !jn.SerialNumber.Empty() {
+	if len(jn.SerialNumber) > 0 {
 		enc["serial_number"] = jn.SerialNumber
 
 	}
-	if !jn.Country.Empty() {
+	if len(jn.Country) > 0 {
 		enc["country"] = jn.Country
 	}
-	if !jn.Locality.Empty() {
+	if len(jn.Locality) > 0 {
 		enc["locality"] = jn.Locality
 	}
-	if !jn.Province.Empty() {
+	if len(jn.Province) > 0 {
 		enc["province"] = jn.Province
 	}
-	if !jn.StreetAddress.Empty() {
+	if len(jn.StreetAddress) > 0 {
 		enc["street_address"] = jn.StreetAddress
 	}
-	if !jn.Organization.Empty() {
+	if len(jn.Organization) > 0 {
 		enc["organization"] = jn.Organization
 	}
-	if !jn.OrganizationalUnit.Empty() {
+	if len(jn.OrganizationalUnit) > 0 {
 		enc["organizational_unit"] = jn.OrganizationalUnit
 	}
-	if !jn.PostalCode.Empty() {
+	if len(jn.PostalCode) > 0 {
 		enc["postal_code"] = jn.PostalCode
 	}
 	for _, a := range jn.UnknownAttributes {
