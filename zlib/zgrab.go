@@ -18,7 +18,7 @@ import (
 )
 
 type Grab struct {
-	Host           net.IP
+	IP             net.IP
 	Domain         string
 	Time           time.Time
 	Data           GrabData
@@ -27,7 +27,7 @@ type Grab struct {
 }
 
 type encodedGrab struct {
-	Host           string    `json:"host"`
+	IP             string    `json:"ip"`
 	Domain         string    `json:"domain,omitempty"`
 	Time           string    `json:"timestamp"`
 	Data           *GrabData `json:"data"`
@@ -56,7 +56,7 @@ func (g *Grab) MarshalJSON() ([]byte, error) {
 		errString = &s
 	}
 	obj := encodedGrab{
-		Host:           g.Host.String(),
+		IP:             g.IP.String(),
 		Domain:         g.Domain,
 		Time:           time,
 		Data:           &g.Data,
@@ -72,7 +72,7 @@ func (g *Grab) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	g.Host = net.ParseIP(eg.Host)
+	g.IP = net.ParseIP(eg.IP)
 	g.Domain = eg.Domain
 	if g.Time, err = time.Parse(time.RFC3339, eg.Time); err != nil {
 		return err
