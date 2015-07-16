@@ -159,3 +159,27 @@ zgrab_https = Record({
 }, extends=zgrab_base)
 
 register_schema("zgrab-https", zgrab_https)
+
+zgrab_heartbleed = SubRecord({
+    "heartbeat_enabled":Boolean(),
+    "heartbleed_vulnerable":Boolean()
+})
+
+zgrab_https_heartbleed = Record({
+    "data":SubRecord({
+        "heartbleed":zgrab_heartbleed
+    })
+}, extends=zgrab_https)
+
+register_schema("zgrab-https-heartbleed", zgrab_https_heartbleed)
+
+zgrab_http = Record({
+    "data":SubRecord({
+        "write":String(),
+        "read":String(),
+    })
+}, extends=zgrab_base)
+
+register_schema("zgrab-http", zgrab_http)
+
+

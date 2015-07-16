@@ -248,7 +248,7 @@ func GrabBanner(config *Config, target *GrabTarget) *Grab {
 		config.ErrorLog.Errorf("Could not connect to %s remote host %s: %s",
 			target.Domain, addr, dialErr.Error())
 		return &Grab{
-			Host:           target.Addr,
+			IP:             target.Addr,
 			Domain:         target.Domain,
 			Time:           t,
 			Error:          dialErr,
@@ -257,7 +257,7 @@ func GrabBanner(config *Config, target *GrabTarget) *Grab {
 	}
 	err := grabber(conn)
 	return &Grab{
-		Host:           target.Addr,
+		IP:             target.Addr,
 		Domain:         target.Domain,
 		Time:           t,
 		Data:           conn.grabData,

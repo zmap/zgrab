@@ -142,8 +142,8 @@ type auxValidity struct {
 
 func (v *validity) MarshalJSON() ([]byte, error) {
 	aux := auxValidity{
-		Start: v.NotBefore.Format(time.RFC3339),
-		End:   v.NotAfter.Format(time.RFC3339),
+		Start: v.NotBefore.UTC().Format(time.RFC3339),
+		End:   v.NotAfter.UTC().Format(time.RFC3339),
 	}
 	return json.Marshal(&aux)
 }
@@ -173,14 +173,11 @@ type jsonSubjectKeyInfo struct {
 type jsonSignature struct {
 	SignatureAlgorithm SignatureAlgorithm `json:"signature_algorithm"`
 	Value              []byte             `json:"value"`
-	Valid              bool               `json:"signature_valid"`
-	BrowswerTrusted    bool               `json:"browser_trusted"`
+	Valid              bool               `json:"valid"`
 	SelfSigned         bool               `json:"self_signed"`
-	MatchesDomain      *bool              `json:"matches_domain,omitempty"`
-	ValidationError    string             `json:"validation_error,omitempty"`
 }
 
-type jsonTBSCertificate struct {
+type jsonCertificate struct {
 	Version            int                          `json:"version"`
 	SerialNumber       string                       `json:"serial_number"`
 	SignatureAlgorithm SignatureAlgorithm           `json:"signature_algorithm"`
@@ -191,28 +188,22 @@ type jsonTBSCertificate struct {
 	Extensions         *CertificateExtensions       `json:"extensions,omitempty"`
 	UnknownExtensions  UnknownCertificateExtensions `json:"unknown_extensions,omitempty"`
 	Signature          jsonSignature                `json:"signature"`
-}
-
-type jsonCertificate struct {
-	Raw               []byte                 `json:"raw"`
-	Certificate       jsonTBSCertificate     `json:"parsed"`
-	Validation        Validation             `json:"validation"`
-	FingerprintMD5    CertificateFingerprint `json:"fingerprint_md5"`
-	FingerprintSHA1   CertificateFingerprint `json:"fingerprint_sha1"`
-	FingerprintSHA256 CertificateFingerprint `json:"fingerprint_sha256"`
+	FingerprintMD5     CertificateFingerprint       `json:"fingerprint_md5"`
+	FingerprintSHA1    CertificateFingerprint       `json:"fingerprint_sha1"`
+	FingerprintSHA256  CertificateFingerprint       `json:"fingerprint_sha256"`
 }
 
 func (c *Certificate) MarshalJSON() ([]byte, error) {
 	// Fill out the certificate
 	jc := new(jsonCertificate)
-	jc.Certificate.Version = c.Version
-	jc.Certificate.SerialNumber = c.SerialNumber.String()
-	jc.Certificate.SignatureAlgorithm = c.SignatureAlgorithm
-	jc.Certificate.Issuer = c.Issuer
-	jc.Certificate.Validity.NotBefore = c.NotBefore
-	jc.Certificate.Validity.NotAfter = c.NotAfter
-	jc.Certificate.Subject = c.Subject
-	jc.Certificate.SubjectKeyInfo.KeyAlgorithm = c.PublicKeyAlgorithm
+	jc.Version = c.Version
+	jc.SerialNumber = c.SerialNumber.String()
+	jc.SignatureAlgorithm = c.SignatureAlgorithm
+	jc.Issuer = c.Issuer
+	jc.Validity.NotBefore = c.NotBefore
+	jc.Validity.NotAfter = c.NotAfter
+	jc.Subject = c.Subject
+	jc.SubjectKeyInfo.KeyAlgorithm = c.PublicKeyAlgorithm
 
 	// Pull out the key
 	keyMap := make(map[string]interface{})
@@ -221,13 +212,13 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	case *rsa.PublicKey:
 		rsaKey := new(keys.RSAPublicKey)
 		rsaKey.PublicKey = key
-		jc.Certificate.SubjectKeyInfo.RSAPublicKey = rsaKey
+		jc.SubjectKeyInfo.RSAPublicKey = rsaKey
 	case *dsa.PublicKey:
 		keyMap["p"] = key.P.Bytes()
 		keyMap["q"] = key.Q.Bytes()
 		keyMap["g"] = key.G.Bytes()
 		keyMap["y"] = key.Y.Bytes()
-		jc.Certificate.SubjectKeyInfo.DSAPublicKey = keyMap
+		jc.SubjectKeyInfo.DSAPublicKey = keyMap
 	case *ecdsa.PublicKey:
 		params := key.Params()
 		keyMap["p"] = params.P.Bytes()
@@ -237,20 +228,17 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		keyMap["gy"] = params.Gy.Bytes()
 		keyMap["x"] = key.X.Bytes()
 		keyMap["y"] = key.Y.Bytes()
-		jc.Certificate.SubjectKeyInfo.ECDSAPublicKey = keyMap
+		jc.SubjectKeyInfo.ECDSAPublicKey = keyMap
 	}
 
-	jc.Certificate.Extensions, jc.Certificate.UnknownExtensions = c.jsonifyExtensions()
+	jc.Extensions, jc.UnknownExtensions = c.jsonifyExtensions()
 
 	// TODO: Handle the fact this might not match
-	jc.Certificate.Signature.SignatureAlgorithm = jc.Certificate.SignatureAlgorithm
-	jc.Certificate.Signature.Value = c.Signature
-	jc.Certificate.Signature.Valid = c.valid
-	if c.validationError != nil {
-		jc.Certificate.Signature.ValidationError = c.validationError.Error()
-	}
+	jc.Signature.SignatureAlgorithm = jc.SignatureAlgorithm
+	jc.Signature.Value = c.Signature
+	jc.Signature.Valid = c.validSignature
 	if c.Subject.CommonName == c.Issuer.CommonName {
-		jc.Certificate.Signature.SelfSigned = true
+		jc.Signature.SelfSigned = true
 	}
 	jc.FingerprintMD5 = c.FingerprintMD5
 	jc.FingerprintSHA1 = c.FingerprintSHA1
