@@ -202,24 +202,29 @@ zgrab_banner = Record({
 
 register_schema("zgrab-ftp", zgrab_banner)
 
-zgrab_smtp = Record({
+zgrab_tls_banner=Record({
     "data":SubRecord({
-        "ehlo":String(),
-        "starttls":String(),
-        "tls":zgrab_tls
+        "tls":zgrab_tls,
     })
 }, extends=zgrab_banner)
-register_schema("zgrab-smtp", zgrab_smtp)
+register_schema("zgrab-imaps", zgrab_tls_banner)
+register_schema("zgrab-pop3s", zgrab_tls_banner)
 
 zgrab_starttls = Record({
     "data":SubRecord({
         "starttls":String(),
-        "tls":zgrab_tls
     })
-}, extends=zgrab_banner)
-
+}, extends=zgrab_tls_banner)
 register_schema("zgrab-imap", zgrab_starttls)
 register_schema("zgrab-pop3", zgrab_starttls)
+
+zgrab_smtp = Record({
+    "data":SubRecord({
+        "ehlo":String(),
+    })
+}, extends=zgrab_starttls)
+register_schema("zgrab-smtp", zgrab_smtp)
+
 
 zgrab_https = Record({
     "data":SubRecord({
