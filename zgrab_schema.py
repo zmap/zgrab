@@ -12,7 +12,7 @@ zgrab_subj_issuer = SubRecord({
     "postal_code":ListOf(String()),
 })
 
-unknown_extensions = SubRecord({
+unknown_extension = SubRecord({
     "id":String(),
     "critical":Boolean(),
     "value":Binary(),
@@ -92,7 +92,7 @@ zgrab_parsed_certificate = SubRecord({
             "permitted_names":ListOf(String()),
         }),
     }),
-    "unknown_extensions":ListOf(unknown_extensions),
+    "unknown_extensions":ListOf(unknown_extension),
     "signature":SubRecord({
         "signature_algorithm":SubRecord({
             "name":String(),
