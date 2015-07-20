@@ -33,7 +33,7 @@ type encodedKnownExtensions struct {
 	CRLDistributionPoints CRLDistributionPoints `json:"crl_distribution_points,omitempty"`
 	AuthKeyID             AuthKeyId             `json:"authority_key_id,omitempty"`
 	ExtendedKeyUsage      ExtendedKeyUsage      `json:"extended_key_usage,omitempty"`
-	CertificatePolicies   CertificatePolicies   `json:"certificate_policies,omitmepty"`
+	CertificatePolicies   CertificatePolicies   `json:"certificate_policies,omitempty"`
 	AuthorityInfoAccess   *AuthorityInfoAccess  `json:"authority_info_access,omitempty"`
 }
 
@@ -56,7 +56,7 @@ type UnknownCertificateExtensions []pkix.Extension
 type encodedUnknownExtension struct {
 	OID      string `json:"oid"`
 	Critical bool   `json:"critical"`
-	Value    []byte `json:"raw"`
+	Value    []byte `json:"raw,omitempty"`
 }
 
 type BasicConstraints struct {
@@ -74,7 +74,7 @@ type SubjectAltName struct {
 
 type NameConstriants struct {
 	Critical       bool     `json:"critical"`
-	PermittedNames []string `json:"permitted_names"`
+	PermittedNames []string `json:"permitted_names,omitempty"`
 }
 
 type CRLDistributionPoints []string
