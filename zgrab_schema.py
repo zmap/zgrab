@@ -165,6 +165,20 @@ zgrab_tls = SubRecord({
             "modulus":Binary(),
             "length":Integer(),
         }),
+        "dh_params":SubRecord({
+            "prime":SubRecord({
+                "value":Binary(),
+                "length":Integer(),
+            }),
+            "generator":SubRecord({
+                "value":Binary(),
+                "length":Integer(),
+            }),
+            "server_public":SubRecord({
+                "value":Binary(),
+                "length":Integer(),
+           }),
+        }),
         "signature":SubRecord({
             "raw":Binary(),
             "type":String(),
