@@ -256,4 +256,30 @@ zgrab_http = Record({
 
 register_schema("zgrab-http", zgrab_http)
 
+zgrab_modbus = Record({
+    "data":SubRecord({
+        "modbus":SubRecord({
+            "length":Integer(),
+            "unit_id":Integer(),
+            "function_code":Integer(),
+            "raw_response":String(),
+            "mei_response":SubRecord({
+                "conformity_level":Integer(),
+                "more_follows":Boolean(),
+                "object_count":Integer(),
+                "objects":SubRecord({
+                    "product_code":String(),
+                    "revision":String(),
+                    "vendor":String(),
+                    "oid.255":String(),
+                }),
+            }),
+            "exception_response":SubRecord({
+                "exception_function":Integer(),
+                "exception_type":Integer(),
+            }),
+        }),
+    }),
+}, extends=zgrab_base)
 
+register_schema("zgrab-modbus", zgrab_modbus)
