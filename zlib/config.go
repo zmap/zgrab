@@ -21,9 +21,10 @@ import (
 )
 
 type HTTPConfig struct {
-	Method    string
-	Endpoint  string
-	UserAgent string
+	Method      string
+	Endpoint    string
+	UserAgent   string
+	ProxyDomain string
 }
 
 type SSHScanConfig struct {

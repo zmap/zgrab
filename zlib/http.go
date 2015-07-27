@@ -53,13 +53,16 @@ type HTTPRequest struct {
 }
 
 type HTTPResponse struct {
-	Headers *HTTPHeaders `json:"headers,omitempty"`
-	Body    string       `json:"body,omitempty"`
+	StatusCode int          `json:"status_code"`
+	Headers    *HTTPHeaders `json:"headers,omitempty"`
+	Body       string       `json:"body,omitempty"`
 }
 
 type HTTPRequestResponse struct {
-	Request  *HTTPRequest  `json:"request,omitempty"`
-	Response *HTTPResponse `json:"response,omitempty"`
+	ProxyRequest  *HTTPRequest  `json:"connect_request"`
+	ProxyResponse *HTTPResponse `json:"connect_response"`
+	Request       *HTTPRequest  `json:"request,omitempty"`
+	Response      *HTTPResponse `json:"response,omitempty"`
 }
 
 func init() {

@@ -183,9 +183,17 @@ func (c *Conn) Close() error {
 }
 
 func (c *Conn) HTTP(config *HTTPConfig) error {
-	req, errNewReq := http.NewRequest(config.Method, "", nil)
-	if errNewReq != nil {
-		return errNewReq
+	if len(config.ProxyDomain) > 0 {
+		if err := c.doProxy(config); err != nil {
+			return err
+		}
+	}
+	return c.doHTTP(config)
+}
+
+func (c *Conn) makeHTTPRequest(config *HTTPConfig) (req *http.Request, encReq *HTTPRequest, err error) {
+	if req, err = http.NewRequest(config.Method, "", nil); err != nil {
+		return
 	}
 	url := new(url.URL)
 	var host string
@@ -212,28 +220,76 @@ func (c *Conn) HTTP(config *HTTPConfig) error {
 		userAgent = "Mozilla/5.0 zgrab/0.x"
 	}
 	req.Header.Set("User-Agent", userAgent)
-
-	encReq := new(HTTPRequest)
+	encReq = new(HTTPRequest)
 	encReq.Endpoint = config.Endpoint
 	encReq.Method = config.Method
 	encReq.UserAgent = userAgent
-	c.grabData.HTTP = new(HTTPRequestResponse)
-	c.grabData.HTTP.Request = encReq
-	if err := req.Write(c.getUnderlyingConn()); err != nil {
-		return err
+	return req, encReq, nil
+}
+
+func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request) (encRes *HTTPResponse, err error) {
+	uc := c.getUnderlyingConn()
+	if err = req.Write(uc); err != nil {
+		return
 	}
-	reader := bufio.NewReader(c.getUnderlyingConn())
-	res, errRes := http.ReadResponse(reader, req)
-	if errRes != nil {
-		return errRes
+	if req.Method == "CONNECT" {
+		req.Method = "HEAD" // fuck you golang
 	}
-	body, errRead := ioutil.ReadAll(res.Body)
-	if errRead != nil {
-		return errRead
+	reader := bufio.NewReader(uc)
+	var res *http.Response
+	if res, err = http.ReadResponse(reader, req); err != nil {
+		return
 	}
-	encRes := new(HTTPResponse)
+	var body []byte
+	if body, err = ioutil.ReadAll(res.Body); err != nil {
+		return
+	}
+	encRes = new(HTTPResponse)
+	encRes.StatusCode = res.StatusCode
 	encRes.Body = string(body)
 	encRes.Headers = HeadersFromGolangHeaders(res.Header)
+	return encRes, nil
+}
+
+func (c *Conn) doProxy(config *HTTPConfig) error {
+	req, encReq, err := c.makeHTTPRequest(config)
+	if err != nil {
+		return err
+	}
+	if c.grabData.HTTP == nil {
+		c.grabData.HTTP = new(HTTPRequestResponse)
+	}
+	c.grabData.HTTP.ProxyRequest = encReq
+	req.Method = "CONNECT"
+	req.URL.Path = config.ProxyDomain
+	encReq.Method = req.Method
+	encReq.Endpoint = req.URL.Path
+	var encRes *HTTPResponse
+	if encRes, err = c.sendHTTPRequestReadHTTPResponse(req); err != nil {
+		return err
+	}
+	c.grabData.HTTP.ProxyResponse = encRes
+	return nil
+}
+
+func (c *Conn) doHTTP(config *HTTPConfig) error {
+	req, encReq, err := c.makeHTTPRequest(config)
+	if err != nil {
+		return err
+	}
+	if c.grabData.HTTP == nil {
+		c.grabData.HTTP = new(HTTPRequestResponse)
+	}
+	if len(config.ProxyDomain) > 0 {
+		host := strings.Split(config.ProxyDomain, ":")[0]
+		req.Host = host
+		req.URL.Host = host
+	}
+	c.grabData.HTTP.Request = encReq
+	var encRes *HTTPResponse
+	if encRes, err = c.sendHTTPRequestReadHTTPResponse(req); err != nil {
+		return err
+	}
 	c.grabData.HTTP.Response = encRes
 	return nil
 }
