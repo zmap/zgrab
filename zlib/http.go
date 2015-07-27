@@ -20,27 +20,27 @@ type UnknownHeader struct {
 	Value string `json:"value,omitempty"`
 }
 
-type HTTPHeaders struct {
-	KnownHeaders   map[string]string `json:"known,omitempty"`
-	UnknownHeaders []UnknownHeader   `json:"unknown,omitempty"`
-}
+type HTTPHeaders map[string]interface{}
 
-func HeadersFromGolangHeaders(h http.Header) *HTTPHeaders {
-	out := new(HTTPHeaders)
-	out.KnownHeaders = make(map[string]string, len(h))
+func HeadersFromGolangHeaders(h http.Header) HTTPHeaders {
+	var out HTTPHeaders = make(map[string]interface{}, len(h))
+	var unknownHeaders []UnknownHeader
 	for header, values := range h {
 		header = strings.ToLower(header)
 		header = strings.Replace(header, "-", "_", -1)
 		joined := strings.Join(values, ",")
 		if _, ok := knownHeaders[header]; ok {
-			out.KnownHeaders[header] = joined
+			out[header] = joined
 		} else {
 			unk := UnknownHeader{
 				Key:   header,
 				Value: joined,
 			}
-			out.UnknownHeaders = append(out.UnknownHeaders, unk)
+			unknownHeaders = append(unknownHeaders, unk)
 		}
+	}
+	if len(unknownHeaders) > 0 {
+		out["unknown"] = unknownHeaders
 	}
 	return out
 }
@@ -53,14 +53,14 @@ type HTTPRequest struct {
 }
 
 type HTTPResponse struct {
-	StatusCode int          `json:"status_code"`
-	Headers    *HTTPHeaders `json:"headers,omitempty"`
-	Body       string       `json:"body,omitempty"`
+	StatusCode int         `json:"status_code"`
+	Headers    HTTPHeaders `json:"headers,omitempty"`
+	Body       string      `json:"body,omitempty"`
 }
 
 type HTTPRequestResponse struct {
-	ProxyRequest  *HTTPRequest  `json:"connect_request"`
-	ProxyResponse *HTTPResponse `json:"connect_response"`
+	ProxyRequest  *HTTPRequest  `json:"connect_request,omitempty"`
+	ProxyResponse *HTTPResponse `json:"connect_response,omitempty"`
 	Request       *HTTPRequest  `json:"request,omitempty"`
 	Response      *HTTPResponse `json:"response,omitempty"`
 }
