@@ -43,6 +43,7 @@ type GrabData struct {
 	SMTPHelp     *SMTPHelpEvent        `json:"smtp_help,omitempty"`
 	StartTLS     string                `json:"starttls,omitempty"`
 	TLSHandshake *ztls.ServerHandshake `json:"tls,omitempty"`
+	HTTP         *HTTPRequestResponse  `json:"http,omitempty"`
 	Heartbleed   *ztls.Heartbleed      `json:"heartbleed,omitempty"`
 	Modbus       *ModbusEvent          `json:"modbus,omitempty"`
 	SSH          *ssh.HandshakeLog     `json:"ssh,omitempty"`

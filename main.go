@@ -69,6 +69,9 @@ func init() {
 	flag.UintVar(&config.ConnectionsPerHost, "connections-per-host", 1, "Number of times to connect to each host (results in more output)")
 	flag.BoolVar(&config.Banners, "banners", false, "Read banner upon connection creation")
 	flag.StringVar(&messageFileName, "data", "", "Send a message and read response (%s will be replaced with destination IP)")
+	flag.StringVar(&config.HTTP.Endpoint, "http", "", "Send an HTTP request to an endpoint")
+	flag.StringVar(&config.HTTP.Method, "http-method", "GET", "Set HTTP request method type")
+	flag.StringVar(&config.HTTP.UserAgent, "http-user-agent", "", "Set a custom HTTP user agent")
 
 	flag.StringVar(&config.EHLODomain, "ehlo", "", "Send an EHLO with the specified domain (implies --smtp)")
 	flag.BoolVar(&config.SMTPHelp, "smtp-help", false, "Send a SMTP help (implies --smtp)")
@@ -122,6 +125,11 @@ func init() {
 		if _, err := config.SSH.MakeHostKeyNameList(); err != nil {
 			zlog.Fatalf("Bad SSH Host Key Algorithms: %s", err.Error())
 		}
+	}
+
+	// Validate HTTP
+	if config.HTTP.Method != "GET" && config.HTTP.Method != "CONNECT" {
+		zlog.Fatalf("Bad HTTP Method: %s (should be GET or CONNECT)", config.HTTP.Method)
 	}
 
 	// Validate FTP

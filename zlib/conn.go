@@ -9,9 +9,13 @@
 package zlib
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
+	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -176,6 +180,62 @@ func (c *Conn) Read(b []byte) (int, error) {
 
 func (c *Conn) Close() error {
 	return c.getUnderlyingConn().Close()
+}
+
+func (c *Conn) HTTP(config *HTTPConfig) error {
+	req, errNewReq := http.NewRequest(config.Method, "", nil)
+	if errNewReq != nil {
+		return errNewReq
+	}
+	url := new(url.URL)
+	var host string
+	if len(c.domain) > 0 {
+		host = c.domain
+	} else {
+		host, _, _ = net.SplitHostPort(c.RemoteAddr().String())
+	}
+	url.Host = host
+	req.Host = host
+	req.Method = config.Method
+	req.Proto = "HTTP/1.1"
+	if c.isTls {
+		url.Scheme = "https"
+	} else {
+		url.Scheme = "http"
+	}
+	url.Path = config.Endpoint
+	req.URL = url
+	var userAgent string
+	if len(config.UserAgent) > 0 {
+		userAgent = config.UserAgent
+	} else {
+		userAgent = "Mozilla/5.0 zgrab/0.x"
+	}
+	req.Header.Set("User-Agent", userAgent)
+
+	encReq := new(HTTPRequest)
+	encReq.Endpoint = config.Endpoint
+	encReq.Method = config.Method
+	encReq.UserAgent = userAgent
+	c.grabData.HTTP = new(HTTPRequestResponse)
+	c.grabData.HTTP.Request = encReq
+	if err := req.Write(c.getUnderlyingConn()); err != nil {
+		return err
+	}
+	reader := bufio.NewReader(c.getUnderlyingConn())
+	res, errRes := http.ReadResponse(reader, req)
+	if errRes != nil {
+		return errRes
+	}
+	body, errRead := ioutil.ReadAll(res.Body)
+	if errRead != nil {
+		return errRead
+	}
+	encRes := new(HTTPResponse)
+	encRes.Body = string(body)
+	encRes.Headers = HeadersFromGolangHeaders(res.Header)
+	c.grabData.HTTP.Response = encRes
+	return nil
 }
 
 // Extra method - Do a TLS Handshake and record progress

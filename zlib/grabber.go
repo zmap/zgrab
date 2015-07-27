@@ -153,6 +153,13 @@ func makeGrabber(config *Config) func(*Conn) error {
 			}
 		}
 
+		if len(config.HTTP.Endpoint) > 0 {
+			if err := c.HTTP(&config.HTTP); err != nil {
+				c.erroredComponent = "http"
+				return err
+			}
+		}
+
 		if config.SSH.SSH {
 			if err := c.SSHHandshake(); err != nil {
 				c.erroredComponent = "ssh"

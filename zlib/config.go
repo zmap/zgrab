@@ -20,6 +20,12 @@ import (
 	"github.com/zmap/zgrab/ztools/zlog"
 )
 
+type HTTPConfig struct {
+	Method    string
+	Endpoint  string
+	UserAgent string
+}
+
 type SSHScanConfig struct {
 	SSH               bool
 	Client            string
@@ -121,6 +127,9 @@ type Config struct {
 
 	// Modbus
 	Modbus bool
+
+	// HTTP
+	HTTP HTTPConfig
 
 	// Error handling
 	ErrorLog *zlog.Logger
