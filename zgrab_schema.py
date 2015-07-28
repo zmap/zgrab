@@ -338,7 +338,9 @@ zgrab_http = Record({
         "response":zgrab_http_response
       })
     })
-})
+}, extends=zgrab_base)
+
+register_schema("zgrab-http", zgrab_http)
 
 zgrab_http_proxy = Record({
     "data":SubRecord({
@@ -348,6 +350,7 @@ zgrab_http_proxy = Record({
       })
     })
 }, extends=zgrab_http)
+register_schema("zgrab-proxy", zgrab_http_proxy)
 
 zgrab_old_http = Record({
     "data":SubRecord({
