@@ -246,8 +246,12 @@ func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request) (encRes *HTTPR
 	}
 	encRes = new(HTTPResponse)
 	encRes.StatusCode = res.StatusCode
-	encRes.Body = string(body)
 	encRes.Headers = HeadersFromGolangHeaders(res.Header)
+	if len(body) > 1024*1024 {
+		encRes.Body = string(body[0 : 1024*1024])
+	} else {
+		encRes.Body = string(body)
+	}
 	return encRes, nil
 }
 
