@@ -377,6 +377,10 @@ zgrab_modbus = Record({
                     "revision":String(),
                     "vendor":String(),
                     "oid.255":String(),
+                    "vendor_url":String(),
+                    "product_name":String(),
+                    "model_name":String(),
+                    "user_application_name":String(),
                 }),
             }),
             "exception_response":SubRecord({
