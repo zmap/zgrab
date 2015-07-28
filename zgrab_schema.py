@@ -261,14 +261,102 @@ zgrab_https_heartbleed = Record({
 
 register_schema("zgrab-https-heartbleed", zgrab_https_heartbleed)
 
+zgrab_unknown_http_header = SubRecord({
+    "key":String(),
+    "value":String()
+})
+
+zgrab_http_headers = SubRecord({
+    "access_control_allow_origin":String(),
+    "accept_patch":String(),
+    "accept_ranges":String(),
+    "age":String(),
+    "allow":String(),
+    "cache_control":String(),
+    "connection":String(),
+    "content_disposition":String(),
+    "content_encoding":String(),
+    "content_language":String(),
+    "content_length":String(),
+    "content_location":String(),
+    "content_md5":String(),
+    "content_range":String(),
+    "content_type":String(),
+    "date":String(),
+    "etag":String(),
+    "expires":String(),
+    "last_modified":String(),
+    "link":String(),
+    "location":String(),
+    "p3p":String(),
+    "pragma":String(),
+    "proxy_authenticate":String(),
+    "public_key_pins":String(),
+    "refresh":String(),
+    "retry_after":String(),
+    "server":AnalyzedString(),
+    "set_cookie":String(),
+    "status":String(),
+    "strict_transport_security":String(),
+    "trailer":String(),
+    "transfer_encoding":String(),
+    "upgrade":String(),
+    "vary":String(),
+    "via":String(),
+    "warning":String(),
+    "www_authenticate":String(),
+    "x_frame_options":String(),
+    "x_xss_protection":String(),
+    "content_security_policy":String(),
+    "x_content_security_policy":String(),
+    "x_webkit_csp":String(),
+    "x_content_type_options":String(),
+    "x_powered_by":String(),
+    "x_ua_compatible":String(),
+    "x_content_duration":String(),
+    "proxy_agent":String(),
+    "unknown":ListOf(zgrab_unknown_http_header)
+})
+
+zgrab_http_request = SubRecord({
+    "method":String(),
+    "endpoint":String(),
+    "user_agent":String()
+})
+
+zgrab_http_response = SubRecord({
+    "status_code":Integer(),
+    "status_line":AnalyzedString(),
+    "body":AnalyzedString(),
+    "headers":zgrab_http_headers
+})
+
 zgrab_http = Record({
+    "data":SubRecord({
+      "http":SubRecord({
+        "request":zgrab_http_request,
+        "response":zgrab_http_response
+      })
+    })
+})
+
+zgrab_http_proxy = Record({
+    "data":SubRecord({
+      "http":SubRecord({
+        "connect_request":zgrab_http_request,
+        "connect_response":zgrab_http_response
+      })
+    })
+}, extends=zgrab_http)
+
+zgrab_old_http = Record({
     "data":SubRecord({
         "write":String(),
         "read":String(),
     })
 }, extends=zgrab_base)
 
-register_schema("zgrab-http", zgrab_http)
+register_schema("zgrab-old-http", zgrab_old_http)
 
 zgrab_modbus = Record({
     "data":SubRecord({
