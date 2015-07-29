@@ -53,7 +53,8 @@ type HTTPRequest struct {
 }
 
 type HTTPResponse struct {
-	StatusCode int         `json:"status_code"`
+	StatusCode int         `json:"status_code,omitempty"`
+	StatusLine string      `json:"status_line,omitempty"`
 	Headers    HTTPHeaders `json:"headers,omitempty"`
 	Body       string      `json:"body,omitempty"`
 }

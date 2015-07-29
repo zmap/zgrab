@@ -246,6 +246,7 @@ func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request) (encRes *HTTPR
 	}
 	encRes = new(HTTPResponse)
 	encRes.StatusCode = res.StatusCode
+	encRes.StatusLine = res.Proto + " " + res.Status
 	encRes.Headers = HeadersFromGolangHeaders(res.Header)
 	if len(body) > 1024*1024 {
 		encRes.Body = string(body[0 : 1024*1024])
@@ -273,6 +274,9 @@ func (c *Conn) doProxy(config *HTTPConfig) error {
 		return err
 	}
 	c.grabData.HTTP.ProxyResponse = encRes
+	if encRes.StatusCode != 200 {
+		return fmt.Errorf("proxy connect returned status %d", encRes.StatusCode)
+	}
 	return nil
 }
 
