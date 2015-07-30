@@ -25,6 +25,7 @@ type HTTPConfig struct {
 	Endpoint    string
 	UserAgent   string
 	ProxyDomain string
+	MaxSize     int
 }
 
 type SSHScanConfig struct {

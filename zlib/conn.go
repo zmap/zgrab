@@ -227,7 +227,7 @@ func (c *Conn) makeHTTPRequest(config *HTTPConfig) (req *http.Request, encReq *H
 	return req, encReq, nil
 }
 
-func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request) (encRes *HTTPResponse, err error) {
+func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request, config *HTTPConfig) (encRes *HTTPResponse, err error) {
 	uc := c.getUnderlyingConn()
 	if err = req.Write(uc); err != nil {
 		return
@@ -248,8 +248,8 @@ func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request) (encRes *HTTPR
 	encRes.StatusCode = res.StatusCode
 	encRes.StatusLine = res.Proto + " " + res.Status
 	encRes.Headers = HeadersFromGolangHeaders(res.Header)
-	if len(body) > 1024*1024 {
-		encRes.Body = string(body[0 : 1024*1024])
+	if len(body) > 1024*config.MaxSize {
+		encRes.Body = string(body[0 : 1024*config.MaxSize])
 	} else {
 		encRes.Body = string(body)
 	}
@@ -270,7 +270,7 @@ func (c *Conn) doProxy(config *HTTPConfig) error {
 	encReq.Method = req.Method
 	encReq.Endpoint = req.URL.Path
 	var encRes *HTTPResponse
-	if encRes, err = c.sendHTTPRequestReadHTTPResponse(req); err != nil {
+	if encRes, err = c.sendHTTPRequestReadHTTPResponse(req, config); err != nil {
 		return err
 	}
 	c.grabData.HTTP.ProxyResponse = encRes
@@ -295,7 +295,7 @@ func (c *Conn) doHTTP(config *HTTPConfig) error {
 	}
 	c.grabData.HTTP.Request = encReq
 	var encRes *HTTPResponse
-	if encRes, err = c.sendHTTPRequestReadHTTPResponse(req); err != nil {
+	if encRes, err = c.sendHTTPRequestReadHTTPResponse(req, config); err != nil {
 		return err
 	}
 	c.grabData.HTTP.Response = encRes
