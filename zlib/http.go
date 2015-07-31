@@ -14,6 +14,7 @@ import (
 )
 
 var knownHeaders map[string]int
+var dropHeaders map[string]int
 
 type UnknownHeader struct {
 	Key   string `json:"key,omitempty"`
@@ -29,7 +30,12 @@ func HeadersFromGolangHeaders(h http.Header) HTTPHeaders {
 		header = strings.ToLower(header)
 		header = strings.Replace(header, "-", "_", -1)
 		joined := strings.Join(values, ",")
-		if _, ok := knownHeaders[header]; ok {
+		if len(joined) > 256 {
+			joined = joined[0:256]
+		}
+		if _, ok := dropHeaders[header]; ok {
+			continue
+		} else if _, ok := knownHeaders[header]; ok {
 			out[header] = joined
 		} else {
 			unk := UnknownHeader{
@@ -67,6 +73,10 @@ type HTTPRequestResponse struct {
 }
 
 func init() {
+	dropHeaders = make(map[string]int, 8)
+	dropHeaders["date"] = 1
+	dropHeaders["set_cookie"] = 1
+
 	knownHeaders = make(map[string]int, 128)
 	knownHeaders["access_control_allow_origin"] = 1
 	knownHeaders["accept_patch"] = 1
@@ -83,7 +93,6 @@ func init() {
 	knownHeaders["content_md5"] = 1
 	knownHeaders["content_range"] = 1
 	knownHeaders["content_type"] = 1
-	knownHeaders["date"] = 1
 	knownHeaders["etag"] = 1
 	knownHeaders["expires"] = 1
 	knownHeaders["last_modified"] = 1
