@@ -327,7 +327,7 @@ zgrab_http_request = SubRecord({
 zgrab_http_response = SubRecord({
     "status_code":Integer(),
     "status_line":AnalyzedString(),
-    "body":AnalyzedString(),
+    "body":HTML(),
     "headers":zgrab_http_headers
 })
 
