@@ -37,7 +37,7 @@ zgrab_parsed_certificate = SubRecord({
             "oid":String(doc="OID of the public key on the certificate. This is helpful when an unknown type is present. This field is reserved and not current populated.")
          }),
         "rsa_public_key":SubRecord({
-            "exponent":Integer(),
+            "exponent":Long(),
             "modulus":Binary(),
             "length":Integer(doc="Bit-length of modulus.")
          }),
@@ -161,7 +161,7 @@ zgrab_tls = SubRecord({
             }),
         }),
         "rsa_params":SubRecord({
-            "exponent":Integer(),
+            "exponent":Long(),
             "modulus":Binary(),
             "length":Integer(),
         }),
