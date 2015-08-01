@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package x509
+package pkix
 
 // OIDName stores the short and long version of the name of an IANA-assigned OID
 type OIDName struct {

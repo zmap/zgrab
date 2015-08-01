@@ -182,8 +182,10 @@ type jsonCertificate struct {
 	SerialNumber       string                       `json:"serial_number"`
 	SignatureAlgorithm SignatureAlgorithm           `json:"signature_algorithm"`
 	Issuer             pkix.Name                    `json:"issuer"`
+	IssuerDN           string                       `json:"issuer_dn,omitempty"`
 	Validity           validity                     `json:"validity"`
 	Subject            pkix.Name                    `json:"subject"`
+	SubjectDN          string                       `json:"subject_dn,omitempty"`
 	SubjectKeyInfo     jsonSubjectKeyInfo           `json:"subject_key_info"`
 	Extensions         *CertificateExtensions       `json:"extensions,omitempty"`
 	UnknownExtensions  UnknownCertificateExtensions `json:"unknown_extensions,omitempty"`
@@ -200,9 +202,11 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.SerialNumber = c.SerialNumber.String()
 	jc.SignatureAlgorithm = c.SignatureAlgorithm
 	jc.Issuer = c.Issuer
+	jc.IssuerDN = c.Issuer.String()
 	jc.Validity.NotBefore = c.NotBefore
 	jc.Validity.NotAfter = c.NotAfter
 	jc.Subject = c.Subject
+	jc.SubjectDN = c.Subject.String()
 	jc.SubjectKeyInfo.KeyAlgorithm = c.PublicKeyAlgorithm
 
 	// Pull out the key
