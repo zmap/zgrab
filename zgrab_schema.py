@@ -327,7 +327,7 @@ zgrab_http_request = SubRecord({
 zgrab_http_response = SubRecord({
     "status_code":Integer(),
     "status_line":AnalyzedString(),
-    "body":AnalyzedString(),
+    "body":HTML(),
     "headers":zgrab_http_headers
 })
 
@@ -377,6 +377,10 @@ zgrab_modbus = Record({
                     "revision":String(),
                     "vendor":String(),
                     "oid.255":String(),
+                    "vendor_url":String(),
+                    "product_name":String(),
+                    "model_name":String(),
+                    "user_application_name":String(),
                 }),
             }),
             "exception_response":SubRecord({

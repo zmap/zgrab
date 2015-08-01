@@ -87,7 +87,7 @@ type ModbusEvent struct {
 	Length           int                `json:"length"`
 	UnitID           int                `json:"unit_id"`
 	Function         FunctionCode       `json:"function_code"`
-	Response         []byte             `json:"raw_response"`
+	Response         []byte             `json:"raw_response,omitempty"`
 	MEIResponse      *MEIResponse       `json:"mei_response,omitempty"`
 	ExceptionReponse *ExceptionResponse `json:"exception_response,omitempty"`
 }
