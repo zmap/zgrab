@@ -238,10 +238,18 @@ func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request, config *HTTPCo
 	reader := bufio.NewReader(uc)
 	var res *http.Response
 	if res, err = http.ReadResponse(reader, req); err != nil {
+		msg := err.Error()
+		if len(msg) > 1024*config.MaxSize {
+			err = errors.New(msg[0 : 1024*config.MaxSize])
+		}
 		return
 	}
 	var body []byte
 	if body, err = ioutil.ReadAll(res.Body); err != nil {
+		msg := err.Error()
+		if len(msg) > 1024*config.MaxSize {
+			err = errors.New(msg[0 : 1024*config.MaxSize])
+		}
 		return
 	}
 	encRes = new(HTTPResponse)
