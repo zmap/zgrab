@@ -23,8 +23,9 @@ type TLSVersion uint16
 type CipherSuite uint16
 
 type ClientHello struct {
-	Random    []byte `json:"random"`
-	SessionID []byte `json:"session_id,omitempty"`
+	Random         []byte `json:"random"`
+	ExtendedRandom []byte `json:"extended_random,omitempty"`
+	SessionID      []byte `json:"session_id,omitempty"`
 }
 
 type ServerHello struct {
@@ -37,6 +38,7 @@ type ServerHello struct {
 	TicketSupported     bool        `json:"ticket"`
 	SecureRenegotiation bool        `json:"secure_renegotiation"`
 	HeartbeatSupported  bool        `json:"heartbeat"`
+	ExtendedRandom      []byte      `json:"extended_random,omitempty"`
 }
 
 // SimpleCertificate holds a *x509.Certificate and a []byte for the certificate
@@ -151,6 +153,10 @@ func (m *clientHelloMsg) MakeLog() *ClientHello {
 	copy(ch.Random, m.random)
 	ch.SessionID = make([]byte, len(m.sessionId))
 	copy(ch.SessionID, m.sessionId)
+	if len(m.extendedRandom) > 0 {
+		ch.ExtendedRandom = make([]byte, len(m.extendedRandom))
+		copy(ch.ExtendedRandom, m.extendedRandom)
+	}
 	return ch
 }
 
@@ -167,6 +173,10 @@ func (m *serverHelloMsg) MakeLog() *ServerHello {
 	sh.TicketSupported = m.ticketSupported
 	sh.SecureRenegotiation = m.secureRenegotiation
 	sh.HeartbeatSupported = m.heartbeatEnabled
+	if len(m.extendedRandom) > 0 {
+		sh.ExtendedRandom = make([]byte, len(m.extendedRandom))
+		copy(sh.ExtendedRandom, m.extendedRandom)
+	}
 	return sh
 }
 

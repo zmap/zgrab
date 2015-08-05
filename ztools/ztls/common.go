@@ -81,6 +81,7 @@ const (
 	extensionSessionTicket       uint16 = 35
 	extensionNextProtoNeg        uint16 = 13172 // not IANA assigned
 	extensionRenegotiationInfo   uint16 = 0xff01
+	extensionExtendedRandom      uint16 = 0x0028 // not IANA assigned
 )
 
 // TLS signaling cipher suite values
@@ -333,6 +334,9 @@ type Config struct {
 	// ClientDSAEnabled sets whether a TLS client will accept server DSA keys
 	// and DSS signatures
 	ClientDSAEnabled bool
+
+	// Use extended random
+	ExtendedRandom bool
 }
 
 func (c *Config) serverInit() {

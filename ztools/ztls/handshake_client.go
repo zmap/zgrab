@@ -55,7 +55,7 @@ func (c *Conn) clientHandshake() error {
 		secureRenegotiation: true,
 	}
 
-	if c.config.HeartbeatEnabled {
+	if c.config.HeartbeatEnabled && !c.config.ExtendedRandom {
 		hello.heartbeatEnabled = true
 		hello.heartbeatMode = heartbeatModePeerAllowed
 	}
@@ -88,6 +88,14 @@ func (c *Conn) clientHandshake() error {
 	if err != nil {
 		c.sendAlert(alertInternalError)
 		return errors.New("tls: short read from Rand: " + err.Error())
+	}
+
+	if c.config.ExtendedRandom {
+		hello.extendedRandomEnabled = true
+		hello.extendedRandom = make([]byte, 32)
+		if _, err := io.ReadFull(c.config.rand(), hello.extendedRandom); err != nil {
+			return errors.New("tls: short read from Rand: " + err.Error())
+		}
 	}
 
 	if hello.vers >= VersionTLS12 {
@@ -539,7 +547,30 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		c.writeRecord(recordTypeHandshake, certVerify.marshal())
 	}
 
-	hs.masterSecret = masterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, hs.hello.random, hs.serverHello.random)
+	var cr, sr []byte
+	if hs.hello.extendedRandomEnabled {
+		helloRandomLen := len(hs.hello.random)
+		helloExtendedRandomLen := len(hs.hello.extendedRandom)
+
+		cr = make([]byte, helloRandomLen+helloExtendedRandomLen)
+		copy(cr, hs.hello.random)
+		copy(cr[helloRandomLen:], hs.hello.extendedRandom)
+	} else {
+		cr = hs.hello.random
+	}
+
+	if hs.serverHello.extendedRandomEnabled {
+		serverRandomLen := len(hs.serverHello.random)
+		serverExtendedRandomLen := len(hs.serverHello.extendedRandom)
+
+		sr = make([]byte, serverRandomLen+serverExtendedRandomLen)
+		copy(sr, hs.serverHello.random)
+		copy(sr[serverRandomLen:], hs.serverHello.extendedRandom)
+	} else {
+		sr = hs.serverHello.random
+	}
+
+	hs.masterSecret = masterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, cr, sr)
 	return nil
 }
 

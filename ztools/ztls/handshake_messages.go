@@ -7,23 +7,25 @@ package ztls
 import "bytes"
 
 type clientHelloMsg struct {
-	raw                 []byte
-	vers                uint16
-	random              []byte
-	sessionId           []byte
-	cipherSuites        []uint16
-	compressionMethods  []uint8
-	nextProtoNeg        bool
-	serverName          string
-	ocspStapling        bool
-	supportedCurves     []CurveID
-	supportedPoints     []uint8
-	ticketSupported     bool
-	sessionTicket       []uint8
-	signatureAndHashes  []signatureAndHash
-	secureRenegotiation bool
-	heartbeatEnabled    bool
-	heartbeatMode       uint8
+	raw                   []byte
+	vers                  uint16
+	random                []byte
+	sessionId             []byte
+	cipherSuites          []uint16
+	compressionMethods    []uint8
+	nextProtoNeg          bool
+	serverName            string
+	ocspStapling          bool
+	supportedCurves       []CurveID
+	supportedPoints       []uint8
+	ticketSupported       bool
+	sessionTicket         []uint8
+	signatureAndHashes    []signatureAndHash
+	secureRenegotiation   bool
+	heartbeatEnabled      bool
+	heartbeatMode         uint8
+	extendedRandomEnabled bool
+	extendedRandom        []byte
 }
 
 func (m *clientHelloMsg) equal(i interface{}) bool {
@@ -48,7 +50,9 @@ func (m *clientHelloMsg) equal(i interface{}) bool {
 		eqSignatureAndHashes(m.signatureAndHashes, m1.signatureAndHashes) &&
 		m.secureRenegotiation == m1.secureRenegotiation &&
 		m.heartbeatEnabled == m1.heartbeatEnabled &&
-		m.heartbeatMode == m1.heartbeatMode
+		m.heartbeatMode == m1.heartbeatMode &&
+		m.extendedRandomEnabled == m1.extendedRandomEnabled &&
+		bytes.Equal(m.extendedRandom, m1.extendedRandom)
 }
 
 func (m *clientHelloMsg) marshal() []byte {
@@ -92,6 +96,10 @@ func (m *clientHelloMsg) marshal() []byte {
 	}
 	if m.heartbeatEnabled {
 		extensionsLength += 1
+		numExtensions++
+	}
+	if m.extendedRandomEnabled {
+		extensionsLength += 2 + len(m.extendedRandom)
 		numExtensions++
 	}
 	if numExtensions > 0 {
@@ -253,6 +261,19 @@ func (m *clientHelloMsg) marshal() []byte {
 		z[3] = byte(length)
 		z[4] = m.heartbeatMode
 		z = z[5:]
+	}
+	if m.extendedRandomEnabled {
+		z[0] = byte(extensionExtendedRandom >> 8)
+		z[1] = byte(extensionExtendedRandom)
+		exLen := len(m.extendedRandom)
+		length := 2 + exLen
+		z[2] = byte(length >> 8)
+		z[3] = byte(length)
+		z[4] = byte(exLen >> 8)
+		z[5] = byte(exLen)
+		z = z[6:]
+		copy(z, m.extendedRandom)
+		z = z[exLen:]
 	}
 	m.raw = x
 
@@ -429,6 +450,20 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 			}
 			m.heartbeatEnabled = true
 			m.heartbeatMode = mode
+		case extensionExtendedRandom:
+			if length < 3 {
+				return false
+			}
+			exLen := int(data[0]<<8) | int(data[1])
+			if length != exLen+2 {
+				return false
+			}
+			if exLen > len(data) {
+				return false
+			}
+			m.extendedRandomEnabled = true
+			m.extendedRandom = make([]byte, exLen)
+			copy(m.extendedRandom, data[2:])
 		}
 		data = data[length:]
 	}
@@ -437,19 +472,21 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 }
 
 type serverHelloMsg struct {
-	raw                 []byte
-	vers                uint16
-	random              []byte
-	sessionId           []byte
-	cipherSuite         uint16
-	compressionMethod   uint8
-	nextProtoNeg        bool
-	nextProtos          []string
-	ocspStapling        bool
-	ticketSupported     bool
-	secureRenegotiation bool
-	heartbeatEnabled    bool
-	heartbeatMode       uint8
+	raw                   []byte
+	vers                  uint16
+	random                []byte
+	sessionId             []byte
+	cipherSuite           uint16
+	compressionMethod     uint8
+	nextProtoNeg          bool
+	nextProtos            []string
+	ocspStapling          bool
+	ticketSupported       bool
+	secureRenegotiation   bool
+	heartbeatEnabled      bool
+	heartbeatMode         uint8
+	extendedRandomEnabled bool
+	extendedRandom        []byte
 }
 
 func (m *serverHelloMsg) equal(i interface{}) bool {
@@ -501,6 +538,10 @@ func (m *serverHelloMsg) marshal() []byte {
 	}
 	if m.heartbeatEnabled {
 		extensionsLength += 1
+		numExtensions++
+	}
+	if m.extendedRandomEnabled {
+		extensionsLength += 2 + len(m.extendedRandom)
 		numExtensions++
 	}
 	if numExtensions > 0 {
@@ -571,6 +612,19 @@ func (m *serverHelloMsg) marshal() []byte {
 		z[4] = m.heartbeatMode
 		z = z[5:]
 	}
+	if m.extendedRandomEnabled {
+		z[0] = byte(extensionExtendedRandom >> 8)
+		z[1] = byte(extensionExtendedRandom)
+		exLen := len(m.extendedRandom)
+		fullLength := 2 + exLen
+		z[2] = byte(fullLength << 8)
+		z[3] = byte(fullLength)
+		z[4] = byte(exLen << 8)
+		z[5] = byte(exLen)
+		z = z[6:]
+		copy(z, m.extendedRandom)
+		z = z[exLen:]
+	}
 
 	m.raw = x
 
@@ -602,6 +656,7 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 	m.ocspStapling = false
 	m.ticketSupported = false
 	m.heartbeatEnabled = false
+	m.extendedRandomEnabled = false
 
 	if len(data) == 0 {
 		// ServerHello is optionally followed by extension data
@@ -659,6 +714,21 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 		case extensionHeartbeat:
 			m.heartbeatEnabled = true
 			m.heartbeatMode = data[0]
+		case extensionExtendedRandom:
+			m.extendedRandomEnabled = true
+			if length < 3 {
+				return false
+			}
+			exRandLen := int(data[0]<<8) | int(data[1])
+			if length != exRandLen+2 {
+				return false
+			}
+			exRand := data[2:]
+			if len(exRand) < exRandLen {
+				return false
+			}
+			m.extendedRandom = make([]byte, exRandLen)
+			copy(m.extendedRandom, data[2:])
 		}
 		data = data[length:]
 	}

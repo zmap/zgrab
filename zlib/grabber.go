@@ -111,6 +111,9 @@ func makeGrabber(config *Config) func(*Conn) error {
 		if config.NoSNI {
 			c.SetNoSNI()
 		}
+		if config.TLSExtendedRandom {
+			c.SetExtendedRandom()
+		}
 
 		if config.SSH.SSH {
 			c.sshScan = &config.SSH

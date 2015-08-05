@@ -65,6 +65,7 @@ type Conn struct {
 	safariCiphers       bool
 	safariNoDHECiphers  bool
 	noSNI               bool
+	extendedRandom      bool
 
 	domain string
 
@@ -119,6 +120,10 @@ func (c *Conn) SetSafariCiphers() {
 
 func (c *Conn) SetSafariNoDHECiphers() {
 	c.safariNoDHECiphers = true
+}
+
+func (c *Conn) SetExtendedRandom() {
+	c.extendedRandom = true
 }
 
 func (c *Conn) SetCAPool(pool *x509.CertPool) {
@@ -356,6 +361,9 @@ func (c *Conn) TLSHandshake() error {
 	if c.safariNoDHECiphers {
 		tlsConfig.CipherSuites = ztls.SafariNoDHECiphers
 		tlsConfig.ForceSuites = true
+	}
+	if c.extendedRandom {
+		tlsConfig.ExtendedRandom = true
 	}
 
 	c.tlsConn = ztls.Client(c.conn, tlsConfig)

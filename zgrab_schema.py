@@ -114,7 +114,8 @@ zgrab_certificate = SubRecord({
 
 zgrab_tls = SubRecord({
     "client_hello":SubRecord({
-        "random":Binary()
+        "random":Binary(),
+        "extended_random":Binary(),
     }),
     "server_hello":SubRecord({
         "version":SubRecord({
@@ -133,6 +134,7 @@ zgrab_tls = SubRecord({
         "ticket":Boolean(),
         "secure_renegotiation":Boolean(),
         "heartbeat":Boolean(),
+        "extended_random":Binary(),
     }),
     "server_certificates":SubRecord({
         "certificate":zgrab_certificate,
@@ -148,7 +150,7 @@ zgrab_tls = SubRecord({
             "curve_id":SubRecord({
                 "name":String(),
                 "id":Integer(),
-            }), 
+            }),
             "server_public":SubRecord({
                 "x":SubRecord({
                     "value":Binary(),
