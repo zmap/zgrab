@@ -63,6 +63,7 @@ type HTTPResponse struct {
 	StatusLine string      `json:"status_line,omitempty"`
 	Headers    HTTPHeaders `json:"headers,omitempty"`
 	Body       string      `json:"body,omitempty"`
+	BodySHA256 []byte      `json:"body_sha256,omitempty"`
 }
 
 type HTTPRequestResponse struct {

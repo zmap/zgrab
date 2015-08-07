@@ -10,6 +10,7 @@ package zlib
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -261,10 +262,17 @@ func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request, config *HTTPCo
 	encRes.StatusCode = res.StatusCode
 	encRes.StatusLine = res.Proto + " " + res.Status
 	encRes.Headers = HeadersFromGolangHeaders(res.Header)
+	var bodyOutput []byte
 	if len(body) > 1024*config.MaxSize {
-		encRes.Body = string(body[0 : 1024*config.MaxSize])
+		bodyOutput = body[0 : 1024*config.MaxSize]
 	} else {
-		encRes.Body = string(body)
+		bodyOutput = body
+	}
+	encRes.Body = string(bodyOutput)
+	if len(bodyOutput) > 0 {
+		m := sha256.New()
+		m.Write(bodyOutput)
+		encRes.BodySHA256 = m.Sum(nil)
 	}
 	return encRes, nil
 }
