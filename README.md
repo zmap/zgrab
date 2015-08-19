@@ -2,6 +2,7 @@ zgrab
 ==================
 
 [![Build Status](https://travis-ci.org/zmap/zgrab.svg?branch=master)](https://travis-ci.org/zmap/zgrab)
+[![Coverage Status](https://coveralls.io/repos/zmap/zgrab/badge.svg?branch=master&service=github)](https://coveralls.io/github/zmap/zgrab?branch=master)
 
 A TLS Banner Grabber, in Go
 

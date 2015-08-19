@@ -1,16 +1,26 @@
 language: go
 go:
-- 1.4
-env:
-  global:
-  - GOPATH="$HOME/gopath"
-before_script:
-- mkdir -p $HOME/gopath/src/github.com/zmap
-- ln -s $TRAVIS_BUILD_DIR $HOME/gopath/src/github.com/zmap/ || true
+- 1.4.2
+before_install:
 - go get gopkg.in/check.v1
 - go get github.com/dadrian/rc2
+- go get github.com/axw/gocov/gocov
+- go get github.com/modocache/gover
+- go get github.com/mattn/goveralls
+- go get golang.org/x/tools/cmd/cover
+before_script:
+- mkdir -p $GOPATH/src/github.com/zmap
+- ln -s $TRAVIS_BUILD_DIR $GOPATH/src/github.com/zmap/ || true
 script:
-- go test -v ./...
+# Unfortunately we have to test each package manually
+# https://github.com/mattn/goveralls/issues/20#issuecomment-72758697
+- go test -v -coverprofile=keys.coverprofile      ./ztools/keys
+- go test -v -coverprofile=x509.coverprofile      ./ztools/x509
+- go test -v -coverprofile=x509.pkix.coverprofile ./ztools/x509/pkix
+- go test -v -coverprofile=zlog.coverprofile      ./ztools/zlog
+- go test -v -coverprofile=ztls.coverprofile      ./ztools/ztls
+- $GOPATH/bin/gover
+- $GOPATH/bin/goveralls -coverprofile=gover.coverprofile -service travis-ci
 notifications:
   email:
   - zmap-devel@umich.edu
