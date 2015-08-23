@@ -64,7 +64,7 @@ func (m *MEIObjectID) Name() string {
 	oid := int(*m)
 	var name string
 	if oid >= len(meiObjectNames) || oid < 0 {
-		name = "oid." + strconv.Itoa(oid)
+		name = "oid_" + strconv.Itoa(oid)
 	} else {
 		name = meiObjectNames[oid]
 	}
