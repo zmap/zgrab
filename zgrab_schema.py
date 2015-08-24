@@ -316,6 +316,8 @@ zgrab_http_headers = SubRecord({
     "x_powered_by":String(),
     "x_ua_compatible":String(),
     "x_content_duration":String(),
+    "x_real_ip":String(),
+    "x_forwarded_for": String(),
     "proxy_agent":String(),
     "unknown":ListOf(zgrab_unknown_http_header)
 })

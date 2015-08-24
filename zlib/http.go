@@ -75,7 +75,9 @@ type HTTPRequestResponse struct {
 
 func init() {
 	dropHeaders = make(map[string]int, 8)
+	dropHeaders["cookie"] = 1
 	dropHeaders["date"] = 1
+	dropHeaders["etag"] = 1
 	dropHeaders["set_cookie"] = 1
 
 	knownHeaders = make(map[string]int, 128)
@@ -94,13 +96,13 @@ func init() {
 	knownHeaders["content_md5"] = 1
 	knownHeaders["content_range"] = 1
 	knownHeaders["content_type"] = 1
-	knownHeaders["etag"] = 1
 	knownHeaders["expires"] = 1
 	knownHeaders["last_modified"] = 1
 	knownHeaders["link"] = 1
 	knownHeaders["location"] = 1
 	knownHeaders["p3p"] = 1
 	knownHeaders["pragma"] = 1
+	knownHeaders["proxy_agent"] = 1
 	knownHeaders["proxy_authenticate"] = 1
 	knownHeaders["public_key_pins"] = 1
 	knownHeaders["refresh"] = 1
@@ -125,5 +127,6 @@ func init() {
 	knownHeaders["x_powered_by"] = 1
 	knownHeaders["x_ua_compatible"] = 1
 	knownHeaders["x_content_duration"] = 1
-
+	knownHeaders["x_real_ip"] = 1
+	knownHeaders["x_forwarded_for"] = 1
 }
