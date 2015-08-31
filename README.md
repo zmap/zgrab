@@ -31,7 +31,7 @@ $ go build
 ## Example
 
 ```
-$ zmap -p 443 --output-fields=* | ztee --output-file=results.csv | zgrab --port 443 --tls --data=./http-req --output-file=banners.json
+$ zmap -p 443 --output-fields=* | ztee results.csv | zgrab --port 443 --tls --data=./http-req --output-file=banners.json
 ```
 
 ## Requirements
