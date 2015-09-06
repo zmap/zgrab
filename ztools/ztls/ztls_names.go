@@ -399,11 +399,19 @@ func nameForSuite(cs uint16) string {
 	return cipher.String()
 }
 
+func (cs CipherSuite) Bytes() []byte {
+	return []byte{uint8(cs >> 8), uint8(cs)}
+}
+
 func (cs CipherSuite) String() string {
 	if name, ok := cipherSuiteNames[int(cs)]; ok {
 		return name
 	}
 	return "unknown"
+}
+
+func (v TLSVersion) Bytes() []byte {
+	return []byte{uint8(v >> 8), uint8(v)}
 }
 
 func (v TLSVersion) String() string {
