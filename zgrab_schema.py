@@ -381,7 +381,6 @@ zgrab_modbus = Record({
                     "product_code":String(),
                     "revision":String(),
                     "vendor":String(),
-                    "oid.255":String(),
                     "vendor_url":String(),
                     "product_name":String(),
                     "model_name":String(),
