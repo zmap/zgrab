@@ -224,6 +224,18 @@ func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, err e
 		}
 	}
 
+	// Check if it's a root
+	if indicies, ok := opts.Roots.bySubjectKeyId[string(c.SubjectKeyId)]; ok {
+		for _, certIdx := range indicies {
+			chain := []*Certificate{opts.Roots.certs[certIdx]}
+			chains = append(chains, chain)
+		}
+		if len(opts.DNSName) > 0 {
+			return nil, HostnameError{c, opts.DNSName}
+		}
+		return chains, nil
+	}
+
 	err = c.isValid(leafCertificate, nil, &opts)
 	if err != nil {
 		return
