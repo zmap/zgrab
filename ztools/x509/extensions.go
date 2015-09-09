@@ -20,22 +20,11 @@ var (
 	oidExtNameConstraints     = asn1.ObjectIdentifier{2, 5, 29, 30}
 	oidCRLDistributionPoints  = asn1.ObjectIdentifier{2, 5, 29, 31}
 	oidExtAuthKeyId           = asn1.ObjectIdentifier{2, 5, 29, 35}
+	oidExtSubjectKeyId        = asn1.ObjectIdentifier{2, 5, 29, 14}
 	oidExtExtendedKeyUsage    = asn1.ObjectIdentifier{2, 5, 29, 37}
 	oidExtCertificatePolicy   = asn1.ObjectIdentifier{2, 5, 29, 32}
 	oidExtAuthorityInfoAccess = oidExtensionAuthorityInfoAccess
 )
-
-type encodedKnownExtensions struct {
-	KeyUsage              KeyUsage              `json:"key_usage,omitempty"`
-	BasicConstraints      *BasicConstraints     `json:"basic_constraints,omitempty"`
-	SubjectAltName        *SubjectAltName       `json:"subject_alt_name,omitempty"`
-	NameConstriants       *NameConstriants      `json:"name_constraints,omitempty"`
-	CRLDistributionPoints CRLDistributionPoints `json:"crl_distribution_points,omitempty"`
-	AuthKeyID             AuthKeyId             `json:"authority_key_id,omitempty"`
-	ExtendedKeyUsage      ExtendedKeyUsage      `json:"extended_key_usage,omitempty"`
-	CertificatePolicies   CertificatePolicies   `json:"certificate_policies,omitempty"`
-	AuthorityInfoAccess   *AuthorityInfoAccess  `json:"authority_info_access,omitempty"`
-}
 
 type encodedUnknownExtensions []encodedUnknownExtension
 
@@ -46,6 +35,7 @@ type CertificateExtensions struct {
 	NameConstriants       *NameConstriants      `json:"name_constraints,omitempty"`
 	CRLDistributionPoints CRLDistributionPoints `json:"crl_distribution_points,omitempty"`
 	AuthKeyID             AuthKeyId             `json:"authority_key_id,omitempty"`
+	SubjectKeyID          []byte                `json:"subject_key_id,omitempty"`
 	ExtendedKeyUsage      ExtendedKeyUsage      `json:"extended_key_usage,omitempty"`
 	CertificatePolicies   CertificatePolicies   `json:"certificate_policies,omitmepty"`
 	AuthorityInfoAccess   *AuthorityInfoAccess  `json:"authority_info_access,omitempty"`
@@ -138,6 +128,8 @@ func (c *Certificate) jsonifyExtensions() (*CertificateExtensions, UnknownCertif
 			exts.AuthorityInfoAccess = new(AuthorityInfoAccess)
 			exts.AuthorityInfoAccess.OCSPServer = c.OCSPServer
 			exts.AuthorityInfoAccess.IssuingCertificateURL = c.IssuingCertificateURL
+		} else if e.Id.Equal(oidExtSubjectKeyId) {
+			exts.SubjectKeyID = c.SubjectKeyId
 		} else {
 			// Unknown extension
 			unk = append(unk, e)
