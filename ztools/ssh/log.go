@@ -18,13 +18,13 @@ type HandshakeLog struct {
 	Algorithms            *AlgorithmSelection           `json:"algorithms,omitempty"`
 	KexDHGroupRequest     *KeyExchangeDHGroupRequest    `json:"key_exchange_dh_group_request,omitempty"`
 	KexDHGroupParams      *KeyExchangeDHGroupParameters `json:"key_exchange_dh_group_params,omitempty"`
-	KexDHGroupInit        *KeyExchangeDHGroupInit       `json:"key_excahnge_dh_group_init,omitempty"`
+	KexDHGroupInit        *KeyExchangeDHGroupInit       `json:"key_exchange_dh_group_init,omitempty"`
 	KexDHGroupReply       *KeyExchangeDHGroupReply      `json:"key_exchange_dh_group_reply,omitempty"`
 	DHInit                *KeyExchangeDHInit            `json:"key_exchange_dh_init,omitempty"`
 	DHReply               *KeyExchangeDHInitReply       `json:"key_exchange_dh_reply,omitempty"`
 }
 
 type AlgorithmSelection struct {
-	KexAlgorithm     string `json:"kex_algorithm,omitempty"`
+	KexAlgorithm     string `json:"key_exchange_algorithm,omitempty"`
 	HostKeyAlgorithm string `json:"host_key_algorithm,omitempty"`
 }

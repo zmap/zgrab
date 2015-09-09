@@ -251,7 +251,7 @@ func (kxi *KeyExchangeInit) Unmarshal(raw []byte) bool {
 // is the prime. E is the public DHE value. See RFC 4253 Section 8.
 type KeyExchangeDHInit struct {
 	raw []byte
-	E   mpint
+	E   mpint `json:"e,omitempty"`
 }
 
 // MsgType returns the SSH_MSG_KEXDH_INIT message type
@@ -289,9 +289,9 @@ func (dhi *KeyExchangeDHInit) Unmarshal(raw []byte) bool {
 type KeyExchangeDHInitReply struct {
 	raw []byte
 
-	K_S       []byte `json:"k_s"`
-	F         mpint  `json:"f"`
-	Signature []byte `json:"signature"`
+	K_S       []byte `json:"k_s,omitempty"`
+	F         mpint  `json:"f,omitempty"`
+	Signature []byte `json:"signature,omitempty"`
 }
 
 func (dhr *KeyExchangeDHInitReply) MsgType() byte {

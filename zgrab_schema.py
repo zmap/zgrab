@@ -397,3 +397,72 @@ zgrab_modbus = Record({
 }, extends=zgrab_base)
 
 register_schema("zgrab-modbus", zgrab_modbus)
+
+zgrab_ssh_protocol_agreement = SubRecord({
+    "raw_banner": AnalyzedString(),
+    "protocol_version": String(),
+    "software_version": String(),
+    "comments": String(),
+})
+
+zgrab_ssh_key_exchange_init = SubRecord({
+    "cookie": Binary(),
+    "key_exchange_algorithms": ListOf(String()),
+    "host_key_algorithms": ListOf(String()),
+    "encryption_client_to_server": ListOf(String()),
+    "encryption_server_to_client": ListOf(String()),
+    "mac_client_to_server": ListOf(String()),
+    "mac_server_to_client": ListOf(String()),
+    "compression_client_to_server": ListOf(String()),
+    "compression_server_to_client": ListOf(String()),
+    "language_client_to_server": ListOf(String()),
+    "language_server_to_client": ListOf(String()),
+    "first_kex_packet_follows": Boolean(),
+    "zero": Integer(),
+})
+
+zgrab_ssh_algorithms = SubRecord({
+    "key_exchange_algorithm": String(),
+    "host_key_algorithm": String(),
+})
+
+zgrab_ssh_dh_group_request = SubRecord({
+    "min": Integer(),
+    "preferred": Integer(),
+    "max": Integer(),
+})
+
+zgrab_ssh_dh_group_params = SubRecord({
+    "prime": Binary(),
+    "generator": Binary(),
+})
+
+zgrab_ssh_dh_init = SubRecord({
+    "e": Binary(),
+})
+
+zgrab_ssh_dh_reply = SubRecord({
+    "k_s": Binary(),
+    "f": Binary(),
+    "signature": Binary(),
+})
+
+zgrab_ssh = Record({
+    "data": SubRecord({
+        "ssh": SubRecord({
+            "client_protocol": zgrab_ssh_protocol_agreement,
+            "server_protocol": zgrab_ssh_protocol_agreement,
+            "client_key_exchange_init": zgrab_ssh_key_exchange_init,
+            "server_key_exchange_init": zgrab_ssh_key_exchange_init,
+            "algorithms": zgrab_ssh_algorithms,
+            "key_exchange_dh_group_request": zgrab_ssh_dh_group_request,
+            "key_exchange_dh_group_params": zgrab_ssh_dh_group_params,
+            "key_exchange_dh_group_init": zgrab_ssh_dh_init,
+            "key_exchange_dh_group_reply": zgrab_ssh_dh_reply,
+            "key_exchange_dh_init": zgrab_ssh_dh_init,
+            "key_exchange_dh_reply": zgrab_ssh_dh_reply,
+        }),
+    }),
+}, extends=zgrab_base)
+
+register_schema("zgrab-ssh", zgrab_ssh)
