@@ -80,7 +80,7 @@ zgrab_parsed_certificate = SubRecord({
             "ip_addresses":ListOf(String()),
         }),
         "crl_distribution_points":ListOf(String()),
-        "authority_key_id":String(), # is this actdually binary?
+        "authority_key_id":Binary(), # is this actdually binary?
         "subject_key_id":Binary(),
         "extended_key_usage":ListOf(Integer()),
         "certificate_policies":ListOf(String()),
