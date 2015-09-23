@@ -47,26 +47,51 @@ type sshPayload interface {
 
 var dropbearRegex = regexp.MustCompile(`^dropbear_([\d]+)\.([\d]+)`)
 
+const (
+	maxProtoSize = 256 * 8
+)
+
 func (c *Conn) ClientHandshake() error {
 	clientProtocol := MakeZGrabProtocolAgreement()
 	clientProtocolBytes := clientProtocol.Marshal()
 	c.conn.Write(clientProtocolBytes)
 
-	buf := make([]byte, 1024)
+	buf := make([]byte, maxProtoSize)
 	protocolDone := false
 	protocolRead := 0
-	for !protocolDone && protocolRead < 1024 {
-		n, err := c.conn.Read(buf[protocolRead : protocolRead+1])
-		protocolRead += n
-		if err != nil {
-			return err
+	lineStart := 0
+	lineEnd := 0
+	for !protocolDone && protocolRead < maxProtoSize {
+
+		// Read one "line"
+		lineDone := false
+		cur := lineStart
+		for !lineDone {
+			n, err := c.conn.Read(buf[cur : cur+1])
+			cur += n
+			protocolRead += n
+			if err != nil {
+				return err
+			}
+			if cur-lineStart < 2 {
+				continue
+			}
+			if bytes.Equal(buf[cur-2:cur], []byte("\r\n")) {
+				lineDone = true
+				lineEnd = cur
+			}
 		}
-		if protocolRead < 2 {
+
+		// Check if it's the version banner
+		line := buf[lineStart:lineEnd]
+		lineStart = lineEnd
+		if len(line) < 5 {
 			continue
 		}
-		if bytes.Equal(buf[protocolRead-2:protocolRead], []byte("\r\n")) {
-			protocolDone = true
+		if !bytes.Equal(line[0:3], []byte("SSH")) {
+			continue
 		}
+		protocolDone = true
 	}
 	serverProtocol := ProtocolAgreement{
 		RawBanner: string(buf[0:protocolRead]),
