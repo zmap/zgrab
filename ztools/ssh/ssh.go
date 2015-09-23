@@ -22,6 +22,7 @@ var errUnexpectedMessage = errors.New("Unexpected SSH message type")
 var errShortBuffer = errors.New("Buffer too short")
 var errInvalidPlaintextLength = errors.New("Plaintext not a multiple of block size")
 var errBadInt = errors.New("Invalid mpint")
+var errInvalidProtocolVersion = errors.New("SSH protocol version invalid")
 
 // Client wraps a network connection with an SSH client connection
 func Client(c net.Conn, config *Config) *Conn {

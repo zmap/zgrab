@@ -66,7 +66,7 @@ func (c *Conn) ClientHandshake() error {
 		// Read one "line"
 		lineDone := false
 		cur := lineStart
-		for !lineDone {
+		for !lineDone && protocolRead < maxProtoSize {
 			n, err := c.conn.Read(buf[cur : cur+1])
 			cur += n
 			protocolRead += n
@@ -98,6 +98,9 @@ func (c *Conn) ClientHandshake() error {
 	}
 	serverProtocol.ParseRawBanner()
 	c.handshakeLog.ServerProtocol = &serverProtocol
+	if !protocolDone {
+		return errInvalidProtocolVersion
+	}
 
 	serverSoftware := serverProtocol.SoftwareVersion
 	if matches := dropbearRegex.FindStringSubmatch(serverSoftware); len(matches) == 3 {
