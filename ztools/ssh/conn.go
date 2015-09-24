@@ -61,6 +61,8 @@ func (c *Conn) ClientHandshake() error {
 	protocolRead := 0
 	lineStart := 0
 	lineEnd := 0
+
+ProtocolLoop:
 	for !protocolDone && protocolRead < maxProtoSize {
 
 		// Read one "line"
@@ -71,12 +73,12 @@ func (c *Conn) ClientHandshake() error {
 			cur += n
 			protocolRead += n
 			if err != nil {
-				return err
+				break ProtocolLoop
 			}
 			if cur-lineStart < 2 {
 				continue
 			}
-			if bytes.Equal(buf[cur-2:cur], []byte("\r\n")) {
+			if buf[cur-1] == byte('\n') {
 				lineDone = true
 				lineEnd = cur
 			}
