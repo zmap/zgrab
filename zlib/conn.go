@@ -304,32 +304,87 @@ func (c *Conn) doProxy(config *HTTPConfig) error {
 		return err
 	}
 	c.grabData.HTTP.ProxyResponse = encRes
-	if encRes.StatusCode != 200 {
+	if encRes.StatusCode != http.StatusOK {
 		return fmt.Errorf("proxy connect returned status %d", encRes.StatusCode)
 	}
 	return nil
 }
 
 func (c *Conn) doHTTP(config *HTTPConfig) error {
-	req, encReq, err := c.makeHTTPRequest(config)
-	if err != nil {
-		return err
-	}
 	if c.grabData.HTTP == nil {
 		c.grabData.HTTP = new(HTTPRequestResponse)
 	}
+
+	var httpResponse *HTTPResponse
+	var httpRequest *HTTPRequest
+	var err error
+	if httpRequest, httpResponse, err = c.makeAndSendHTTPRequest(config); err != nil {
+		return err
+	}
+
+	c.grabData.HTTP.Request = httpRequest
+	c.grabData.HTTP.Response = httpResponse
+
+
+	for redirectCount := 0; httpResponse.isRedirect() && httpResponse.canRedirectWithConn(c) && redirectCount < config.MaxRedirects; redirectCount++ {
+
+		var location string
+		// TODO: Should we error here or just store an empty redirect response?
+		if location = httpResponse.Headers["location"].(string); location == "" {
+			return fmt.Errorf("No location found for %d response from %s (%s)", httpResponse.StatusCode, c.domain, c.RemoteAddr())
+		}
+
+		switch httpResponse.StatusCode {
+		case http.StatusMultipleChoices, http.StatusMovedPermanently, http.StatusFound, http.StatusSeeOther, http.StatusTemporaryRedirect:
+			if locationUrl, err := url.Parse(location); err != nil {
+				return err
+			} else {
+				config.Endpoint = locationUrl.RequestURI()
+			}
+
+			if httpRequest, httpResponse, err = c.makeAndSendHTTPRequest(config); err != nil {
+				return err
+			}
+
+			c.grabData.HTTP.RedirectRequests = append(c.grabData.HTTP.RedirectRequests, httpRequest)
+			c.grabData.HTTP.RedirectResponses = append(c.grabData.HTTP.RedirectResponses, httpResponse)
+
+		case http.StatusUseProxy:
+		// The requested resource MUST be accessed through the proxy given by the Location field.
+		// The Location field gives the URI of the proxy
+
+		case http.StatusNotModified:
+			return fmt.Errorf("Unexpected StatusNotModified response code: %d from %s (%s)", http.StatusNotModified, c.domain, c.RemoteAddr())
+
+		default:
+			return fmt.Errorf("Invalid redirect response code: %d from %s (%s)", httpResponse.StatusCode, c.domain, c.RemoteAddr())
+		}
+
+		// TODO: handle the case where we redirect to a different proto/host
+
+	}
+
+	return nil
+}
+
+func (c *Conn) makeAndSendHTTPRequest(config *HTTPConfig) (*HTTPRequest, *HTTPResponse, error) {
+	req, encReq, err := c.makeHTTPRequest(config)
+	if err != nil {
+		return encReq, nil, err
+	}
+
 	if len(config.ProxyDomain) > 0 {
 		host := strings.Split(config.ProxyDomain, ":")[0]
 		req.Host = host
 		req.URL.Host = host
 	}
-	c.grabData.HTTP.Request = encReq
+
 	var encRes *HTTPResponse
 	if encRes, err = c.sendHTTPRequestReadHTTPResponse(req, config); err != nil {
-		return err
+		return encReq, encRes, err
 	}
-	c.grabData.HTTP.Response = encRes
-	return nil
+
+	return encReq, encRes, nil
 }
 
 // Extra method - Do a TLS Handshake and record progress
