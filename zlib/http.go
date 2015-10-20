@@ -68,20 +68,20 @@ type HTTPRequest struct {
 type HTTPResponse struct {
 	VersionMajor int      `json:"version_major",omitempty"`
 	VersionMinor int      `json:"version_minor",omitempty"`
-	StatusCode int         `json:"status_code,omitempty"`
-	StatusLine string      `json:"status_line,omitempty"`
-	Headers    HTTPHeaders `json:"headers,omitempty"`
-	Body       string      `json:"body,omitempty"`
-	BodySHA256 []byte      `json:"body_sha256,omitempty"`
+	StatusCode   int         `json:"status_code,omitempty"`
+	StatusLine   string      `json:"status_line,omitempty"`
+	Headers      HTTPHeaders `json:"headers,omitempty"`
+	Body         string      `json:"body,omitempty"`
+	BodySHA256   []byte      `json:"body_sha256,omitempty"`
 }
 
 type HTTPRequestResponse struct {
-	ProxyRequest  		*HTTPRequest  `json:"connect_request,omitempty"`
-	ProxyResponse 		*HTTPResponse `json:"connect_response,omitempty"`
-	Request       		*HTTPRequest  `json:"request,omitempty"`
-	Response      		*HTTPResponse `json:"response,omitempty"`
-	RedirectRequests 	[]*HTTPRequest `json:"redirect_requests,omitempty"`
-	RedirectResponses 	[]*HTTPResponse `json:"redirect_responses,omitempty"`
+	ProxyRequest      *HTTPRequest  `json:"connect_request,omitempty"`
+	ProxyResponse     *HTTPResponse `json:"connect_response,omitempty"`
+	Request           *HTTPRequest  `json:"request,omitempty"`
+	Response          *HTTPResponse `json:"response,omitempty"`
+	RedirectRequests  []*HTTPRequest `json:"redirect_requests,omitempty"`
+	RedirectResponses []*HTTPResponse `json:"redirect_responses,omitempty"`
 }
 
 func init() {

@@ -48,20 +48,20 @@ const (
 // Implements the net.Conn interface
 type Conn struct {
 	// Underlying network connection
-	conn    net.Conn
-	tlsConn *ztls.Conn
-	isTls   bool
+	conn                net.Conn
+	tlsConn             *ztls.Conn
+	isTls               bool
 
-	grabData GrabData
+	grabData            GrabData
 
 	// Max TLS version
-	maxTlsVersion uint16
+	maxTlsVersion       uint16
 
 	// Cache the deadlines so we can reapply after TLS handshake
-	readDeadline  time.Time
-	writeDeadline time.Time
+	readDeadline        time.Time
+	writeDeadline       time.Time
 
-	caPool *x509.CertPool
+	caPool              *x509.CertPool
 
 	onlyDHE             bool
 	onlyExports         bool
@@ -75,16 +75,16 @@ type Conn struct {
 	noSNI               bool
 	extendedRandom      bool
 
-	domain string
+	domain              string
 
 	// Encoding type
-	ReadEncoding string
+	ReadEncoding        string
 
 	// SSH
-	sshScan *SSHScanConfig
+	sshScan             *SSHScanConfig
 
 	// Errored component
-	erroredComponent string
+	erroredComponent    string
 }
 
 func (c *Conn) getUnderlyingConn() net.Conn {
@@ -232,6 +232,7 @@ func (c *Conn) makeHTTPRequest(config *HTTPConfig) (req *http.Request, encReq *H
 	} else {
 		userAgent = "Mozilla/5.0 zgrab/0.x"
 	}
+
 	req.Header.Set("User-Agent", userAgent)
 	encReq = new(HTTPRequest)
 	encReq.Endpoint = config.Endpoint
@@ -252,16 +253,16 @@ func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request, config *HTTPCo
 	var res *http.Response
 	if res, err = http.ReadResponse(reader, req); err != nil {
 		msg := err.Error()
-		if len(msg) > 1024*config.MaxSize {
-			err = errors.New(msg[0 : 1024*config.MaxSize])
+		if len(msg) > 1024 * config.MaxSize {
+			err = errors.New(msg[0 : 1024 * config.MaxSize])
 		}
 		return
 	}
 	var body []byte
 	if body, err = ioutil.ReadAll(res.Body); err != nil {
 		msg := err.Error()
-		if len(msg) > 1024*config.MaxSize {
-			err = errors.New(msg[0 : 1024*config.MaxSize])
+		if len(msg) > 1024 * config.MaxSize {
+			err = errors.New(msg[0 : 1024 * config.MaxSize])
 		}
 		return
 	}
@@ -272,8 +273,8 @@ func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request, config *HTTPCo
 	encRes.VersionMinor = res.ProtoMinor
 	encRes.Headers = HeadersFromGolangHeaders(res.Header)
 	var bodyOutput []byte
-	if len(body) > 1024*config.MaxSize {
-		bodyOutput = body[0 : 1024*config.MaxSize]
+	if len(body) > 1024 * config.MaxSize {
+		bodyOutput = body[0 : 1024 * config.MaxSize]
 	} else {
 		bodyOutput = body
 	}
