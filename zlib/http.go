@@ -16,8 +16,8 @@ package zlib
 
 import (
 	"net/http"
-	"strings"
 	"net/url"
+	"strings"
 )
 
 var knownHeaders map[string]int
@@ -66,8 +66,8 @@ type HTTPRequest struct {
 }
 
 type HTTPResponse struct {
-	VersionMajor int      `json:"version_major",omitempty"`
-	VersionMinor int      `json:"version_minor",omitempty"`
+	VersionMajor int         `json:"version_major",omitempty"`
+	VersionMinor int         `json:"version_minor",omitempty"`
 	StatusCode   int         `json:"status_code,omitempty"`
 	StatusLine   string      `json:"status_line,omitempty"`
 	Headers      HTTPHeaders `json:"headers,omitempty"`
@@ -76,11 +76,11 @@ type HTTPResponse struct {
 }
 
 type HTTPRequestResponse struct {
-	ProxyRequest      *HTTPRequest  `json:"connect_request,omitempty"`
-	ProxyResponse     *HTTPResponse `json:"connect_response,omitempty"`
-	Request           *HTTPRequest  `json:"request,omitempty"`
-	Response          *HTTPResponse `json:"response,omitempty"`
-	RedirectRequests  []*HTTPRequest `json:"redirect_requests,omitempty"`
+	ProxyRequest      *HTTPRequest    `json:"connect_request,omitempty"`
+	ProxyResponse     *HTTPResponse   `json:"connect_response,omitempty"`
+	Request           *HTTPRequest    `json:"request,omitempty"`
+	Response          *HTTPResponse   `json:"response,omitempty"`
+	RedirectRequests  []*HTTPRequest  `json:"redirect_requests,omitempty"`
 	RedirectResponses []*HTTPResponse `json:"redirect_responses,omitempty"`
 }
 
@@ -153,14 +153,18 @@ func (response HTTPResponse) isRedirect() bool {
 func (response HTTPResponse) canRedirectWithConn(conn *Conn) bool {
 
 	targetUrl, targetUrlError := url.Parse(conn.domain)
-	if (targetUrlError != nil) { return false }
+	if targetUrlError != nil {
+		return false
+	}
 
 	redirectUrl, redirectUrlError := url.Parse(response.Headers["location"].(string))
-	if (redirectUrlError != nil) { return false }
+	if redirectUrlError != nil {
+		return false
+	}
 
 	// Either explicit keep-alive or HTTP 1.1, which uses persistent connections by default
 	var keepAlive bool
-	if (response.Headers["Connection"] != nil) {
+	if response.Headers["Connection"] != nil {
 		keepAlive = strings.EqualFold(response.Headers["Connection"].(string), "keep-alive")
 	} else {
 		keepAlive = response.VersionMajor == 1 && response.VersionMinor == 1
@@ -171,4 +175,3 @@ func (response HTTPResponse) canRedirectWithConn(conn *Conn) bool {
 
 	return matchesHost && matchesProto && keepAlive
 }
-
