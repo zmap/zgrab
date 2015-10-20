@@ -330,7 +330,6 @@ func (c *Conn) doHTTP(config *HTTPConfig) error {
 	for redirectCount := 0; httpResponse.isRedirect() && httpResponse.canRedirectWithConn(c) && redirectCount < config.MaxRedirects; redirectCount++ {
 
 		var location string
-		// TODO: Should we error here or just store an empty redirect response?
 		if location = httpResponse.Headers["location"].(string); location == "" {
 			return fmt.Errorf("No location found for %d response from %s (%s)", httpResponse.StatusCode, c.domain, c.RemoteAddr())
 		}
@@ -360,9 +359,6 @@ func (c *Conn) doHTTP(config *HTTPConfig) error {
 		default:
 			return fmt.Errorf("Invalid redirect response code: %d from %s (%s)", httpResponse.StatusCode, c.domain, c.RemoteAddr())
 		}
-
-		// TODO: handle the case where we redirect to a different proto/host
-
 	}
 
 	return nil
