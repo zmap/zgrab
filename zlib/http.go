@@ -15,6 +15,7 @@
 package zlib
 
 import (
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -162,6 +163,11 @@ func (response HTTPResponse) canRedirectWithConn(conn *Conn) bool {
 		return false
 	}
 
+	remoteIpAddress, _, remoteIpAddressErr := net.SplitHostPort(conn.RemoteAddr().String())
+	if remoteIpAddressErr != nil {
+		return false
+	}
+
 	// Either explicit keep-alive or HTTP 1.1, which uses persistent connections by default
 	var keepAlive bool
 	if response.Headers["Connection"] != nil {
@@ -170,7 +176,7 @@ func (response HTTPResponse) canRedirectWithConn(conn *Conn) bool {
 		keepAlive = response.VersionMajor == 1 && response.VersionMinor == 1
 	}
 
-	matchesHost := targetUrl.Host == redirectUrl.Host
+	matchesHost := (targetUrl.Host == redirectUrl.Host) || (redirectUrl.Host == remoteIpAddress)
 	matchesProto := (conn.isTls && redirectUrl.Scheme == "https") || (!conn.isTls && redirectUrl.Scheme == "http")
 
 	return matchesHost && matchesProto && keepAlive
