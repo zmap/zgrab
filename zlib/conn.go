@@ -268,6 +268,8 @@ func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request, config *HTTPCo
 	encRes = new(HTTPResponse)
 	encRes.StatusCode = res.StatusCode
 	encRes.StatusLine = res.Proto + " " + res.Status
+	encRes.VersionMajor = res.ProtoMajor
+	encRes.VersionMinor = res.ProtoMinor
 	encRes.Headers = HeadersFromGolangHeaders(res.Header)
 	var bodyOutput []byte
 	if len(body) > 1024*config.MaxSize {
