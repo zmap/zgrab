@@ -168,16 +168,18 @@ func (response HTTPResponse) canRedirectWithConn(conn *Conn) bool {
 		return false
 	}
 
+	relativePath := redirectUrl.Host == ""
+	matchesHost := (targetUrl.Host == redirectUrl.Host) || (redirectUrl.Host == remoteIpAddress)
+	matchesProto := (conn.isTls && redirectUrl.Scheme == "https") || (!conn.isTls && redirectUrl.Scheme == "http")
+
 	// Either explicit keep-alive or HTTP 1.1, which uses persistent connections by default
 	var keepAlive bool
 	if response.Headers["Connection"] != nil {
 		keepAlive = strings.EqualFold(response.Headers["Connection"].(string), "keep-alive")
 	} else {
 		keepAlive = response.VersionMajor == 1 && response.VersionMinor == 1
+
 	}
 
-	matchesHost := (targetUrl.Host == redirectUrl.Host) || (redirectUrl.Host == remoteIpAddress)
-	matchesProto := (conn.isTls && redirectUrl.Scheme == "https") || (!conn.isTls && redirectUrl.Scheme == "http")
-
-	return matchesHost && matchesProto && keepAlive
+	return (relativePath && keepAlive) || (!relativePath && keepAlive && matchesHost && matchesProto)
 }
