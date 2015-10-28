@@ -169,7 +169,7 @@ func (response HTTPResponse) canRedirectWithConn(conn *Conn) bool {
 	}
 
 	relativePath := redirectUrl.Host == ""
-	matchesHost := (targetUrl.Host == redirectUrl.Host) || (redirectUrl.Host == remoteIpAddress)
+	matchesHost := (strings.Contains(redirectUrl.Host, targetUrl.Host)) || (redirectUrl.Host == remoteIpAddress)
 	matchesProto := (conn.isTls && redirectUrl.Scheme == "https") || (!conn.isTls && redirectUrl.Scheme == "http")
 
 	// Either explicit keep-alive or HTTP 1.1, which uses persistent connections by default
