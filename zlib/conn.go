@@ -338,6 +338,7 @@ func (c *Conn) doHTTP(config *HTTPConfig) error {
 			if locationUrl, err := url.Parse(location); err != nil {
 				return err
 			} else {
+				c.domain = locationUrl.Host
 				config.Endpoint = locationUrl.RequestURI()
 			}
 
