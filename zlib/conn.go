@@ -204,8 +204,8 @@ func (c *Conn) HTTP(config *HTTPConfig) error {
 	return c.doHTTP(config)
 }
 
-func (c *Conn) makeHTTPRequest(config *HTTPConfig) (req *http.Request, encReq *HTTPRequest, err error) {
-	if req, err = http.NewRequest(config.Method, "", nil); err != nil {
+func (c *Conn) makeHTTPRequest(endpoint string, httpMethod string, userAgent string) (req *http.Request, encReq *HTTPRequest, err error) {
+	if req, err = http.NewRequest(httpMethod, "", nil); err != nil {
 		return
 	}
 	url := new(url.URL)
@@ -217,28 +217,30 @@ func (c *Conn) makeHTTPRequest(config *HTTPConfig) (req *http.Request, encReq *H
 	}
 	url.Host = host
 	req.Host = host
-	req.Method = config.Method
+	req.Method = httpMethod
 	req.Proto = "HTTP/1.1"
 	if c.isTls {
 		url.Scheme = "https"
 	} else {
 		url.Scheme = "http"
 	}
-	url.Path = config.Endpoint
+	url.Path = endpoint
 	req.URL = url
-	var userAgent string
-	if len(config.UserAgent) > 0 {
-		userAgent = config.UserAgent
-	} else {
+
+	if len(userAgent) <= 0 {
 		userAgent = "Mozilla/5.0 zgrab/0.x"
 	}
 
 	req.Header.Set("User-Agent", userAgent)
 	encReq = new(HTTPRequest)
-	encReq.Endpoint = config.Endpoint
-	encReq.Method = config.Method
+	encReq.Endpoint = endpoint
+	encReq.Method = httpMethod
 	encReq.UserAgent = userAgent
 	return req, encReq, nil
+}
+
+func (c *Conn) makeHTTPRequestFromConfig(config *HTTPConfig) (req *http.Request, encReq *HTTPRequest, err error) {
+	return c.makeHTTPRequest(config.Endpoint, config.Method, config.UserAgent)
 }
 
 func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request, config *HTTPConfig) (encRes *HTTPResponse, err error) {
@@ -288,7 +290,7 @@ func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request, config *HTTPCo
 }
 
 func (c *Conn) doProxy(config *HTTPConfig) error {
-	req, encReq, err := c.makeHTTPRequest(config)
+	req, encReq, err := c.makeHTTPRequestFromConfig(config)
 	if err != nil {
 		return err
 	}
@@ -335,14 +337,21 @@ func (c *Conn) doHTTP(config *HTTPConfig) error {
 
 		switch httpResponse.StatusCode {
 		case http.StatusMultipleChoices, http.StatusMovedPermanently, http.StatusFound, http.StatusSeeOther, http.StatusTemporaryRedirect:
-			if locationUrl, err := url.Parse(location); err != nil {
+			var redirectUrl *url.URL
+
+			if redirectUrl, err = url.Parse(location); err != nil {
 				return err
 			} else {
-				c.domain = locationUrl.Host
-				config.Endpoint = locationUrl.RequestURI()
+				c.SetDomain(redirectUrl.Host)
 			}
 
-			if httpRequest, httpResponse, err = c.makeAndSendHTTPRequest(config); err != nil {
+			var redirectBaseRequest *http.Request
+
+			if redirectBaseRequest, httpRequest, err = c.makeHTTPRequest(redirectUrl.RequestURI(), config.Method, config.UserAgent); err != nil {
+				return err
+			}
+
+			if httpResponse, err = c.sendHTTPRequestReadHTTPResponse(redirectBaseRequest, config); err != nil {
 				return err
 			}
 
@@ -365,7 +374,7 @@ func (c *Conn) doHTTP(config *HTTPConfig) error {
 }
 
 func (c *Conn) makeAndSendHTTPRequest(config *HTTPConfig) (*HTTPRequest, *HTTPResponse, error) {
-	req, encReq, err := c.makeHTTPRequest(config)
+	req, encReq, err := c.makeHTTPRequestFromConfig(config)
 	if err != nil {
 		return encReq, nil, err
 	}
