@@ -32,7 +32,9 @@ import (
 	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/util"
 	"github.com/zmap/zgrab/ztools/x509"
+	"github.com/zmap/zgrab/ztools/zlog"
 	"github.com/zmap/zgrab/ztools/ztls"
+	"io"
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:^\d\d\d\s.*\r\n$)|(?:^\d\d\d-[\s\S]*\r\n\d\d\d\s.*\r\n$)`)
@@ -352,6 +354,9 @@ func (c *Conn) doHTTP(config *HTTPConfig) error {
 			}
 
 			if httpResponse, err = c.sendHTTPRequestReadHTTPResponse(redirectBaseRequest, config); err != nil {
+				if err == io.ErrUnexpectedEOF {
+					zlog.Errorf("Connection closed before making redirect to %s (%s)", c.domain, c.RemoteAddr())
+				}
 				return err
 			}
 
