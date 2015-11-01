@@ -149,9 +149,16 @@ func makeGrabber(config *Config) func(*Conn) error {
 			}
 		}
 
-		if config.FTP {
+		if config.FTPBanners {
 			if err := c.GetFTPBanner(); err != nil {
-				c.erroredComponent = "ftp"
+				c.erroredComponent = "ftp-banners"
+				return err
+			}
+		}
+
+		if config.FTPSBanners {
+			if err := c.GetFTPSBanner(); err != nil {
+				c.erroredComponent = "ftps-banners"
 				return err
 			}
 		}

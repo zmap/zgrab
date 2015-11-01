@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/zmap/zgrab/ztools/ssh"
+	"github.com/zmap/zgrab/ztools/zftp"
 	"github.com/zmap/zgrab/ztools/ztls"
 )
 
@@ -47,6 +48,7 @@ type GrabData struct {
 	Heartbleed   *ztls.Heartbleed      `json:"heartbleed,omitempty"`
 	Modbus       *ModbusEvent          `json:"modbus,omitempty"`
 	SSH          *ssh.HandshakeLog     `json:"ssh,omitempty"`
+	FTP          *zftp.FTPLog          `json:"ftp,omitempty"`
 }
 
 func (g *Grab) MarshalJSON() ([]byte, error) {

@@ -23,14 +23,15 @@ import (
 	"time"
 
 	"github.com/zmap/zgrab/ztools/ssh"
+	"github.com/zmap/zgrab/ztools/util"
 	"github.com/zmap/zgrab/ztools/x509"
+	"github.com/zmap/zgrab/ztools/zftp"
 	"github.com/zmap/zgrab/ztools/ztls"
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:^\d\d\d\s.*\r\n$)|(?:^\d\d\d-[\s\S]*\r\n\d\d\d\s.*\r\n$)`)
 var pop3EndRegex = regexp.MustCompile(`(?:\r\n\.\r\n$)|(?:\r\n$)`)
 var imapStatusEndRegex = regexp.MustCompile(`\r\n$`)
-var ftpEndRegex = regexp.MustCompile(`^.*[0-9]{3}( [^\r\n]*)?\r?\n$`)
 
 const (
 	SMTP_COMMAND = "STARTTLS\r\n"
@@ -473,28 +474,8 @@ func (c *Conn) IMAPStartTLSHandshake() error {
 	return c.TLSHandshake()
 }
 
-func (c *Conn) readUntilRegex(res []byte, expr *regexp.Regexp) (int, error) {
-	buf := res[0:]
-	length := 0
-	for finished := false; !finished; {
-		n, err := c.getUnderlyingConn().Read(buf)
-		length += n
-		if err != nil {
-			return length, err
-		}
-		if expr.Match(res[0:length]) {
-			finished = true
-		}
-		if length == len(res) {
-			return length, errors.New("Not enough buffer space")
-		}
-		buf = res[length:]
-	}
-	return length, nil
-}
-
 func (c *Conn) readSmtpResponse(res []byte) (int, error) {
-	return c.readUntilRegex(res, smtpEndRegex)
+	return util.ReadUntilRegex(c.getUnderlyingConn(), res, smtpEndRegex)
 }
 
 func (c *Conn) SMTPBanner(b []byte) (int, error) {
@@ -530,7 +511,7 @@ func (c *Conn) SMTPHelp() error {
 }
 
 func (c *Conn) readPop3Response(res []byte) (int, error) {
-	return c.readUntilRegex(res, pop3EndRegex)
+	return util.ReadUntilRegex(c.getUnderlyingConn(), res, pop3EndRegex)
 }
 
 func (c *Conn) POP3Banner(b []byte) (int, error) {
@@ -540,7 +521,7 @@ func (c *Conn) POP3Banner(b []byte) (int, error) {
 }
 
 func (c *Conn) readImapStatusResponse(res []byte) (int, error) {
-	return c.readUntilRegex(res, imapStatusEndRegex)
+	return util.ReadUntilRegex(c.getUnderlyingConn(), res, imapStatusEndRegex)
 }
 
 func (c *Conn) IMAPBanner(b []byte) (int, error) {
@@ -598,10 +579,22 @@ func (c *Conn) SendModbusEcho() (int, error) {
 }
 
 func (c *Conn) GetFTPBanner() error {
-	res := make([]byte, 1024)
-	n, err := c.readUntilRegex(res, ftpEndRegex)
-	c.grabData.Banner = string(res[0:n])
-	return err
+	c.grabData.FTP = new(zftp.FTPLog)
+	return zftp.GatherFTPBanner(c.grabData.FTP, c.getUnderlyingConn())
+}
+
+func (c *Conn) GetFTPSBanner() error {
+	c.grabData.FTP = new(zftp.FTPLog)
+	ftpsReady, err := zftp.GatherFTPSBanner(c.grabData.FTP, c.getUnderlyingConn())
+	if err != nil {
+		return err
+	}
+
+	if ftpsReady {
+		return c.TLSHandshake()
+	} else {
+		return nil
+	}
 }
 
 func (c *Conn) SSHHandshake() error {

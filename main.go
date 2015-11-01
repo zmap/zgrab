@@ -100,7 +100,8 @@ func init() {
 	flag.BoolVar(&config.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
 	flag.StringVar(&rootCAFileName, "ca-file", "", "List of trusted root certificate authorities in PEM format")
 	flag.IntVar(&config.GOMAXPROCS, "gomaxprocs", 3, "Set GOMAXPROCS (default 3)")
-	flag.BoolVar(&config.FTP, "ftp", false, "Read FTP banners")
+	flag.BoolVar(&config.FTPBanners, "ftp-banners", false, "Read FTP banners")
+	flag.BoolVar(&config.FTPSBanners, "ftps-banners", false, "Read FTP banners and FTPS certificates")
 	flag.BoolVar(&config.SSH.SSH, "ssh", false, "SSH scan")
 	flag.StringVar(&config.SSH.Client, "ssh-client", "", "Mimic behavior of a specific SSH client")
 	flag.StringVar(&config.SSH.KexAlgorithms, "ssh-kex-algorithms", "", "Set SSH Key Exchange Algorithms")
@@ -136,8 +137,14 @@ func init() {
 	}
 
 	// Validate FTP
-	if config.FTP && config.Banners {
-		zlog.Fatal("--ftp and --banners are mutually exclusive")
+	if config.FTPBanners && config.Banners {
+		zlog.Fatal("--ftp-banners and --banners are mutually exclusive")
+	}
+	if config.FTPSBanners && config.Banners {
+		zlog.Fatal("--ftps-banners and --banners are mutually exclusive")
+	}
+	if config.FTPBanners && config.FTPSBanners {
+		zlog.Fatal("--ftp-banners and --ftps-banners are mutually exclusive")
 	}
 
 	// Validate TLS Versions
