@@ -6,7 +6,7 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-package zftp
+package ftp
 
 import (
 	"net"
@@ -18,14 +18,21 @@ import (
 
 var ftpEndRegex = regexp.MustCompile(`^(?:.*\r?\n)*([0-9]{3})( [^\r\n]*)?\r?\n$`)
 
-func GatherFTPBanner(logStruct *FTPLog, connection net.Conn) error {
+func GetFTPBanner(logStruct *FTPLog, connection net.Conn) (bool, error) {
 	buffer := make([]byte, 1024)
 	respLen, err := util.ReadUntilRegex(connection, buffer, ftpEndRegex)
 	logStruct.Banner = string(buffer[0:respLen])
-	return err
+
+	if err != nil {
+		return false, err
+	}
+
+	retCode := ftpEndRegex.FindStringSubmatch(logStruct.Banner)[1]
+
+	return strings.HasPrefix(retCode, "2"), nil
 }
 
-func setupFTPS(logStruct *FTPLog, connection net.Conn) (bool, error) {
+func SetupFTPS(logStruct *FTPLog, connection net.Conn) (bool, error) {
 	buffer := make([]byte, 1024)
 
 	connection.Write([]byte("AUTH TLS\r\n"))
@@ -54,19 +61,4 @@ func setupFTPS(logStruct *FTPLog, connection net.Conn) (bool, error) {
 	}
 
 	return false, nil
-}
-
-func GatherFTPSBanner(logStruct *FTPLog, connection net.Conn) (bool, error) {
-	err := GatherFTPBanner(logStruct, connection)
-	if err != nil {
-		return false, err
-	}
-
-	retCode := ftpEndRegex.FindStringSubmatch(logStruct.Banner)[1]
-
-	if strings.HasPrefix(retCode, "2") {
-		return setupFTPS(logStruct, connection)
-	} else {
-		return false, nil
-	}
 }

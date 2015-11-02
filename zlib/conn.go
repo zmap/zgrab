@@ -22,10 +22,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/util"
 	"github.com/zmap/zgrab/ztools/x509"
-	"github.com/zmap/zgrab/ztools/zftp"
 	"github.com/zmap/zgrab/ztools/ztls"
 )
 
@@ -578,14 +578,9 @@ func (c *Conn) SendModbusEcho() (int, error) {
 	return w, err
 }
 
-func (c *Conn) GetFTPBanner() error {
-	c.grabData.FTP = new(zftp.FTPLog)
-	return zftp.GatherFTPBanner(c.grabData.FTP, c.getUnderlyingConn())
-}
+func (c *Conn) GetFTPSCertificates() error {
+	ftpsReady, err := ftp.SetupFTPS(c.grabData.FTP, c.getUnderlyingConn())
 
-func (c *Conn) GetFTPSBanner() error {
-	c.grabData.FTP = new(zftp.FTPLog)
-	ftpsReady, err := zftp.GatherFTPSBanner(c.grabData.FTP, c.getUnderlyingConn())
 	if err != nil {
 		return err
 	}

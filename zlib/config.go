@@ -126,8 +126,8 @@ type Config struct {
 	StartTLS   bool
 
 	// FTP
-	FTPBanners  bool
-	FTPSBanners bool
+	FTP        bool
+	FTPAuthTLS bool
 
 	// Modbus
 	Modbus bool

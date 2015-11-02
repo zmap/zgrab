@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/processing"
 )
 
@@ -149,17 +150,20 @@ func makeGrabber(config *Config) func(*Conn) error {
 			}
 		}
 
-		if config.FTPBanners {
-			if err := c.GetFTPBanner(); err != nil {
-				c.erroredComponent = "ftp-banners"
+		if config.FTP {
+			c.grabData.FTP = new(ftp.FTPLog)
+
+			is200Banner, err := ftp.GetFTPBanner(c.grabData.FTP, c.getUnderlyingConn())
+			if err != nil {
+				c.erroredComponent = "ftp"
 				return err
 			}
-		}
 
-		if config.FTPSBanners {
-			if err := c.GetFTPSBanner(); err != nil {
-				c.erroredComponent = "ftps-banners"
-				return err
+			if config.FTPAuthTLS && is200Banner {
+				if err := c.GetFTPSCertificates(); err != nil {
+					c.erroredComponent = "ftp-authtls"
+					return err
+				}
 			}
 		}
 

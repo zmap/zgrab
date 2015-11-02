@@ -6,7 +6,7 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-package zftp
+package ftp
 
 type FTPLog struct {
 	Banner      string `json:"banner,omitempty"`
