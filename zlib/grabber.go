@@ -124,6 +124,11 @@ func makeGrabber(config *Config) func(*Conn) error {
 		if config.SSH.SSH {
 			c.sshScan = &config.SSH
 		}
+		if config.ISCSI.ISCSI {
+			c.iscsiScan = &config.ISCSI
+			c.ISCSIScan(&config.ISCSI)
+		}
+		
 		c.ReadEncoding = config.Encoding
 		if config.TLS {
 			if err := c.TLSHandshake(); err != nil {

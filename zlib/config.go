@@ -24,6 +24,7 @@ import (
 	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/x509"
 	"github.com/zmap/zgrab/ztools/zlog"
+	"github.com/zmap/zgrab/ztools/iscsi"
 )
 
 type HTTPConfig struct {
@@ -139,6 +140,9 @@ type Config struct {
 
 	// HTTP
 	HTTP HTTPConfig
+
+	// ISCSI
+	ISCSI iscsi.ISCSIConfig
 
 	// Error handling
 	ErrorLog *zlog.Logger

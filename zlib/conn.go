@@ -31,6 +31,7 @@ import (
 	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/x509"
 	"github.com/zmap/zgrab/ztools/ztls"
+	"github.com/zmap/zgrab/ztools/iscsi"
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:^\d\d\d\s.*\r\n$)|(?:^\d\d\d-[\s\S]*\r\n\d\d\d\s.*\r\n$)`)
@@ -81,6 +82,9 @@ type Conn struct {
 
 	// SSH
 	sshScan *SSHScanConfig
+
+	// iSCSI
+	iscsiScan *iscsi.ISCSIConfig
 
 	// Errored component
 	erroredComponent string
@@ -616,5 +620,14 @@ func (c *Conn) SSHHandshake() error {
 	err := client.ClientHandshake()
 	handshakeLog := client.HandshakeLog()
 	c.grabData.SSH = handshakeLog
+	return err
+}
+
+func (c *Conn) ISCSIScan(config *iscsi.ISCSIConfig) error {
+	data, err := iscsi.Scan(c.getUnderlyingConn(), config)
+	if err != nil {
+		return err
+	}
+	c.grabData.ISCSI = &data
 	return err
 }
