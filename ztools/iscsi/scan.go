@@ -60,7 +60,6 @@ func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
 	response := NewLoginResponse()
 	err = response.UnmarshalBinary(buf)
 	if err != nil && err != io.EOF {
-		fmt.Println(err)
 		return authlog, err
 	}
 
@@ -69,8 +68,6 @@ func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
 		authlog.HadError = true
 		return authlog, errors.New("iSCSI-login failed")
 	}
-
-	//	fmt.Printf("%+v\n", response.Header)
 
 	increment(&CmdSN)
 
@@ -81,8 +78,6 @@ func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
 	if err != nil {
 		return authlog, err
 	}
-
-	//	fmt.Printf("%x\n", res)
 
 	conn.Write(res)
 
@@ -98,8 +93,10 @@ func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
 		return authlog, err
 	}
 
-	//	response2.Data.Print()
-	//	fmt.Printf("%+v\n", response2.Header)
+	if response2.Header.(*TextResponseHeader).Opcode == REJECT {
+		authlog.HadError = true
+		return authlog, nil
+	}
 
 	targets := map[string]string{}
 	for i, target := range response2.Data.Data {
@@ -113,7 +110,6 @@ func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
 	}
 
 	for target, ip := range targets {
-		//increment(&CmdSN)
 		conn2, err := net.Dial("tcp", conn.RemoteAddr().String())
 		if err != nil {
 			return authlog, err
@@ -158,11 +154,9 @@ func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
 		buf = make([]byte, 1024)
 		_, err = conn2.Read(buf)
 		if err != nil {
-			fmt.Println(err)
 			authlog.HadError = true
 			return authlog, err
 		}
-
 		response = NewLoginResponse()
 		err = response.UnmarshalBinary(buf)
 		if err != nil && err != io.EOF {
@@ -170,10 +164,12 @@ func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
 			return authlog, err
 		}
 
+		haderror := response.Header.(*LoginResponseHeader).Opcode == REJECT
+
 		if response.Header.(*LoginResponseHeader).StatusClass == 0 && response.Header.(*LoginResponseHeader).StatusDetail == 0 {
-			authlog.Targets = append(authlog.Targets, Target{target, ip, true, false})
+			authlog.Targets = append(authlog.Targets, Target{target, ip, true, haderror})
 		} else {
-			authlog.Targets = append(authlog.Targets, Target{target, ip, false, false})
+			authlog.Targets = append(authlog.Targets, Target{target, ip, false, haderror})
 		}
 
 	}

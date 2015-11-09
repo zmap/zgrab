@@ -94,7 +94,6 @@ type Parameters struct {
 func (p *Parameters) AddTextParameter(key, value string) {
 	p.Data = append(p.Data, TextParameter{key, value})
 	p.L += len(key) + len(value) + 2
-	//p.Header.SetLength(p.l)
 }
 
 func (p *Parameters) Length() [3]byte {
@@ -118,8 +117,6 @@ type PDU struct {
 
 func (p PDU) MarshalBinary() ([]byte, error) {
 	buf := new(bytes.Buffer)
-	//copy(p.Header.GetLength(), length)
-	//p.Header.GetLength()
 	err := binary.Write(buf, binary.BigEndian, p.Header)
 	if err != nil {
 		return buf.Bytes(), err
@@ -140,7 +137,6 @@ func (p PDU) MarshalBinary() ([]byte, error) {
 }
 
 func (p *PDU) UnmarshalBinary(data []byte) error {
-	//	fmt.Printf("%x\n", data)
 	buf := bytes.NewBuffer(data)
 	err := binary.Read(buf, binary.BigEndian, p.Header)
 	if err != nil {
@@ -284,49 +280,3 @@ func NewLoginResponse() LoginResponse {
 	return LoginResponse{PDU{new(LoginResponseHeader), Parameters{}}}
 }
 
-func Login2(loginParams map[string]string) []byte {
-	// packet follows RFC convention of 4 byte "words"
-	packet := [][]byte{
-		[]byte{
-			LOGIN_REQUEST + REQUEST_PDU,
-			TRANSIT + CSG_LOGIN + NSG_FULL,
-			VERSION_MAX,
-			VERSION_MIN,
-		},
-		[]byte{0, 0, 0, 0}, // to be filled in later with AHS and data segment lengths
-		ISID_CISCO_OUI[:4],
-		append(ISID_CISCO_OUI[4:], TSIH_LOGIN[:]...),
-		[]byte{0, 0, 0, 0}, // Initiator Task Tag can be 0
-		[]byte{0, 0, 0, 0}, // Connection ID is 0x0, 0x0, other two bytes are reserved
-		[]byte{0, 0, 0, 1}, // Command Sequence Number is 1
-		[]byte{0, 0, 0, 0}, //reserved,
-		[]byte{0, 0, 0, 0}, //reserved,
-		[]byte{0, 0, 0, 0}, //reserved,
-		[]byte{0, 0, 0, 0}, //reserved,
-		[]byte{0, 0, 0, 0}, //reserved,
-	}
-
-	res := make([]byte, len(packet)*4)
-	for i, bs := range packet {
-		for j, b := range bs {
-			res[i*4+j] = b
-		}
-	}
-	// fill data segment with params
-	l := 0 // length counter
-	for param, value := range loginParams {
-		paramb := []byte(param + "=" + value + "\u0000")
-		l += len(paramb)
-		res = append(res, paramb...)
-	}
-	padding := l % 4
-	res = append(res, make([]byte, padding, padding)...)
-
-	// according to RFC7143 (11.2.1.6), padding is excluded from length calculation
-	// in case of weirdness, do: l += padding
-
-	length := []byte{}
-	fmt.Sscanf(fmt.Sprintf("%06x", l), "%x", &length)
-	copy(res[5:8], length[:])
-	return res
-}
