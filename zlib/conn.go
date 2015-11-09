@@ -625,9 +625,6 @@ func (c *Conn) SSHHandshake() error {
 
 func (c *Conn) ISCSIScan(config *iscsi.ISCSIConfig) error {
 	data, err := iscsi.Scan(c.getUnderlyingConn(), config)
-	if err != nil {
-		return err
-	}
 	c.grabData.ISCSI = &data
 	return err
 }
