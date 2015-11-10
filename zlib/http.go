@@ -15,7 +15,9 @@
 package zlib
 
 import (
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -65,18 +67,22 @@ type HTTPRequest struct {
 }
 
 type HTTPResponse struct {
-	StatusCode int         `json:"status_code,omitempty"`
-	StatusLine string      `json:"status_line,omitempty"`
-	Headers    HTTPHeaders `json:"headers,omitempty"`
-	Body       string      `json:"body,omitempty"`
-	BodySHA256 []byte      `json:"body_sha256,omitempty"`
+	VersionMajor int         `json:"version_major",omitempty"`
+	VersionMinor int         `json:"version_minor",omitempty"`
+	StatusCode   int         `json:"status_code,omitempty"`
+	StatusLine   string      `json:"status_line,omitempty"`
+	Headers      HTTPHeaders `json:"headers,omitempty"`
+	Body         string      `json:"body,omitempty"`
+	BodySHA256   []byte      `json:"body_sha256,omitempty"`
 }
 
 type HTTPRequestResponse struct {
-	ProxyRequest  *HTTPRequest  `json:"connect_request,omitempty"`
-	ProxyResponse *HTTPResponse `json:"connect_response,omitempty"`
-	Request       *HTTPRequest  `json:"request,omitempty"`
-	Response      *HTTPResponse `json:"response,omitempty"`
+	ProxyRequest      *HTTPRequest    `json:"connect_request,omitempty"`
+	ProxyResponse     *HTTPResponse   `json:"connect_response,omitempty"`
+	Request           *HTTPRequest    `json:"request,omitempty"`
+	Response          *HTTPResponse   `json:"response,omitempty"`
+	RedirectRequests  []*HTTPRequest  `json:"redirect_requests,omitempty"`
+	RedirectResponses []*HTTPResponse `json:"redirect_responses,omitempty"`
 }
 
 func init() {
@@ -135,4 +141,49 @@ func init() {
 	knownHeaders["x_content_duration"] = 1
 	knownHeaders["x_real_ip"] = 1
 	knownHeaders["x_forwarded_for"] = 1
+}
+
+func (response HTTPResponse) isRedirect() bool {
+	if response.StatusCode >= 300 && response.StatusCode < 400 {
+		return true
+	}
+
+	return false
+}
+
+func (response HTTPResponse) canRedirectWithConn(conn *Conn) bool {
+
+	targetUrl, targetUrlError := url.Parse(conn.domain)
+	if targetUrlError != nil {
+		return false
+	}
+
+	if response.Headers["location"] == nil {
+		return false
+	}
+
+	redirectUrl, redirectUrlError := url.Parse(response.Headers["location"].(string))
+	if redirectUrlError != nil {
+		return false
+	}
+
+	remoteIpAddress, _, remoteIpAddressErr := net.SplitHostPort(conn.RemoteAddr().String())
+	if remoteIpAddressErr != nil {
+		return false
+	}
+
+	relativePath := redirectUrl.Host == ""
+	matchesHost := (strings.Contains(redirectUrl.Host, targetUrl.Host)) || (redirectUrl.Host == remoteIpAddress)
+	matchesProto := (conn.isTls && redirectUrl.Scheme == "https") || (!conn.isTls && redirectUrl.Scheme == "http")
+
+	// Either explicit keep-alive or HTTP 1.1, which uses persistent connections by default
+	var keepAlive bool
+	if response.Headers["Connection"] != nil {
+		keepAlive = strings.EqualFold(response.Headers["Connection"].(string), "keep-alive")
+	} else {
+		keepAlive = response.VersionMajor == 1 && response.VersionMinor == 1
+
+	}
+
+	return (relativePath && keepAlive) || (!relativePath && keepAlive && matchesHost && matchesProto)
 }

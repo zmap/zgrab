@@ -255,6 +255,8 @@ func makeGrabber(config *Config) func(*Conn) error {
 			config.ErrorLog.Errorf("Conversation error with remote host %s: %s",
 				c.RemoteAddr().String(), err.Error())
 		}
+
+		c.Close()
 		return err
 	}
 }
