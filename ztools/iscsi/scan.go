@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"time"
 )
 
 func inner(sn *[4]byte, index int) {
@@ -25,11 +26,11 @@ func increment(sn *[4]byte) {
 }
 
 func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
-	authlog := AuthLog{conn.RemoteAddr().String(), []Target{}, false}
+	authlog := AuthLog{[]Target{}, false}
 	p := Parameters{[]TextParameter{}, 0}
 
 	p.AddTextParameter("InitiatorName", "iqn.1993-08.org.debian:01:f0f8de6d331")
-	p.AddTextParameter("InitiatorAlias", "musk")
+	p.AddTextParameter("InitiatorAlias", fmt.Sprintf("%0"+fmt.Sprint(len(config.LocalLogin)/4*4+4)+"s", config.LocalLogin))
 	p.AddTextParameter("SessionType", "Discovery")
 	p.AddTextParameter("HeaderDigest", "None")
 	p.AddTextParameter("DataDigest", "None")
@@ -62,9 +63,7 @@ func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
 	if err != nil && err != io.EOF {
 		return authlog, err
 	}
-
-	// success is denoted by StatusClass == 0
-	if response.Header.(*LoginResponseHeader).StatusClass != 0 {
+	if response.Header.(*LoginResponseHeader).Opcode != LOGIN_RESPONSE {
 		authlog.HadError = true
 		return authlog, errors.New("iSCSI-login failed")
 	}
@@ -90,6 +89,7 @@ func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
 	response2 := NewTextResponse()
 	err = response2.UnmarshalBinary(buf)
 	if err != nil && err != io.EOF {
+		authlog.HadError = true
 		return authlog, err
 	}
 
@@ -110,10 +110,13 @@ func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
 	}
 
 	for target, ip := range targets {
-		conn2, err := net.Dial("tcp", conn.RemoteAddr().String())
+		// 3 second connection establish timeout
+		conn2, err := net.DialTimeout("tcp", conn.RemoteAddr().String(), time.Second*3)
 		if err != nil {
 			return authlog, err
 		}
+		// 3 second read/write timeouts
+		conn2.SetDeadline(time.Now().Add(time.Second * 3))
 		defer conn2.Close()
 
 		p := Parameters{[]TextParameter{}, 0}

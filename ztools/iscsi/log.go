@@ -8,7 +8,6 @@ type Target struct {
 }
 
 type AuthLog struct {
-	Destination string   `json:"ip,omitempty"`
-	Targets     []Target `json:"targets,omitempty"`
-	HadError    bool     `json:"had_error"`
+	Targets  []Target `json:"targets,omitempty"`
+	HadError bool     `json:"had_error"`
 }
