@@ -158,6 +158,10 @@ func (response HTTPResponse) canRedirectWithConn(conn *Conn) bool {
 		return false
 	}
 
+	if response.Headers["location"] == nil {
+		return false
+	}
+
 	redirectUrl, redirectUrlError := url.Parse(response.Headers["location"].(string))
 	if redirectUrlError != nil {
 		return false

@@ -336,6 +336,11 @@ func (c *Conn) doHTTP(config *HTTPConfig) error {
 	for redirectCount := 0; httpResponse.isRedirect() && httpResponse.canRedirectWithConn(c) && redirectCount < config.MaxRedirects; redirectCount++ {
 
 		var location string
+
+		if httpResponse.Headers["location"] == nil {
+			return fmt.Errorf("No location found for %d response from %s (%s)", httpResponse.StatusCode, c.domain, c.RemoteAddr())
+		}
+
 		if location = httpResponse.Headers["location"].(string); location == "" {
 			return fmt.Errorf("No location found for %d response from %s (%s)", httpResponse.StatusCode, c.domain, c.RemoteAddr())
 		}
