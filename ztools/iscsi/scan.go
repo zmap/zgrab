@@ -46,6 +46,7 @@ func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
 	r := NewLoginRequest(p, CmdSN)
 	res, err := r.MarshalBinary()
 	if err != nil {
+		authlog.HadError = true
 		return authlog, err
 	}
 
@@ -61,6 +62,7 @@ func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
 	response := NewLoginResponse()
 	err = response.UnmarshalBinary(buf)
 	if err != nil && err != io.EOF {
+		authlog.HadError = true
 		return authlog, err
 	}
 	if response.Header.(*LoginResponseHeader).Opcode != LOGIN_RESPONSE {
@@ -75,6 +77,7 @@ func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
 	r2 := NewTextRequest(p, CmdSN, CmdSN)
 	res, err = r2.MarshalBinary()
 	if err != nil {
+		authlog.HadError = true
 		return authlog, err
 	}
 
@@ -93,9 +96,9 @@ func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
 		return authlog, err
 	}
 
-	if response2.Header.(*TextResponseHeader).Opcode == REJECT {
+	if response2.Header.(*TextResponseHeader).Opcode != TEXT_RESPONSE {
 		authlog.HadError = true
-		return authlog, nil
+		return authlog, errors.New("iSCSI-discovery failed")
 	}
 
 	targets := map[string]string{}
@@ -113,6 +116,7 @@ func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
 		// 3 second connection establish timeout
 		conn2, err := net.DialTimeout("tcp", conn.RemoteAddr().String(), time.Second*3)
 		if err != nil {
+			authlog.HadError = true
 			return authlog, err
 		}
 		// 3 second read/write timeouts
@@ -144,6 +148,7 @@ func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
 		r = NewLoginRequest(p, CmdSN)
 		res, err = r.MarshalBinary()
 		if err != nil {
+			authlog.HadError = true
 			return authlog, err
 		}
 
@@ -167,7 +172,7 @@ func Scan(conn net.Conn, config *ISCSIConfig) (AuthLog, error) {
 			return authlog, err
 		}
 
-		haderror := response.Header.(*LoginResponseHeader).Opcode == REJECT
+		haderror := response.Header.(*LoginResponseHeader).Opcode != LOGIN_RESPONSE
 
 		if response.Header.(*LoginResponseHeader).StatusClass == 0 && response.Header.(*LoginResponseHeader).StatusDetail == 0 {
 			authlog.Targets = append(authlog.Targets, Target{target, ip, true, haderror})

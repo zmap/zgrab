@@ -107,6 +107,7 @@ func init() {
 	flag.StringVar(&rootCAFileName, "ca-file", "", "List of trusted root certificate authorities in PEM format")
 	flag.IntVar(&config.GOMAXPROCS, "gomaxprocs", 3, "Set GOMAXPROCS (default 3)")
 	flag.BoolVar(&config.FTP, "ftp", false, "Read FTP banners")
+	flag.BoolVar(&config.FTPAuthTLS, "ftp-authtls", false, "Collect FTPS certificates in addition to FTP banners")
 	flag.BoolVar(&config.SSH.SSH, "ssh", false, "SSH scan")
 	flag.StringVar(&config.SSH.Client, "ssh-client", "", "Mimic behavior of a specific SSH client")
 	flag.StringVar(&config.SSH.KexAlgorithms, "ssh-kex-algorithms", "", "Set SSH Key Exchange Algorithms")
@@ -149,6 +150,9 @@ func init() {
 	// Validate FTP
 	if config.FTP && config.Banners {
 		zlog.Fatal("--ftp and --banners are mutually exclusive")
+	}
+	if config.FTPAuthTLS && !config.FTP {
+		zlog.Fatal("--ftp-authtls requires usage of --ftp")
 	}
 
 	// Validate TLS Versions

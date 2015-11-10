@@ -1,16 +1,17 @@
 language: go
 go:
-- 1.4
-env:
-  global:
-  - GOPATH="$HOME/gopath"
-before_script:
-- mkdir -p $HOME/gopath/src/github.com/zmap
-- ln -s $TRAVIS_BUILD_DIR $HOME/gopath/src/github.com/zmap/ || true
+- 1.4.2
+before_install:
 - go get gopkg.in/check.v1
 - go get github.com/dadrian/rc2
+- go get github.com/axw/gocov/gocov
+- go get github.com/mattn/goveralls
+- go get golang.org/x/tools/cmd/cover
+before_script:
+- mkdir -p $GOPATH/src/github.com/zmap
+- ln -s $TRAVIS_BUILD_DIR $GOPATH/src/github.com/zmap/ || true
 script:
-- go test -v ./...
+- ./.test-cover.sh
 notifications:
   email:
   - zmap-devel@umich.edu
