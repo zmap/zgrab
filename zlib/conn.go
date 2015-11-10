@@ -254,6 +254,7 @@ func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request, config *HTTPCo
 		req.Method = "HEAD" // fuck you golang
 	}
 	reader := bufio.NewReader(uc)
+
 	var res *http.Response
 	if res, err = http.ReadResponse(reader, req); err != nil {
 		msg := err.Error()
@@ -262,6 +263,8 @@ func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request, config *HTTPCo
 		}
 		return
 	}
+	defer res.Body.Close()
+
 	var body []byte
 	if body, err = ioutil.ReadAll(res.Body); err != nil {
 		msg := err.Error()
