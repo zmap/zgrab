@@ -320,7 +320,7 @@ func (c *Conn) doHTTP(config *HTTPConfig) error {
 		c.grabData.HTTP = new(HTTPRequestResponse)
 	}
 
-	var httpResponse *HTTPResponse
+	var httpResponse, terminalResponse, previousResponse *HTTPResponse
 	var httpRequest *HTTPRequest
 	var err error
 	if httpRequest, httpResponse, err = c.makeAndSendHTTPRequest(config); err != nil {
@@ -328,7 +328,7 @@ func (c *Conn) doHTTP(config *HTTPConfig) error {
 	}
 
 	c.grabData.HTTP.Request = httpRequest
-	c.grabData.HTTP.Response = httpResponse
+	terminalResponse = httpResponse
 
 	for redirectCount := 0; httpResponse.isRedirect() && httpResponse.canRedirectWithConn(c) && redirectCount < config.MaxRedirects; redirectCount++ {
 
@@ -353,6 +353,8 @@ func (c *Conn) doHTTP(config *HTTPConfig) error {
 				return err
 			}
 
+			previousResponse = httpResponse
+
 			if httpResponse, err = c.sendHTTPRequestReadHTTPResponse(redirectBaseRequest, config); err != nil {
 				if err == io.ErrUnexpectedEOF {
 					zlog.Errorf("Connection closed before making redirect to %s (%s)", c.domain, c.RemoteAddr())
@@ -361,7 +363,9 @@ func (c *Conn) doHTTP(config *HTTPConfig) error {
 			}
 
 			c.grabData.HTTP.RedirectRequests = append(c.grabData.HTTP.RedirectRequests, httpRequest)
-			c.grabData.HTTP.RedirectResponses = append(c.grabData.HTTP.RedirectResponses, httpResponse)
+			c.grabData.HTTP.RedirectResponses = append(c.grabData.HTTP.RedirectResponses, previousResponse)
+
+			terminalResponse = httpResponse
 
 		case http.StatusUseProxy:
 		// The requested resource MUST be accessed through the proxy given by the Location field.
@@ -374,6 +378,8 @@ func (c *Conn) doHTTP(config *HTTPConfig) error {
 			return fmt.Errorf("Invalid redirect response code: %d from %s (%s)", httpResponse.StatusCode, c.domain, c.RemoteAddr())
 		}
 	}
+
+	c.grabData.HTTP.Response = terminalResponse
 
 	return nil
 }
