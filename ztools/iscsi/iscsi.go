@@ -128,7 +128,7 @@ func (p PDU) MarshalBinary() ([]byte, error) {
 		}
 	}
 
-	for i := 0; i < p.Data.L%4; i++ {
+	for i := 0; i < buf.Len()%4; i++ {
 		buf.Write([]byte{0})
 	}
 
@@ -279,4 +279,3 @@ type LoginResponse struct {
 func NewLoginResponse() LoginResponse {
 	return LoginResponse{PDU{new(LoginResponseHeader), Parameters{}}}
 }
-
