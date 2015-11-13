@@ -32,8 +32,10 @@ import (
 	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/util"
 	"github.com/zmap/zgrab/ztools/x509"
+	"github.com/zmap/zgrab/ztools/zlog"
 	"github.com/zmap/zgrab/ztools/ztls"
 	"github.com/zmap/zgrab/ztools/iscsi"
+	"io"
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:^\d\d\d\s.*\r\n$)|(?:^\d\d\d-[\s\S]*\r\n\d\d\d\s.*\r\n$)`)
@@ -208,8 +210,8 @@ func (c *Conn) HTTP(config *HTTPConfig) error {
 	return c.doHTTP(config)
 }
 
-func (c *Conn) makeHTTPRequest(config *HTTPConfig) (req *http.Request, encReq *HTTPRequest, err error) {
-	if req, err = http.NewRequest(config.Method, "", nil); err != nil {
+func (c *Conn) makeHTTPRequest(endpoint string, httpMethod string, userAgent string) (req *http.Request, encReq *HTTPRequest, err error) {
+	if req, err = http.NewRequest(httpMethod, "", nil); err != nil {
 		return
 	}
 	url := new(url.URL)
@@ -221,27 +223,30 @@ func (c *Conn) makeHTTPRequest(config *HTTPConfig) (req *http.Request, encReq *H
 	}
 	url.Host = host
 	req.Host = host
-	req.Method = config.Method
+	req.Method = httpMethod
 	req.Proto = "HTTP/1.1"
 	if c.isTls {
 		url.Scheme = "https"
 	} else {
 		url.Scheme = "http"
 	}
-	url.Path = config.Endpoint
+	url.Path = endpoint
 	req.URL = url
-	var userAgent string
-	if len(config.UserAgent) > 0 {
-		userAgent = config.UserAgent
-	} else {
+
+	if len(userAgent) <= 0 {
 		userAgent = "Mozilla/5.0 zgrab/0.x"
 	}
+
 	req.Header.Set("User-Agent", userAgent)
 	encReq = new(HTTPRequest)
-	encReq.Endpoint = config.Endpoint
-	encReq.Method = config.Method
+	encReq.Endpoint = endpoint
+	encReq.Method = httpMethod
 	encReq.UserAgent = userAgent
 	return req, encReq, nil
+}
+
+func (c *Conn) makeHTTPRequestFromConfig(config *HTTPConfig) (req *http.Request, encReq *HTTPRequest, err error) {
+	return c.makeHTTPRequest(config.Endpoint, config.Method, config.UserAgent)
 }
 
 func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request, config *HTTPConfig) (encRes *HTTPResponse, err error) {
@@ -272,6 +277,8 @@ func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request, config *HTTPCo
 	encRes = new(HTTPResponse)
 	encRes.StatusCode = res.StatusCode
 	encRes.StatusLine = res.Proto + " " + res.Status
+	encRes.VersionMajor = res.ProtoMajor
+	encRes.VersionMinor = res.ProtoMinor
 	encRes.Headers = HeadersFromGolangHeaders(res.Header)
 	var bodyOutput []byte
 	if len(body) > 1024*config.MaxSize {
@@ -289,7 +296,7 @@ func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request, config *HTTPCo
 }
 
 func (c *Conn) doProxy(config *HTTPConfig) error {
-	req, encReq, err := c.makeHTTPRequest(config)
+	req, encReq, err := c.makeHTTPRequestFromConfig(config)
 	if err != nil {
 		return err
 	}
@@ -306,32 +313,93 @@ func (c *Conn) doProxy(config *HTTPConfig) error {
 		return err
 	}
 	c.grabData.HTTP.ProxyResponse = encRes
-	if encRes.StatusCode != 200 {
+	if encRes.StatusCode != http.StatusOK {
 		return fmt.Errorf("proxy connect returned status %d", encRes.StatusCode)
 	}
 	return nil
 }
 
 func (c *Conn) doHTTP(config *HTTPConfig) error {
-	req, encReq, err := c.makeHTTPRequest(config)
-	if err != nil {
-		return err
-	}
 	if c.grabData.HTTP == nil {
 		c.grabData.HTTP = new(HTTPRequestResponse)
 	}
+
+	var httpResponse *HTTPResponse
+	var httpRequest *HTTPRequest
+	var err error
+	if httpRequest, httpResponse, err = c.makeAndSendHTTPRequest(config); err != nil {
+		return err
+	}
+
+	c.grabData.HTTP.Request = httpRequest
+	c.grabData.HTTP.Response = httpResponse
+
+	for redirectCount := 0; httpResponse.isRedirect() && httpResponse.canRedirectWithConn(c) && redirectCount < config.MaxRedirects; redirectCount++ {
+
+		var location string
+		if location = httpResponse.Headers["location"].(string); location == "" {
+			return fmt.Errorf("No location found for %d response from %s (%s)", httpResponse.StatusCode, c.domain, c.RemoteAddr())
+		}
+
+		switch httpResponse.StatusCode {
+		case http.StatusMultipleChoices, http.StatusMovedPermanently, http.StatusFound, http.StatusSeeOther, http.StatusTemporaryRedirect:
+			var redirectUrl *url.URL
+
+			if redirectUrl, err = url.Parse(location); err != nil {
+				return err
+			} else {
+				c.SetDomain(redirectUrl.Host)
+			}
+
+			var redirectBaseRequest *http.Request
+
+			if redirectBaseRequest, httpRequest, err = c.makeHTTPRequest(redirectUrl.RequestURI(), config.Method, config.UserAgent); err != nil {
+				return err
+			}
+
+			if httpResponse, err = c.sendHTTPRequestReadHTTPResponse(redirectBaseRequest, config); err != nil {
+				if err == io.ErrUnexpectedEOF {
+					zlog.Errorf("Connection closed before making redirect to %s (%s)", c.domain, c.RemoteAddr())
+				}
+				return err
+			}
+
+			c.grabData.HTTP.RedirectRequests = append(c.grabData.HTTP.RedirectRequests, httpRequest)
+			c.grabData.HTTP.RedirectResponses = append(c.grabData.HTTP.RedirectResponses, httpResponse)
+
+		case http.StatusUseProxy:
+		// The requested resource MUST be accessed through the proxy given by the Location field.
+		// The Location field gives the URI of the proxy
+
+		case http.StatusNotModified:
+			return fmt.Errorf("Unexpected StatusNotModified response code: %d from %s (%s)", http.StatusNotModified, c.domain, c.RemoteAddr())
+
+		default:
+			return fmt.Errorf("Invalid redirect response code: %d from %s (%s)", httpResponse.StatusCode, c.domain, c.RemoteAddr())
+		}
+	}
+
+	return nil
+}
+
+func (c *Conn) makeAndSendHTTPRequest(config *HTTPConfig) (*HTTPRequest, *HTTPResponse, error) {
+	req, encReq, err := c.makeHTTPRequestFromConfig(config)
+	if err != nil {
+		return encReq, nil, err
+	}
+
 	if len(config.ProxyDomain) > 0 {
 		host := strings.Split(config.ProxyDomain, ":")[0]
 		req.Host = host
 		req.URL.Host = host
 	}
-	c.grabData.HTTP.Request = encReq
+
 	var encRes *HTTPResponse
 	if encRes, err = c.sendHTTPRequestReadHTTPResponse(req, config); err != nil {
-		return err
+		return encReq, encRes, err
 	}
-	c.grabData.HTTP.Response = encRes
-	return nil
+
+	return encReq, encRes, nil
 }
 
 // Extra method - Do a TLS Handshake and record progress
