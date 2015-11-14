@@ -297,7 +297,7 @@ func (c *Conn) doProxy(config *HTTPConfig) error {
 		return err
 	}
 	if c.grabData.HTTP == nil {
-		c.grabData.HTTP = new(HTTPRequestResponse)
+		c.grabData.HTTP = new(HTTP)
 	}
 	c.grabData.HTTP.ProxyRequest = encReq
 	req.Method = "CONNECT"
@@ -317,17 +317,19 @@ func (c *Conn) doProxy(config *HTTPConfig) error {
 
 func (c *Conn) doHTTP(config *HTTPConfig) error {
 	if c.grabData.HTTP == nil {
-		c.grabData.HTTP = new(HTTPRequestResponse)
+		c.grabData.HTTP = new(HTTP)
 	}
 
 	var httpResponse, terminalResponse, previousResponse *HTTPResponse
 	var httpRequest *HTTPRequest
+	var requestResponse *HTTPRequestResponse
 	var err error
 	if httpRequest, httpResponse, err = c.makeAndSendHTTPRequest(config); err != nil {
 		return err
 	}
 
-	c.grabData.HTTP.Request = httpRequest
+	requestResponse = new(HTTPRequestResponse)
+	requestResponse.Request = httpRequest
 	terminalResponse = httpResponse
 
 	for redirectCount := 0; httpResponse.isRedirect() && httpResponse.canRedirectWithConn(c) && redirectCount < config.MaxRedirects; redirectCount++ {
@@ -362,8 +364,10 @@ func (c *Conn) doHTTP(config *HTTPConfig) error {
 				return err
 			}
 
-			c.grabData.HTTP.RedirectRequests = append(c.grabData.HTTP.RedirectRequests, httpRequest)
-			c.grabData.HTTP.RedirectResponses = append(c.grabData.HTTP.RedirectResponses, previousResponse)
+			requestResponse.Response = previousResponse
+			c.grabData.HTTP.RequestResponseChain = append(c.grabData.HTTP.RequestResponseChain, requestResponse)
+			requestResponse = new(HTTPRequestResponse)
+			requestResponse.Request = httpRequest
 
 			terminalResponse = httpResponse
 
@@ -379,6 +383,7 @@ func (c *Conn) doHTTP(config *HTTPConfig) error {
 		}
 	}
 
+	c.grabData.HTTP.RequestResponseChain = append(c.grabData.HTTP.RequestResponseChain, requestResponse)
 	c.grabData.HTTP.Response = terminalResponse
 
 	return nil

@@ -76,13 +76,16 @@ type HTTPResponse struct {
 	BodySHA256   []byte      `json:"body_sha256,omitempty"`
 }
 
+type HTTP struct {
+	ProxyRequest         *HTTPRequest           `json:"connect_request,omitempty"`
+	ProxyResponse        *HTTPResponse          `json:"connect_response,omitempty"`
+	Response             *HTTPResponse          `json:"response,omitempty"`
+	RequestResponseChain []*HTTPRequestResponse `json:"request_response_chain,omitempty"`
+}
+
 type HTTPRequestResponse struct {
-	ProxyRequest      *HTTPRequest    `json:"connect_request,omitempty"`
-	ProxyResponse     *HTTPResponse   `json:"connect_response,omitempty"`
-	Request           *HTTPRequest    `json:"request,omitempty"`
-	Response          *HTTPResponse   `json:"response,omitempty"`
-	RedirectRequests  []*HTTPRequest  `json:"redirect_requests,omitempty"`
-	RedirectResponses []*HTTPResponse `json:"redirect_responses,omitempty"`
+	Request  *HTTPRequest  `json:"request,omitempty"`
+	Response *HTTPResponse `json:"response,omitempty"`
 }
 
 func init() {
