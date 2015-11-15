@@ -337,11 +337,16 @@ zgrab_http_response = SubRecord({
     "headers":zgrab_http_headers
 })
 
+zgrab_http_request_response = SubRecord({
+    "request":zgrab_http_request,
+    "response":zgrab_http_response
+})
+
 zgrab_http = Record({
     "data":SubRecord({
       "http":SubRecord({
-        "request":zgrab_http_request,
-        "response":zgrab_http_response
+        "response":zgrab_http_response,
+        "request_response_chain":ListOf(zgrab_http_request_response)
       })
     })
 }, extends=zgrab_base)
