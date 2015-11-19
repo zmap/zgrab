@@ -16,11 +16,11 @@ import (
 )
 
 var (
-	IAC                = 0xFF //255 - Interpret as command
-	DONT               = 0xFE
-	DO                 = 0xFD
-	WONT               = 0xFC
-	WILL               = 0xFB
+	IAC                = byte(255) //Interpret as command
+	DONT               = byte(254)
+	DO                 = byte(253)
+	WONT               = byte(252)
+	WILL               = byte(251)
 	READ_TIMEOUT       = 3 * time.Second
 	IAC_CMD_LENGTH     = 3 // IAC commands take 3 bytes (inclusive)
 	READ_BUFFER_LENGTH = 8192
@@ -69,8 +69,8 @@ func NegotiateOptions(conn net.Conn) error {
 	retBufferIndex := 0
 	var option, optionType byte
 	for iacIndex := bytes.IndexByte(buffer, IAC); iacIndex != -1; iacIndex = bytes.IndexByte(buffer, IAC) {
-		optionType = bytes[iacIndex+1]
-		option = bytes[iacIndex+2]
+		optionType = buffer[iacIndex+1]
+		option = buffer[iacIndex+2]
 
 		if optionType == WILL || optionType == WONT {
 			optionType = DONT
@@ -87,7 +87,7 @@ func NegotiateOptions(conn net.Conn) error {
 		retBufferIndex += IAC_CMD_LENGTH
 	}
 
-	if err = conn.Write(retBuffer); err != nil {
+	if _, err = conn.Write(retBuffer); err != nil {
 		return err
 	}
 
