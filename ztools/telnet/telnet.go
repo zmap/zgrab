@@ -16,46 +16,56 @@ import (
 )
 
 var (
-	IAC            = 0xFF //255 - Interpret as command
-	DONT           = 0xFE
-	DO             = 0xFD
-	WONT           = 0xFC
-	WILL           = 0xFB
-	READ_TIMEOUT   = 3 * time.Second
-	IAC_CMD_LENGTH = 3 // IAC commands take 3 bytes (inclusive)
+	IAC                = 0xFF //255 - Interpret as command
+	DONT               = 0xFE
+	DO                 = 0xFD
+	WONT               = 0xFC
+	WILL               = 0xFB
+	READ_TIMEOUT       = 3 * time.Second
+	IAC_CMD_LENGTH     = 3 // IAC commands take 3 bytes (inclusive)
+	READ_BUFFER_LENGTH = 8192
 )
 
 func GetTelnetBanner(logStruct *TelnetLog, conn net.Conn) error {
+	conn.SetReadDeadline(time.Now().Add(READ_TIMEOUT))
 
 	if err := NegotiateOptions(conn); err != nil {
 		return err
 	}
 
 	//grab banner
-
-	return nil
-
-}
-
-func NegotiateOptions(conn net.Conn) error {
-	buffer := make([]byte, 1024)
-	conn.SetReadDeadline(time.Now().Add(READ_TIMEOUT))
-
-	bytesRead := 0
+	buffer := make([]byte, READ_BUFFER_LENGTH)
 
 	numBytes, err := conn.Read(buffer)
 
-	bytesRead += numBytes
 	if err != nil {
 		return err
 	}
 
-	if bytesRead == len(buffer) {
+	if numBytes == len(buffer) {
+		return errors.New("Not enough buffer space for telnet options")
+	}
+
+	logStruct.Banner = string(buffer[0:numBytes])
+
+	return nil
+}
+
+func NegotiateOptions(conn net.Conn) error {
+	buffer := make([]byte, READ_BUFFER_LENGTH)
+
+	numBytes, err := conn.Read(buffer)
+
+	if err != nil {
+		return err
+	}
+
+	if numBytes == len(buffer) {
 		return errors.New("Not enough buffer space for telnet options")
 	}
 
 	// Negotiate options
-	retBuffer := make([]byte, 1024)
+	retBuffer := make([]byte, READ_BUFFER_LENGTH)
 	retBufferIndex := 0
 	var option, optionType byte
 	for iacIndex := bytes.IndexByte(buffer, IAC); iacIndex != -1; iacIndex = bytes.IndexByte(buffer, IAC) {
