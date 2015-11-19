@@ -12,7 +12,6 @@ import (
 	"bytes"
 	"errors"
 	"net"
-	"time"
 )
 
 var (
@@ -21,37 +20,31 @@ var (
 	DO                 = byte(253)
 	WONT               = byte(252)
 	WILL               = byte(251)
-	READ_TIMEOUT       = 3 * time.Second
 	IAC_CMD_LENGTH     = 3 // IAC commands take 3 bytes (inclusive)
 	READ_BUFFER_LENGTH = 8192
 )
 
 func GetTelnetBanner(logStruct *TelnetLog, conn net.Conn) error {
-	conn.SetReadDeadline(time.Now().Add(READ_TIMEOUT))
-
-	if err := NegotiateOptions(conn); err != nil {
+	var err error
+	if err = NegotiateOptions(logStruct, conn); err != nil {
 		return err
 	}
 
 	//grab banner
 	buffer := make([]byte, READ_BUFFER_LENGTH)
 
-	numBytes, err := conn.Read(buffer)
-
-	if err != nil {
-		return err
+	numBytes := len(buffer)
+	count := 0
+	for numBytes != 0 && count < 15 {
+		numBytes, err = conn.Read(buffer)
+		logStruct.Banner = logStruct.Banner + string(buffer[0:numBytes])
+		count += 1
 	}
-
-	if numBytes == len(buffer) {
-		return errors.New("Not enough buffer space for telnet options")
-	}
-
-	logStruct.Banner = string(buffer[0:numBytes])
 
 	return nil
 }
 
-func NegotiateOptions(conn net.Conn) error {
+func NegotiateOptions(logStruct *TelnetLog, conn net.Conn) error {
 	buffer := make([]byte, READ_BUFFER_LENGTH)
 
 	numBytes, err := conn.Read(buffer)
@@ -68,7 +61,9 @@ func NegotiateOptions(conn net.Conn) error {
 	retBuffer := make([]byte, READ_BUFFER_LENGTH)
 	retBufferIndex := 0
 	var option, optionType byte
-	for iacIndex := bytes.IndexByte(buffer, IAC); iacIndex != -1; iacIndex = bytes.IndexByte(buffer, IAC) {
+	var iacIndex, prevIacIndex int
+	prevIacIndex = 0
+	for iacIndex = bytes.IndexByte(buffer, IAC); iacIndex != -1; iacIndex = bytes.IndexByte(buffer, IAC) {
 		optionType = buffer[iacIndex+1]
 		option = buffer[iacIndex+2]
 
@@ -85,7 +80,11 @@ func NegotiateOptions(conn net.Conn) error {
 		retBuffer[retBufferIndex+2] = option
 
 		retBufferIndex += IAC_CMD_LENGTH
+		prevIacIndex = iacIndex
 	}
+
+	// no more IAC commands, just read the resulting data
+	logStruct.Banner = string(buffer[prevIacIndex:numBytes])
 
 	if _, err = conn.Write(retBuffer); err != nil {
 		return err
