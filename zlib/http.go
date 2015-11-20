@@ -15,6 +15,7 @@
 package zlib
 
 import (
+	"github.com/zmap/zgrab/ztools/util"
 	"net"
 	"net/http"
 	"net/url"
@@ -176,8 +177,15 @@ func (response HTTPResponse) canRedirectWithConn(conn *Conn) bool {
 		return false
 	}
 
-	relativePath := redirectUrl.Host == ""
-	matchesHost := (strings.Contains(redirectUrl.Host, targetUrl.Host)) || (redirectUrl.Host == remoteIpAddress)
+	targetHost := targetUrl.Host
+	if targetHost == "" {
+		targetHost = conn.domain
+	}
+	redirectHost := redirectUrl.Host
+
+	relativePath := redirectHost == ""
+	matchesHost := (strings.Contains(redirectHost, targetHost) && util.TLDMatches(redirectHost, targetHost)) ||
+		(redirectHost == remoteIpAddress)
 	matchesProto := (conn.isTls && redirectUrl.Scheme == "https") || (!conn.isTls && redirectUrl.Scheme == "http")
 
 	// Either explicit keep-alive or HTTP 1.1, which uses persistent connections by default

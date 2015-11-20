@@ -16,7 +16,6 @@ package zlib
 
 import (
 	"encoding/json"
-
 	"github.com/zmap/zgrab/ztools/processing"
 )
 
