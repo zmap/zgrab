@@ -191,7 +191,7 @@ func makeGrabber(config *Config) func(*Conn) error {
 		if config.Telnet {
 			c.grabData.Telnet = new(telnet.TelnetLog)
 
-			if err := telnet.GetTelnetBanner(c.grabData.Telnet, c.getUnderlyingConn()); err != nil {
+			if err := telnet.GetTelnetBanner(c.grabData.Telnet, c.getUnderlyingConn(), config.TelnetMaxSize); err != nil {
 				c.erroredComponent = "telnet"
 				return err
 			}

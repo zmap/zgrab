@@ -17,10 +17,12 @@ package telnet
 import (
 	"bytes"
 	"errors"
+	"io"
+	"math"
 	"net"
 )
 
-var (
+const (
 	IAC                = byte(255) //Interpret as command
 	DONT               = byte(254)
 	DO                 = byte(253)
@@ -30,8 +32,7 @@ var (
 	READ_BUFFER_LENGTH = 8192
 )
 
-func GetTelnetBanner(logStruct *TelnetLog, conn net.Conn) error {
-	var err error
+func GetTelnetBanner(logStruct *TelnetLog, conn net.Conn, maxReadSize int) (err error) {
 	if err = NegotiateOptions(logStruct, conn); err != nil {
 		return err
 	}
@@ -40,10 +41,19 @@ func GetTelnetBanner(logStruct *TelnetLog, conn net.Conn) error {
 	buffer := make([]byte, READ_BUFFER_LENGTH)
 
 	numBytes := len(buffer)
+	rounds := int(math.Ceil(float64(maxReadSize) / READ_BUFFER_LENGTH))
 	count := 0
-	for numBytes != 0 && count < 15 {
+	for numBytes != 0 && count < rounds {
+
 		numBytes, err = conn.Read(buffer)
-		logStruct.Banner = logStruct.Banner + string(buffer[0:numBytes])
+		if err != nil && err != io.EOF {
+			return err
+		}
+		if count == rounds-1 {
+			logStruct.Banner = logStruct.Banner + string(buffer[0:maxReadSize%READ_BUFFER_LENGTH])
+		} else {
+			logStruct.Banner = logStruct.Banner + string(buffer[0:numBytes])
+		}
 		count += 1
 	}
 
@@ -75,10 +85,10 @@ func NegotiateOptions(logStruct *TelnetLog, conn net.Conn) error {
 
 		if optionType == WILL || optionType == WONT {
 			optionType = DONT
-		} else if option == DO || optionType == DONT {
+		} else if optionType == DO || optionType == DONT {
 			optionType = WONT
 		} else {
-			return errors.New("Unsupported telnet option type")
+			return errors.New("Unsupported telnet option type" + string(optionType))
 		}
 
 		retBuffer[retBufferIndex] = IAC
@@ -87,6 +97,7 @@ func NegotiateOptions(logStruct *TelnetLog, conn net.Conn) error {
 
 		retBufferIndex += IAC_CMD_LENGTH
 		prevIacIndex = iacIndex
+		buffer = buffer[iacIndex+IAC_CMD_LENGTH:]
 	}
 
 	// no more IAC commands, just read the resulting data

@@ -137,7 +137,8 @@ type Config struct {
 	FTPAuthTLS bool
 
 	// Telnet
-	Telnet bool
+	Telnet        bool
+	TelnetMaxSize int
 
 	// Modbus
 	Modbus bool
