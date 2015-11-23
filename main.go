@@ -113,6 +113,11 @@ func init() {
 	flag.StringVar(&config.SSH.Client, "ssh-client", "", "Mimic behavior of a specific SSH client")
 	flag.StringVar(&config.SSH.KexAlgorithms, "ssh-kex-algorithms", "", "Set SSH Key Exchange Algorithms")
 	flag.StringVar(&config.SSH.HostKeyAlgorithms, "ssh-host-key-algorithms", "", "Set SSH Host Key Algorithms")
+
+	flag.BoolVar(&config.ISCSI.ISCSI, "iscsi", false, "iSCSI scan")
+	flag.StringVar(&config.ISCSI.LocalLogin, "iscsi-login", "", "Local login string for iSCSI (Should be set to hostname of scanning server)")
+	flag.IntVar(&config.ISCSI.MaxConnections, "iscsi-max-conns", 10, "Maximum connections for a single iSCSI host")
+
 	flag.Parse()
 
 	// Validate Go Runtime config

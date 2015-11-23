@@ -22,6 +22,7 @@ import (
 	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/ztls"
+	"github.com/zmap/zgrab/ztools/iscsi"
 )
 
 type Grab struct {
@@ -55,6 +56,7 @@ type GrabData struct {
 	Modbus       *ModbusEvent          `json:"modbus,omitempty"`
 	SSH          *ssh.HandshakeLog     `json:"ssh,omitempty"`
 	FTP          *ftp.FTPLog           `json:"ftp,omitempty"`
+	ISCSI        *iscsi.AuthLog        `json:"iscsi,omitempty"`
 }
 
 func (g *Grab) MarshalJSON() ([]byte, error) {
