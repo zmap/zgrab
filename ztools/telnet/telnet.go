@@ -17,6 +17,7 @@ package telnet
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"net"
@@ -28,7 +29,8 @@ const (
 	DO                 = byte(253)
 	WONT               = byte(252)
 	WILL               = byte(251)
-	IAC_CMD_LENGTH     = 3 // IAC commands take 3 bytes (inclusive)
+	AYT                = byte(246) // Are you there
+	IAC_CMD_LENGTH     = 3         // IAC commands take 3 bytes (inclusive)
 	READ_BUFFER_LENGTH = 8192
 )
 
@@ -76,32 +78,40 @@ func NegotiateOptions(logStruct *TelnetLog, conn net.Conn) error {
 	// Negotiate options
 	retBuffer := make([]byte, READ_BUFFER_LENGTH)
 	retBufferIndex := 0
-	var option, optionType byte
-	var iacIndex, prevIacIndex int
-	prevIacIndex = 0
+	var option, optionType, returnOptionType byte
+	var iacIndex, lastReadIndex int
+	lastReadIndex = 0
 	for iacIndex = bytes.IndexByte(buffer, IAC); iacIndex != -1; iacIndex = bytes.IndexByte(buffer, IAC) {
 		optionType = buffer[iacIndex+1]
 		option = buffer[iacIndex+2]
 
+		// record all offered options
+		if optionType == WILL || optionType == DO {
+			logStruct.SupportedOpts = append(logStruct.SupportedOpts, fmt.Sprintf("%d", option))
+		} else if optionType == WONT || optionType == DONT {
+			logStruct.UnsupportedOpts = append(logStruct.UnsupportedOpts, fmt.Sprintf("%d", option))
+		}
+
+		// reject all offered options
 		if optionType == WILL || optionType == WONT {
-			optionType = DONT
+			returnOptionType = DONT
 		} else if optionType == DO || optionType == DONT {
-			optionType = WONT
+			returnOptionType = WONT
 		} else {
-			return errors.New("Unsupported telnet option type" + string(optionType))
+			return errors.New("Unsupported telnet IAC option type" + fmt.Sprintf("%d", optionType))
 		}
 
 		retBuffer[retBufferIndex] = IAC
-		retBuffer[retBufferIndex+1] = optionType
+		retBuffer[retBufferIndex+1] = returnOptionType
 		retBuffer[retBufferIndex+2] = option
 
 		retBufferIndex += IAC_CMD_LENGTH
-		prevIacIndex = iacIndex
+		lastReadIndex = iacIndex + IAC_CMD_LENGTH
 		buffer = buffer[iacIndex+IAC_CMD_LENGTH:]
 	}
 
 	// no more IAC commands, just read the resulting data
-	logStruct.Banner = string(buffer[prevIacIndex:numBytes])
+	logStruct.Banner = string(buffer[lastReadIndex:numBytes])
 
 	if _, err = conn.Write(retBuffer); err != nil {
 		return err
