@@ -28,13 +28,15 @@ import (
 	"strings"
 	"time"
 
+	"io"
+
+	"github.com/zmap/zgrab/ztools/bacnet"
 	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/util"
 	"github.com/zmap/zgrab/ztools/x509"
 	"github.com/zmap/zgrab/ztools/zlog"
 	"github.com/zmap/zgrab/ztools/ztls"
-	"io"
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:^\d\d\d\s.*\r\n$)|(?:^\d\d\d-[\s\S]*\r\n\d\d\d\s.*\r\n$)`)
@@ -628,6 +630,38 @@ func (c *Conn) CheckHeartbleed(b []byte) (int, error) {
 	}
 	c.grabData.Heartbleed = hb
 	return n, err
+}
+
+func (c *Conn) BACNetVendorQuery() error {
+	c.grabData.BACNet = new(bacnet.Log)
+	if err := c.grabData.BACNet.QueryDeviceID(c.getUnderlyingConn()); err != nil {
+		return err
+	}
+	if err := c.grabData.BACNet.QueryVendorNumber(c.getUnderlyingConn()); err != nil {
+		return err
+	}
+	if err := c.grabData.BACNet.QueryVendorName(c.getUnderlyingConn()); err != nil {
+		return err
+	}
+	if err := c.grabData.BACNet.QueryFirmwareRevision(c.getUnderlyingConn()); err != nil {
+		return err
+	}
+	if err := c.grabData.BACNet.QueryApplicationSoftwareRevision(c.getUnderlyingConn()); err != nil {
+		return err
+	}
+	if err := c.grabData.BACNet.QueryObjectName(c.getUnderlyingConn()); err != nil {
+		return err
+	}
+	if err := c.grabData.BACNet.QueryModelName(c.getUnderlyingConn()); err != nil {
+		return err
+	}
+	if err := c.grabData.BACNet.QueryDescription(c.getUnderlyingConn()); err != nil {
+		return err
+	}
+	if err := c.grabData.BACNet.QueryLocation(c.getUnderlyingConn()); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Conn) SendModbusEcho() (int, error) {

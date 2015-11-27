@@ -374,6 +374,25 @@ zgrab_old_http = Record({
 
 register_schema("zgrab-old-http", zgrab_old_http)
 
+zgrab_bacnet = Record({
+    "data": SubRecord({
+        "bacnet": SubRecord({
+            "is_bacnet": Boolean(),
+            "instance_number": Integer(),
+            "vendor_id": Integer(),
+            "vendor_name": AnalyzedString(es_include_raw=True),
+            "firmware_revision": String(),
+            "application_software_revision": String(),
+            "object_name": AnalyzedString(es_include_raw=True),
+            "model_name": AnalyzedString(es_include_raw=True),
+            "description": AnalyzedString(es_include_raw=True),
+            "location": AnalyzedString(es_include_raw=True),
+        }),
+    }),
+}, extends=zgrab_base)
+
+register_schema("zgrab-bacnet", zgrab_bacnet)
+
 zgrab_modbus = Record({
     "data":SubRecord({
         "modbus":SubRecord({
