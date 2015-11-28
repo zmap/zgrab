@@ -38,8 +38,8 @@ func ReadUntilRegex(connection net.Conn, res []byte, expr *regexp.Regexp) (int, 
 
 // Checks for a strict TLD match
 func TLDMatches(host1 string, host2 string) bool {
-	splitStr1 := strings.Split(StripPortNumber(host1), ".")
-	splitStr2 := strings.Split(StripPortNumber(host2), ".")
+	splitStr1 := strings.Split(stripPortNumber(host1), ".")
+	splitStr2 := strings.Split(stripPortNumber(host2), ".")
 
 	tld1 := splitStr1[len(splitStr1)-1]
 	tld2 := splitStr2[len(splitStr2)-1]
@@ -47,6 +47,6 @@ func TLDMatches(host1 string, host2 string) bool {
 	return tld1 == tld2
 }
 
-func StripPortNumber(host string) string {
+func stripPortNumber(host string) string {
 	return strings.Split(host, ":")[0]
 }

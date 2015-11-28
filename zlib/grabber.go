@@ -27,6 +27,7 @@ import (
 	"github.com/zmap/zgrab/ztools/fox"
 	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/processing"
+	"github.com/zmap/zgrab/ztools/scada/dnp3"
 )
 
 type GrabTarget struct {
@@ -184,6 +185,10 @@ func makeGrabber(config *Config) func(*Conn) error {
 				c.erroredComponent = "fox"
 				return err
 			}
+
+		if config.DNP3 {
+			c.grabData.DNP3 = new(dnp3.DNP3Log)
+			dnp3.GetDNP3Banner(c.grabData.DNP3, c.getUnderlyingConn())
 		}
 
 		if len(config.HTTP.Endpoint) > 0 {

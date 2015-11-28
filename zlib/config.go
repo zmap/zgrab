@@ -144,6 +144,10 @@ type Config struct {
 
 	// Niagara Fox
 	Fox bool
+
+	// DNP3
+	DNP3 bool
+
 	// HTTP
 	HTTP HTTPConfig
 
