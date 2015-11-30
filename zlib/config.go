@@ -139,6 +139,9 @@ type Config struct {
 	// Modbus
 	Modbus bool
 
+	// BACNet
+	BACNet bool
+
 	// HTTP
 	HTTP HTTPConfig
 

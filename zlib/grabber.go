@@ -67,6 +67,9 @@ func NewGrabTargetDecoder(reader io.Reader) processing.Decoder {
 
 func makeDialer(c *Config) func(string) (*Conn, error) {
 	proto := "tcp"
+	if c.BACNet {
+		proto = "udp"
+	}
 	timeout := c.Timeout
 	return func(addr string) (*Conn, error) {
 		deadline := time.Now().Add(timeout)
@@ -235,6 +238,13 @@ func makeGrabber(config *Config) func(*Conn) error {
 		if config.Modbus {
 			if _, err := c.SendModbusEcho(); err != nil {
 				c.erroredComponent = "modbus"
+				return err
+			}
+		}
+
+		if config.BACNet {
+			if err := c.BACNetVendorQuery(); err != nil {
+				c.erroredComponent = "bacnet"
 				return err
 			}
 		}

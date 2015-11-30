@@ -19,6 +19,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/zmap/zgrab/ztools/bacnet"
 	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/ztls"
@@ -55,6 +56,7 @@ type GrabData struct {
 	Modbus       *ModbusEvent          `json:"modbus,omitempty"`
 	SSH          *ssh.HandshakeLog     `json:"ssh,omitempty"`
 	FTP          *ftp.FTPLog           `json:"ftp,omitempty"`
+	BACNet       *bacnet.Log           `json:"bacnet,omitempty"`
 }
 
 func (g *Grab) MarshalJSON() ([]byte, error) {
