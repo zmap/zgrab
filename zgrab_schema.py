@@ -455,8 +455,7 @@ register_schema("zgrab-modbus", zgrab_modbus)
 zgrab_dnp3 = Record({
     "data":SubRecord({
         "dnp3":SubRecord({
-            "src_address":String(),
-            "dst_address":String(),
+            "link_address":String(),
             "function_code":Integer(),
             "raw_response":String()
         }),
