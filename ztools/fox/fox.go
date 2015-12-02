@@ -56,7 +56,7 @@ func GetFoxBanner(logStruct *FoxLog, connection net.Conn) error {
 	responseString := string(readBuffer[0:bytesRead])
 	output := strings.Split(responseString, string(0x0a))
 
-	if strings.HasPrefix(responseString, "fox a 0 -1 fox hello") {
+	if strings.HasPrefix(responseString, RESPONSE_PREFIX) {
 		logStruct.IsFox = true
 
 		for _, value := range output {
