@@ -69,9 +69,9 @@ func GetFoxBanner(logStruct *FoxLog, connection net.Conn) error {
 				}
 				logStruct.Id = uint32(id)
 			} else if strings.HasPrefix(value, "hostAddress") && strings.Contains(value, ":") {
-				logStruct.Hostname = strings.Split(value, ":")[1]
-			} else if strings.HasPrefix(value, "hostName") && strings.Contains(value, ":") {
 				logStruct.HostAddress = strings.Split(value, ":")[1]
+			} else if strings.HasPrefix(value, "hostName") && strings.Contains(value, ":") {
+				logStruct.Hostname = strings.Split(value, ":")[1]
 			} else if strings.HasPrefix(value, "app.name") && strings.Contains(value, ":") {
 				logStruct.AppName = strings.Split(value, ":")[1]
 			} else if strings.HasPrefix(value, "app.version") && strings.Contains(value, ":") {
