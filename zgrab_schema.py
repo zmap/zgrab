@@ -410,10 +410,10 @@ zgrab_fox = Record({
             "station_name": String(),
             "language": AnalyzedString(es_include_raw=True),
             "time_zone": AnalyzedString(es_include_raw=True),
-            "host_id": String(),
+            "host_id": AnalyzedString(es_include_raw=True),
             "vm_uuid": String(),
             "brand_id": AnalyzedString(es_include_raw=True),
-            "sys_info": String(),
+            "sys_info": AnalyzedString(es_include_raw=True),
             "auth_agent_type": String()
         }),
     }),
