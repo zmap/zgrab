@@ -142,6 +142,8 @@ type Config struct {
 	// BACNet
 	BACNet bool
 
+	// Niagara Fox
+	Fox bool
 	// HTTP
 	HTTP HTTPConfig
 

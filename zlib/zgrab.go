@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/zmap/zgrab/ztools/bacnet"
+	"github.com/zmap/zgrab/ztools/fox"
 	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/ztls"
@@ -57,6 +58,7 @@ type GrabData struct {
 	SSH          *ssh.HandshakeLog     `json:"ssh,omitempty"`
 	FTP          *ftp.FTPLog           `json:"ftp,omitempty"`
 	BACNet       *bacnet.Log           `json:"bacnet,omitempty"`
+	Fox          *fox.FoxLog           `json:"fox,omitempty"`
 }
 
 func (g *Grab) MarshalJSON() ([]byte, error) {

@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/zmap/zgrab/ztools/fox"
 	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/processing"
 )
@@ -173,6 +174,15 @@ func makeGrabber(config *Config) func(*Conn) error {
 					c.erroredComponent = "ftp-authtls"
 					return err
 				}
+			}
+		}
+
+		if config.Fox {
+			c.grabData.Fox = new(fox.FoxLog)
+
+			if err := fox.GetFoxBanner(c.grabData.Fox, c.getUnderlyingConn()); err != nil {
+				c.erroredComponent = "fox"
+				return err
 			}
 		}
 

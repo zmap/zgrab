@@ -91,6 +91,7 @@ func init() {
 	flag.BoolVar(&config.POP3, "pop3", false, "Conform to POP3 rules when sending STARTTLS")
 	flag.BoolVar(&config.Modbus, "modbus", false, "Send some modbus data")
 	flag.BoolVar(&config.BACNet, "bacnet", false, "Send some BACNet data")
+	flag.BoolVar(&config.Fox, "fox", false, "Send some Niagara Fox Tunneling data")
 	flag.BoolVar(&config.NoSNI, "no-sni", false, "Do not send domain name in TLS handshake regardless of whether known")
 
 	flag.BoolVar(&config.ExportsOnly, "export-ciphers", false, "Send only export ciphers")
