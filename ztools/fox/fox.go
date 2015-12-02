@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"net"
+	"strconv"
 	"strings"
 )
 
@@ -56,33 +57,53 @@ func GetFoxBanner(logStruct *FoxLog, connection net.Conn) error {
 	output := strings.Split(responseString, string(0x0a))
 
 	if strings.HasPrefix(responseString, "fox a 0 -1 fox hello") {
-		logStruct.Banner = responseString
+		logStruct.IsFox = true
 
 		for _, value := range output {
-			if strings.Contains(value, "hostAddress") && strings.Contains(value, ":") {
-				logStruct.Hostname = strings.Split(value, ":")[1]
-			} else if strings.Contains(value, "hostAddress") && strings.Contains(value, ":") {
-				logStruct.HostAddress = strings.Split(value, ":")[1]
-			} else if strings.Contains(value, "fox.version") && strings.Contains(value, ":") {
+			if strings.HasPrefix(value, "fox.version") && strings.Contains(value, ":") {
 				logStruct.Version = strings.Split(value, ":")[1]
-			} else if strings.Contains(value, "app.name") && strings.Contains(value, ":") {
+			} else if strings.HasPrefix(value, "id") && strings.Contains(value, ":") {
+				id, err := strconv.ParseUint(strings.Split(value, ":")[1], 10, 32)
+				if err != nil {
+					return err
+				}
+				logStruct.Id = uint32(id)
+			} else if strings.HasPrefix(value, "hostAddress") && strings.Contains(value, ":") {
+				logStruct.Hostname = strings.Split(value, ":")[1]
+			} else if strings.HasPrefix(value, "hostName") && strings.Contains(value, ":") {
+				logStruct.HostAddress = strings.Split(value, ":")[1]
+			} else if strings.HasPrefix(value, "app.name") && strings.Contains(value, ":") {
 				logStruct.AppName = strings.Split(value, ":")[1]
-			} else if strings.Contains(value, "app.version") && strings.Contains(value, ":") {
+			} else if strings.HasPrefix(value, "app.version") && strings.Contains(value, ":") {
 				logStruct.AppVersion = strings.Split(value, ":")[1]
-			} else if strings.Contains(value, "vm.name") && strings.Contains(value, ":") {
+			} else if strings.HasPrefix(value, "vm.name") && strings.Contains(value, ":") {
 				logStruct.VMName = strings.Split(value, ":")[1]
-			} else if strings.Contains(value, "vm.version") && strings.Contains(value, ":") {
+			} else if strings.HasPrefix(value, "vm.version") && strings.Contains(value, ":") {
 				logStruct.VMVersion = strings.Split(value, ":")[1]
-			} else if strings.Contains(value, "os.name") && strings.Contains(value, ":") {
+			} else if strings.HasPrefix(value, "os.name") && strings.Contains(value, ":") {
 				logStruct.OSName = strings.Split(value, ":")[1]
-			} else if strings.Contains(value, "timeZone") && strings.Contains(value, ":") {
-				logStruct.TimeZone = strings.Split(value, ":")[1]
-			} else if strings.Contains(value, "hostId") && strings.Contains(value, ":") {
+			} else if strings.HasPrefix(value, "os.version") && strings.Contains(value, ":") {
+				logStruct.OSVersion = strings.Split(value, ":")[1]
+			} else if strings.HasPrefix(value, "station.name") && strings.Contains(value, ":") {
+				logStruct.StationName = strings.Split(value, ":")[1]
+			} else if strings.HasPrefix(value, "lang") && strings.Contains(value, ":") {
+				logStruct.Language = strings.Split(value, ":")[1]
+			} else if strings.HasPrefix(value, "timeZone") && strings.Contains(value, ":") {
+				timeZone := strings.Split(value, ":")[1]
+				if strings.Contains(timeZone, ";") {
+					timeZone = strings.Split(timeZone, ";")[0]
+				}
+				logStruct.TimeZone = timeZone
+			} else if strings.HasPrefix(value, "hostId") && strings.Contains(value, ":") {
 				logStruct.HostId = strings.Split(value, ":")[1]
-			} else if strings.Contains(value, "vmUuid") && strings.Contains(value, ":") {
+			} else if strings.HasPrefix(value, "vmUuid") && strings.Contains(value, ":") {
 				logStruct.VMUuid = strings.Split(value, ":")[1]
-			} else if strings.Contains(value, "brandId") && strings.Contains(value, ":") {
+			} else if strings.HasPrefix(value, "brandId") && strings.Contains(value, ":") {
 				logStruct.BrandId = strings.Split(value, ":")[1]
+			} else if strings.HasPrefix(value, "sysInfo") && strings.Contains(value, ":") {
+				logStruct.SysInfo = strings.Split(value, ":")[1]
+			} else if strings.HasPrefix(value, "authAgentTypeSpecs") && strings.Contains(value, ":") {
+				logStruct.AuthAgentType = strings.Split(value, ":")[1]
 			}
 		}
 	}
