@@ -30,12 +30,17 @@ const (
 	RESPONSE_PREFIX = "fox a 0 -1 fox hello"
 )
 
-func GetFoxBanner(logStruct *FoxLog, connection net.Conn) error {
-	queryBytes, err := hex.DecodeString(ORIGINAL_QUERY)
-	if err != nil {
-		return err
-	}
+var queryBytes []byte
 
+func init() {
+	var err error
+	queryBytes, err = hex.DecodeString(ORIGINAL_QUERY)
+	if err != nil {
+		panic("Could not decode Fox query")
+	}
+}
+
+func GetFoxBanner(logStruct *FoxLog, connection net.Conn) error {
 	bytesWritten, err := connection.Write(queryBytes)
 	if bytesWritten != len(queryBytes) {
 		return errors.New("Unable to write all Fox query bytes...")
