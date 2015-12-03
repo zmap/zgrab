@@ -53,9 +53,14 @@ const (
 	APP_GROUP_0_LIST_ATTRIBUTES   = 0xFF   // list available group 0 attributes
 )
 
+var linkBatchRequest []byte
+
+func init() {
+	linkBatchRequest = makeLinkRequestBatch(0x0000, 1, 0x0000, 100)
+}
+
 func GetDNP3Banner(logStruct *DNP3Log, connection net.Conn) (err error) {
-	requestBytes := makeLinkRequestBatch(0x0000, 1, 0x0000, 100)
-	connection.Write(requestBytes)
+	connection.Write(linkBatchRequest)
 
 	buffer := make([]byte, 8192)
 	bytesRead, err := connection.Read(buffer)
@@ -64,11 +69,8 @@ func GetDNP3Banner(logStruct *DNP3Log, connection net.Conn) (err error) {
 	}
 
 	if bytesRead >= LINK_MIN_HEADER_LENGTH && binary.BigEndian.Uint16(buffer[0:2]) == LINK_START_FIELD {
-		linkAddress := binary.LittleEndian.Uint16(buffer[6:8])
-
+		logStruct.IsDNP3 = true
 		logStruct.RawResponse = fmt.Sprintf("%X", buffer[0:bytesRead])
-		logStruct.LinkAddress = fmt.Sprintf("%d", linkAddress)
-		logStruct.FunctionCode = int(buffer[4] & byte(0x0F))
 	}
 
 	return nil

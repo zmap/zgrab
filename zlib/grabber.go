@@ -185,6 +185,7 @@ func makeGrabber(config *Config) func(*Conn) error {
 				c.erroredComponent = "fox"
 				return err
 			}
+		}
 
 		if config.DNP3 {
 			c.grabData.DNP3 = new(dnp3.DNP3Log)
