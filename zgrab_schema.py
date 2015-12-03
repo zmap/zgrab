@@ -393,6 +393,34 @@ zgrab_bacnet = Record({
 
 register_schema("zgrab-bacnet", zgrab_bacnet)
 
+zgrab_fox = Record({
+    "data": SubRecord({
+        "fox": SubRecord({
+            "is_fox": Boolean(),
+            "version": AnalyzedString(es_include_raw=True),
+            "id": Integer(),
+            "hostname": String(),
+            "host_address": String(),
+            "app_name": AnalyzedString(es_include_raw=True),
+            "app_version": String(),
+            "vm_name": AnalyzedString(es_include_raw=True),
+            "vm_version": String(),
+            "os_name": AnalyzedString(es_include_raw=True),
+            "os_version": String(),
+            "station_name": String(),
+            "language": AnalyzedString(es_include_raw=True),
+            "time_zone": AnalyzedString(es_include_raw=True),
+            "host_id": AnalyzedString(es_include_raw=True),
+            "vm_uuid": String(),
+            "brand_id": AnalyzedString(es_include_raw=True),
+            "sys_info": AnalyzedString(es_include_raw=True),
+            "auth_agent_type": String()
+        }),
+    }),
+}, extends=zgrab_base)
+
+register_schema("zgrab-fox", zgrab_fox)
+
 zgrab_modbus = Record({
     "data":SubRecord({
         "modbus":SubRecord({
