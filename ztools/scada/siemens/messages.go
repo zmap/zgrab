@@ -107,7 +107,7 @@ const cotpDataPacketHeaderLength = 2
 
 // Encodes a COTPDataPacket to binary
 func (cotpDataPacket *COTPDataPacket) Marshal() ([]byte, error) {
-	bytes := make([]byte, 0, cotpDataPacketHeaderLength+len(cotpDataPacket))
+	bytes := make([]byte, 0, cotpDataPacketHeaderLength+len(cotpDataPacket.Data))
 
 	bytes = append(bytes, byte(2))    // data header length
 	bytes = append(bytes, byte(0xf0)) // code for data packet
@@ -120,11 +120,78 @@ func (cotpDataPacket *COTPDataPacket) Marshal() ([]byte, error) {
 // Decodes a COTPDataPacket from binary
 func (cotpDataPacket *COTPDataPacket) Unmarshal(bytes []byte) error {
 	headerSize := bytes[0]
+
 	if headerSize+1 > len(bytes) {
 		return errInvalidPacket
 	}
 
 	cotpDataPacket.Data = bytes[headerSize+1:]
+
+	return nil
+}
+
+type S7Packet struct {
+	PDUType    byte
+	RequestId  uint16
+	Parameters []byte
+	Data       []byte
+	Error      uint16
+}
+
+const (
+	S7_PROTOCOL_ID       = byte(0x32)
+	S7_REQUEST           = byte(0x01)
+	S7_REQUEST_USER_DATA = byte(0x07)
+	S7_ACKNOWLEDGEMENT   = byte(0x02)
+	S7_RESPONSE          = byte(0x03)
+)
+
+// Encodes a S7Packet to binary
+func (s7Packet *S7Packet) Marshal() ([]byte, error) {
+
+	if s7Packet.PDUType != S7_REQUEST || s7Packet.PDUType != S7_REQUEST_USER_DATA {
+		return nil, errors.New("Invalid PDU request type")
+	}
+
+	bytes := make([]byte, 0, len(s7Packet))
+
+	bytes = append(bytes, S7_PROTOCOL_ID) // s7 protocol id
+	bytes = append(bytes, s7Packet.PDUType)
+	bytes = append(bytes, binary.LittleEndian.PutUint16(0)...) // reserved
+	bytes = append(bytes, binary.LittleEndian.PutUint16(s7Packet.RequestId)...)
+	bytes = append(bytes, binary.LittleEndian.PutUint16(len(s7Packet.Parameters)))
+	bytes = append(bytes, binary.LittleEndian.PutUint16(len(s7Packet.Data)))
+	bytes = append(bytes, s7Packet.Parameters...)
+	bytes = append(bytes, s7Packet.Data...)
+
+	return bytes, nil
+}
+
+// Decodes a S7Packet from binary
+func (s7Packet *S7Packet) Unmarshal(bytes []byte) error {
+	if protocolId := bytes[0]; protocolId != S7_PROTOCOL_ID {
+		return errNotS7
+	}
+
+	var headerSize int
+	pduType := bytes[1]
+
+	if pduType == S7_ACKNOWLEDGEMENT || pduType == S7_RESPONSE {
+		headerSize = 12
+		s7Packet.Error = binary.LittleEndian.Uint16(bytes[10:12])
+	} else if pduType == S7_REQUEST || pduType == S7_REQUEST_USER_DATA {
+		headerSize = 10
+	} else {
+		return errors.New("Unknown PDU type " + string(pduType))
+	}
+
+	s7Packet.PDUType = pduType
+	s7Packet.RequestId = binary.LittleEndian.Uint16(bytes[4:6])
+	paramLength := binary.LittleEndian.Uint16(bytes[6:8])
+	dataLength := binary.LittleEndian.Uint16(bytes[8:10])
+
+	s7Packet.Parameters = bytes[headerSize : headerSize+paramLength]
+	s7Packet.Data = bytes[headerSize+paramLength : headerSize+paramLength+dataLength]
 
 	return nil
 }
