@@ -24,10 +24,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/zmap/zgrab/ztools/fox"
 	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/processing"
 	"github.com/zmap/zgrab/ztools/scada/dnp3"
+	"github.com/zmap/zgrab/ztools/scada/fox"
 )
 
 type GrabTarget struct {

@@ -19,10 +19,10 @@ import (
 	"net"
 	"time"
 
-	"github.com/zmap/zgrab/ztools/bacnet"
-	"github.com/zmap/zgrab/ztools/fox"
 	"github.com/zmap/zgrab/ztools/ftp"
+	"github.com/zmap/zgrab/ztools/scada/bacnet"
 	"github.com/zmap/zgrab/ztools/scada/dnp3"
+	"github.com/zmap/zgrab/ztools/scada/fox"
 	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/ztls"
 )
