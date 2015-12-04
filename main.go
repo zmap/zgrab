@@ -92,6 +92,7 @@ func init() {
 	flag.BoolVar(&config.Modbus, "modbus", false, "Send some modbus data")
 	flag.BoolVar(&config.BACNet, "bacnet", false, "Send some BACNet data")
 	flag.BoolVar(&config.Fox, "fox", false, "Send some Niagara Fox Tunneling data")
+	flag.BoolVar(&config.S7, "s7", false, "Send some Siemens S7 data")
 	flag.BoolVar(&config.NoSNI, "no-sni", false, "Do not send domain name in TLS handshake regardless of whether known")
 
 	flag.BoolVar(&config.ExportsOnly, "export-ciphers", false, "Send only export ciphers")

@@ -10,7 +10,7 @@ var (
 
 type S7Error struct{}
 
-const (
+var (
 	S7_ERROR_CODES = map[uint32]string{
 		// s7 data errors
 		0x05: "Address error",
