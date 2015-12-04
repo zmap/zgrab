@@ -452,6 +452,17 @@ zgrab_modbus = Record({
 
 register_schema("zgrab-modbus", zgrab_modbus)
 
+zgrab_dnp3 = Record({
+    "data":SubRecord({
+        "dnp3":SubRecord({
+            "is_dnp3":Boolean(),
+            "raw_response":Binary(),
+        }),
+    }),
+}, extends=zgrab_base)
+
+register_schema("zgrab-dnp3", zgrab_dnp3)
+
 zgrab_ssh_protocol_agreement = SubRecord({
     "raw_banner": AnalyzedString(),
     "protocol_version": String(),

@@ -111,6 +111,7 @@ func init() {
 	flag.IntVar(&config.GOMAXPROCS, "gomaxprocs", 3, "Set GOMAXPROCS (default 3)")
 	flag.BoolVar(&config.FTP, "ftp", false, "Read FTP banners")
 	flag.BoolVar(&config.FTPAuthTLS, "ftp-authtls", false, "Collect FTPS certificates in addition to FTP banners")
+	flag.BoolVar(&config.DNP3, "dnp3", false, "Read DNP3 banners")
 	flag.BoolVar(&config.SSH.SSH, "ssh", false, "SSH scan")
 	flag.StringVar(&config.SSH.Client, "ssh-client", "", "Mimic behavior of a specific SSH client")
 	flag.StringVar(&config.SSH.KexAlgorithms, "ssh-kex-algorithms", "", "Set SSH Key Exchange Algorithms")
