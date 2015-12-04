@@ -456,7 +456,7 @@ zgrab_dnp3 = Record({
     "data":SubRecord({
         "dnp3":SubRecord({
             "is_dnp3":Boolean(),
-            "raw_response":String()
+            "raw_response":Binary(),
         }),
     }),
 }, extends=zgrab_base)

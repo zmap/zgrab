@@ -16,11 +16,11 @@ package dnp3
 
 import (
 	"encoding/binary"
-	"fmt"
 	"io"
 	"net"
 )
 
+// DNP3 Flags
 const (
 	LINK_MIN_HEADER_LENGTH        = 10     // minimum link header length in bytes
 	LINK_START_FIELD              = 0x0564 // Pre-set 2-byte start field
@@ -70,7 +70,7 @@ func GetDNP3Banner(logStruct *DNP3Log, connection net.Conn) (err error) {
 
 	if bytesRead >= LINK_MIN_HEADER_LENGTH && binary.BigEndian.Uint16(buffer[0:2]) == LINK_START_FIELD {
 		logStruct.IsDNP3 = true
-		logStruct.RawResponse = fmt.Sprintf("%X", buffer[0:bytesRead])
+		logStruct.RawResponse = buffer[0:bytesRead]
 	}
 
 	return nil
