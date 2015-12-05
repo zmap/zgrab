@@ -85,7 +85,7 @@ func (cotpConnPacket *COTPConnectionPacket) Unmarshal(bytes []byte) error {
 		return errInvalidPacket
 	}
 
-	if sizeByte := bytes[0]; int(sizeByte+1) != len(bytes) {
+	if sizeByte := bytes[0]; int(sizeByte)+1 != len(bytes) {
 		return errS7PacketTooShort
 	}
 
@@ -123,6 +123,11 @@ func (cotpDataPacket *COTPDataPacket) Marshal() ([]byte, error) {
 
 // Decodes a COTPDataPacket from binary
 func (cotpDataPacket *COTPDataPacket) Unmarshal(bytes []byte) error {
+
+	if bytes == nil || len(bytes) < 1 {
+		return errInvalidPacket
+	}
+
 	headerSize := bytes[0]
 
 	if int(headerSize+1) > len(bytes) {
