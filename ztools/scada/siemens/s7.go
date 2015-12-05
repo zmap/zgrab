@@ -3,8 +3,6 @@ package siemens
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/hex"
-	"github.com/zmap/zgrab/ztools/zlog"
 	"net"
 	"time"
 )
@@ -56,25 +54,24 @@ func GetS7Banner(logStruct *S7Log, connection net.Conn) (err error) {
 	// Make Module Identification request
 	moduleIdentificationResponse, err := readRequest(connection, S7_SZL_MODULE_IDENTIFICATION)
 	if err != nil {
-		return err
+		return nil // mask errors after detecting IsS7
 	}
 	parseModuleIdentificatioNRequest(logStruct, &moduleIdentificationResponse)
 
 	// Make Component Identification request
 	componentIdentificationResponse, err := readRequest(connection, S7_SZL_COMPONENT_IDENTIFICATION)
 	if err != nil {
-		return err
+		return nil // mask errors after detecting IsS7
 	}
 	parseComponentIdentificationResponse(logStruct, &componentIdentificationResponse)
 
-	connection.Close()
 	return nil
 }
 
 func makeNewConnection(address string) (newConnection net.Conn, err error) {
 	newConnection, err = net.Dial("tcp", address)
+
 	if err != nil {
-		newConnection.Close()
 		return newConnection, err
 	}
 	newConnection.SetDeadline(time.Now().Add(time.Second * 3))
@@ -273,30 +270,14 @@ func parseModuleIdentificatioNRequest(logStruct *S7Log, s7Packet *S7Packet) erro
 		return errS7PacketTooShort
 	}
 
-	b, err := hex.DecodeString("ff09007800110000001c0004000136455337203331332d35424730342d304142302000c000010001000636455337203331332d35424730342d304142302000c0000100010007202020202020202020202020202020202020202000c0560303010081426f6f74204c6f61646572202020202020202020000041200909")
-	if err != nil {
-		return err
-	}
-
-	fields := bytes.FieldsFunc(b[S7_DATA_BYTE_OFFSET:], func(c rune) bool {
+	fields := bytes.FieldsFunc(s7Packet.Data[S7_DATA_BYTE_OFFSET:], func(c rune) bool {
 		return int(c) == 0
 	})
-
-	zlog.Infof("%d", len(fields))
-	zlog.Infof("%x", fields[0])
 
 	for i := len(fields) - 1; i >= 0; i-- {
 		switch i {
 		case 0:
 			logStruct.ModuleId = string(fields[i][1:]) // exclude index byte
-			//		case 1:
-			//			logStruct.Module = string(fields[i][1:])
-			//		case 2:
-			//			logStruct.PlantId = string(fields[i][1:])
-			//		case 3:
-			//			logStruct.Copyright = string(fields[i][1:])
-			//		case 4:
-			//			logStruct.SerialNumber = string(fields[i][1:])
 		case 5:
 			logStruct.Hardware = string(fields[i][1:])
 		case 6:

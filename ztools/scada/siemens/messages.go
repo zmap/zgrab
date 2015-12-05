@@ -186,7 +186,7 @@ func (s7Packet *S7Packet) Marshal() ([]byte, error) {
 }
 
 // Decodes a S7Packet from binary
-func (s7Packet *S7Packet) Unmarshal(bytes []byte) error {
+func (s7Packet *S7Packet) Unmarshal(bytes []byte) (err error) {
 	if bytes == nil || len(bytes) < 1 {
 		return errInvalidPacket
 	}
@@ -195,7 +195,7 @@ func (s7Packet *S7Packet) Unmarshal(bytes []byte) error {
 		return errNotS7
 	}
 
-	var headerSize uint16
+	var headerSize int
 	pduType := bytes[1]
 
 	if pduType == S7_ACKNOWLEDGEMENT || pduType == S7_RESPONSE {
@@ -209,10 +209,10 @@ func (s7Packet *S7Packet) Unmarshal(bytes []byte) error {
 
 	s7Packet.PDUType = pduType
 	s7Packet.RequestId = binary.BigEndian.Uint16(bytes[4:6])
-	paramLength := binary.BigEndian.Uint16(bytes[6:8])
-	dataLength := binary.BigEndian.Uint16(bytes[8:10])
+	paramLength := int(binary.BigEndian.Uint16(bytes[6:8]))
+	dataLength := int(binary.BigEndian.Uint16(bytes[8:10]))
 
-	if int(headerSize+paramLength+dataLength) >= len(bytes) {
+	if paramLength < 0 || dataLength < 0 || headerSize+paramLength+dataLength > len(bytes) {
 		return errInvalidPacket
 	}
 
