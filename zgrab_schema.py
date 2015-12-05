@@ -463,6 +463,30 @@ zgrab_dnp3 = Record({
 
 register_schema("zgrab-dnp3", zgrab_dnp3)
 
+zgrab_s7 = Record({
+    "data":SubRecord({
+        "s7":SubRecord({
+            "is_s7":Boolean(),
+            "system":String(),
+            "module":String(),
+            "plant_id":String(),
+            "copyright":String(),
+            "serial_number":String(),
+            "reserved_for_os":String(),
+            "module_type":String(),
+            "memory_serial_number":String(),
+            "cpu_profile":String(),
+            "oem_id":String(),
+            "location":String(),
+            "module_id":String(),
+            "hardware":String(),
+            "firmware":String(),
+        }),
+    }),
+}, extends=zgrab_base)
+
+register_schema("zgrab-s7", zgrab_s7)
+
 zgrab_ssh_protocol_agreement = SubRecord({
     "raw_banner": AnalyzedString(),
     "protocol_version": String(),

@@ -19,12 +19,13 @@ import (
 	"net"
 	"time"
 
-	"github.com/zmap/zgrab/ztools/bacnet"
-	"github.com/zmap/zgrab/ztools/fox"
 	"github.com/zmap/zgrab/ztools/ftp"
+	"github.com/zmap/zgrab/ztools/scada/bacnet"
 	"github.com/zmap/zgrab/ztools/scada/dnp3"
+	"github.com/zmap/zgrab/ztools/scada/fox"
 	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/ztls"
+	"github.com/zmap/zgrab/ztools/scada/siemens"
 )
 
 type Grab struct {
@@ -61,6 +62,7 @@ type GrabData struct {
 	BACNet       *bacnet.Log           `json:"bacnet,omitempty"`
 	Fox          *fox.FoxLog           `json:"fox,omitempty"`
 	DNP3         *dnp3.DNP3Log         `json:"dnp3,omitempty"`
+	S7         *siemens.S7Log         `json:"s7,omitempty"`
 }
 
 func (g *Grab) MarshalJSON() ([]byte, error) {

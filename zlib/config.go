@@ -148,6 +148,9 @@ type Config struct {
 	// DNP3
 	DNP3 bool
 
+	// S7
+	S7 bool
+
 	// HTTP
 	HTTP HTTPConfig
 

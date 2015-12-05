@@ -24,10 +24,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/zmap/zgrab/ztools/fox"
 	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/processing"
 	"github.com/zmap/zgrab/ztools/scada/dnp3"
+	"github.com/zmap/zgrab/ztools/scada/fox"
+	"github.com/zmap/zgrab/ztools/scada/siemens"
 )
 
 type GrabTarget struct {
@@ -183,6 +184,15 @@ func makeGrabber(config *Config) func(*Conn) error {
 
 			if err := fox.GetFoxBanner(c.grabData.Fox, c.getUnderlyingConn()); err != nil {
 				c.erroredComponent = "fox"
+				return err
+			}
+		}
+
+		if config.S7 {
+			c.grabData.S7 = new(siemens.S7Log)
+
+			if err := siemens.GetS7Banner(c.grabData.S7, c.getUnderlyingConn()); err != nil {
+				c.erroredComponent = "s7"
 				return err
 			}
 		}
