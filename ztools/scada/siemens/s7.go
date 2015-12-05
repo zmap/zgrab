@@ -3,14 +3,16 @@ package siemens
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
+	"github.com/zmap/zgrab/ztools/zlog"
 	"net"
 )
 
 func GetS7Banner(logStruct *S7Log, connection net.Conn) (err error) {
 
-	// -------- Attempt connection
+	// Attempt connection
 	connPacketBytes, err := makeCOTPConnectionPacketBytes(uint16(0x102), uint16(0x100))
-	//	connPacketBytes, err := makeCOTPConnectionPacket(uint16(0x200), uint16(0x100)).Marshal()
+	//	connPacketBytes, err := makeCOTPConnectionPacketBytes(uint16(0x200), uint16(0x100))
 	if err != nil {
 		return err
 	}
@@ -23,7 +25,7 @@ func GetS7Banner(logStruct *S7Log, connection net.Conn) (err error) {
 		return err
 	}
 
-	// -------- Negotiate S7
+	// Negotiate S7
 	requestPacketBytes, err := makeRequestPacketBytes(S7_REQUEST, makeNegotiatePDUParamBytes(), nil)
 	if err != nil {
 		return err
@@ -35,20 +37,19 @@ func GetS7Banner(logStruct *S7Log, connection net.Conn) (err error) {
 
 	logStruct.IsS7 = true
 
-	// -------- Make Component Identification request
-	readRequestBytes, err := makeReadRequestBytes(uint16(0x1c))
+	// Make Module Identification request
+	moduleIdentificationResponse, err := readRequest(connection, S7_SZL_MODULE_IDENTIFICATION)
 	if err != nil {
 		return err
 	}
-	readResponse, err := sendRequestReadResponse(connection, readRequestBytes)
+	parseModuleIdentificatioNRequest(logStruct, &moduleIdentificationResponse)
+
+	// Make Component Identification request
+	componentIdentificationResponse, err := readRequest(connection, S7_SZL_COMPONENT_IDENTIFICATION)
 	if err != nil {
 		return err
 	}
-	s7Packet, err := unmarshalReadResponse(readResponse)
-	if err != nil {
-		return err
-	}
-	parseComponentIdentificationResponse(logStruct, &s7Packet)
+	parseComponentIdentificationResponse(logStruct, &componentIdentificationResponse)
 
 	return nil
 }
@@ -106,7 +107,7 @@ func makeRequestPacketBytes(pduType byte, parameters []byte, data []byte) ([]byt
 // Send a generic packet request and return the response
 func sendRequestReadResponse(connection net.Conn, requestBytes []byte) ([]byte, error) {
 	connection.Write(requestBytes)
-	responseBytes := make([]byte, 1024)
+	responseBytes := make([]byte, 2048)
 	bytesRead, err := connection.Read(responseBytes)
 	if err != nil {
 		return nil, err
@@ -200,7 +201,11 @@ func unmarshalReadResponse(bytes []byte) (S7Packet, error) {
 	return s7Packet, nil
 }
 
-func parseComponentIdentificationResponse(logStruct *S7Log, s7Packet *S7Packet) {
+func parseComponentIdentificationResponse(logStruct *S7Log, s7Packet *S7Packet) error {
+	if len(s7Packet.Data) < S7_DATA_BYTE_OFFSET {
+		return errS7PacketTooShort
+	}
+
 	fields := bytes.FieldsFunc(s7Packet.Data[S7_DATA_BYTE_OFFSET:], func(c rune) bool {
 		return int(c) == 0
 	})
@@ -218,9 +223,9 @@ func parseComponentIdentificationResponse(logStruct *S7Log, s7Packet *S7Packet) 
 		case 4:
 			logStruct.SerialNumber = string(fields[i][1:])
 		case 5:
-			logStruct.ReservedForOS = string(fields[i][1:])
-		case 6:
 			logStruct.ModuleType = string(fields[i][1:])
+		case 6:
+			logStruct.ReservedForOS = string(fields[i][1:])
 		case 7:
 			logStruct.MemorySerialNumber = string(fields[i][1:])
 		case 8:
@@ -231,4 +236,62 @@ func parseComponentIdentificationResponse(logStruct *S7Log, s7Packet *S7Packet) 
 			logStruct.Location = string(fields[i][1:])
 		}
 	}
+
+	return nil
+}
+
+func parseModuleIdentificatioNRequest(logStruct *S7Log, s7Packet *S7Packet) error {
+	if len(s7Packet.Data) < S7_DATA_BYTE_OFFSET {
+		return errS7PacketTooShort
+	}
+
+	b, err := hex.DecodeString("ff09007800110000001c0004000136455337203331332d35424730342d304142302000c000010001000636455337203331332d35424730342d304142302000c0000100010007202020202020202020202020202020202020202000c0560303010081426f6f74204c6f61646572202020202020202020000041200909")
+	if err != nil {
+		return err
+	}
+
+	fields := bytes.FieldsFunc(b[S7_DATA_BYTE_OFFSET:], func(c rune) bool {
+		return int(c) == 0
+	})
+
+	zlog.Infof("%d", len(fields))
+	zlog.Infof("%x", fields[0])
+
+	for i := len(fields) - 1; i >= 0; i-- {
+		switch i {
+		case 0:
+			logStruct.ModuleId = string(fields[i][1:]) // exclude index byte
+			//		case 1:
+			//			logStruct.Module = string(fields[i][1:])
+			//		case 2:
+			//			logStruct.PlantId = string(fields[i][1:])
+			//		case 3:
+			//			logStruct.Copyright = string(fields[i][1:])
+			//		case 4:
+			//			logStruct.SerialNumber = string(fields[i][1:])
+		case 5:
+			logStruct.Hardware = string(fields[i][1:])
+		case 6:
+			logStruct.Firmware = string(fields[i][1:])
+		}
+	}
+
+	return nil
+}
+
+func readRequest(connection net.Conn, slzId uint16) (packet S7Packet, err error) {
+	readRequestBytes, err := makeReadRequestBytes(slzId)
+	if err != nil {
+		return packet, err
+	}
+	readResponse, err := sendRequestReadResponse(connection, readRequestBytes)
+	if err != nil {
+		return packet, err
+	}
+	packet, err = unmarshalReadResponse(readResponse)
+	if err != nil {
+		return packet, err
+	}
+
+	return packet, nil
 }

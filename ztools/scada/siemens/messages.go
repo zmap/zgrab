@@ -81,12 +81,15 @@ func (cotpConnPacket *COTPConnectionPacket) Marshal() ([]byte, error) {
 // Decodes a COTPConnectionPacket from binary that must be a connection confirmation
 func (cotpConnPacket *COTPConnectionPacket) Unmarshal(bytes []byte) error {
 
-	sizeByte := bytes[0]
-	if int(sizeByte+1) != len(bytes) {
+	if bytes == nil || len(bytes) < 1 {
+		return errInvalidPacket
+	}
+
+	if sizeByte := bytes[0]; int(sizeByte+1) != len(bytes) {
 		return errS7PacketTooShort
 	}
-	pduType := bytes[1]
-	if pduType != 0xd0 {
+
+	if pduType := bytes[1]; pduType != 0xd0 {
 		return errors.New("Not a connection confirmation packet")
 	}
 
@@ -140,16 +143,18 @@ type S7Packet struct {
 }
 
 const (
-	S7_PROTOCOL_ID       = byte(0x32)
-	S7_REQUEST_ID        = uint16(0)
-	S7_REQUEST           = byte(0x01)
-	S7_REQUEST_USER_DATA = byte(0x07)
-	S7_ACKNOWLEDGEMENT   = byte(0x02)
-	S7_RESPONSE          = byte(0x03)
-	S7_SZL_REQUEST       = byte(0x04)
-	S7_SZL_FUNCTIONS     = byte(0x04)
-	S7_SZL_READ          = byte(0x01)
-	S7_DATA_BYTE_OFFSET  = 12 // offset for real data
+	S7_PROTOCOL_ID                  = byte(0x32)
+	S7_REQUEST_ID                   = uint16(0)
+	S7_REQUEST                      = byte(0x01)
+	S7_REQUEST_USER_DATA            = byte(0x07)
+	S7_ACKNOWLEDGEMENT              = byte(0x02)
+	S7_RESPONSE                     = byte(0x03)
+	S7_SZL_REQUEST                  = byte(0x04)
+	S7_SZL_FUNCTIONS                = byte(0x04)
+	S7_SZL_READ                     = byte(0x01)
+	S7_SZL_MODULE_IDENTIFICATION    = uint16(0x11)
+	S7_SZL_COMPONENT_IDENTIFICATION = uint16(0x1c)
+	S7_DATA_BYTE_OFFSET             = 12 // offset for real data
 )
 
 const s7PacketHeaderLength = 3
@@ -182,6 +187,10 @@ func (s7Packet *S7Packet) Marshal() ([]byte, error) {
 
 // Decodes a S7Packet from binary
 func (s7Packet *S7Packet) Unmarshal(bytes []byte) error {
+	if bytes == nil || len(bytes) < 1 {
+		return errInvalidPacket
+	}
+
 	if protocolId := bytes[0]; protocolId != S7_PROTOCOL_ID {
 		return errNotS7
 	}

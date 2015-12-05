@@ -13,4 +13,7 @@ type S7Log struct {
 	CpuProfile         string `json:"cpu_profile,omitempty"`
 	OEMId              string `json:"oem_id,omitempty"`
 	Location           string `json:"location,omitempty"`
+	ModuleId           string `json:"module_id,omitempty"`
+	Hardware           string `json:"hardware,omitempty"`
+	Firmware           string `json:"firmware,omitempty"`
 }
