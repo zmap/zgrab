@@ -6,20 +6,36 @@ import (
 	"encoding/hex"
 	"github.com/zmap/zgrab/ztools/zlog"
 	"net"
+	"time"
 )
 
 func GetS7Banner(logStruct *S7Log, connection net.Conn) (err error) {
-
 	// Attempt connection
-	connPacketBytes, err := makeCOTPConnectionPacketBytes(uint16(0x102), uint16(0x100))
-	//	connPacketBytes, err := makeCOTPConnectionPacketBytes(uint16(0x200), uint16(0x100))
+	var connPacketBytes, connResponseBytes []byte
+	connPacketBytes, err = makeCOTPConnectionPacketBytes(uint16(0x102), uint16(0x100))
 	if err != nil {
 		return err
 	}
-	connResponseBytes, err := sendRequestReadResponse(connection, connPacketBytes)
-	if err != nil {
-		return err
+
+	connResponseBytes, err = sendRequestReadResponse(connection, connPacketBytes)
+	if connResponseBytes == nil || len(connResponseBytes) == 0 || err != nil {
+		address := connection.RemoteAddr().String()
+		connection.Close()
+		connection, err = makeNewConnection(address)
+		if err != nil {
+			return err
+		}
+
+		connPacketBytes, err = makeCOTPConnectionPacketBytes(uint16(0x200), uint16(0x100))
+		if err != nil {
+			return err
+		}
+		connResponseBytes, err = sendRequestReadResponse(connection, connPacketBytes)
+		if err != nil {
+			return err
+		}
 	}
+
 	_, err = unmarshalCOTPConnectionResponse(connResponseBytes)
 	if err != nil {
 		return err
@@ -51,7 +67,19 @@ func GetS7Banner(logStruct *S7Log, connection net.Conn) (err error) {
 	}
 	parseComponentIdentificationResponse(logStruct, &componentIdentificationResponse)
 
+	connection.Close()
 	return nil
+}
+
+func makeNewConnection(address string) (newConnection net.Conn, err error) {
+	newConnection, err = net.Dial("tcp", address)
+	if err != nil {
+		newConnection.Close()
+		return newConnection, err
+	}
+	newConnection.SetDeadline(time.Now().Add(time.Second * 3))
+
+	return newConnection, nil
 }
 
 func makeCOTPConnectionPacketBytes(dstTsap uint16, srcTsap uint16) ([]byte, error) {

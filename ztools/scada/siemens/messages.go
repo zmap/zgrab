@@ -212,6 +212,10 @@ func (s7Packet *S7Packet) Unmarshal(bytes []byte) error {
 	paramLength := binary.BigEndian.Uint16(bytes[6:8])
 	dataLength := binary.BigEndian.Uint16(bytes[8:10])
 
+	if int(headerSize+paramLength+dataLength) >= len(bytes) {
+		return errInvalidPacket
+	}
+
 	s7Packet.Parameters = bytes[headerSize : headerSize+paramLength]
 	s7Packet.Data = bytes[headerSize+paramLength : headerSize+paramLength+dataLength]
 
