@@ -149,6 +149,7 @@ const (
 	S7_SZL_REQUEST       = byte(0x04)
 	S7_SZL_FUNCTIONS     = byte(0x04)
 	S7_SZL_READ          = byte(0x01)
+	S7_DATA_BYTE_OFFSET  = 12 // offset for real data
 )
 
 const s7PacketHeaderLength = 3

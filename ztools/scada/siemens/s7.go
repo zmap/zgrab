@@ -1,6 +1,7 @@
 package siemens
 
 import (
+	"bytes"
 	"encoding/binary"
 	"net"
 )
@@ -13,41 +14,41 @@ func GetS7Banner(logStruct *S7Log, connection net.Conn) (err error) {
 	if err != nil {
 		return err
 	}
-
 	connResponseBytes, err := sendRequestReadResponse(connection, connPacketBytes)
 	if err != nil {
 		return err
 	}
-
 	_, err = unmarshalCOTPConnectionResponse(connResponseBytes)
 	if err != nil {
 		return err
 	}
 
 	// -------- Negotiate S7
-
 	requestPacketBytes, err := makeRequestPacketBytes(S7_REQUEST, makeNegotiatePDUParamBytes(), nil)
 	if err != nil {
 		return err
 	}
-
 	_, err = sendRequestReadResponse(connection, requestPacketBytes)
 	if err != nil {
 		return err
 	}
-	// -------- Make Module Identification request
-	readRequestParamBytes := makeReadRequestParamBytes(uint16(0x11))
-	readRequestBytes, err := makeRequestPacketBytes(S7_REQUEST, readRequestParamBytes, nil)
 
+	logStruct.IsS7 = true
+
+	// -------- Make Component Identification request
+	readRequestBytes, err := makeReadRequestBytes(uint16(0x1c))
+	if err != nil {
+		return err
+	}
 	readResponse, err := sendRequestReadResponse(connection, readRequestBytes)
 	if err != nil {
 		return err
 	}
-
-	logStruct.RawResponse = readResponse
-
-	// -------- Make Component Identification request
-	//	readRequest, err := makeReadRequestParamBytes(0x1c)
+	s7Packet, err := unmarshalReadResponse(readResponse)
+	if err != nil {
+		return err
+	}
+	parseComponentIdentificationResponse(logStruct, &s7Packet)
 
 	return nil
 }
@@ -140,7 +141,7 @@ func makeNegotiatePDUParamBytes() (bytes []byte) {
 	return bytes
 }
 
-func makeReadRequestParamBytes(szlId uint16) (bytes []byte) {
+func makeReadRequestParamBytes(data []byte) (bytes []byte) {
 	bytes = make([]byte, 0, 16)
 
 	bytes = append(bytes, byte(0x00)) // magic parameter
@@ -151,17 +152,83 @@ func makeReadRequestParamBytes(szlId uint16) (bytes []byte) {
 	bytes = append(bytes, byte((S7_SZL_REQUEST*0x10)+S7_SZL_FUNCTIONS))
 	bytes = append(bytes, byte(S7_SZL_READ))
 	bytes = append(bytes, byte(0))
+
+	return bytes
+}
+
+func makeReadRequestDataBytes(szlId uint16) []byte {
+	bytes := make([]byte, 0, 4)
 	bytes = append(bytes, byte(0xff))
 	bytes = append(bytes, byte(0x09))
-
-	// data section
 	uint16BytesHolder := make([]byte, 2)
-	binary.BigEndian.PutUint16(uint16BytesHolder, 4) // size of subsequent data
-	bytes = append(bytes, uint16BytesHolder...)      // szl id
+	binary.BigEndian.PutUint16(uint16BytesHolder, uint16(4)) // size of subsequent data
+	bytes = append(bytes, uint16BytesHolder...)
 	binary.BigEndian.PutUint16(uint16BytesHolder, szlId)
 	bytes = append(bytes, uint16BytesHolder...) // szl id
 	binary.BigEndian.PutUint16(uint16BytesHolder, 1)
 	bytes = append(bytes, uint16BytesHolder...) // szl index
 
 	return bytes
+}
+
+func makeReadRequestBytes(szlId uint16) ([]byte, error) {
+	readRequestParamBytes := makeReadRequestParamBytes(makeReadRequestDataBytes(szlId))
+	readRequestBytes, err := makeRequestPacketBytes(S7_REQUEST_USER_DATA, readRequestParamBytes, makeReadRequestDataBytes(szlId))
+	if err != nil {
+		return nil, err
+	}
+
+	return readRequestBytes, nil
+}
+
+func unmarshalReadResponse(bytes []byte) (S7Packet, error) {
+	var tpktPacket TPKTPacket
+	var cotpDataPacket COTPDataPacket
+	var s7Packet S7Packet
+	if err := tpktPacket.Unmarshal(bytes); err != nil {
+		return s7Packet, err
+	}
+
+	if err := cotpDataPacket.Unmarshal(tpktPacket.Data); err != nil {
+		return s7Packet, err
+	}
+
+	if err := s7Packet.Unmarshal(cotpDataPacket.Data); err != nil {
+		return s7Packet, err
+	}
+
+	return s7Packet, nil
+}
+
+func parseComponentIdentificationResponse(logStruct *S7Log, s7Packet *S7Packet) {
+	fields := bytes.FieldsFunc(s7Packet.Data[S7_DATA_BYTE_OFFSET:], func(c rune) bool {
+		return int(c) == 0
+	})
+
+	for i := len(fields) - 1; i >= 0; i-- {
+		switch i {
+		case 0:
+			logStruct.System = string(fields[i][1:]) // exclude index byte
+		case 1:
+			logStruct.Module = string(fields[i][1:])
+		case 2:
+			logStruct.PlantId = string(fields[i][1:])
+		case 3:
+			logStruct.Copyright = string(fields[i][1:])
+		case 4:
+			logStruct.SerialNumber = string(fields[i][1:])
+		case 5:
+			logStruct.ReservedForOS = string(fields[i][1:])
+		case 6:
+			logStruct.ModuleType = string(fields[i][1:])
+		case 7:
+			logStruct.MemorySerialNumber = string(fields[i][1:])
+		case 8:
+			logStruct.CpuProfile = string(fields[i][1:])
+		case 9:
+			logStruct.OEMId = string(fields[i][1:])
+		case 10:
+			logStruct.Location = string(fields[i][1:])
+		}
+	}
 }
