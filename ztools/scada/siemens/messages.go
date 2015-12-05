@@ -81,7 +81,7 @@ func (cotpConnPacket *COTPConnectionPacket) Marshal() ([]byte, error) {
 // Decodes a COTPConnectionPacket from binary that must be a connection confirmation
 func (cotpConnPacket *COTPConnectionPacket) Unmarshal(bytes []byte) error {
 
-	if bytes == nil || len(bytes) < 1 {
+	if bytes == nil || len(bytes) < 2 {
 		return errInvalidPacket
 	}
 
@@ -93,9 +93,9 @@ func (cotpConnPacket *COTPConnectionPacket) Unmarshal(bytes []byte) error {
 		return errors.New("Not a connection confirmation packet")
 	}
 
-	cotpConnPacket.DestinationRef = binary.BigEndian.Uint16(bytes[2:4])
-	cotpConnPacket.SourceRef = binary.BigEndian.Uint16(bytes[4:6])
-	// TODO: see if these need to be implemented
+	// TODO: implement these fields with proper bounds checking
+	//	cotpConnPacket.DestinationRef = binary.BigEndian.Uint16(bytes[2:4])
+	//	cotpConnPacket.SourceRef = binary.BigEndian.Uint16(bytes[4:6])
 	//	cotpConnPacket.DestinationTSAP
 	//	cotpConnPacket.SourceTSAP
 	//	cotpConnPacket.TPDUSize
