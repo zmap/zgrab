@@ -118,7 +118,7 @@ func init() {
 	flag.StringVar(&config.SSH.KexAlgorithms, "ssh-kex-algorithms", "", "Set SSH Key Exchange Algorithms")
 	flag.StringVar(&config.SSH.HostKeyAlgorithms, "ssh-host-key-algorithms", "", "Set SSH Host Key Algorithms")
 	flag.BoolVar(&config.Telnet, "telnet", false, "Read telnet banners")
-	flag.IntVar(&config.TelnetMaxSize, "telnet-max-size", 8192, "Max bytes to read for telnet banner")
+	flag.IntVar(&config.TelnetMaxSize, "telnet-max-size", 65536, "Max bytes to read for telnet banner")
 	flag.Parse()
 
 	// Validate Go Runtime config
