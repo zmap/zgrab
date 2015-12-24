@@ -117,6 +117,8 @@ func init() {
 	flag.StringVar(&config.SSH.Client, "ssh-client", "", "Mimic behavior of a specific SSH client")
 	flag.StringVar(&config.SSH.KexAlgorithms, "ssh-kex-algorithms", "", "Set SSH Key Exchange Algorithms")
 	flag.StringVar(&config.SSH.HostKeyAlgorithms, "ssh-host-key-algorithms", "", "Set SSH Host Key Algorithms")
+	flag.BoolVar(&config.Telnet, "telnet", false, "Read telnet banners")
+	flag.IntVar(&config.TelnetMaxSize, "telnet-max-size", 65536, "Max bytes to read for telnet banner")
 	flag.Parse()
 
 	// Validate Go Runtime config
@@ -153,6 +155,11 @@ func init() {
 	}
 	if config.FTPAuthTLS && !config.FTP {
 		zlog.Fatal("--ftp-authtls requires usage of --ftp")
+	}
+
+	// Validate Telnet
+	if config.Telnet && config.Banners {
+		zlog.Fatal("--telnet and --banners are mutually exclusive")
 	}
 
 	// Validate TLS Versions

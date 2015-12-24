@@ -23,12 +23,12 @@ import (
 	"net"
 	"strconv"
 	"time"
-
 	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/processing"
 	"github.com/zmap/zgrab/ztools/scada/dnp3"
 	"github.com/zmap/zgrab/ztools/scada/fox"
 	"github.com/zmap/zgrab/ztools/scada/siemens"
+	"github.com/zmap/zgrab/ztools/telnet"
 )
 
 type GrabTarget struct {
@@ -184,6 +184,15 @@ func makeGrabber(config *Config) func(*Conn) error {
 
 			if err := fox.GetFoxBanner(c.grabData.Fox, c.getUnderlyingConn()); err != nil {
 				c.erroredComponent = "fox"
+				return err
+			}
+		}
+
+		if config.Telnet {
+			c.grabData.Telnet = new(telnet.TelnetLog)
+
+			if err := telnet.GetTelnetBanner(c.grabData.Telnet, c.getUnderlyingConn(), config.TelnetMaxSize); err != nil {
+				c.erroredComponent = "telnet"
 				return err
 			}
 		}
