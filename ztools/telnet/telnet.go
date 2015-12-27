@@ -23,13 +23,14 @@ import (
 	"net"
 )
 
+// RFC 854 - https://tools.ietf.org/html/rfc854
 const (
 	IAC                = byte(255) //Interpret as command
 	DONT               = byte(254)
 	DO                 = byte(253)
 	WONT               = byte(252)
 	WILL               = byte(251)
-	AYT                = byte(246) // Are you there
+	GO_AHEAD           = byte(249) // Special go ahead command
 	IAC_CMD_LENGTH     = 3         // IAC commands take 3 bytes (inclusive)
 	READ_BUFFER_LENGTH = 8192
 )
@@ -65,13 +66,14 @@ func GetTelnetBanner(logStruct *TelnetLog, conn net.Conn, maxReadSize int) (err 
 func NegotiateOptions(logStruct *TelnetLog, conn net.Conn) error {
 	var readBuffer, retBuffer []byte
 	var option, optionType, returnOptionType byte
-	var iacIndex, lastReadIndex, numBytes int
+	var iacIndex, firstUnreadIndex, numBytes, numDataBytes int
 	var err error
 
 	for finishedNegotiating := false; finishedNegotiating == false; {
 		readBuffer = make([]byte, READ_BUFFER_LENGTH)
 		retBuffer = nil
 		numBytes, err = conn.Read(readBuffer)
+		numDataBytes = numBytes
 
 		if err != nil {
 			return err
@@ -83,10 +85,18 @@ func NegotiateOptions(logStruct *TelnetLog, conn net.Conn) error {
 
 		// Negotiate options
 
-		lastReadIndex = 0
+		firstUnreadIndex = 0
 		for iacIndex = bytes.IndexByte(readBuffer, IAC); iacIndex != -1; iacIndex = bytes.IndexByte(readBuffer, IAC) {
 			optionType = readBuffer[iacIndex+1]
 			option = readBuffer[iacIndex+2]
+
+			// ignore go ahead
+			if optionType == GO_AHEAD {
+				readBuffer = readBuffer[0:iacIndex]
+				numBytes = iacIndex
+				firstUnreadIndex = 0
+				break
+			}
 
 			// record all offered options
 			if optionType == WILL || optionType == DO {
@@ -108,20 +118,21 @@ func NegotiateOptions(logStruct *TelnetLog, conn net.Conn) error {
 			retBuffer = append(retBuffer, returnOptionType)
 			retBuffer = append(retBuffer, option)
 
-			lastReadIndex += iacIndex + IAC_CMD_LENGTH
-			readBuffer = readBuffer[iacIndex+IAC_CMD_LENGTH:]
+			firstUnreadIndex += iacIndex + IAC_CMD_LENGTH
+			numDataBytes -= firstUnreadIndex
+			readBuffer = readBuffer[firstUnreadIndex:]
 		}
 
 		if _, err = conn.Write(retBuffer); err != nil {
 			return err
 		}
 
-		finishedNegotiating = numBytes != lastReadIndex
+		finishedNegotiating = numBytes != firstUnreadIndex
 	}
 
 	// no more IAC commands, just read the resulting data
-	if numBytes >= lastReadIndex {
-		logStruct.Banner = string(readBuffer[lastReadIndex:numBytes])
+	if numDataBytes >= 0 {
+		logStruct.Banner = string(readBuffer[0:numDataBytes])
 	}
 
 	return nil
