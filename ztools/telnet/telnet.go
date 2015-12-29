@@ -52,6 +52,11 @@ func GetTelnetBanner(logStruct *TelnetLog, conn net.Conn, maxReadSize int) (err 
 		if err != nil && err != io.EOF {
 			return err
 		}
+
+		if containsIAC(buffer) {
+			continue
+		}
+
 		if count == rounds-1 {
 			logStruct.Banner = logStruct.Banner + string(buffer[0:maxReadSize%READ_BUFFER_LENGTH])
 		} else {
@@ -85,8 +90,8 @@ func NegotiateOptions(logStruct *TelnetLog, conn net.Conn) error {
 
 		// Negotiate options
 
-		firstUnreadIndex = 0
 		for iacIndex = bytes.IndexByte(readBuffer, IAC); iacIndex != -1; iacIndex = bytes.IndexByte(readBuffer, IAC) {
+			firstUnreadIndex = 0
 			optionType = readBuffer[iacIndex+1]
 			option = readBuffer[iacIndex+2]
 
@@ -118,7 +123,7 @@ func NegotiateOptions(logStruct *TelnetLog, conn net.Conn) error {
 			retBuffer = append(retBuffer, returnOptionType)
 			retBuffer = append(retBuffer, option)
 
-			firstUnreadIndex += iacIndex + IAC_CMD_LENGTH
+			firstUnreadIndex = iacIndex + IAC_CMD_LENGTH
 			numDataBytes -= firstUnreadIndex
 			readBuffer = readBuffer[firstUnreadIndex:]
 		}
@@ -127,13 +132,18 @@ func NegotiateOptions(logStruct *TelnetLog, conn net.Conn) error {
 			return err
 		}
 
-		finishedNegotiating = numBytes != firstUnreadIndex
+		numIACBytes := numBytes - numDataBytes
+		finishedNegotiating = numBytes != numIACBytes
 	}
 
 	// no more IAC commands, just read the resulting data
 	if numDataBytes >= 0 {
-		logStruct.Banner = string(readBuffer[0:numDataBytes])
+		logStruct.Banner = string(readBuffer[0:numBytes])
 	}
 
 	return nil
+}
+
+func containsIAC(buffer []byte) bool {
+	return bytes.IndexByte(buffer, IAC) != -1
 }
