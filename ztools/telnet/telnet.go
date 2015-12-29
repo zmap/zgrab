@@ -49,6 +49,15 @@ func GetTelnetBanner(logStruct *TelnetLog, conn net.Conn, maxReadSize int) (err 
 	for numBytes != 0 && count < rounds && numBytes == READ_BUFFER_LENGTH {
 
 		numBytes, err = conn.Read(buffer)
+		// ignore timeout errors if there is already banner content
+		if err, ok := err.(net.Error); ok && err.Timeout() {
+			if len(logStruct.Banner) == 0 {
+				return err
+			} else {
+				break
+			}
+		}
+
 		if err != nil && err != io.EOF {
 			return err
 		}
