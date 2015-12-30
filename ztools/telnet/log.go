@@ -12,10 +12,10 @@
  * permissions and limitations under the License.
  */
 
-package ftp
+package telnet
 
-type FTPLog struct {
-	Banner      string `json:"banner,omitempty"`
-	AuthTLSResp string `json:"auth_tls_resp,omitempty"`
-	AuthSSLResp string `json:"auth_ssl_resp,omitempty"`
+type TelnetLog struct {
+	Banner          string   `json:"banner,omitempty"`
+	SupportedOpts   []string `json:"supported_opts,omitempty"`   //DO and WILL option codes
+	UnsupportedOpts []string `json:"unsupported_opts,omitempty"` // DONT and WONT option codes
 }
