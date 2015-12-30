@@ -16,6 +16,7 @@ package telnet
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -34,6 +35,41 @@ const (
 	IAC_CMD_LENGTH     = 3         // IAC commands take 3 bytes (inclusive)
 	READ_BUFFER_LENGTH = 8192
 )
+
+type TelnetOption uint16
+
+func (opt *TelnetOption) Name() string {
+	name, ok := optionToName[int(*opt)]
+	if !ok {
+		return "unknown"
+	}
+	return name
+}
+
+func (opt *TelnetOption) MarshalJSON() ([]byte, error) {
+	out := struct {
+		Name  string `json:"name"`
+		Value int    `json:"value"`
+	}{
+		opt.Name(),
+		int(*opt),
+	}
+	return json.Marshal(&out)
+}
+
+func (opt *TelnetOption) UnmarshalJSON(b []byte) error {
+	aux := struct {
+		Value int `json:"value"`
+	}{}
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	if aux.Value < 0 || aux.Value > 255 {
+		return errors.New("Invalid byte value")
+	}
+	*opt = TelnetOption(byte(aux.Value))
+	return nil
+}
 
 func GetTelnetBanner(logStruct *TelnetLog, conn net.Conn, maxReadSize int) (err error) {
 	if err = NegotiateOptions(logStruct, conn); err != nil {
@@ -116,10 +152,15 @@ func NegotiateOptions(logStruct *TelnetLog, conn net.Conn) error {
 			}
 
 			// record all offered options
-			if optionType == WILL || optionType == DO {
-				logStruct.SupportedOpts = append(logStruct.SupportedOpts, fmt.Sprintf("%d", option))
-			} else if optionType == WONT || optionType == DONT {
-				logStruct.UnsupportedOpts = append(logStruct.UnsupportedOpts, fmt.Sprintf("%d", option))
+			opt := TelnetOption(option)
+			if optionType == WILL {
+				logStruct.Will = append(logStruct.Will, opt)
+			} else if optionType == DO {
+				logStruct.Do = append(logStruct.Do, opt)
+			} else if optionType == WONT {
+				logStruct.Wont = append(logStruct.Wont, opt)
+			} else if optionType == DONT {
+				logStruct.Dont = append(logStruct.Dont, opt)
 			}
 
 			// reject all offered options

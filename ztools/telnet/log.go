@@ -15,7 +15,9 @@
 package telnet
 
 type TelnetLog struct {
-	Banner          string   `json:"banner,omitempty"`
-	SupportedOpts   []string `json:"supported_opts,omitempty"`   //DO and WILL option codes
-	UnsupportedOpts []string `json:"unsupported_opts,omitempty"` // DONT and WONT option codes
+	Banner string         `json:"banner,omitempty"`
+	Will   []TelnetOption `json:"will,omitempty"`
+	Do     []TelnetOption `json:"do,omitempty"`
+	Wont   []TelnetOption `json:"wont,omitempty"`
+	Dont   []TelnetOption `json:"dont,omitempty"`
 }
