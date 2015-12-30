@@ -40,6 +40,7 @@ func GetTelnetBanner(logStruct *TelnetLog, conn net.Conn, maxReadSize int) (err 
 		return err
 	}
 
+	var bannerSlice []byte
 	//grab banner
 	buffer := make([]byte, READ_BUFFER_LENGTH)
 
@@ -67,12 +68,14 @@ func GetTelnetBanner(logStruct *TelnetLog, conn net.Conn, maxReadSize int) (err 
 		}
 
 		if count == rounds-1 {
-			logStruct.Banner = logStruct.Banner + string(buffer[0:maxReadSize%READ_BUFFER_LENGTH])
+			bannerSlice = append(bannerSlice, buffer[0:maxReadSize%READ_BUFFER_LENGTH]...)
 		} else {
-			logStruct.Banner = logStruct.Banner + string(buffer[0:numBytes])
+			bannerSlice = append(bannerSlice, buffer[0:numBytes]...)
 		}
 		count += 1
 	}
+
+	logStruct.Banner += string(bannerSlice)
 
 	return nil
 }
