@@ -219,7 +219,25 @@ zgrab_banner = Record({
 
 register_schema("zgrab-ftp", zgrab_banner)
 
-zgrab_tls_banner=Record({
+caps_list = ListOf(SubRecord({
+    "name":String(),
+    "value":Integer()
+}))
+
+zgrab_telnet = Record({
+    "data":SubRecord({
+        "telnet":SubRecord({
+            "banner":AnalyzedString(),
+            "will":caps_list,
+            "wont":caps_list,
+            "do":caps_list,
+            "dont":caps_list,
+        })
+    })
+}, extends=zgrab_base)
+
+
+zgrab_tls_banner = Record({
     "data":SubRecord({
         "tls":zgrab_tls,
     })
