@@ -55,6 +55,12 @@ func (c *Conn) clientHandshake() error {
 		secureRenegotiation: true,
 	}
 
+	if c.config.SessionTicketsDisabled {
+		hello.ticketSupported = false
+	} else {
+		hello.ticketSupported = true
+	}
+
 	if c.config.HeartbeatEnabled && !c.config.ExtendedRandom {
 		hello.heartbeatEnabled = true
 		hello.heartbeatMode = heartbeatModePeerAllowed
@@ -236,6 +242,12 @@ func (c *Conn) clientHandshake() error {
 		if err := hs.readFinished(); err != nil {
 			return err
 		}
+	}
+
+	if hs.session == nil {
+		c.handshakeLog.SessionTicket = nil
+	} else {
+		c.handshakeLog.SessionTicket = hs.session.MakeLog()
 	}
 
 	if sessionCache != nil && hs.session != nil && session != hs.session {

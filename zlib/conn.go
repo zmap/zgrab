@@ -77,6 +77,7 @@ type Conn struct {
 	safariNoDHECiphers  bool
 	noSNI               bool
 	extendedRandom      bool
+	gatherSessionTicket bool
 
 	domain string
 
@@ -147,6 +148,10 @@ func (c *Conn) SetDomain(domain string) {
 
 func (c *Conn) SetNoSNI() {
 	c.noSNI = true
+}
+
+func (c *Conn) SetGatherSessionTicket() {
+	c.gatherSessionTicket = true
 }
 
 // Layer in the regular conn methods
@@ -459,6 +464,11 @@ func (c *Conn) TLSHandshake() error {
 	}
 	if c.extendedRandom {
 		tlsConfig.ExtendedRandom = true
+	}
+	if c.gatherSessionTicket {
+		tlsConfig.SessionTicketsDisabled = false
+	} else {
+		tlsConfig.SessionTicketsDisabled = true
 	}
 
 	c.tlsConn = ztls.Client(c.conn, tlsConfig)

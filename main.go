@@ -108,6 +108,9 @@ func init() {
 	flag.BoolVar(&config.SafariNoDHE, "safari-no-dhe-ciphers", false, "Send Safari ciphers minus DHE suites")
 
 	flag.BoolVar(&config.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
+
+	flag.BoolVar(&config.GatherSessionTicket, "tls-session-ticket-ext", false, "Send support for TLS Session Tickets and output ticket if presented")
+
 	flag.StringVar(&rootCAFileName, "ca-file", "", "List of trusted root certificate authorities in PEM format")
 	flag.IntVar(&config.GOMAXPROCS, "gomaxprocs", 3, "Set GOMAXPROCS (default 3)")
 	flag.BoolVar(&config.FTP, "ftp", false, "Read FTP banners")
