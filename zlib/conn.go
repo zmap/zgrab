@@ -466,9 +466,7 @@ func (c *Conn) TLSHandshake() error {
 		tlsConfig.ExtendedRandom = true
 	}
 	if c.gatherSessionTicket {
-		tlsConfig.SessionTicketsDisabled = false
-	} else {
-		tlsConfig.SessionTicketsDisabled = true
+		tlsConfig.ForceSessionTicketExt = true
 	}
 
 	c.tlsConn = ztls.Client(c.conn, tlsConfig)

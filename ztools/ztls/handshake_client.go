@@ -55,9 +55,7 @@ func (c *Conn) clientHandshake() error {
 		secureRenegotiation: true,
 	}
 
-	if c.config.SessionTicketsDisabled {
-		hello.ticketSupported = false
-	} else {
+	if c.config.ForceSessionTicketExt {
 		hello.ticketSupported = true
 	}
 

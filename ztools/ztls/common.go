@@ -337,6 +337,9 @@ type Config struct {
 
 	// Use extended random
 	ExtendedRandom bool
+
+	// Force Client Hello to send TLS Session Ticket extension
+	ForceSessionTicketExt bool
 }
 
 func (c *Config) serverInit() {
