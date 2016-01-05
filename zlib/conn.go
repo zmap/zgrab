@@ -54,15 +54,19 @@ type Conn struct {
 	conn    net.Conn
 	tlsConn *ztls.Conn
 	isTls   bool
+	rhost string
 
 	grabData GrabData
+	grabData2 GrabData
 
 	// Max TLS version
+	tlsVersion    uint16
 	maxTlsVersion uint16
 
 	// Cache the deadlines so we can reapply after TLS handshake
 	readDeadline  time.Time
 	writeDeadline time.Time
+	timeout time.Duration
 
 	caPool *x509.CertPool
 
@@ -77,6 +81,7 @@ type Conn struct {
 	safariNoDHECiphers  bool
 	noSNI               bool
 	extendedRandom      bool
+	comparisonDHE		bool
 
 	domain string
 
@@ -137,6 +142,11 @@ func (c *Conn) SetExtendedRandom() {
 	c.extendedRandom = true
 }
 
+func (c *Conn) SetComparisonDHE() {
+	c.comparisonDHE = true
+}
+
+
 func (c *Conn) SetCAPool(pool *x509.CertPool) {
 	c.caPool = pool
 }
@@ -163,6 +173,19 @@ func (c *Conn) SetDeadline(t time.Time) error {
 	c.writeDeadline = t
 	return c.getUnderlyingConn().SetDeadline(t)
 }
+
+func (c *Conn) SetTimeout(t time.Duration)  {
+	c.timeout = t
+}
+
+func (c *Conn) SetRHost(h string)  {
+	c.rhost = h
+}
+
+func (c *Conn) SetMaxTlsVersion(t uint16)  {
+	c.maxTlsVersion = t
+}
+
 
 func (c *Conn) SetReadDeadline(t time.Time) error {
 	c.readDeadline = t
@@ -409,6 +432,67 @@ func (c *Conn) makeAndSendHTTPRequest(config *HTTPConfig) (*HTTPRequest, *HTTPRe
 
 	return encReq, encRes, nil
 }
+
+func (c *Conn) ComparisonDHE() error {
+//func (c *Conn, config *Config, target *GrabTarget) ComparisonDHE() error {
+	// first perform a handshake with typical firefox ciphers
+	tlsConfig := new(ztls.Config)
+	tlsConfig.InsecureSkipVerify = true
+	tlsConfig.MinVersion = ztls.VersionSSL30
+	tlsConfig.MaxVersion = c.maxTlsVersion
+	tlsConfig.RootCAs = c.caPool
+	tlsConfig.HeartbeatEnabled = true
+	tlsConfig.ClientDSAEnabled = true
+	if !c.noSNI && c.domain != "" {
+		tlsConfig.ServerName = c.domain
+	}
+	tlsConfig.CipherSuites = ztls.FirefoxCiphers
+
+	c.tlsConn = ztls.Client(c.conn, tlsConfig)
+	c.tlsConn.SetReadDeadline(c.readDeadline)
+	c.tlsConn.SetWriteDeadline(c.writeDeadline)
+	c.isTls = true
+	err := c.tlsConn.Handshake()
+	if err == ztls.ErrUnimplementedCipher {
+		err = nil
+	}
+	h1 := c.tlsConn.GetHandshakeLog()
+	c.grabData.TLSHandshake = h1
+	// if there was an error, not worth doing a second handshake
+	// either this isn't TLS and we're wasting time, or this thing supports
+	// no useful cipher suites
+	if err != nil {
+		return err
+	}
+	// alright. let's do this again, but without DHE
+	tlsConfig.CipherSuites = ztls.FirefoxNoDHECiphers
+
+	dial := makeDialer(c.timeout, "tcp", c.tlsVersion)
+	c2, dialErr := dial(c.rhost)
+	if dialErr != nil {
+		return dialErr
+	}
+	if c.domain != "" {
+		c2.SetDomain(c.domain)
+	}
+	c2.tlsConn = ztls.Client(c2.conn, tlsConfig)
+	c2.tlsConn.SetReadDeadline(c2.readDeadline)
+	c2.tlsConn.SetWriteDeadline(c2.writeDeadline)
+	c2.isTls = true
+
+	c2.tlsConn.SetReadDeadline(c2.readDeadline)
+	c2.tlsConn.SetWriteDeadline(c2.writeDeadline)
+	c2.isTls = true
+	err = c2.tlsConn.Handshake()
+	if tlsConfig.ForceSuites && err == ztls.ErrUnimplementedCipher {
+		err = nil
+	}
+	h2 := c2.tlsConn.GetHandshakeLog()
+	c2.Close()
+	c.grabData2.TLSHandshake = h2
+	return err
+}
+
 
 // Extra method - Do a TLS Handshake and record progress
 func (c *Conn) TLSHandshake() error {

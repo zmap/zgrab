@@ -68,29 +68,28 @@ func NewGrabTargetDecoder(reader io.Reader) processing.Decoder {
 	return &d
 }
 
-func makeDialer(c *Config) func(string) (*Conn, error) {
-	proto := "tcp"
-	if c.BACNet {
-		proto = "udp"
-	}
-	timeout := c.Timeout
+func makeDialer(timeout time.Duration, proto string, tlsVersion uint16) func(string) (*Conn, error) {
 	return func(addr string) (*Conn, error) {
 		deadline := time.Now().Add(timeout)
 		d := Dialer{
 			Deadline: deadline,
 		}
 		conn, err := d.Dial(proto, addr)
-		conn.maxTlsVersion = c.TLSVersion
+		conn.SetTimeout(timeout)
+		conn.SetMaxTlsVersion(tlsVersion)
+		conn.SetRHost(addr)
 		if err == nil {
 			conn.SetDeadline(deadline)
+			conn.SetTimeout(timeout)
+			conn.SetMaxTlsVersion(tlsVersion)
 		}
 		return conn, err
 	}
 }
 
-func makeGrabber(config *Config) func(*Conn) error {
+func makeGrabber(config *Config) func(*Conn, *GrabTarget) error {
 	// Do all the hard work here
-	g := func(c *Conn) error {
+	g := func(c *Conn, target *GrabTarget) error {
 		banner := make([]byte, 1024)
 		response := make([]byte, 65536)
 		c.SetCAPool(config.RootCAPool)
@@ -127,11 +126,17 @@ func makeGrabber(config *Config) func(*Conn) error {
 		if config.TLSExtendedRandom {
 			c.SetExtendedRandom()
 		}
-
 		if config.SSH.SSH {
 			c.sshScan = &config.SSH
 		}
 		c.ReadEncoding = config.Encoding
+
+		if config.ComparisonDHE {
+			if err := c.ComparisonDHE(); err != nil {
+				c.erroredComponent = "tls"
+				return err
+			}
+		}
 		if config.TLS {
 			if err := c.TLSHandshake(); err != nil {
 				c.erroredComponent = "tls"
@@ -294,8 +299,8 @@ func makeGrabber(config *Config) func(*Conn) error {
 		return nil
 	}
 	// Wrap the whole thing in a logger
-	return func(c *Conn) error {
-		err := g(c)
+	return func(c *Conn, target *GrabTarget) error {
+		err := g(c, target)
 		if err != nil {
 			config.ErrorLog.Errorf("Conversation error with remote host %s: %s",
 				c.RemoteAddr().String(), err.Error())
@@ -307,7 +312,11 @@ func makeGrabber(config *Config) func(*Conn) error {
 }
 
 func GrabBanner(config *Config, target *GrabTarget) *Grab {
-	dial := makeDialer(config)
+	proto := "tcp"
+	if config.BACNet {
+		proto = "udp"
+	}
+	dial := makeDialer(config.Timeout, proto, config.TLSVersion)
 	grabber := makeGrabber(config)
 	port := strconv.FormatUint(uint64(config.Port), 10)
 	addr := target.Addr.String()
@@ -329,12 +338,13 @@ func GrabBanner(config *Config, target *GrabTarget) *Grab {
 			ErrorComponent: "connect",
 		}
 	}
-	err := grabber(conn)
+	err := grabber(conn, target)
 	return &Grab{
 		IP:             target.Addr,
 		Domain:         target.Domain,
 		Time:           t,
 		Data:           conn.grabData,
+		Data2:           conn.grabData2,
 		Error:          err,
 		ErrorComponent: conn.erroredComponent,
 	}

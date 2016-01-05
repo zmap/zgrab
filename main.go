@@ -106,6 +106,7 @@ func init() {
 
 	flag.BoolVar(&config.SafariOnly, "safari-ciphers", false, "Send Safari Ordered Cipher Suites")
 	flag.BoolVar(&config.SafariNoDHE, "safari-no-dhe-ciphers", false, "Send Safari ciphers minus DHE suites")
+	flag.BoolVar(&config.ComparisonDHE, "comparison-dhe", false, "Send two handshakes. One with DH ciphers and one without")
 
 	flag.BoolVar(&config.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
 	flag.StringVar(&rootCAFileName, "ca-file", "", "List of trusted root certificate authorities in PEM format")

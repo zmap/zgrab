@@ -90,6 +90,7 @@ func (sc *SSHScanConfig) MakeConfig() *ssh.Config {
 type Config struct {
 	// Connection
 	Port               uint16
+	TimeoutLength      uint16
 	Timeout            time.Duration
 	Senders            uint
 	ConnectionsPerHost uint
@@ -113,6 +114,7 @@ type Config struct {
 	SafariNoDHE       bool
 	NoSNI             bool
 	TLSExtendedRandom bool
+	ComparisonDHE     bool
 
 	// SSH
 	SSH SSHScanConfig

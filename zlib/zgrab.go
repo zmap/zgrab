@@ -34,6 +34,7 @@ type Grab struct {
 	Domain         string
 	Time           time.Time
 	Data           GrabData
+	Data2          GrabData
 	Error          error
 	ErrorComponent string
 }
@@ -43,6 +44,7 @@ type encodedGrab struct {
 	Domain         string    `json:"domain,omitempty"`
 	Time           string    `json:"timestamp"`
 	Data           *GrabData `json:"data,omitempty"`
+	Data2          *GrabData `json:"data2,omitempty"`
 	Error          *string   `json:"error,omitempty"`
 	ErrorComponent string    `json:"error_component,omitempty"`
 }
@@ -79,6 +81,7 @@ func (g *Grab) MarshalJSON() ([]byte, error) {
 		Domain:         g.Domain,
 		Time:           time,
 		Data:           &g.Data,
+		Data2:          &g.Data2,
 		Error:          errString,
 		ErrorComponent: g.ErrorComponent,
 	}
