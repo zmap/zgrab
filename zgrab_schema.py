@@ -199,6 +199,9 @@ zgrab_tls = SubRecord({
     }),
     "server_finished":SubRecord({
         "verify_data":Binary()
+    }),
+    "session_ticket":SubRecord({
+        "value":Binary()
     })
 })
 
