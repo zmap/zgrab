@@ -73,7 +73,8 @@ type Finished struct {
 // SessionTicket represents the new session ticket sent by the server to the
 // client
 type SessionTicket struct {
-	Value []uint8 `json:"value,omitempty"`
+	Value  []uint8 `json:"value,omitempty"`
+	Length int     `json:"length,omitempty"`
 }
 
 // ServerHandshake stores all of the messages sent by the server during a standard TLS Handshake.
@@ -270,7 +271,8 @@ func (m *finishedMsg) MakeLog() *Finished {
 
 func (m *ClientSessionState) MakeLog() *SessionTicket {
 	st := new(SessionTicket)
-	st.Value = make([]uint8, len(m.sessionTicket))
+	st.Length = len(m.sessionTicket)
+	st.Value = make([]uint8, st.Length)
 	copy(st.Value, m.sessionTicket)
 	return st
 }

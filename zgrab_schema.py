@@ -201,7 +201,8 @@ zgrab_tls = SubRecord({
         "verify_data":Binary()
     }),
     "session_ticket":SubRecord({
-        "value":Binary()
+        "value":Binary(),
+        "length":Integer()
     })
 })
 
