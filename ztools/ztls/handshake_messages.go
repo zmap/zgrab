@@ -1341,8 +1341,9 @@ func (m *certificateVerifyMsg) unmarshal(data []byte) bool {
 }
 
 type newSessionTicketMsg struct {
-	raw    []byte
-	ticket []byte
+	raw          []byte
+	ticket       []byte
+	lifetimeHint uint32
 }
 
 func (m *newSessionTicketMsg) equal(i interface{}) bool {
@@ -1394,6 +1395,7 @@ func (m *newSessionTicketMsg) unmarshal(data []byte) bool {
 		return false
 	}
 
+	m.lifetimeHint = uint32(data[4])<<24 | uint32(data[5])<<16 | uint32(data[6])<<8 | uint32(data[7])
 	m.ticket = data[10:]
 
 	return true
