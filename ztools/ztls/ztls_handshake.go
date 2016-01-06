@@ -70,6 +70,13 @@ type Finished struct {
 	VerifyData []byte `json:"verify_data"`
 }
 
+// SessionTicket represents the new session ticket sent by the server to the
+// client
+type SessionTicket struct {
+	Value  []uint8 `json:"value,omitempty"`
+	Length int     `json:"length,omitempty"`
+}
+
 // ServerHandshake stores all of the messages sent by the server during a standard TLS Handshake.
 // It implements zgrab.EventData interface
 type ServerHandshake struct {
@@ -78,6 +85,7 @@ type ServerHandshake struct {
 	ServerCertificates *Certificates      `json:"server_certificates,omitempty"`
 	ServerKeyExchange  *ServerKeyExchange `json:"server_key_exchange,omitempty"`
 	ServerFinished     *Finished          `json:"server_finished,omitempty"`
+	SessionTicket      *SessionTicket     `json:"session_ticket,omitempty"`
 }
 
 // MarshalJSON implements the json.Marshler interface
@@ -259,4 +267,12 @@ func (m *finishedMsg) MakeLog() *Finished {
 	sf.VerifyData = make([]byte, len(m.verifyData))
 	copy(sf.VerifyData, m.verifyData)
 	return sf
+}
+
+func (m *ClientSessionState) MakeLog() *SessionTicket {
+	st := new(SessionTicket)
+	st.Length = len(m.sessionTicket)
+	st.Value = make([]uint8, st.Length)
+	copy(st.Value, m.sessionTicket)
+	return st
 }
