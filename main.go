@@ -109,7 +109,7 @@ func init() {
 
 	flag.BoolVar(&config.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
 
-	flag.BoolVar(&config.GatherSessionTicket, "tls-session-ticket-ext", false, "Send support for TLS Session Tickets and output ticket if presented")
+	flag.BoolVar(&config.GatherSessionTicket, "tls-session-ticket", false, "Send support for TLS Session Tickets and output ticket if presented")
 
 	flag.StringVar(&rootCAFileName, "ca-file", "", "List of trusted root certificate authorities in PEM format")
 	flag.IntVar(&config.GOMAXPROCS, "gomaxprocs", 3, "Set GOMAXPROCS (default 3)")
