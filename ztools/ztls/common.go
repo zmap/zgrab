@@ -73,15 +73,16 @@ const (
 
 // TLS extension numbers
 const (
-	extensionServerName          uint16 = 0
-	extensionStatusRequest       uint16 = 5
-	extensionSupportedCurves     uint16 = 10
-	extensionSupportedPoints     uint16 = 11
-	extensionSignatureAlgorithms uint16 = 13
-	extensionSessionTicket       uint16 = 35
-	extensionNextProtoNeg        uint16 = 13172 // not IANA assigned
-	extensionRenegotiationInfo   uint16 = 0xff01
-	extensionExtendedRandom      uint16 = 0x0028 // not IANA assigned
+	extensionServerName           uint16 = 0
+	extensionStatusRequest        uint16 = 5
+	extensionSupportedCurves      uint16 = 10
+	extensionSupportedPoints      uint16 = 11
+	extensionSignatureAlgorithms  uint16 = 13
+	extensionSessionTicket        uint16 = 35
+	extensionNextProtoNeg         uint16 = 13172 // not IANA assigned
+	extensionRenegotiationInfo    uint16 = 0xff01
+	extensionExtendedRandom       uint16 = 0x0028 // not IANA assigned
+	extensionExtendedMasterSecret uint16 = 0x0017
 )
 
 // TLS signaling cipher suite values
@@ -341,6 +342,9 @@ type Config struct {
 
 	// Force Client Hello to send TLS Session Ticket extension
 	ForceSessionTicketExt bool
+
+	// Send RFC 7627 Extended Master Secret extension in Client Hello
+	ExtendedMasterSecret bool
 }
 
 func (c *Config) serverInit() {

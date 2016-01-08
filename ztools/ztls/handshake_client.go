@@ -59,6 +59,10 @@ func (c *Conn) clientHandshake() error {
 		hello.ticketSupported = true
 	}
 
+	if c.config.ExtendedMasterSecret {
+		hello.extendedMasterSecretEnabled = true
+	}
+
 	if c.config.HeartbeatEnabled && !c.config.ExtendedRandom {
 		hello.heartbeatEnabled = true
 		hello.heartbeatMode = heartbeatModePeerAllowed
@@ -260,6 +264,7 @@ func (c *Conn) clientHandshake() error {
 
 func (hs *clientHandshakeState) doFullHandshake() error {
 	c := hs.c
+	var session_hash []byte
 
 	msg, err := c.readHandshake()
 	if err != nil {
@@ -507,6 +512,10 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		c.writeRecord(recordTypeHandshake, ckx.marshal())
 	}
 
+	if hs.hello.extendedMasterSecretEnabled && hs.serverHello.extendedMasterSecretEnabled {
+		session_hash = hs.finishedHash.Sum()
+	}
+
 	if chainToSend != nil {
 		var signed []byte
 		certVerify := &certificateVerifyMsg{
@@ -580,7 +589,11 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		sr = hs.serverHello.random
 	}
 
-	hs.masterSecret = masterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, cr, sr)
+	if hs.hello.extendedMasterSecretEnabled && hs.serverHello.extendedMasterSecretEnabled {
+		hs.masterSecret = extendedMasterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, session_hash)
+	} else {
+		hs.masterSecret = masterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, cr, sr)
+	}
 	return nil
 }
 
