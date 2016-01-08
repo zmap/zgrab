@@ -162,10 +162,8 @@ func masterFromPreMasterSecret(version uint16, suite *cipherSuite, preMasterSecr
 // extendedMasterFromPreMasterSecret generates the master secret from the
 // premaster secret. See https://tools.ietf.org/html/rfc7627#section-4
 func extendedMasterFromPreMasterSecret(version uint16, suite *cipherSuite, preMasterSecret, session_hash []byte) []byte {
-	seed := make([]byte, len(session_hash))
-	copy(seed, session_hash)
 	masterSecret := make([]byte, masterSecretLength)
-	prfForVersion(version, suite)(masterSecret, preMasterSecret, extendedMasterSecretLabel, seed[0:])
+	prfForVersion(version, suite)(masterSecret, preMasterSecret, extendedMasterSecretLabel, session_hash[0:])
 	return masterSecret
 }
 
