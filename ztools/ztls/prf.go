@@ -124,6 +124,7 @@ const (
 )
 
 var masterSecretLabel = []byte("master secret")
+var extendedMasterSecretLabel = []byte("extended master secret")
 var keyExpansionLabel = []byte("key expansion")
 var clientFinishedLabel = []byte("client finished")
 var serverFinishedLabel = []byte("server finished")
@@ -155,6 +156,16 @@ func masterFromPreMasterSecret(version uint16, suite *cipherSuite, preMasterSecr
 	copy(seed[len(clientRandom):], serverRandom)
 	masterSecret := make([]byte, masterSecretLength)
 	prfForVersion(version, suite)(masterSecret, preMasterSecret, masterSecretLabel, seed[0:])
+	return masterSecret
+}
+
+// extendedMasterFromPreMasterSecret generates the master secret from the
+// premaster secret. See https://tools.ietf.org/html/rfc7627#section-4
+func extendedMasterFromPreMasterSecret(version uint16, suite *cipherSuite, preMasterSecret, session_hash []byte) []byte {
+	seed := make([]byte, len(session_hash))
+	copy(seed, session_hash)
+	masterSecret := make([]byte, masterSecretLength)
+	prfForVersion(version, suite)(masterSecret, preMasterSecret, extendedMasterSecretLabel, seed[0:])
 	return masterSecret
 }
 

@@ -66,18 +66,19 @@ type Conn struct {
 
 	caPool *x509.CertPool
 
-	onlyDHE             bool
-	onlyExports         bool
-	onlyExportsDH       bool
-	chromeCiphers       bool
-	chromeNoDHE         bool
-	firefoxCiphers      bool
-	firefoxNoDHECiphers bool
-	safariCiphers       bool
-	safariNoDHECiphers  bool
-	noSNI               bool
-	extendedRandom      bool
-	gatherSessionTicket bool
+	onlyDHE                   bool
+	onlyExports               bool
+	onlyExportsDH             bool
+	chromeCiphers             bool
+	chromeNoDHE               bool
+	firefoxCiphers            bool
+	firefoxNoDHECiphers       bool
+	safariCiphers             bool
+	safariNoDHECiphers        bool
+	noSNI                     bool
+	extendedRandom            bool
+	gatherSessionTicket       bool
+	offerExtendedMasterSecret bool
 
 	domain string
 
@@ -152,6 +153,10 @@ func (c *Conn) SetNoSNI() {
 
 func (c *Conn) SetGatherSessionTicket() {
 	c.gatherSessionTicket = true
+}
+
+func (c *Conn) SetExtendedMasterSecret() {
+	c.offerExtendedMasterSecret = true
 }
 
 // Layer in the regular conn methods
@@ -467,6 +472,9 @@ func (c *Conn) TLSHandshake() error {
 	}
 	if c.gatherSessionTicket {
 		tlsConfig.ForceSessionTicketExt = true
+	}
+	if c.offerExtendedMasterSecret {
+		tlsConfig.ExtendedMasterSecret = true
 	}
 
 	c.tlsConn = ztls.Client(c.conn, tlsConfig)

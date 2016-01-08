@@ -98,22 +98,23 @@ type Config struct {
 	Encoding string
 
 	// TLS
-	TLS                 bool
-	TLSVersion          uint16
-	Heartbleed          bool
-	RootCAPool          *x509.CertPool
-	DHEOnly             bool
-	ExportsOnly         bool
-	ExportsDHOnly       bool
-	FirefoxOnly         bool
-	FirefoxNoDHE        bool
-	ChromeOnly          bool
-	ChromeNoDHE         bool
-	SafariOnly          bool
-	SafariNoDHE         bool
-	NoSNI               bool
-	TLSExtendedRandom   bool
-	GatherSessionTicket bool
+	TLS                  bool
+	TLSVersion           uint16
+	Heartbleed           bool
+	RootCAPool           *x509.CertPool
+	DHEOnly              bool
+	ExportsOnly          bool
+	ExportsDHOnly        bool
+	FirefoxOnly          bool
+	FirefoxNoDHE         bool
+	ChromeOnly           bool
+	ChromeNoDHE          bool
+	SafariOnly           bool
+	SafariNoDHE          bool
+	NoSNI                bool
+	TLSExtendedRandom    bool
+	GatherSessionTicket  bool
+	ExtendedMasterSecret bool
 
 	// SSH
 	SSH SSHScanConfig

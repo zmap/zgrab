@@ -59,6 +59,10 @@ func (c *Conn) clientHandshake() error {
 		hello.ticketSupported = true
 	}
 
+	if c.config.ExtendedMasterSecret {
+		hello.extendedMasterSecretEnabled = true
+	}
+
 	if c.config.HeartbeatEnabled && !c.config.ExtendedRandom {
 		hello.heartbeatEnabled = true
 		hello.heartbeatMode = heartbeatModePeerAllowed
