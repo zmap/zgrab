@@ -202,7 +202,8 @@ zgrab_tls = SubRecord({
     }),
     "session_ticket":SubRecord({
         "value":Binary(),
-        "length":Integer()
+        "length":Integer(),
+        "lifetime_hint":Long()
     })
 })
 

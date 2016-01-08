@@ -686,6 +686,7 @@ func (hs *clientHandshakeState) readSessionTicket() error {
 		cipherSuite:        hs.suite.id,
 		masterSecret:       hs.masterSecret,
 		serverCertificates: c.peerCertificates,
+		lifetimeHint:       sessionTicketMsg.lifetimeHint,
 	}
 
 	return nil
