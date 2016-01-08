@@ -395,7 +395,7 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 	}
 	hs.finishedHash.Write(ckx.marshal())
 
-	if c.config.ExtendedMasterSecret {
+	if hs.hello.extendedMasterSecretEnabled && hs.clientHello.extendedMasterSecretEnabled {
 		session_hash = hs.finishedHash.Sum()
 	}
 
@@ -484,7 +484,8 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 		c.sendAlert(alertHandshakeFailure)
 		return err
 	}
-	if c.config.ExtendedMasterSecret {
+
+	if hs.hello.extendedMasterSecretEnabled && hs.clientHello.extendedMasterSecretEnabled {
 		hs.masterSecret = extendedMasterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, session_hash)
 	} else {
 		hs.masterSecret = masterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, hs.clientHello.random, hs.hello.random)
