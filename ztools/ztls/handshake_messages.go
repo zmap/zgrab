@@ -26,6 +26,7 @@ type clientHelloMsg struct {
 	heartbeatMode         uint8
 	extendedRandomEnabled bool
 	extendedRandom        []byte
+	extendedMasterSecret  bool
 }
 
 func (m *clientHelloMsg) equal(i interface{}) bool {
@@ -52,7 +53,8 @@ func (m *clientHelloMsg) equal(i interface{}) bool {
 		m.heartbeatEnabled == m1.heartbeatEnabled &&
 		m.heartbeatMode == m1.heartbeatMode &&
 		m.extendedRandomEnabled == m1.extendedRandomEnabled &&
-		bytes.Equal(m.extendedRandom, m1.extendedRandom)
+		bytes.Equal(m.extendedRandom, m1.extendedRandom) &&
+		m.extendedMasterSecret == m1.extendedMasterSecret
 }
 
 func (m *clientHelloMsg) marshal() []byte {
@@ -100,6 +102,9 @@ func (m *clientHelloMsg) marshal() []byte {
 	}
 	if m.extendedRandomEnabled {
 		extensionsLength += 2 + len(m.extendedRandom)
+		numExtensions++
+	}
+	if m.extendedMasterSecret {
 		numExtensions++
 	}
 	if numExtensions > 0 {
@@ -275,6 +280,12 @@ func (m *clientHelloMsg) marshal() []byte {
 		copy(z, m.extendedRandom)
 		z = z[exLen:]
 	}
+	if m.extendedMasterSecret {
+		// https://tools.ietf.org/html/draft-ietf-tls-session-hash-01
+		z[0] = byte(extensionExtendedMasterSecret >> 8)
+		z[1] = byte(extensionExtendedMasterSecret & 0xff)
+		z = z[4:]
+	}
 	m.raw = x
 
 	return x
@@ -329,6 +340,7 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 	m.sessionTicket = nil
 	m.signatureAndHashes = nil
 	m.heartbeatEnabled = false
+	m.extendedMasterSecret = false
 
 	if len(data) == 0 {
 		// ClientHello is optionally followed by extension data
@@ -464,6 +476,11 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 			m.extendedRandomEnabled = true
 			m.extendedRandom = make([]byte, exLen)
 			copy(m.extendedRandom, data[2:])
+		case extensionExtendedMasterSecret:
+			if length != 0 {
+				return false
+			}
+			m.extendedMasterSecret = true
 		}
 		data = data[length:]
 	}
@@ -487,6 +504,7 @@ type serverHelloMsg struct {
 	heartbeatMode         uint8
 	extendedRandomEnabled bool
 	extendedRandom        []byte
+	extendedMasterSecret  bool
 }
 
 func (m *serverHelloMsg) equal(i interface{}) bool {
@@ -505,7 +523,8 @@ func (m *serverHelloMsg) equal(i interface{}) bool {
 		eqStrings(m.nextProtos, m1.nextProtos) &&
 		m.ocspStapling == m1.ocspStapling &&
 		m.ticketSupported == m1.ticketSupported &&
-		m.secureRenegotiation == m1.secureRenegotiation
+		m.secureRenegotiation == m1.secureRenegotiation &&
+		m.extendedMasterSecret == m1.extendedMasterSecret
 }
 
 func (m *serverHelloMsg) marshal() []byte {
@@ -542,6 +561,9 @@ func (m *serverHelloMsg) marshal() []byte {
 	}
 	if m.extendedRandomEnabled {
 		extensionsLength += 2 + len(m.extendedRandom)
+		numExtensions++
+	}
+	if m.extendedMasterSecret {
 		numExtensions++
 	}
 	if numExtensions > 0 {
@@ -625,6 +647,11 @@ func (m *serverHelloMsg) marshal() []byte {
 		copy(z, m.extendedRandom)
 		z = z[exLen:]
 	}
+	if m.extendedMasterSecret {
+		z[0] = byte(extensionExtendedMasterSecret >> 8)
+		z[1] = byte(extensionExtendedMasterSecret & 0xff)
+		z = z[4:]
+	}
 
 	m.raw = x
 
@@ -657,6 +684,7 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 	m.ticketSupported = false
 	m.heartbeatEnabled = false
 	m.extendedRandomEnabled = false
+	m.extendedMasterSecret = false
 
 	if len(data) == 0 {
 		// ServerHello is optionally followed by extension data
@@ -729,6 +757,11 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 			}
 			m.extendedRandom = make([]byte, exRandLen)
 			copy(m.extendedRandom, data[2:])
+		case extensionExtendedMasterSecret:
+			if length != 0 {
+				return false
+			}
+			m.extendedMasterSecret = true
 		}
 		data = data[length:]
 	}

@@ -44,15 +44,16 @@ func (c *Conn) clientHandshake() error {
 	c.heartbleedLog = new(Heartbleed)
 
 	hello := &clientHelloMsg{
-		vers:                c.config.maxVersion(),
-		compressionMethods:  []uint8{compressionNone},
-		random:              make([]byte, 32),
-		ocspStapling:        true,
-		serverName:          c.config.ServerName,
-		supportedCurves:     c.config.curvePreferences(),
-		supportedPoints:     []uint8{pointFormatUncompressed},
-		nextProtoNeg:        len(c.config.NextProtos) > 0,
-		secureRenegotiation: true,
+		vers:                 c.config.maxVersion(),
+		compressionMethods:   []uint8{compressionNone},
+		random:               make([]byte, 32),
+		ocspStapling:         true,
+		serverName:           c.config.ServerName,
+		supportedCurves:      c.config.curvePreferences(),
+		supportedPoints:      []uint8{pointFormatUncompressed},
+		nextProtoNeg:         len(c.config.NextProtos) > 0,
+		secureRenegotiation:  true,
+		extendedMasterSecret: c.config.maxVersion() >= VersionTLS10 && c.config.ExtendedMasterSecret,
 	}
 
 	if c.config.ForceSessionTicketExt {
@@ -507,6 +508,13 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		c.writeRecord(recordTypeHandshake, ckx.marshal())
 	}
 
+	if hs.serverHello.extendedMasterSecret && c.vers >= VersionTLS10 {
+		hs.masterSecret = extendedMasterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, hs.finishedHash)
+		c.extendedMasterSecret = true
+	} else {
+		hs.masterSecret = masterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, hs.hello.random, hs.serverHello.random)
+	}
+
 	if chainToSend != nil {
 		var signed []byte
 		certVerify := &certificateVerifyMsg{
@@ -580,7 +588,6 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		sr = hs.serverHello.random
 	}
 
-	hs.masterSecret = masterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, cr, sr)
 	return nil
 }
 
@@ -628,6 +635,7 @@ func (hs *clientHandshakeState) processServerHello() (bool, error) {
 	if hs.serverResumedSession() {
 		// Restore masterSecret and peerCerts from previous state
 		hs.masterSecret = hs.session.masterSecret
+		c.extendedMasterSecret = hs.session.extendedMasterSecret
 		c.peerCertificates = hs.session.serverCertificates
 		return true, nil
 	}
