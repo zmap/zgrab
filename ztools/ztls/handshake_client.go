@@ -508,13 +508,6 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		c.writeRecord(recordTypeHandshake, ckx.marshal())
 	}
 
-	if hs.serverHello.extendedMasterSecret && c.vers >= VersionTLS10 {
-		hs.masterSecret = extendedMasterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, hs.finishedHash)
-		c.extendedMasterSecret = true
-	} else {
-		hs.masterSecret = masterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, hs.hello.random, hs.serverHello.random)
-	}
-
 	if chainToSend != nil {
 		var signed []byte
 		certVerify := &certificateVerifyMsg{
@@ -586,6 +579,13 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		copy(sr[serverRandomLen:], hs.serverHello.extendedRandom)
 	} else {
 		sr = hs.serverHello.random
+	}
+
+	if hs.serverHello.extendedMasterSecret && c.vers >= VersionTLS10 {
+		hs.masterSecret = extendedMasterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, hs.finishedHash)
+		c.extendedMasterSecret = true
+	} else {
+		hs.masterSecret = masterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, hs.hello.random, hs.serverHello.random)
 	}
 
 	return nil
