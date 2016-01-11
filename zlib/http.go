@@ -15,9 +15,9 @@
 package zlib
 
 import (
+	"github.com/zmap/zgrab/ztools/http"
 	"github.com/zmap/zgrab/ztools/util"
 	"net"
-	"net/http"
 	"net/url"
 	"strings"
 )
@@ -80,7 +80,7 @@ type HTTPResponse struct {
 type HTTP struct {
 	ProxyRequest         *HTTPRequest           `json:"connect_request,omitempty"`
 	ProxyResponse        *HTTPResponse          `json:"connect_response,omitempty"`
-	Response             *HTTPResponse          `json:"response,omitempty"`
+	Response             *http.Response         `json:"response,omitempty"`
 	RequestResponseChain []*HTTPRequestResponse `json:"request_response_chain,omitempty"`
 }
 
