@@ -39,7 +39,7 @@ type Client struct {
 	//
 	// If CheckRedirect is nil, the Client uses its default policy,
 	// which is to stop after 10 consecutive requests.
-	CheckRedirect func(req *Request, via []*Request) error
+	CheckRedirect func(req *Request, res *Response, via []*Request) error
 
 	// Jar specifies the cookie jar.
 	// If Jar is nil, cookies are not sent in requests and ignored
@@ -185,6 +185,7 @@ func (c *Client) doFollowingRedirects(ireq *Request) (r *Response, err error) {
 		redirectChecker = defaultCheckRedirect
 	}
 	var via []*Request
+	var currentResponse *Response
 
 	if ireq.URL == nil {
 		return nil, errors.New("http: nil Request.URL")
@@ -213,7 +214,7 @@ func (c *Client) doFollowingRedirects(ireq *Request) (r *Response, err error) {
 					req.Header.Set("Referer", lastReq.URL.String())
 				}
 
-				err = redirectChecker(req, via)
+				err = redirectChecker(req, currentResponse, via)
 				if err != nil {
 					break
 				}
@@ -232,7 +233,8 @@ func (c *Client) doFollowingRedirects(ireq *Request) (r *Response, err error) {
 		}
 
 		if shouldRedirect(r.StatusCode) {
-			r.Body.Close()
+			currentResponse = r
+			//			r.Body.Close()
 			if urlStr = r.Header.Get("Location"); urlStr == "" {
 				err = errors.New(fmt.Sprintf("%d response missing Location header", r.StatusCode))
 				break
@@ -253,7 +255,7 @@ func (c *Client) doFollowingRedirects(ireq *Request) (r *Response, err error) {
 	return
 }
 
-func defaultCheckRedirect(req *Request, via []*Request) error {
+func defaultCheckRedirect(req *Request, res *Response, via []*Request) error {
 	if len(via) >= 10 {
 		return errors.New("stopped after 10 redirects")
 	}
