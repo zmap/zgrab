@@ -47,7 +47,7 @@ type Response struct {
 	// non-nil, even on responses without a body or responses with
 	// a zero-lengthed body.
 	Body     io.ReadCloser `json:"-"`
-	BodyText string
+	BodyText string        `json:"body",omitempty"`
 
 	// ContentLength records the length of the associated content.  The
 	// value -1 indicates that the length is unknown.  Unless RequestMethod

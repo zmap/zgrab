@@ -11,7 +11,6 @@ package util
 import (
 	"bytes"
 	"errors"
-	"github.com/zmap/zgrab/ztools/zlog"
 	"io"
 	"io/ioutil"
 	"math"
@@ -90,7 +89,6 @@ func ReadString(reader io.Reader, maxReadLen int) (str string, err error) {
 				totalBytesRead += numBytes
 			}
 			count += 1
-			zlog.Infof("totalBytesRead: %d", totalBytesRead)
 		}
 	}
 
