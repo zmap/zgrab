@@ -26,7 +26,7 @@ import (
 	"github.com/zmap/zgrab/ztools/scada/fox"
 	"github.com/zmap/zgrab/ztools/scada/siemens"
 	"github.com/zmap/zgrab/ztools/telnet"
-	"github.com/zmap/zgrab/ztools/zlog"
+	"github.com/zmap/zgrab/ztools/util"
 	"io"
 	"net"
 	"strconv"
@@ -123,16 +123,17 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string) error {
 			Jar:           nil, // Don't send or receive cookies (otherwise use CookieJar)
 			Transport:     transport,
 		}
-		zlog.Infof("address: %s", addr)
 		if resp, err := client.Get("http://" + addr); err != nil {
-			zlog.Errorf("Error making HTTP request")
-			zlog.Error(err)
+			config.ErrorLog.Errorf("Could not connect to remote host %s: %s", addr, err.Error())
 			return err
 		} else {
 			grabData.HTTP.Response = resp
-			zlog.Infof("Response Status: %s", resp.Status)
-			zlog.Infof("Response Proto: %s", resp.Proto)
-			zlog.Info(resp.Header)
+			str, err := util.ReadString(resp.Body, config.HTTP.MaxSize*1000)
+			if err != nil {
+				return err
+			}
+
+			grabData.HTTP.Response.BodyText = str
 		}
 
 		return nil

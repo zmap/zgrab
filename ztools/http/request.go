@@ -69,14 +69,14 @@ var reqWriteExcludeHeader = map[string]bool{
 // A Request represents an HTTP request received by a server
 // or to be sent by a client.
 type Request struct {
-	Method string // GET, POST, PUT, etc.
-	URL    *url.URL
+	Method string   `json:"method",omitempty"` // GET, POST, PUT, etc.
+	URL    *url.URL `json:"url",omitempty"`
 
 	// The protocol version for incoming requests.
 	// Outgoing requests always use HTTP/1.1.
-	Proto      string // "HTTP/1.0"
-	ProtoMajor int    // 1
-	ProtoMinor int    // 0
+	Proto      string `json:"proto",omitempty"`       // "HTTP/1.0"
+	ProtoMajor int    `json:"proto_major",omitempty"` // 1
+	ProtoMinor int    `json:"proto_minor",omitempty"` // 0
 
 	// A header maps request lines to their values.
 	// If the header says
@@ -97,44 +97,44 @@ type Request struct {
 	// The request parser implements this by canonicalizing the
 	// name, making the first character and any characters
 	// following a hyphen uppercase and the rest lowercase.
-	Header Header
+	Header Header `json:"header",omitempty"`
 
 	// The message body.
-	Body io.ReadCloser
+	Body io.ReadCloser `json:"body",omitempty"`
 
 	// ContentLength records the length of the associated content.
 	// The value -1 indicates that the length is unknown.
 	// Values >= 0 indicate that the given number of bytes may
 	// be read from Body.
 	// For outgoing requests, a value of 0 means unknown if Body is not nil.
-	ContentLength int64
+	ContentLength int64 `json:"content_length",omitempty"`
 
 	// TransferEncoding lists the transfer encodings from outermost to
 	// innermost. An empty list denotes the "identity" encoding.
 	// TransferEncoding can usually be ignored; chunked encoding is
 	// automatically added and removed as necessary when sending and
 	// receiving requests.
-	TransferEncoding []string
+	TransferEncoding []string `json:"transfer_encoding",omitempty"`
 
 	// Close indicates whether to close the connection after
 	// replying to this request.
-	Close bool
+	Close bool `json:"close",omitempty"`
 
 	// The host on which the URL is sought.
 	// Per RFC 2616, this is either the value of the Host: header
 	// or the host name given in the URL itself.
-	Host string
+	Host string `json:"host",omitempty`
 
 	// Form contains the parsed form data, including both the URL
 	// field's query parameters and the POST or PUT form data.
 	// This field is only available after ParseForm is called.
 	// The HTTP client ignores Form and uses Body instead.
-	Form url.Values
+	Form url.Values `json:"form",omitempty"`
 
 	// MultipartForm is the parsed multipart form, including file uploads.
 	// This field is only available after ParseMultipartForm is called.
 	// The HTTP client ignores MultipartForm and uses Body instead.
-	MultipartForm *multipart.Form
+	MultipartForm *multipart.Form `json:"multipart_form",omitempty"`
 
 	// Trailer maps trailer keys to values.  Like for Header, if the
 	// response has multiple trailer lines with the same key, they will be
@@ -142,7 +142,7 @@ type Request struct {
 	// For server requests, Trailer is only populated after Body has been
 	// closed or fully consumed.
 	// Trailer support is only partially complete.
-	Trailer Header
+	Trailer Header `json:"trailer",omitempty"`
 
 	// RemoteAddr allows HTTP servers and other software to record
 	// the network address that sent the request, usually for
@@ -151,13 +151,13 @@ type Request struct {
 	// sets RemoteAddr to an "IP:port" address before invoking a
 	// handler.
 	// This field is ignored by the HTTP client.
-	RemoteAddr string
+	RemoteAddr string `json:"remote_addr",omitempty"`
 
 	// RequestURI is the unmodified Request-URI of the
 	// Request-Line (RFC 2616, Section 5.1) as sent by the client
 	// to a server. Usually the URL field should be used instead.
 	// It is an error to set this field in an HTTP client request.
-	RequestURI string
+	RequestURI string `json:"request_uri",omitempty"`
 
 	// TLS allows HTTP servers and other software to record
 	// information about the TLS connection on which the request
