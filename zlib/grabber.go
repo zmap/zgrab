@@ -119,21 +119,34 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string) error {
 		}
 
 		client := &http.Client{
-			CheckRedirect: nil, //Defaults to following up to 10 redirects
-			Jar:           nil, // Don't send or receive cookies (otherwise use CookieJar)
-			Transport:     transport,
+			CheckRedirect: func(req *http.Request, res *http.Response, via []*http.Request) error {
+				grabData.HTTP.RedirectRequestChain = append(grabData.HTTP.RedirectRequestChain, req)
+
+				grabData.HTTP.RedirectResponseChain = append(grabData.HTTP.RedirectResponseChain, res)
+				res.Body.Close()
+
+				if len(via) > config.HTTP.MaxRedirects {
+					return errors.New(fmt.Sprintf("stopped after %d redirects", config.HTTP.MaxRedirects))
+				}
+
+				return nil
+			}, //Defaults to following up to 10 redirects
+			Jar:       nil, // Don't send or receive cookies (otherwise use CookieJar)
+			Transport: transport,
 		}
 		if resp, err := client.Get("http://" + addr); err != nil {
 			config.ErrorLog.Errorf("Could not connect to remote host %s: %s", addr, err.Error())
 			return err
 		} else {
 			grabData.HTTP.Response = resp
-			str, err := util.ReadString(resp.Body, config.HTTP.MaxSize*1000)
-			if err != nil {
+
+			if str, err := util.ReadString(resp.Body, config.HTTP.MaxSize*1000); err != nil {
 				return err
+			} else {
+				grabData.HTTP.Response.BodyText = str
 			}
 
-			grabData.HTTP.Response.BodyText = str
+			resp.Body.Close()
 		}
 
 		return nil
