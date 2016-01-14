@@ -130,6 +130,9 @@ func makeGrabber(config *Config) func(*Conn) error {
 		if config.GatherSessionTicket {
 			c.SetGatherSessionTicket()
 		}
+		if config.ExtendedMasterSecret {
+			c.SetOfferExtendedMasterSecret()
+		}
 
 		if config.SSH.SSH {
 			c.sshScan = &config.SSH

@@ -136,6 +136,7 @@ zgrab_tls = SubRecord({
         "secure_renegotiation":Boolean(),
         "heartbeat":Boolean(),
         "extended_random":Binary(),
+        "extended_master_secret": Boolean(),
     }),
     "server_certificates":SubRecord({
         "certificate":zgrab_certificate,
