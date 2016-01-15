@@ -7,11 +7,11 @@ package http_test
 import (
 	"bytes"
 	"fmt"
+	. "github.com/zmap/zgrab/ztools/http"
+	"github.com/zmap/zgrab/ztools/http/httptest"
 	"io"
 	"io/ioutil"
 	"log"
-	. "net/http"
-	"net/http/httptest"
 	"strconv"
 	"strings"
 	"testing"
@@ -70,7 +70,7 @@ func TestServerContentType(t *testing.T) {
 			t.Errorf("%v: %v", tt.desc, err)
 			continue
 		}
-		if ct := resp.Header.Get("Content-Type"); ct != tt.contentType {
+		if ct := resp.Headers.Get("Content-Type"); ct != tt.contentType {
 			t.Errorf("%v: Content-Type = %q, want %q", tt.desc, ct, tt.contentType)
 		}
 		data, err := ioutil.ReadAll(resp.Body)
@@ -103,7 +103,7 @@ func TestContentTypeWithCopy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
-	if ct := resp.Header.Get("Content-Type"); ct != expected {
+	if ct := resp.Headers.Get("Content-Type"); ct != expected {
 		t.Errorf("Content-Type = %q, want %q", ct, expected)
 	}
 	data, err := ioutil.ReadAll(resp.Body)

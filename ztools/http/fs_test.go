@@ -8,11 +8,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	. "github.com/zmap/zgrab/ztools/http"
+	"github.com/zmap/zgrab/ztools/http/httptest"
 	"io"
 	"io/ioutil"
 	"net"
-	. "net/http"
-	"net/http/httptest"
 	"net/url"
 	"os"
 	"os/exec"
@@ -57,7 +57,7 @@ func TestServeFile(t *testing.T) {
 
 	// set up the Request (re-used for all tests)
 	var req Request
-	req.Header = make(Header)
+	req.Headers = make(Header)
 	if req.URL, err = url.Parse(ts.URL); err != nil {
 		t.Fatal("ParseURL:", err)
 	}
@@ -71,9 +71,9 @@ func TestServeFile(t *testing.T) {
 
 	// Range tests
 	for i, rt := range ServeFileRangeTests {
-		req.Header.Set("Range", "bytes="+rt.r)
+		req.Headers.Set("Range", "bytes="+rt.r)
 		if rt.r == "" {
-			req.Header["Range"] = nil
+			req.Headers["Range"] = nil
 		}
 		r, body := getBody(t, fmt.Sprintf("test %d", i), req)
 		if r.StatusCode != rt.code {
@@ -86,7 +86,7 @@ func TestServeFile(t *testing.T) {
 		if rt.r == "" {
 			h = ""
 		}
-		cr := r.Header.Get("Content-Range")
+		cr := r.Headers.Get("Content-Range")
 		if cr != h {
 			t.Errorf("header mismatch: range=%q: got %q, want %q", rt.r, cr, h)
 		}
@@ -252,7 +252,7 @@ func TestServeFileContentType(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if h := resp.Header.Get("Content-Type"); h != want {
+		if h := resp.Headers.Get("Content-Type"); h != want {
 			t.Errorf("Content-Type mismatch: got %q, want %q", h, want)
 		}
 	}
@@ -270,7 +270,7 @@ func TestServeFileMimeType(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := "text/css; charset=utf-8"
-	if h := resp.Header.Get("Content-Type"); h != want {
+	if h := resp.Headers.Get("Content-Type"); h != want {
 		t.Errorf("Content-Type mismatch: got %q, want %q", h, want)
 	}
 }
@@ -349,10 +349,10 @@ func TestServeContent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if g, e := res.Header.Get("Content-Type"), "text/css; charset=utf-8"; g != e {
+	if g, e := res.Headers.Get("Content-Type"), "text/css; charset=utf-8"; g != e {
 		t.Errorf("style.css: content type = %q, want %q", g, e)
 	}
-	if g := res.Header.Get("Last-Modified"); g != "" {
+	if g := res.Headers.Get("Last-Modified"); g != "" {
 		t.Errorf("want empty Last-Modified; got %q", g)
 	}
 
@@ -365,10 +365,10 @@ func TestServeContent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if g, e := res.Header.Get("Content-Type"), "text/html; charset=utf-8"; g != e {
+	if g, e := res.Headers.Get("Content-Type"), "text/html; charset=utf-8"; g != e {
 		t.Errorf("style.html: content type = %q, want %q", g, e)
 	}
-	if g := res.Header.Get("Last-Modified"); g == "" {
+	if g := res.Headers.Get("Last-Modified"); g == "" {
 		t.Errorf("want non-empty last-modified")
 	}
 }

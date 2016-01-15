@@ -10,11 +10,11 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	. "github.com/zmap/zgrab/ztools/http"
+	"github.com/zmap/zgrab/ztools/http/httptest"
 	"io"
 	"io/ioutil"
 	"net"
-	. "net/http"
-	"net/http/httptest"
 	"net/url"
 	"strconv"
 	"strings"
@@ -77,7 +77,7 @@ func TestClientHead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := r.Header["Last-Modified"]; !ok {
+	if _, ok := r.Headers["Last-Modified"]; !ok {
 		t.Error("Last-Modified header not found.")
 	}
 }
@@ -102,7 +102,7 @@ func TestGetRequestFormat(t *testing.T) {
 	if tr.req.URL.String() != url {
 		t.Errorf("expected URL %q; got %q", url, tr.req.URL.String())
 	}
-	if tr.req.Header == nil {
+	if tr.req.Headers == nil {
 		t.Errorf("expected non-nil request Header")
 	}
 }
@@ -122,7 +122,7 @@ func TestPostRequestFormat(t *testing.T) {
 	if tr.req.URL.String() != url {
 		t.Errorf("got URL %q, want %q", tr.req.URL.String(), url)
 	}
-	if tr.req.Header == nil {
+	if tr.req.Headers == nil {
 		t.Fatalf("expected non-nil request Header")
 	}
 	if tr.req.Close {
@@ -150,10 +150,10 @@ func TestPostFormRequestFormat(t *testing.T) {
 	if tr.req.URL.String() != urlStr {
 		t.Errorf("got URL %q, want %q", tr.req.URL.String(), urlStr)
 	}
-	if tr.req.Header == nil {
+	if tr.req.Headers == nil {
 		t.Fatalf("expected non-nil request Header")
 	}
-	if g, e := tr.req.Header.Get("Content-Type"), "application/x-www-form-urlencoded"; g != e {
+	if g, e := tr.req.Headers.Get("Content-Type"), "application/x-www-form-urlencoded"; g != e {
 		t.Errorf("got Content-Type %q, want %q", g, e)
 	}
 	if tr.req.Close {
@@ -213,7 +213,7 @@ func TestRedirects(t *testing.T) {
 
 	var checkErr error
 	var lastVia []*Request
-	c = &Client{CheckRedirect: func(_ *Request, via []*Request) error {
+	c = &Client{CheckRedirect: func(_ *Request, _ *Response, via []*Request) error {
 		lastVia = via
 		return checkErr
 	}}
