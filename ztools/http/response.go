@@ -39,7 +39,7 @@ type Response struct {
 	// omitted from Header.
 	//
 	// Keys in the map are canonicalized (see CanonicalHeaderKey).
-	Header Header `json:"header",omitempty"`
+	Headers Header `json:"headers,omitempty"`
 
 	// Body represents the response body.
 	//
@@ -47,36 +47,36 @@ type Response struct {
 	// non-nil, even on responses without a body or responses with
 	// a zero-lengthed body.
 	Body     io.ReadCloser `json:"-"`
-	BodyText string        `json:"body",omitempty"`
+	BodyText string        `json:"body,omitempty"`
 
 	// ContentLength records the length of the associated content.  The
 	// value -1 indicates that the length is unknown.  Unless RequestMethod
 	// is "HEAD", values >= 0 indicate that the given number of bytes may
 	// be read from Body.
-	ContentLength int64 `json:"content_length",omitempty"`
+	ContentLength int64 `json:"content_length,omitempty"`
 
 	// Contains transfer encodings from outer-most to inner-most. Value is
 	// nil, means that "identity" encoding is used.
-	TransferEncoding []string `json:"transfer_encoding",omitempty"`
+	TransferEncoding []string `json:"transfer_encoding,omitempty"`
 
 	// Close records whether the header directed that the connection be
 	// closed after reading Body.  The value is advice for clients: neither
 	// ReadResponse nor Response.Write ever closes a connection.
-	Close bool `json:"close",omitempty"`
+	Close bool `json:"-"`
 
 	// Trailer maps trailer keys to values, in the same
 	// format as the header.
-	Trailer Header `json:"trailer",omitempty"`
+	Trailers Header `json:"trailers,omitempty"`
 
 	// The Request that was sent to obtain this Response.
 	// Request's Body is nil (having already been consumed).
 	// This is only populated for Client requests.
-	Request *Request `json:"request",omitempty"`
+	Request *Request `json:"request,omitempty"`
 }
 
 // Cookies parses and returns the cookies set in the Set-Cookie headers.
 func (r *Response) Cookies() []*Cookie {
-	return readSetCookies(r.Header)
+	return readSetCookies(r.Headers)
 }
 
 var ErrNoLocation = errors.New("http: no Location header in response")
@@ -86,7 +86,7 @@ var ErrNoLocation = errors.New("http: no Location header in response")
 // the Response's Request.  ErrNoLocation is returned if no
 // Location header is present.
 func (r *Response) Location() (*url.URL, error) {
-	lv := r.Header.Get("Location")
+	lv := r.Headers.Get("Location")
 	if lv == "" {
 		return nil, ErrNoLocation
 	}
@@ -143,9 +143,9 @@ func ReadResponse(r *bufio.Reader, req *Request) (resp *Response, err error) {
 	if err != nil {
 		return nil, err
 	}
-	resp.Header = Header(mimeHeader)
+	resp.Headers = Header(mimeHeader)
 
-	fixPragmaCacheControl(resp.Header)
+	fixPragmaCacheControl(resp.Headers)
 
 	err = readTransfer(resp, r)
 	if err != nil {
@@ -218,7 +218,7 @@ func (r *Response) Write(w io.Writer) error {
 	}
 
 	// Rest of header
-	err = r.Header.WriteSubset(w, respExcludeHeader)
+	err = r.Headers.WriteSubset(w, respExcludeHeader)
 	if err != nil {
 		return err
 	}

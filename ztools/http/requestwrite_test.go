@@ -39,7 +39,7 @@ var reqWriteTests = []reqWriteTest{
 			Proto:      "HTTP/1.1",
 			ProtoMajor: 1,
 			ProtoMinor: 1,
-			Header: Header{
+			Headers: Header{
 				"Accept":           {"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
 				"Accept-Charset":   {"ISO-8859-1,utf-8;q=0.7,*;q=0.7"},
 				"Accept-Encoding":  {"gzip,deflate"},
@@ -85,7 +85,7 @@ var reqWriteTests = []reqWriteTest{
 			},
 			ProtoMajor:       1,
 			ProtoMinor:       1,
-			Header:           Header{},
+			Headers:          Header{},
 			TransferEncoding: []string{"chunked"},
 		},
 
@@ -114,7 +114,7 @@ var reqWriteTests = []reqWriteTest{
 			},
 			ProtoMajor:       1,
 			ProtoMinor:       1,
-			Header:           Header{},
+			Headers:          Header{},
 			Close:            true,
 			TransferEncoding: []string{"chunked"},
 		},
@@ -147,7 +147,7 @@ var reqWriteTests = []reqWriteTest{
 			},
 			ProtoMajor:    1,
 			ProtoMinor:    1,
-			Header:        Header{},
+			Headers:       Header{},
 			Close:         true,
 			ContentLength: 6,
 		},
@@ -177,7 +177,7 @@ var reqWriteTests = []reqWriteTest{
 			Method: "POST",
 			URL:    mustParseURL("http://example.com/"),
 			Host:   "example.com",
-			Header: Header{
+			Headers: Header{
 				"Content-Length": []string{"10"}, // ignored
 			},
 			ContentLength: 6,
@@ -318,7 +318,7 @@ var reqWriteTests = []reqWriteTest{
 			URL:        mustParseURL("/foo"),
 			ProtoMajor: 1,
 			ProtoMinor: 0,
-			Header: Header{
+			Headers: Header{
 				"X-Foo": []string{"X-Bar"},
 			},
 		},
@@ -346,8 +346,8 @@ func TestRequestWrite(t *testing.T) {
 			}
 		}
 		setBody()
-		if tt.Req.Header == nil {
-			tt.Req.Header = make(Header)
+		if tt.Req.Headers == nil {
+			tt.Req.Headers = make(Header)
 		}
 
 		var braw bytes.Buffer

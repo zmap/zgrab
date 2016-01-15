@@ -42,7 +42,7 @@ var respTests = []respTest{
 			ProtoMajor: 1,
 			ProtoMinor: 0,
 			Request:    dummyReq("GET"),
-			Header: Header{
+			Headers: Header{
 				"Connection": {"close"}, // TODO(rsc): Delete?
 			},
 			Close:         true,
@@ -65,7 +65,7 @@ var respTests = []respTest{
 			Proto:         "HTTP/1.1",
 			ProtoMajor:    1,
 			ProtoMinor:    1,
-			Header:        Header{},
+			Headers:       Header{},
 			Request:       dummyReq("GET"),
 			Close:         true,
 			ContentLength: -1,
@@ -86,7 +86,7 @@ var respTests = []respTest{
 			Proto:         "HTTP/1.1",
 			ProtoMajor:    1,
 			ProtoMinor:    1,
-			Header:        Header{},
+			Headers:       Header{},
 			Request:       dummyReq("GET"),
 			Close:         false,
 			ContentLength: 0,
@@ -110,7 +110,7 @@ var respTests = []respTest{
 			ProtoMajor: 1,
 			ProtoMinor: 0,
 			Request:    dummyReq("GET"),
-			Header: Header{
+			Headers: Header{
 				"Connection":     {"close"}, // TODO(rsc): Delete?
 				"Content-Length": {"10"},    // TODO(rsc): Delete?
 			},
@@ -140,7 +140,7 @@ var respTests = []respTest{
 			ProtoMajor:       1,
 			ProtoMinor:       0,
 			Request:          dummyReq("GET"),
-			Header:           Header{},
+			Headers:          Header{},
 			Close:            true,
 			ContentLength:    -1,
 			TransferEncoding: []string{"chunked"},
@@ -167,7 +167,7 @@ var respTests = []respTest{
 			ProtoMajor:       1,
 			ProtoMinor:       0,
 			Request:          dummyReq("GET"),
-			Header:           Header{},
+			Headers:          Header{},
 			Close:            true,
 			ContentLength:    -1, // TODO(rsc): Fix?
 			TransferEncoding: []string{"chunked"},
@@ -190,7 +190,7 @@ var respTests = []respTest{
 			ProtoMajor:    1,
 			ProtoMinor:    0,
 			Request:       dummyReq("HEAD"),
-			Header:        Header{},
+			Headers:       Header{},
 			Close:         true,
 			ContentLength: 0,
 		},
@@ -211,7 +211,7 @@ var respTests = []respTest{
 			ProtoMajor: 1,
 			ProtoMinor: 1,
 			Request:    dummyReq("GET"),
-			Header: Header{
+			Headers: Header{
 				"Content-Length": {"0"},
 			},
 			Close:         false,
@@ -232,7 +232,7 @@ var respTests = []respTest{
 			ProtoMajor:    1,
 			ProtoMinor:    0,
 			Request:       dummyReq("GET"),
-			Header:        Header{},
+			Headers:       Header{},
 			Close:         true,
 			ContentLength: -1,
 		},
@@ -251,7 +251,7 @@ var respTests = []respTest{
 			ProtoMajor:    1,
 			ProtoMinor:    0,
 			Request:       dummyReq("GET"),
-			Header:        Header{},
+			Headers:       Header{},
 			Close:         true,
 			ContentLength: -1,
 		},
@@ -412,8 +412,8 @@ var responseLocationTests = []responseLocationTest{
 func TestLocationResponse(t *testing.T) {
 	for i, tt := range responseLocationTests {
 		res := new(Response)
-		res.Header = make(Header)
-		res.Header.Set("Location", tt.location)
+		res.Headers = make(Header)
+		res.Headers.Set("Location", tt.location)
 		if tt.requrl != "" {
 			res.Request = &Request{}
 			var err error
