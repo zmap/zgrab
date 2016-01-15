@@ -25,11 +25,9 @@ var respExcludeHeader = map[string]bool{
 // Response represents the response from an HTTP request.
 //
 type Response struct {
-	Status     string `json:"status",omitempty"`      // e.g. "200 OK"
-	StatusCode int    `json:"status_code",omitempty"` // e.g. 200
-	Proto      string `json:"proto",omitempty"`       // e.g. "HTTP/1.0"
-	ProtoMajor int    `json:"proto_major",omitempty"` // e.g. 1
-	ProtoMinor int    `json:"proto_minor",omitempty"` // e.g. 0
+	Status     string   `json:"status,omitempty"`      // e.g. "200 OK"
+	StatusCode int      `json:"status_code,omitempty"` // e.g. 200
+	Protocol   Protocol `json:"protocol, omitempty`
 
 	// Header maps header keys to values.  If the response had multiple
 	// headers with the same key, they will be concatenated, with comma
@@ -132,10 +130,11 @@ func ReadResponse(r *bufio.Reader, req *Request) (resp *Response, err error) {
 		return nil, &badStringError{"malformed HTTP status code", f[1]}
 	}
 
-	resp.Proto = f[0]
+	resp.Protocol = *(new(Protocol))
+	resp.Protocol.Name = f[0]
 	var ok bool
-	if resp.ProtoMajor, resp.ProtoMinor, ok = ParseHTTPVersion(resp.Proto); !ok {
-		return nil, &badStringError{"malformed HTTP version", resp.Proto}
+	if resp.Protocol.Major, resp.Protocol.Minor, ok = ParseHTTPVersion(resp.Protocol.Name); !ok {
+		return nil, &badStringError{"malformed HTTP version", resp.Protocol.Name}
 	}
 
 	// Parse the response headers.
@@ -170,8 +169,8 @@ func fixPragmaCacheControl(header Header) {
 // ProtoAtLeast returns whether the HTTP protocol used
 // in the response is at least major.minor.
 func (r *Response) ProtoAtLeast(major, minor int) bool {
-	return r.ProtoMajor > major ||
-		r.ProtoMajor == major && r.ProtoMinor >= minor
+	return r.Protocol.Major > major ||
+		r.Protocol.Major == major && r.Protocol.Minor >= minor
 }
 
 // Writes the response (header, body and trailer) in wire format. This method
@@ -203,8 +202,8 @@ func (r *Response) Write(w io.Writer) error {
 			text = "status code " + strconv.Itoa(r.StatusCode)
 		}
 	}
-	io.WriteString(w, "HTTP/"+strconv.Itoa(r.ProtoMajor)+".")
-	io.WriteString(w, strconv.Itoa(r.ProtoMinor)+" ")
+	io.WriteString(w, "HTTP/"+strconv.Itoa(r.Protocol.Major)+".")
+	io.WriteString(w, strconv.Itoa(r.Protocol.Minor)+" ")
 	io.WriteString(w, strconv.Itoa(r.StatusCode)+" "+text+"\r\n")
 
 	// Process Body,ContentLength,Close,Trailer
