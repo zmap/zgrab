@@ -38,10 +38,12 @@ var respTests = []respTest{
 		Response{
 			Status:     "200 OK",
 			StatusCode: 200,
-			Proto:      "HTTP/1.0",
-			ProtoMajor: 1,
-			ProtoMinor: 0,
-			Request:    dummyReq("GET"),
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
+			Request: dummyReq("GET"),
 			Headers: Header{
 				"Connection": {"close"}, // TODO(rsc): Delete?
 			},
@@ -60,11 +62,13 @@ var respTests = []respTest{
 			"Body here\n",
 
 		Response{
-			Status:        "200 OK",
-			StatusCode:    200,
-			Proto:         "HTTP/1.1",
-			ProtoMajor:    1,
-			ProtoMinor:    1,
+			Status:     "200 OK",
+			StatusCode: 200,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Headers:       Header{},
 			Request:       dummyReq("GET"),
 			Close:         true,
@@ -81,11 +85,13 @@ var respTests = []respTest{
 			"Body should not be read!\n",
 
 		Response{
-			Status:        "204 No Content",
-			StatusCode:    204,
-			Proto:         "HTTP/1.1",
-			ProtoMajor:    1,
-			ProtoMinor:    1,
+			Status:     "204 No Content",
+			StatusCode: 204,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Headers:       Header{},
 			Request:       dummyReq("GET"),
 			Close:         false,
@@ -106,10 +112,12 @@ var respTests = []respTest{
 		Response{
 			Status:     "200 OK",
 			StatusCode: 200,
-			Proto:      "HTTP/1.0",
-			ProtoMajor: 1,
-			ProtoMinor: 0,
-			Request:    dummyReq("GET"),
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
+			Request: dummyReq("GET"),
 			Headers: Header{
 				"Connection":     {"close"}, // TODO(rsc): Delete?
 				"Content-Length": {"10"},    // TODO(rsc): Delete?
@@ -134,11 +142,13 @@ var respTests = []respTest{
 			"\r\n",
 
 		Response{
-			Status:           "200 OK",
-			StatusCode:       200,
-			Proto:            "HTTP/1.0",
-			ProtoMajor:       1,
-			ProtoMinor:       0,
+			Status:     "200 OK",
+			StatusCode: 200,
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 			Request:          dummyReq("GET"),
 			Headers:          Header{},
 			Close:            true,
@@ -161,11 +171,13 @@ var respTests = []respTest{
 			"\r\n",
 
 		Response{
-			Status:           "200 OK",
-			StatusCode:       200,
-			Proto:            "HTTP/1.0",
-			ProtoMajor:       1,
-			ProtoMinor:       0,
+			Status:     "200 OK",
+			StatusCode: 200,
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 			Request:          dummyReq("GET"),
 			Headers:          Header{},
 			Close:            true,
@@ -184,11 +196,13 @@ var respTests = []respTest{
 			"\r\n",
 
 		Response{
-			Status:        "200 OK",
-			StatusCode:    200,
-			Proto:         "HTTP/1.0",
-			ProtoMajor:    1,
-			ProtoMinor:    0,
+			Status:     "200 OK",
+			StatusCode: 200,
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 			Request:       dummyReq("HEAD"),
 			Headers:       Header{},
 			Close:         true,
@@ -207,10 +221,12 @@ var respTests = []respTest{
 		Response{
 			Status:     "200 OK",
 			StatusCode: 200,
-			Proto:      "HTTP/1.1",
-			ProtoMajor: 1,
-			ProtoMinor: 1,
-			Request:    dummyReq("GET"),
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
+			Request: dummyReq("GET"),
 			Headers: Header{
 				"Content-Length": {"0"},
 			},
@@ -226,11 +242,13 @@ var respTests = []respTest{
 	{
 		"HTTP/1.0 303 \r\n\r\n",
 		Response{
-			Status:        "303 ",
-			StatusCode:    303,
-			Proto:         "HTTP/1.0",
-			ProtoMajor:    1,
-			ProtoMinor:    0,
+			Status:     "303 ",
+			StatusCode: 303,
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 			Request:       dummyReq("GET"),
 			Headers:       Header{},
 			Close:         true,
@@ -245,11 +263,13 @@ var respTests = []respTest{
 	{
 		"HTTP/1.0 303\r\n\r\n",
 		Response{
-			Status:        "303 ",
-			StatusCode:    303,
-			Proto:         "HTTP/1.0",
-			ProtoMajor:    1,
-			ProtoMinor:    0,
+			Status:     "303 ",
+			StatusCode: 303,
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 			Request:       dummyReq("GET"),
 			Headers:       Header{},
 			Close:         true,

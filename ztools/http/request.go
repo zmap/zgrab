@@ -74,9 +74,7 @@ type Request struct {
 
 	// The protocol version for incoming requests.
 	// Outgoing requests always use HTTP/1.1.
-	Proto      string `json:"-"` // "HTTP/1.0"
-	ProtoMajor int    `json:"-"` // 1
-	ProtoMinor int    `json:"-"` // 0
+	Protocol Protocol `json:"-"`
 
 	// A header maps request lines to their values.
 	// If the header says
@@ -172,8 +170,8 @@ type Request struct {
 // ProtoAtLeast returns whether the HTTP protocol used
 // in the request is at least major.minor.
 func (r *Request) ProtoAtLeast(major, minor int) bool {
-	return r.ProtoMajor > major ||
-		r.ProtoMajor == major && r.ProtoMinor >= minor
+	return r.Protocol.Major > major ||
+		r.Protocol.Major == major && r.Protocol.Minor >= minor
 }
 
 // UserAgent returns the client's User-Agent, if sent in the request.
@@ -415,14 +413,16 @@ func NewRequest(method, urlStr string, body io.Reader) (*Request, error) {
 		rc = ioutil.NopCloser(body)
 	}
 	req := &Request{
-		Method:     method,
-		URL:        u,
-		Proto:      "HTTP/1.1",
-		ProtoMajor: 1,
-		ProtoMinor: 1,
-		Headers:    make(Header),
-		Body:       rc,
-		Host:       u.Host,
+		Method: method,
+		URL:    u,
+		Protocol: Protocol{
+			Name:  "HTTP/1.1",
+			Major: 1,
+			Minor: 1,
+		},
+		Headers: make(Header),
+		Body:    rc,
+		Host:    u.Host,
 	}
 	if body != nil {
 		switch v := body.(type) {
@@ -467,11 +467,11 @@ func ReadRequest(b *bufio.Reader) (req *Request, err error) {
 	if f = strings.SplitN(s, " ", 3); len(f) < 3 {
 		return nil, &badStringError{"malformed HTTP request", s}
 	}
-	req.Method, req.RequestURI, req.Proto = f[0], f[1], f[2]
+	req.Method, req.RequestURI, req.Protocol.Name = f[0], f[1], f[2]
 	rawurl := req.RequestURI
 	var ok bool
-	if req.ProtoMajor, req.ProtoMinor, ok = ParseHTTPVersion(req.Proto); !ok {
-		return nil, &badStringError{"malformed HTTP version", req.Proto}
+	if req.Protocol.Major, req.Protocol.Minor, ok = ParseHTTPVersion(req.Protocol.Name); !ok {
+		return nil, &badStringError{"malformed HTTP version", req.Protocol.Name}
 	}
 
 	// CONNECT requests are used two different ways, and neither uses a full URL:
@@ -736,7 +736,7 @@ func (r *Request) expectsContinue() bool {
 }
 
 func (r *Request) wantsHttp10KeepAlive() bool {
-	if r.ProtoMajor != 1 || r.ProtoMinor != 0 {
+	if r.Protocol.Major != 1 || r.Protocol.Minor != 0 {
 		return false
 	}
 	return strings.Contains(strings.ToLower(r.Headers.Get("Connection")), "keep-alive")

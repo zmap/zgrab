@@ -36,9 +36,11 @@ var reqWriteTests = []reqWriteTest{
 				Host:   "www.techcrunch.com",
 				Path:   "/",
 			},
-			Proto:      "HTTP/1.1",
-			ProtoMajor: 1,
-			ProtoMinor: 1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Headers: Header{
 				"Accept":           {"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
 				"Accept-Charset":   {"ISO-8859-1,utf-8;q=0.7,*;q=0.7"},
@@ -83,8 +85,11 @@ var reqWriteTests = []reqWriteTest{
 				Host:   "www.google.com",
 				Path:   "/search",
 			},
-			ProtoMajor:       1,
-			ProtoMinor:       1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Headers:          Header{},
 			TransferEncoding: []string{"chunked"},
 		},
@@ -112,8 +117,11 @@ var reqWriteTests = []reqWriteTest{
 				Host:   "www.google.com",
 				Path:   "/search",
 			},
-			ProtoMajor:       1,
-			ProtoMinor:       1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Headers:          Header{},
 			Close:            true,
 			TransferEncoding: []string{"chunked"},
@@ -145,8 +153,11 @@ var reqWriteTests = []reqWriteTest{
 				Host:   "www.google.com",
 				Path:   "/search",
 			},
-			ProtoMajor:    1,
-			ProtoMinor:    1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Headers:       Header{},
 			Close:         true,
 			ContentLength: 6,
@@ -217,11 +228,14 @@ var reqWriteTests = []reqWriteTest{
 	// Request with a 0 ContentLength and a 0 byte body.
 	{
 		Req: Request{
-			Method:        "POST",
-			URL:           mustParseURL("/"),
-			Host:          "example.com",
-			ProtoMajor:    1,
-			ProtoMinor:    1,
+			Method: "POST",
+			URL:    mustParseURL("/"),
+			Host:   "example.com",
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			ContentLength: 0, // as if unset by user
 		},
 
@@ -246,11 +260,14 @@ var reqWriteTests = []reqWriteTest{
 	// Request with a 0 ContentLength and a 1 byte body.
 	{
 		Req: Request{
-			Method:        "POST",
-			URL:           mustParseURL("/"),
-			Host:          "example.com",
-			ProtoMajor:    1,
-			ProtoMinor:    1,
+			Method: "POST",
+			URL:    mustParseURL("/"),
+			Host:   "example.com",
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			ContentLength: 0, // as if unset by user
 		},
 
@@ -272,11 +289,14 @@ var reqWriteTests = []reqWriteTest{
 	// Request with a ContentLength of 10 but a 5 byte body.
 	{
 		Req: Request{
-			Method:        "POST",
-			URL:           mustParseURL("/"),
-			Host:          "example.com",
-			ProtoMajor:    1,
-			ProtoMinor:    1,
+			Method: "POST",
+			URL:    mustParseURL("/"),
+			Host:   "example.com",
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			ContentLength: 10, // but we're going to send only 5 bytes
 		},
 		Body:      []byte("12345"),
@@ -286,11 +306,14 @@ var reqWriteTests = []reqWriteTest{
 	// Request with a ContentLength of 4 but an 8 byte body.
 	{
 		Req: Request{
-			Method:        "POST",
-			URL:           mustParseURL("/"),
-			Host:          "example.com",
-			ProtoMajor:    1,
-			ProtoMinor:    1,
+			Method: "POST",
+			URL:    mustParseURL("/"),
+			Host:   "example.com",
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			ContentLength: 4, // but we're going to try to send 8 bytes
 		},
 		Body:      []byte("12345678"),
@@ -300,11 +323,14 @@ var reqWriteTests = []reqWriteTest{
 	// Request with a 5 ContentLength and nil body.
 	{
 		Req: Request{
-			Method:        "POST",
-			URL:           mustParseURL("/"),
-			Host:          "example.com",
-			ProtoMajor:    1,
-			ProtoMinor:    1,
+			Method: "POST",
+			URL:    mustParseURL("/"),
+			Host:   "example.com",
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			ContentLength: 5, // but we'll omit the body
 		},
 		WantError: errors.New("http: Request.ContentLength=5 with nil Body"),
@@ -314,10 +340,13 @@ var reqWriteTests = []reqWriteTest{
 	// and doesn't add a User-Agent.
 	{
 		Req: Request{
-			Method:     "GET",
-			URL:        mustParseURL("/foo"),
-			ProtoMajor: 1,
-			ProtoMinor: 0,
+			Method: "GET",
+			URL:    mustParseURL("/foo"),
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 			Headers: Header{
 				"X-Foo": []string{"X-Bar"},
 			},

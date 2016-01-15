@@ -230,8 +230,7 @@ type transferReader struct {
 	Header        Header
 	StatusCode    int
 	RequestMethod string
-	ProtoMajor    int
-	ProtoMinor    int
+	Protocol      Protocol
 	// Output
 	Body             io.ReadCloser
 	ContentLength    int64
@@ -265,14 +264,14 @@ func readTransfer(msg interface{}, r *bufio.Reader) (err error) {
 		t.Header = rr.Headers
 		t.StatusCode = rr.StatusCode
 		t.RequestMethod = rr.Request.Method
-		t.ProtoMajor = rr.ProtoMajor
-		t.ProtoMinor = rr.ProtoMinor
-		t.Close = shouldClose(t.ProtoMajor, t.ProtoMinor, t.Header)
+		t.Protocol.Major = rr.Protocol.Major
+		t.Protocol.Minor = rr.Protocol.Minor
+		t.Close = shouldClose(t.Protocol.Major, t.Protocol.Minor, t.Header)
 		isResponse = true
 	case *Request:
 		t.Header = rr.Headers
-		t.ProtoMajor = rr.ProtoMajor
-		t.ProtoMinor = rr.ProtoMinor
+		t.Protocol.Major = rr.Protocol.Major
+		t.Protocol.Minor = rr.Protocol.Minor
 		// Transfer semantics for Requests are exactly like those for
 		// Responses with status code 200, responding to a GET method
 		t.StatusCode = 200
@@ -282,8 +281,8 @@ func readTransfer(msg interface{}, r *bufio.Reader) (err error) {
 	}
 
 	// Default to HTTP/1.1
-	if t.ProtoMajor == 0 && t.ProtoMinor == 0 {
-		t.ProtoMajor, t.ProtoMinor = 1, 1
+	if t.Protocol.Major == 0 && t.Protocol.Minor == 0 {
+		t.Protocol.Major, t.Protocol.Minor = 1, 1
 	}
 
 	// Transfer encoding, content length
