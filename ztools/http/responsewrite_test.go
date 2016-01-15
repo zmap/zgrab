@@ -59,9 +59,9 @@ var respWriteTests = []respWriteTest{
 		Response{
 			StatusCode: 200,
 			Protocol: Protocol{
-				Name:  "HTTP/1.0",
+				Name:  "HTTP/1.1",
 				Major: 1,
-				Minor: 0,
+				Minor: 1,
 			},
 			Request:          dummyReq("GET"),
 			Headers:          Header{},
