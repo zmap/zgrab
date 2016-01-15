@@ -51,7 +51,7 @@ var reqTests = []reqTest{
 			Proto:      "HTTP/1.1",
 			ProtoMajor: 1,
 			ProtoMinor: 1,
-			Header: Header{
+			Headers: Header{
 				"Accept":           {"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
 				"Accept-Language":  {"en-us,en;q=0.5"},
 				"Accept-Encoding":  {"gzip,deflate"},
@@ -86,7 +86,7 @@ var reqTests = []reqTest{
 			Proto:         "HTTP/1.1",
 			ProtoMajor:    1,
 			ProtoMinor:    1,
-			Header:        Header{},
+			Headers:       Header{},
 			Close:         false,
 			ContentLength: 0,
 			Host:          "foo.com",
@@ -112,7 +112,7 @@ var reqTests = []reqTest{
 			Proto:         "HTTP/1.1",
 			ProtoMajor:    1,
 			ProtoMinor:    1,
-			Header:        Header{},
+			Headers:       Header{},
 			Close:         false,
 			ContentLength: 0,
 			Host:          "test",
@@ -163,7 +163,7 @@ var reqTests = []reqTest{
 			Proto:            "HTTP/1.1",
 			ProtoMajor:       1,
 			ProtoMinor:       1,
-			Header:           Header{},
+			Headers:          Header{},
 			ContentLength:    -1,
 			Host:             "foo.com",
 			RequestURI:       "/",
@@ -188,7 +188,7 @@ var reqTests = []reqTest{
 			Proto:         "HTTP/1.1",
 			ProtoMajor:    1,
 			ProtoMinor:    1,
-			Header:        Header{},
+			Headers:       Header{},
 			Close:         false,
 			ContentLength: 0,
 			Host:          "www.google.com:443",
@@ -212,7 +212,7 @@ var reqTests = []reqTest{
 			Proto:         "HTTP/1.1",
 			ProtoMajor:    1,
 			ProtoMinor:    1,
-			Header:        Header{},
+			Headers:       Header{},
 			Close:         false,
 			ContentLength: 0,
 			Host:          "127.0.0.1:6060",
@@ -236,7 +236,7 @@ var reqTests = []reqTest{
 			Proto:         "HTTP/1.1",
 			ProtoMajor:    1,
 			ProtoMinor:    1,
-			Header:        Header{},
+			Headers:       Header{},
 			Close:         false,
 			ContentLength: 0,
 			Host:          "",
@@ -276,8 +276,8 @@ func TestReadRequest(t *testing.T) {
 		if body != tt.Body {
 			t.Errorf("#%d: Body = %q want %q", i, body, tt.Body)
 		}
-		if !reflect.DeepEqual(tt.Trailer, req.Trailer) {
-			t.Errorf("#%d. Trailers differ.\n got: %v\nwant: %v", i, req.Trailer, tt.Trailer)
+		if !reflect.DeepEqual(tt.Trailer, req.Trailers) {
+			t.Errorf("#%d. Trailers differ.\n got: %v\nwant: %v", i, req.Trailers, tt.Trailer)
 		}
 	}
 }

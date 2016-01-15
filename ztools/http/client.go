@@ -123,12 +123,12 @@ func send(req *Request, t RoundTripper) (resp *Response, err error) {
 	// Most the callers of send (Get, Post, et al) don't need
 	// Headers, leaving it uninitialized.  We guarantee to the
 	// Transport that this has been initialized, though.
-	if req.Header == nil {
-		req.Header = make(Header)
+	if req.Headers == nil {
+		req.Headers = make(Header)
 	}
 
 	if u := req.URL.User; u != nil {
-		req.Header.Set("Authorization", "Basic "+base64.URLEncoding.EncodeToString([]byte(u.String())))
+		req.Headers.Set("Authorization", "Basic "+base64.URLEncoding.EncodeToString([]byte(u.String())))
 	}
 	return t.RoundTrip(req)
 }
@@ -202,7 +202,7 @@ func (c *Client) doFollowingRedirects(ireq *Request) (r *Response, err error) {
 		if redirect != 0 {
 			req = new(Request)
 			req.Method = ireq.Method
-			req.Header = make(Header)
+			req.Headers = make(Header)
 			req.URL, err = base.Parse(urlStr)
 			if err != nil {
 				break
@@ -211,7 +211,7 @@ func (c *Client) doFollowingRedirects(ireq *Request) (r *Response, err error) {
 				// Add the Referer header.
 				lastReq := via[len(via)-1]
 				if lastReq.URL.Scheme != "https" {
-					req.Header.Set("Referer", lastReq.URL.String())
+					req.Headers.Set("Referer", lastReq.URL.String())
 				}
 
 				err = redirectChecker(req, currentResponse, via)
@@ -235,7 +235,7 @@ func (c *Client) doFollowingRedirects(ireq *Request) (r *Response, err error) {
 		if shouldRedirect(r.StatusCode) {
 			currentResponse = r
 			//			r.Body.Close()
-			if urlStr = r.Header.Get("Location"); urlStr == "" {
+			if urlStr = r.Headers.Get("Location"); urlStr == "" {
 				err = errors.New(fmt.Sprintf("%d response missing Location header", r.StatusCode))
 				break
 			}
@@ -279,7 +279,7 @@ func (c *Client) Post(url string, bodyType string, body io.Reader) (r *Response,
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", bodyType)
+	req.Headers.Set("Content-Type", bodyType)
 	r, err = send(req, c.Transport)
 	if err == nil && c.Jar != nil {
 		c.Jar.SetCookies(req.URL, r.Cookies())

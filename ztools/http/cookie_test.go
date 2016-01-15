@@ -100,7 +100,7 @@ func TestAddCookie(t *testing.T) {
 		for _, c := range tt.Cookies {
 			req.AddCookie(c)
 		}
-		if g := req.Header.Get("Cookie"); g != tt.Raw {
+		if g := req.Headers.Get("Cookie"); g != tt.Raw {
 			t.Errorf("Test %d:\nwant: %s\n got: %s\n", i, tt.Raw, g)
 			continue
 		}
