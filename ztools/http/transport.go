@@ -127,7 +127,7 @@ func (t *Transport) RoundTrip(req *Request) (resp *Response, err error) {
 	if req.URL == nil {
 		return nil, errors.New("http: nil Request.URL")
 	}
-	if req.Header == nil {
+	if req.Headers == nil {
 		return nil, errors.New("http: nil Request.Header")
 	}
 	if req.URL.Scheme != "http" && req.URL.Scheme != "https" {
@@ -337,13 +337,13 @@ func (t *Transport) getConn(cm *connectMethod) (*persistConn, error) {
 		}
 	case cm.targetScheme == "https":
 		connectReq := &Request{
-			Method: "CONNECT",
-			URL:    &url.URL{Opaque: cm.targetAddr},
-			Host:   cm.targetAddr,
-			Header: make(Header),
+			Method:  "CONNECT",
+			URL:     &url.URL{Opaque: cm.targetAddr},
+			Host:    cm.targetAddr,
+			Headers: make(Header),
 		}
 		if pa != "" {
-			connectReq.Header.Set("Proxy-Authorization", pa)
+			connectReq.Headers.Set("Proxy-Authorization", pa)
 		}
 		connectReq.Write(conn)
 
@@ -546,9 +546,9 @@ func (pc *persistConn) readLoop() {
 			pc.close()
 		} else {
 			hasBody := rc.req.Method != "HEAD" && resp.ContentLength != 0
-			if rc.addedGzip && hasBody && resp.Header.Get("Content-Encoding") == "gzip" {
-				resp.Header.Del("Content-Encoding")
-				resp.Header.Del("Content-Length")
+			if rc.addedGzip && hasBody && resp.Headers.Get("Content-Encoding") == "gzip" {
+				resp.Headers.Del("Content-Encoding")
+				resp.Headers.Del("Content-Length")
 				resp.ContentLength = -1
 				gzReader, zerr := gzip.NewReader(resp.Body)
 				if zerr != nil {
@@ -628,7 +628,7 @@ func (pc *persistConn) roundTrip(req *transportRequest) (resp *Response, err err
 	// uncompress the gzip stream if we were the layer that
 	// requested it.
 	requestedGzip := false
-	if !pc.t.DisableCompression && req.Header.Get("Accept-Encoding") == "" {
+	if !pc.t.DisableCompression && req.Headers.Get("Accept-Encoding") == "" {
 		// Request gzip only, not deflate. Deflate is ambiguous and
 		// not as universally supported anyway.
 		// See: http://www.gzip.org/zlib/zlib_faq.html#faq38

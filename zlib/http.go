@@ -81,7 +81,6 @@ type HTTP struct {
 	ProxyRequest          *HTTPRequest     `json:"connect_request,omitempty"`
 	ProxyResponse         *HTTPResponse    `json:"connect_response,omitempty"`
 	Response              *http.Response   `json:"response,omitempty"`
-	RedirectRequestChain  []*http.Request  `json:"redirect_request_chain,omitempty"`
 	RedirectResponseChain []*http.Response `json:"redirect_response_chain,omitempty"`
 }
 

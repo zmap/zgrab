@@ -46,7 +46,7 @@ func newTransferWriter(r interface{}) (t *transferWriter, err error) {
 		t.ContentLength = rr.ContentLength
 		t.Close = rr.Close
 		t.TransferEncoding = rr.TransferEncoding
-		t.Trailer = rr.Trailer
+		t.Trailer = rr.Trailers
 		atLeastHTTP11 = rr.ProtoAtLeast(1, 1)
 		if t.Body != nil && len(t.TransferEncoding) == 0 && atLeastHTTP11 {
 			if t.ContentLength == 0 {
@@ -77,7 +77,7 @@ func newTransferWriter(r interface{}) (t *transferWriter, err error) {
 		t.ContentLength = rr.ContentLength
 		t.Close = rr.Close
 		t.TransferEncoding = rr.TransferEncoding
-		t.Trailer = rr.Trailer
+		t.Trailer = rr.Trailers
 		atLeastHTTP11 = rr.ProtoAtLeast(1, 1)
 		t.ResponseToHEAD = noBodyExpected(rr.Request.Method)
 	}
@@ -262,7 +262,7 @@ func readTransfer(msg interface{}, r *bufio.Reader) (err error) {
 	isResponse := false
 	switch rr := msg.(type) {
 	case *Response:
-		t.Header = rr.Header
+		t.Header = rr.Headers
 		t.StatusCode = rr.StatusCode
 		t.RequestMethod = rr.Request.Method
 		t.ProtoMajor = rr.ProtoMajor
@@ -270,7 +270,7 @@ func readTransfer(msg interface{}, r *bufio.Reader) (err error) {
 		t.Close = shouldClose(t.ProtoMajor, t.ProtoMinor, t.Header)
 		isResponse = true
 	case *Request:
-		t.Header = rr.Header
+		t.Header = rr.Headers
 		t.ProtoMajor = rr.ProtoMajor
 		t.ProtoMinor = rr.ProtoMinor
 		// Transfer semantics for Requests are exactly like those for
@@ -342,13 +342,13 @@ func readTransfer(msg interface{}, r *bufio.Reader) (err error) {
 		rr.ContentLength = t.ContentLength
 		rr.TransferEncoding = t.TransferEncoding
 		rr.Close = t.Close
-		rr.Trailer = t.Trailer
+		rr.Trailers = t.Trailer
 	case *Response:
 		rr.Body = t.Body
 		rr.ContentLength = t.ContentLength
 		rr.TransferEncoding = t.TransferEncoding
 		rr.Close = t.Close
-		rr.Trailer = t.Trailer
+		rr.Trailers = t.Trailer
 	}
 
 	return nil
@@ -592,9 +592,9 @@ func (b *body) readTrailer() error {
 	}
 	switch rr := b.hdr.(type) {
 	case *Request:
-		rr.Trailer = Header(hdr)
+		rr.Trailers = Header(hdr)
 	case *Response:
-		rr.Trailer = Header(hdr)
+		rr.Trailers = Header(hdr)
 	}
 	return nil
 }

@@ -120,8 +120,6 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string) error {
 
 		client := &http.Client{
 			CheckRedirect: func(req *http.Request, res *http.Response, via []*http.Request) error {
-				grabData.HTTP.RedirectRequestChain = append(grabData.HTTP.RedirectRequestChain, req)
-
 				grabData.HTTP.RedirectResponseChain = append(grabData.HTTP.RedirectResponseChain, res)
 				res.Body.Close()
 
