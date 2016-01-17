@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -36,6 +37,36 @@ var ErrMissingFile = errors.New("http: no such file")
 // HTTP request parsing errors.
 type ProtocolError struct {
 	ErrorString string
+}
+
+type URLWrapper struct {
+	Scheme   string `json:"scheme,omitempty"`
+	Opaque   string `json:"opaque,omitempty"`
+	Host     string `json:"host,omitempty"`
+	Path     string `json:"path,omitempty"`
+	RawPath  string `json:"raw_path,omitempty"`
+	RawQuery string `json:"raw_query,omitempty"`
+	Fragment string `json:"fragment,omitempty"`
+}
+
+func (request *Request) MarshalJSON() ([]byte, error) {
+	type Alias Request
+
+	return json.Marshal(&struct {
+		URL URLWrapper `json:"url,omitempty"`
+		*Alias
+	}{
+		URL: URLWrapper{
+			Scheme:   request.URL.Scheme,
+			Opaque:   request.URL.Opaque,
+			Host:     request.URL.Host,
+			Path:     request.URL.Path,
+			RawPath:  request.URL.RawPath,
+			RawQuery: request.URL.RawQuery,
+			Fragment: request.URL.Fragment,
+		},
+		Alias: (*Alias)(request),
+	})
 }
 
 func (err *ProtocolError) Error() string { return err.ErrorString }
@@ -70,7 +101,7 @@ var reqWriteExcludeHeader = map[string]bool{
 // or to be sent by a client.
 type Request struct {
 	Method string   `json:"method,omitempty"` // GET, POST, PUT, etc.
-	URL    *url.URL `json:"url,omitempty"`
+	URL    *url.URL `json:"_"`
 
 	// The protocol version for incoming requests.
 	// Outgoing requests always use HTTP/1.1.
