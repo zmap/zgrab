@@ -101,7 +101,7 @@ var reqWriteExcludeHeader = map[string]bool{
 // or to be sent by a client.
 type Request struct {
 	Method string   `json:"method,omitempty"` // GET, POST, PUT, etc.
-	URL    *url.URL `json:"_"`
+	URL    *url.URL `json:"-"`
 
 	// The protocol version for incoming requests.
 	// Outgoing requests always use HTTP/1.1.
