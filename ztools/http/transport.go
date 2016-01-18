@@ -12,10 +12,10 @@ package http
 import (
 	"bufio"
 	"compress/gzip"
-	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/zmap/zgrab/ztools/ztls"
 	"io"
 	"io/ioutil"
 	"log"
@@ -62,7 +62,7 @@ type Transport struct {
 
 	// TLSClientConfig specifies the TLS configuration to use with
 	// tls.Client. If nil, the default configuration is used.
-	TLSClientConfig *tls.Config
+	TLSClientConfig *ztls.Config
 
 	DisableKeepAlives  bool
 	DisableCompression bool
@@ -365,12 +365,12 @@ func (t *Transport) getConn(cm *connectMethod) (*persistConn, error) {
 
 	if cm.targetScheme == "https" {
 		// Initiate TLS and check remote host name against certificate.
-		conn = tls.Client(conn, t.TLSClientConfig)
-		if err = conn.(*tls.Conn).Handshake(); err != nil {
+		conn = ztls.Client(conn, t.TLSClientConfig)
+		if err = conn.(*ztls.Conn).Handshake(); err != nil {
 			return nil, err
 		}
 		if t.TLSClientConfig == nil || !t.TLSClientConfig.InsecureSkipVerify {
-			if err = conn.(*tls.Conn).VerifyHostname(cm.tlsHost()); err != nil {
+			if err = conn.(*ztls.Conn).VerifyHostname(cm.tlsHost()); err != nil {
 				return nil, err
 			}
 		}
