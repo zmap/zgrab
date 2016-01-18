@@ -1,6 +1,6 @@
 language: go
 go:
-- 1.4.2
+- 1.5.2
 before_install:
 - go get gopkg.in/check.v1
 - go get github.com/dadrian/rc2
