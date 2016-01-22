@@ -153,8 +153,13 @@ func (t *Transport) RoundTrip(req *Request) (resp *Response, err error) {
 	// pre-CONNECTed to https server.  In any case, we'll be ready
 	// to send it requests.
 	pconn, err := t.getConn(cm)
+
 	if err != nil {
 		return nil, err
+	}
+
+	if cm.targetScheme == "https" {
+		req.TLSHandshake = pconn.conn.(*ztls.Conn).GetHandshakeLog()
 	}
 
 	return pconn.roundTrip(treq)
@@ -369,6 +374,7 @@ func (t *Transport) getConn(cm *connectMethod) (*persistConn, error) {
 		if err = conn.(*ztls.Conn).Handshake(); err != nil {
 			return nil, err
 		}
+
 		if t.TLSClientConfig == nil || !t.TLSClientConfig.InsecureSkipVerify {
 			if err = conn.(*ztls.Conn).VerifyHostname(cm.tlsHost()); err != nil {
 				return nil, err
