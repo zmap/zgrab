@@ -27,6 +27,7 @@ import (
 	"github.com/zmap/zgrab/ztools/scada/siemens"
 	"github.com/zmap/zgrab/ztools/telnet"
 	"github.com/zmap/zgrab/ztools/util"
+	"github.com/zmap/zgrab/ztools/ztls"
 	"io"
 	"net"
 	"strconv"
@@ -110,12 +111,60 @@ func makeNetDialer(c *Config) func(string, string) (net.Conn, error) {
 func makeHTTPGrabber(config *Config, grabData GrabData) func(string) error {
 	g := func(addr string) error {
 
+		tlsConfig := new(ztls.Config)
+		tlsConfig.InsecureSkipVerify = true
+		tlsConfig.MinVersion = ztls.VersionSSL30
+		tlsConfig.MaxVersion = config.TLSVersion
+		tlsConfig.RootCAs = config.RootCAPool
+		tlsConfig.HeartbeatEnabled = true
+		tlsConfig.ClientDSAEnabled = true
+		//		if !config.NoSNI && session.domain != "" {
+		//			tlsConfig.ServerName = session.domain
+		//		}
+		if config.DHEOnly {
+			tlsConfig.CipherSuites = ztls.DHECiphers
+		}
+		if config.ExportsOnly {
+			tlsConfig.CipherSuites = ztls.RSA512ExportCiphers
+		}
+		if config.ExportsDHOnly {
+			tlsConfig.CipherSuites = ztls.DHEExportCiphers
+		}
+		if config.ChromeOnly {
+			tlsConfig.CipherSuites = ztls.ChromeCiphers
+		}
+		if config.ChromeNoDHE {
+			tlsConfig.CipherSuites = ztls.ChromeNoDHECiphers
+		}
+		if config.FirefoxOnly {
+			tlsConfig.CipherSuites = ztls.FirefoxCiphers
+		}
+		if config.FirefoxNoDHE {
+			tlsConfig.CipherSuites = ztls.FirefoxNoDHECiphers
+		}
+
+		if config.SafariOnly {
+			tlsConfig.CipherSuites = ztls.SafariCiphers
+			tlsConfig.ForceSuites = true
+		}
+		if config.SafariNoDHE {
+			tlsConfig.CipherSuites = ztls.SafariNoDHECiphers
+			tlsConfig.ForceSuites = true
+		}
+		if config.TLSExtendedRandom {
+			tlsConfig.ExtendedRandom = true
+		}
+		if config.GatherSessionTicket {
+			tlsConfig.ForceSessionTicketExt = true
+		}
+
 		transport := &http.Transport{
 			Proxy:               nil, // TODO: implement proxying
 			Dial:                makeNetDialer(config),
 			DisableKeepAlives:   false,
 			DisableCompression:  false,
 			MaxIdleConnsPerHost: 1,
+			TLSClientConfig:     tlsConfig,
 		}
 
 		client := &http.Client{

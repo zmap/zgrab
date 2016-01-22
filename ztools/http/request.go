@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/zmap/zgrab/ztools/ztls"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -196,6 +197,9 @@ type Request struct {
 	// otherwise it leaves the field nil.
 	// This field is ignored by the HTTP client.
 	TLS *tls.ConnectionState `json:"tls,omitempty"`
+
+	// TLS handshake details
+	TLSHandshake *ztls.ServerHandshake `json:"tls_handshake,omitempty"`
 }
 
 // ProtoAtLeast returns whether the HTTP protocol used
