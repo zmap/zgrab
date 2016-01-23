@@ -20,11 +20,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/zmap/zgrab/ztools/ftp"
+	"github.com/zmap/zgrab/ztools/http"
 	"github.com/zmap/zgrab/ztools/processing"
 	"github.com/zmap/zgrab/ztools/scada/dnp3"
 	"github.com/zmap/zgrab/ztools/scada/fox"
 	"github.com/zmap/zgrab/ztools/scada/siemens"
 	"github.com/zmap/zgrab/ztools/telnet"
+	"github.com/zmap/zgrab/ztools/util"
+	"github.com/zmap/zgrab/ztools/ztls"
 	"io"
 	"net"
 	"strconv"
@@ -86,6 +89,125 @@ func makeDialer(c *Config) func(string) (*Conn, error) {
 		}
 		return conn, err
 	}
+}
+
+func makeNetDialer(c *Config) func(string, string) (net.Conn, error) {
+	proto := "tcp"
+	timeout := c.Timeout
+	return func(net, addr string) (net.Conn, error) {
+		deadline := time.Now().Add(timeout)
+		d := Dialer{
+			Deadline: deadline,
+		}
+		conn, err := d.Dial(proto, addr)
+		conn.maxTlsVersion = c.TLSVersion
+		if err == nil {
+			conn.SetDeadline(deadline)
+		}
+		return conn.getUnderlyingConn(), err
+	}
+}
+
+func makeHTTPGrabber(config *Config, grabData GrabData) func(string) error {
+	g := func(addr string) error {
+
+		var tlsConfig *ztls.Config
+		if config.TLS {
+			tlsConfig = new(ztls.Config)
+			tlsConfig.InsecureSkipVerify = true
+			tlsConfig.MinVersion = ztls.VersionSSL30
+			tlsConfig.MaxVersion = config.TLSVersion
+			tlsConfig.RootCAs = config.RootCAPool
+			tlsConfig.HeartbeatEnabled = true
+			tlsConfig.ClientDSAEnabled = true
+			//		if !config.NoSNI && session.domain != "" {
+			//			tlsConfig.ServerName = session.domain
+			//		}
+			if config.DHEOnly {
+				tlsConfig.CipherSuites = ztls.DHECiphers
+			}
+			if config.ExportsOnly {
+				tlsConfig.CipherSuites = ztls.RSA512ExportCiphers
+			}
+			if config.ExportsDHOnly {
+				tlsConfig.CipherSuites = ztls.DHEExportCiphers
+			}
+			if config.ChromeOnly {
+				tlsConfig.CipherSuites = ztls.ChromeCiphers
+			}
+			if config.ChromeNoDHE {
+				tlsConfig.CipherSuites = ztls.ChromeNoDHECiphers
+			}
+			if config.FirefoxOnly {
+				tlsConfig.CipherSuites = ztls.FirefoxCiphers
+			}
+			if config.FirefoxNoDHE {
+				tlsConfig.CipherSuites = ztls.FirefoxNoDHECiphers
+			}
+
+			if config.SafariOnly {
+				tlsConfig.CipherSuites = ztls.SafariCiphers
+				tlsConfig.ForceSuites = true
+			}
+			if config.SafariNoDHE {
+				tlsConfig.CipherSuites = ztls.SafariNoDHECiphers
+				tlsConfig.ForceSuites = true
+			}
+			if config.TLSExtendedRandom {
+				tlsConfig.ExtendedRandom = true
+			}
+			if config.GatherSessionTicket {
+				tlsConfig.ForceSessionTicketExt = true
+			}
+		}
+
+		transport := &http.Transport{
+			Proxy:               nil, // TODO: implement proxying
+			Dial:                makeNetDialer(config),
+			DisableKeepAlives:   false,
+			DisableCompression:  false,
+			MaxIdleConnsPerHost: 1,
+			TLSClientConfig:     tlsConfig,
+		}
+
+		client := &http.Client{
+			CheckRedirect: func(req *http.Request, res *http.Response, via []*http.Request) error {
+				grabData.HTTP.RedirectResponseChain = append(grabData.HTTP.RedirectResponseChain, res)
+				if str, err := util.ReadString(res.Body, config.HTTP.MaxSize*1000); err != nil {
+					return err
+				} else {
+					res.BodyText = str
+				}
+				res.Body.Close()
+
+				if len(via) > config.HTTP.MaxRedirects {
+					return errors.New(fmt.Sprintf("stopped after %d redirects", config.HTTP.MaxRedirects))
+				}
+
+				return nil
+			}, //Defaults to following up to 10 redirects
+			Jar:       nil, // Don't send or receive cookies (otherwise use CookieJar)
+			Transport: transport,
+		}
+		if resp, err := client.Get("http://" + addr); err != nil {
+			config.ErrorLog.Errorf("Could not connect to remote host %s: %s", addr, err.Error())
+			return err
+		} else {
+			grabData.HTTP.Response = resp
+
+			if str, err := util.ReadString(resp.Body, config.HTTP.MaxSize*1000); err != nil {
+				return err
+			} else {
+				grabData.HTTP.Response.BodyText = str
+			}
+
+			resp.Body.Close()
+		}
+
+		return nil
+	}
+
+	return g
 }
 
 func makeGrabber(config *Config) func(*Conn) error {
@@ -214,13 +336,6 @@ func makeGrabber(config *Config) func(*Conn) error {
 			dnp3.GetDNP3Banner(c.grabData.DNP3, c.getUnderlyingConn())
 		}
 
-		if len(config.HTTP.Endpoint) > 0 {
-			if err := c.HTTP(&config.HTTP); err != nil {
-				c.erroredComponent = "http"
-				return err
-			}
-		}
-
 		if config.SSH.SSH {
 			if err := c.SSHHandshake(); err != nil {
 				c.erroredComponent = "ssh"
@@ -310,35 +425,55 @@ func makeGrabber(config *Config) func(*Conn) error {
 }
 
 func GrabBanner(config *Config, target *GrabTarget) *Grab {
-	dial := makeDialer(config)
-	grabber := makeGrabber(config)
-	port := strconv.FormatUint(uint64(config.Port), 10)
-	addr := target.Addr.String()
-	rhost := net.JoinHostPort(addr, port)
-	t := time.Now()
-	conn, dialErr := dial(rhost)
-	if target.Domain != "" {
-		conn.SetDomain(target.Domain)
-	}
-	if dialErr != nil {
-		// Could not connect to host
-		config.ErrorLog.Errorf("Could not connect to %s remote host %s: %s",
-			target.Domain, addr, dialErr.Error())
+
+	if len(config.HTTP.Endpoint) == 0 {
+		dial := makeDialer(config)
+		grabber := makeGrabber(config)
+		port := strconv.FormatUint(uint64(config.Port), 10)
+		addr := target.Addr.String()
+		rhost := net.JoinHostPort(addr, port)
+		t := time.Now()
+		conn, dialErr := dial(rhost)
+		if target.Domain != "" {
+			conn.SetDomain(target.Domain)
+		}
+		if dialErr != nil {
+			// Could not connect to host
+			config.ErrorLog.Errorf("Could not connect to %s remote host %s: %s",
+				target.Domain, addr, dialErr.Error())
+			return &Grab{
+				IP:             target.Addr,
+				Domain:         target.Domain,
+				Time:           t,
+				Error:          dialErr,
+				ErrorComponent: "connect",
+			}
+		}
+		err := grabber(conn)
 		return &Grab{
 			IP:             target.Addr,
 			Domain:         target.Domain,
 			Time:           t,
-			Error:          dialErr,
-			ErrorComponent: "connect",
+			Data:           conn.grabData,
+			Error:          err,
+			ErrorComponent: conn.erroredComponent,
 		}
-	}
-	err := grabber(conn)
-	return &Grab{
-		IP:             target.Addr,
-		Domain:         target.Domain,
-		Time:           t,
-		Data:           conn.grabData,
-		Error:          err,
-		ErrorComponent: conn.erroredComponent,
+	} else {
+		grabData := GrabData{HTTP: new(HTTP)}
+		httpGrabber := makeHTTPGrabber(config, grabData)
+		port := strconv.FormatUint(uint64(config.Port), 10)
+		addr := target.Addr.String()
+		rhost := net.JoinHostPort(addr, port)
+		t := time.Now()
+
+		err := httpGrabber(rhost)
+
+		return &Grab{
+			IP:     target.Addr,
+			Domain: target.Domain,
+			Time:   t,
+			Data:   grabData,
+			Error:  err,
+		}
 	}
 }

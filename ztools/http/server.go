@@ -623,8 +623,8 @@ func (c *conn) serve() {
 				w.finishRequest()
 				break
 			}
-			req.Header.Del("Expect")
-		} else if req.Header.Get("Expect") != "" {
+			req.Headers.Del("Expect")
+		} else if req.Headers.Get("Expect") != "" {
 			// TODO(bradfitz): let ServeHTTP handlers handle
 			// requests with non-standard expectation[s]? Seems
 			// theoretical at best, and doesn't fit into the

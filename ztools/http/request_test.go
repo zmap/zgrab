@@ -8,11 +8,11 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	. "github.com/zmap/zgrab/ztools/http"
+	"github.com/zmap/zgrab/ztools/http/httptest"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
-	. "net/http"
-	"net/http/httptest"
 	"net/url"
 	"os"
 	"reflect"
@@ -32,7 +32,7 @@ func TestQuery(t *testing.T) {
 func TestPostQuery(t *testing.T) {
 	req, _ := NewRequest("POST", "http://www.google.com/search?q=foo&q=bar&both=x",
 		strings.NewReader("z=post&both=y"))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
+	req.Headers.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
 
 	if q := req.FormValue("q"); q != "foo" {
 		t.Errorf(`req.FormValue("q") = %q, want "foo"`, q)
@@ -62,9 +62,9 @@ var parseContentTypeTests = []parseContentTypeTest{
 func TestParseFormUnknownContentType(t *testing.T) {
 	for i, test := range parseContentTypeTests {
 		req := &Request{
-			Method: "POST",
-			Header: Header(test.contentType),
-			Body:   ioutil.NopCloser(bytes.NewBufferString("body")),
+			Method:  "POST",
+			Headers: Header(test.contentType),
+			Body:    ioutil.NopCloser(bytes.NewBufferString("body")),
 		}
 		err := req.ParseForm()
 		switch {
@@ -78,16 +78,16 @@ func TestParseFormUnknownContentType(t *testing.T) {
 
 func TestMultipartReader(t *testing.T) {
 	req := &Request{
-		Method: "POST",
-		Header: Header{"Content-Type": {`multipart/form-data; boundary="foo123"`}},
-		Body:   ioutil.NopCloser(new(bytes.Buffer)),
+		Method:  "POST",
+		Headers: Header{"Content-Type": {`multipart/form-data; boundary="foo123"`}},
+		Body:    ioutil.NopCloser(new(bytes.Buffer)),
 	}
 	multipart, err := req.MultipartReader()
 	if multipart == nil {
 		t.Errorf("expected multipart; error: %v", err)
 	}
 
-	req.Header = Header{"Content-Type": {"text/plain"}}
+	req.Headers = Header{"Content-Type": {"text/plain"}}
 	multipart, err = req.MultipartReader()
 	if multipart != nil {
 		t.Errorf("unexpected multipart for text/plain")
@@ -123,7 +123,7 @@ func TestRedirect(t *testing.T) {
 func TestSetBasicAuth(t *testing.T) {
 	r, _ := NewRequest("GET", "http://example.com/", nil)
 	r.SetBasicAuth("Aladdin", "open sesame")
-	if g, e := r.Header.Get("Authorization"), "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ=="; g != e {
+	if g, e := r.Headers.Get("Authorization"), "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ=="; g != e {
 		t.Errorf("got header %q, want %q", g, e)
 	}
 }
@@ -216,7 +216,7 @@ func newTestMultipartRequest(t *testing.T) *Request {
 		t.Fatal("NewRequest:", err)
 	}
 	ctype := fmt.Sprintf(`multipart/form-data; boundary="%s"`, boundary)
-	req.Header.Set("Content-type", ctype)
+	req.Headers.Set("Content-type", ctype)
 	return req
 }
 

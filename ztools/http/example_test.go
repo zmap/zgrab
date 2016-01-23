@@ -6,9 +6,9 @@ package http_test
 
 import (
 	"fmt"
+	"github.com/zmap/zgrab/ztools/http"
 	"io/ioutil"
 	"log"
-	"net/http"
 )
 
 func ExampleHijacker() {

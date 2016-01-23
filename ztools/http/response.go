@@ -25,11 +25,9 @@ var respExcludeHeader = map[string]bool{
 // Response represents the response from an HTTP request.
 //
 type Response struct {
-	Status     string `json:"status",omitempty"`// e.g. "200 OK"
-	StatusCode int    `json:"status_code",omitempty"`// e.g. 200
-	Proto      string `json:"proto",omitempty"`// e.g. "HTTP/1.0"
-	ProtoMajor int    `json:"proto_major",omitempty"`// e.g. 1
-	ProtoMinor int    `json:"proto_minor",omitempty"`// e.g. 0
+	Status     string   `json:"status,omitempty"`      // e.g. "200 OK"
+	StatusCode int      `json:"status_code,omitempty"` // e.g. 200
+	Protocol   Protocol `json:"protocol, omitempty`
 
 	// Header maps header keys to values.  If the response had multiple
 	// headers with the same key, they will be concatenated, with comma
@@ -39,43 +37,44 @@ type Response struct {
 	// omitted from Header.
 	//
 	// Keys in the map are canonicalized (see CanonicalHeaderKey).
-	Header Header `json:"header",omitempty"`
+	Headers Header `json:"headers,omitempty"`
 
 	// Body represents the response body.
 	//
 	// The http Client and Transport guarantee that Body is always
 	// non-nil, even on responses without a body or responses with
 	// a zero-lengthed body.
-	Body io.ReadCloser `json:"body",omitempty"`
+	Body     io.ReadCloser `json:"-"`
+	BodyText string        `json:"body,omitempty"`
 
 	// ContentLength records the length of the associated content.  The
 	// value -1 indicates that the length is unknown.  Unless RequestMethod
 	// is "HEAD", values >= 0 indicate that the given number of bytes may
 	// be read from Body.
-	ContentLength int64 `json:"content_length",omitempty"`
+	ContentLength int64 `json:"content_length,omitempty"`
 
 	// Contains transfer encodings from outer-most to inner-most. Value is
 	// nil, means that "identity" encoding is used.
-	TransferEncoding []string `json:"transfer_encoding",omitempty"`
+	TransferEncoding []string `json:"transfer_encoding,omitempty"`
 
 	// Close records whether the header directed that the connection be
 	// closed after reading Body.  The value is advice for clients: neither
 	// ReadResponse nor Response.Write ever closes a connection.
-	Close bool `json:"close",omitempty"`
+	Close bool `json:"-"`
 
 	// Trailer maps trailer keys to values, in the same
 	// format as the header.
-	Trailer Header `json:"trailer",omitempty"`
+	Trailers Header `json:"trailers,omitempty"`
 
 	// The Request that was sent to obtain this Response.
 	// Request's Body is nil (having already been consumed).
 	// This is only populated for Client requests.
-	Request *Request `json:"request",omitempty"`
+	Request *Request `json:"request,omitempty"`
 }
 
 // Cookies parses and returns the cookies set in the Set-Cookie headers.
 func (r *Response) Cookies() []*Cookie {
-	return readSetCookies(r.Header)
+	return readSetCookies(r.Headers)
 }
 
 var ErrNoLocation = errors.New("http: no Location header in response")
@@ -85,7 +84,7 @@ var ErrNoLocation = errors.New("http: no Location header in response")
 // the Response's Request.  ErrNoLocation is returned if no
 // Location header is present.
 func (r *Response) Location() (*url.URL, error) {
-	lv := r.Header.Get("Location")
+	lv := r.Headers.Get("Location")
 	if lv == "" {
 		return nil, ErrNoLocation
 	}
@@ -131,10 +130,11 @@ func ReadResponse(r *bufio.Reader, req *Request) (resp *Response, err error) {
 		return nil, &badStringError{"malformed HTTP status code", f[1]}
 	}
 
-	resp.Proto = f[0]
+	resp.Protocol = *(new(Protocol))
+	resp.Protocol.Name = f[0]
 	var ok bool
-	if resp.ProtoMajor, resp.ProtoMinor, ok = ParseHTTPVersion(resp.Proto); !ok {
-		return nil, &badStringError{"malformed HTTP version", resp.Proto}
+	if resp.Protocol.Major, resp.Protocol.Minor, ok = ParseHTTPVersion(resp.Protocol.Name); !ok {
+		return nil, &badStringError{"malformed HTTP version", resp.Protocol.Name}
 	}
 
 	// Parse the response headers.
@@ -142,9 +142,9 @@ func ReadResponse(r *bufio.Reader, req *Request) (resp *Response, err error) {
 	if err != nil {
 		return nil, err
 	}
-	resp.Header = Header(mimeHeader)
+	resp.Headers = Header(mimeHeader)
 
-	fixPragmaCacheControl(resp.Header)
+	fixPragmaCacheControl(resp.Headers)
 
 	err = readTransfer(resp, r)
 	if err != nil {
@@ -169,8 +169,8 @@ func fixPragmaCacheControl(header Header) {
 // ProtoAtLeast returns whether the HTTP protocol used
 // in the response is at least major.minor.
 func (r *Response) ProtoAtLeast(major, minor int) bool {
-	return r.ProtoMajor > major ||
-		r.ProtoMajor == major && r.ProtoMinor >= minor
+	return r.Protocol.Major > major ||
+		r.Protocol.Major == major && r.Protocol.Minor >= minor
 }
 
 // Writes the response (header, body and trailer) in wire format. This method
@@ -202,8 +202,8 @@ func (r *Response) Write(w io.Writer) error {
 			text = "status code " + strconv.Itoa(r.StatusCode)
 		}
 	}
-	io.WriteString(w, "HTTP/"+strconv.Itoa(r.ProtoMajor)+".")
-	io.WriteString(w, strconv.Itoa(r.ProtoMinor)+" ")
+	io.WriteString(w, "HTTP/"+strconv.Itoa(r.Protocol.Major)+".")
+	io.WriteString(w, strconv.Itoa(r.Protocol.Minor)+" ")
 	io.WriteString(w, strconv.Itoa(r.StatusCode)+" "+text+"\r\n")
 
 	// Process Body,ContentLength,Close,Trailer
@@ -217,7 +217,7 @@ func (r *Response) Write(w io.Writer) error {
 	}
 
 	// Rest of header
-	err = r.Header.WriteSubset(w, respExcludeHeader)
+	err = r.Headers.WriteSubset(w, respExcludeHeader)
 	if err != nil {
 		return err
 	}

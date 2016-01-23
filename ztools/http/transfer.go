@@ -46,7 +46,7 @@ func newTransferWriter(r interface{}) (t *transferWriter, err error) {
 		t.ContentLength = rr.ContentLength
 		t.Close = rr.Close
 		t.TransferEncoding = rr.TransferEncoding
-		t.Trailer = rr.Trailer
+		t.Trailer = rr.Trailers
 		atLeastHTTP11 = rr.ProtoAtLeast(1, 1)
 		if t.Body != nil && len(t.TransferEncoding) == 0 && atLeastHTTP11 {
 			if t.ContentLength == 0 {
@@ -77,7 +77,7 @@ func newTransferWriter(r interface{}) (t *transferWriter, err error) {
 		t.ContentLength = rr.ContentLength
 		t.Close = rr.Close
 		t.TransferEncoding = rr.TransferEncoding
-		t.Trailer = rr.Trailer
+		t.Trailer = rr.Trailers
 		atLeastHTTP11 = rr.ProtoAtLeast(1, 1)
 		t.ResponseToHEAD = noBodyExpected(rr.Request.Method)
 	}
@@ -230,8 +230,7 @@ type transferReader struct {
 	Header        Header
 	StatusCode    int
 	RequestMethod string
-	ProtoMajor    int
-	ProtoMinor    int
+	Protocol      Protocol
 	// Output
 	Body             io.ReadCloser
 	ContentLength    int64
@@ -262,17 +261,17 @@ func readTransfer(msg interface{}, r *bufio.Reader) (err error) {
 	isResponse := false
 	switch rr := msg.(type) {
 	case *Response:
-		t.Header = rr.Header
+		t.Header = rr.Headers
 		t.StatusCode = rr.StatusCode
 		t.RequestMethod = rr.Request.Method
-		t.ProtoMajor = rr.ProtoMajor
-		t.ProtoMinor = rr.ProtoMinor
-		t.Close = shouldClose(t.ProtoMajor, t.ProtoMinor, t.Header)
+		t.Protocol.Major = rr.Protocol.Major
+		t.Protocol.Minor = rr.Protocol.Minor
+		t.Close = shouldClose(t.Protocol.Major, t.Protocol.Minor, t.Header)
 		isResponse = true
 	case *Request:
-		t.Header = rr.Header
-		t.ProtoMajor = rr.ProtoMajor
-		t.ProtoMinor = rr.ProtoMinor
+		t.Header = rr.Headers
+		t.Protocol.Major = rr.Protocol.Major
+		t.Protocol.Minor = rr.Protocol.Minor
 		// Transfer semantics for Requests are exactly like those for
 		// Responses with status code 200, responding to a GET method
 		t.StatusCode = 200
@@ -282,8 +281,8 @@ func readTransfer(msg interface{}, r *bufio.Reader) (err error) {
 	}
 
 	// Default to HTTP/1.1
-	if t.ProtoMajor == 0 && t.ProtoMinor == 0 {
-		t.ProtoMajor, t.ProtoMinor = 1, 1
+	if t.Protocol.Major == 0 && t.Protocol.Minor == 0 {
+		t.Protocol.Major, t.Protocol.Minor = 1, 1
 	}
 
 	// Transfer encoding, content length
@@ -342,13 +341,13 @@ func readTransfer(msg interface{}, r *bufio.Reader) (err error) {
 		rr.ContentLength = t.ContentLength
 		rr.TransferEncoding = t.TransferEncoding
 		rr.Close = t.Close
-		rr.Trailer = t.Trailer
+		rr.Trailers = t.Trailer
 	case *Response:
 		rr.Body = t.Body
 		rr.ContentLength = t.ContentLength
 		rr.TransferEncoding = t.TransferEncoding
 		rr.Close = t.Close
-		rr.Trailer = t.Trailer
+		rr.Trailers = t.Trailer
 	}
 
 	return nil
@@ -592,9 +591,9 @@ func (b *body) readTrailer() error {
 	}
 	switch rr := b.hdr.(type) {
 	case *Request:
-		rr.Trailer = Header(hdr)
+		rr.Trailers = Header(hdr)
 	case *Response:
-		rr.Trailer = Header(hdr)
+		rr.Trailers = Header(hdr)
 	}
 	return nil
 }

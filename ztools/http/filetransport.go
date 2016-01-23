@@ -52,11 +52,14 @@ func newPopulateResponseWriter() (*populateResponse, <-chan *Response) {
 		ch: make(chan *Response),
 		pw: pw,
 		res: &Response{
-			Proto:      "HTTP/1.0",
-			ProtoMajor: 1,
-			Header:     make(Header),
-			Close:      true,
-			Body:       pr,
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
+			Headers: make(Header),
+			Close:   true,
+			Body:    pr,
 		},
 	}
 	return rw, rw.ch
@@ -98,7 +101,7 @@ func (pr *populateResponse) sendResponse() {
 }
 
 func (pr *populateResponse) Header() Header {
-	return pr.res.Header
+	return pr.res.Headers
 }
 
 func (pr *populateResponse) WriteHeader(code int) {

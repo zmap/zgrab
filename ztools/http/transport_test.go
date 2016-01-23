@@ -11,10 +11,10 @@ import (
 	"compress/gzip"
 	"crypto/rand"
 	"fmt"
+	. "github.com/zmap/zgrab/ztools/http"
+	"github.com/zmap/zgrab/ztools/http/httptest"
 	"io"
 	"io/ioutil"
-	. "net/http"
-	"net/http/httptest"
 	"net/url"
 	"os"
 	"runtime"
@@ -84,9 +84,10 @@ func TestTransportConnectionCloseOnResponse(t *testing.T) {
 				t.Fatalf("URL parse error: %v", err)
 			}
 			req.Method = "GET"
-			req.Proto = "HTTP/1.1"
-			req.ProtoMajor = 1
-			req.ProtoMinor = 1
+			req.Protocol = *(new(Protocol))
+			req.Protocol.Name = "HTTP/1.1"
+			req.Protocol.Major = 1
+			req.Protocol.Minor = 1
 
 			res, err := c.Do(req)
 			if err != nil {
@@ -126,9 +127,10 @@ func TestTransportConnectionCloseOnRequest(t *testing.T) {
 				t.Fatalf("URL parse error: %v", err)
 			}
 			req.Method = "GET"
-			req.Proto = "HTTP/1.1"
-			req.ProtoMajor = 1
-			req.ProtoMinor = 1
+			req.Protocol = *(new(Protocol))
+			req.Protocol.Name = "HTTP/1.1"
+			req.Protocol.Major = 1
+			req.Protocol.Minor = 1
 			req.Close = connectionClose
 
 			res, err := c.Do(req)
@@ -381,7 +383,7 @@ func TestTransportHeadResponses(t *testing.T) {
 		if err != nil {
 			t.Errorf("error on loop %d: %v", i, err)
 		}
-		if e, g := "123", res.Header.Get("Content-Length"); e != g {
+		if e, g := "123", res.Headers.Get("Content-Length"); e != g {
 			t.Errorf("loop %d: expected Content-Length header of %q, got %q", i, e, g)
 		}
 		if e, g := int64(0), res.ContentLength; e != g {
@@ -414,7 +416,7 @@ func TestTransportHeadChunkedResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request 2 error: %v", err)
 	}
-	if v1, v2 := res1.Header.Get("x-client-ipport"), res2.Header.Get("x-client-ipport"); v1 != v2 {
+	if v1, v2 := res1.Headers.Get("x-client-ipport"), res2.Headers.Get("x-client-ipport"); v1 != v2 {
 		t.Errorf("ip/ports differed between head requests: %q vs %q", v1, v2)
 	}
 }
@@ -436,7 +438,7 @@ var roundTripTests = []struct {
 func TestRoundTripGzip(t *testing.T) {
 	const responseBody = "test response body"
 	ts := httptest.NewServer(HandlerFunc(func(rw ResponseWriter, req *Request) {
-		accept := req.Header.Get("Accept-Encoding")
+		accept := req.Headers.Get("Accept-Encoding")
 		if expect := req.FormValue("expect_accept"); accept != expect {
 			t.Errorf("in handler, test %v: Accept-Encoding = %q, want %q",
 				req.FormValue("testnum"), accept, expect)
@@ -457,7 +459,7 @@ func TestRoundTripGzip(t *testing.T) {
 		// Test basic request (no accept-encoding)
 		req, _ := NewRequest("GET", fmt.Sprintf("%s/?testnum=%d&expect_accept=%s", ts.URL, i, test.expectAccept), nil)
 		if test.accept != "" {
-			req.Header.Set("Accept-Encoding", test.accept)
+			req.Headers.Set("Accept-Encoding", test.accept)
 		}
 		res, err := DefaultTransport.RoundTrip(req)
 		var body []byte
@@ -479,10 +481,10 @@ func TestRoundTripGzip(t *testing.T) {
 		if g, e := string(body), responseBody; g != e {
 			t.Errorf("%d. body = %q; want %q", i, g, e)
 		}
-		if g, e := req.Header.Get("Accept-Encoding"), test.accept; g != e {
+		if g, e := req.Headers.Get("Accept-Encoding"), test.accept; g != e {
 			t.Errorf("%d. Accept-Encoding = %q; want %q (it was mutated, in violation of RoundTrip contract)", i, g, e)
 		}
-		if g, e := res.Header.Get("Content-Encoding"), test.accept; g != e {
+		if g, e := res.Headers.Get("Content-Encoding"), test.accept; g != e {
 			t.Errorf("%d. Content-Encoding = %q; want %q", i, g, e)
 		}
 	}
@@ -493,7 +495,7 @@ func TestTransportGzip(t *testing.T) {
 	const testString = "The test string aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	const nRandBytes = 1024 * 1024
 	ts := httptest.NewServer(HandlerFunc(func(rw ResponseWriter, req *Request) {
-		if g, e := req.Header.Get("Accept-Encoding"), "gzip"; g != e {
+		if g, e := req.Headers.Get("Accept-Encoding"), "gzip"; g != e {
 			t.Errorf("Accept-Encoding = %q, want %q", g, e)
 		}
 		rw.Header().Set("Content-Encoding", "gzip")
@@ -554,7 +556,7 @@ func TestTransportGzip(t *testing.T) {
 		if g, e := string(body), testString; g != e {
 			t.Fatalf("body = %q; want %q", g, e)
 		}
-		if g, e := res.Header.Get("Content-Encoding"), ""; g != e {
+		if g, e := res.Headers.Get("Content-Encoding"), ""; g != e {
 			t.Fatalf("Content-Encoding = %q; want %q", g, e)
 		}
 
@@ -629,7 +631,7 @@ func TestTransportGzipRecursive(t *testing.T) {
 		t.Fatalf("Incorrect result from recursive gz:\nhave=%x\nwant=%x",
 			body, rgz)
 	}
-	if g, e := res.Header.Get("Content-Encoding"), ""; g != e {
+	if g, e := res.Headers.Get("Content-Encoding"), ""; g != e {
 		t.Fatalf("Content-Encoding = %q; want %q", g, e)
 	}
 }
@@ -730,7 +732,7 @@ func (fooProto) RoundTrip(req *Request) (*Response, error) {
 	res := &Response{
 		Status:     "200 OK",
 		StatusCode: 200,
-		Header:     make(Header),
+		Headers:    make(Header),
 		Body:       ioutil.NopCloser(strings.NewReader("You wanted " + req.URL.String())),
 	}
 	return res, nil

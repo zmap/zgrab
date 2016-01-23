@@ -28,8 +28,6 @@ import (
 	"strings"
 	"time"
 
-	"io"
-
 	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/scada/bacnet"
 	"github.com/zmap/zgrab/ztools/ssh"
@@ -203,15 +201,6 @@ func (c *Conn) Close() error {
 	return c.getUnderlyingConn().Close()
 }
 
-func (c *Conn) HTTP(config *HTTPConfig) error {
-	if len(config.ProxyDomain) > 0 {
-		if err := c.doProxy(config); err != nil {
-			return err
-		}
-	}
-	return c.doHTTP(config)
-}
-
 func (c *Conn) makeHTTPRequest(endpoint string, httpMethod string, userAgent string) (req *http.Request, encReq *HTTPRequest, err error) {
 	if req, err = http.NewRequest(httpMethod, "", nil); err != nil {
 		return
@@ -281,7 +270,7 @@ func (c *Conn) sendHTTPRequestReadHTTPResponse(req *http.Request, config *HTTPCo
 	encRes.StatusLine = res.Proto + " " + res.Status
 	encRes.VersionMajor = res.ProtoMajor
 	encRes.VersionMinor = res.ProtoMinor
-	encRes.Headers = HeadersFromGolangHeaders(res.Header)
+	//	encRes.Headers = HeadersFromGolangHeaders(res.Header)
 	var bodyOutput []byte
 	if len(body) > 1024*config.MaxSize {
 		bodyOutput = body[0 : 1024*config.MaxSize]
@@ -319,100 +308,6 @@ func (c *Conn) doProxy(config *HTTPConfig) error {
 		return fmt.Errorf("proxy connect returned status %d", encRes.StatusCode)
 	}
 	return nil
-}
-
-func (c *Conn) doHTTP(config *HTTPConfig) error {
-	if c.grabData.HTTP == nil {
-		c.grabData.HTTP = new(HTTP)
-	}
-
-	var httpResponse, terminalResponse, previousResponse *HTTPResponse
-	var httpRequest *HTTPRequest
-	var requestResponse *HTTPRequestResponse
-	var err error
-	if httpRequest, httpResponse, err = c.makeAndSendHTTPRequest(config); err != nil {
-		return err
-	}
-
-	requestResponse = new(HTTPRequestResponse)
-	requestResponse.Request = httpRequest
-	terminalResponse = httpResponse
-
-	for redirectCount := 0; httpResponse.isRedirect() && httpResponse.canRedirectWithConn(c) && redirectCount < config.MaxRedirects; redirectCount++ {
-
-		var location string
-		if location = httpResponse.Headers["location"].(string); location == "" {
-			return fmt.Errorf("No location found for %d response from %s (%s)", httpResponse.StatusCode, c.domain, c.RemoteAddr())
-		}
-
-		switch httpResponse.StatusCode {
-		case http.StatusMultipleChoices, http.StatusMovedPermanently, http.StatusFound, http.StatusSeeOther, http.StatusTemporaryRedirect:
-			var redirectUrl *url.URL
-
-			if redirectUrl, err = url.Parse(location); err != nil {
-				return err
-			} else {
-				c.SetDomain(redirectUrl.Host)
-			}
-
-			var redirectBaseRequest *http.Request
-
-			if redirectBaseRequest, httpRequest, err = c.makeHTTPRequest(redirectUrl.RequestURI(), config.Method, config.UserAgent); err != nil {
-				return err
-			}
-
-			previousResponse = httpResponse
-
-			if httpResponse, err = c.sendHTTPRequestReadHTTPResponse(redirectBaseRequest, config); err != nil {
-				if err == io.ErrUnexpectedEOF {
-					return errors.New(fmt.Sprint("Connection closed before making redirect to %s (%s)", c.domain, c.RemoteAddr()))
-				}
-				return err
-			}
-
-			requestResponse.Response = previousResponse
-			c.grabData.HTTP.RequestResponseChain = append(c.grabData.HTTP.RequestResponseChain, requestResponse)
-			requestResponse = new(HTTPRequestResponse)
-			requestResponse.Request = httpRequest
-
-			terminalResponse = httpResponse
-
-		case http.StatusUseProxy:
-		// The requested resource MUST be accessed through the proxy given by the Location field.
-		// The Location field gives the URI of the proxy
-
-		case http.StatusNotModified:
-			return fmt.Errorf("Unexpected StatusNotModified response code: %d from %s (%s)", http.StatusNotModified, c.domain, c.RemoteAddr())
-
-		default:
-			return fmt.Errorf("Invalid redirect response code: %d from %s (%s)", httpResponse.StatusCode, c.domain, c.RemoteAddr())
-		}
-	}
-
-	c.grabData.HTTP.RequestResponseChain = append(c.grabData.HTTP.RequestResponseChain, requestResponse)
-	c.grabData.HTTP.Response = terminalResponse
-
-	return nil
-}
-
-func (c *Conn) makeAndSendHTTPRequest(config *HTTPConfig) (*HTTPRequest, *HTTPResponse, error) {
-	req, encReq, err := c.makeHTTPRequestFromConfig(config)
-	if err != nil {
-		return encReq, nil, err
-	}
-
-	if len(config.ProxyDomain) > 0 {
-		host := strings.Split(config.ProxyDomain, ":")[0]
-		req.Host = host
-		req.URL.Host = host
-	}
-
-	var encRes *HTTPResponse
-	if encRes, err = c.sendHTTPRequestReadHTTPResponse(req, config); err != nil {
-		return encReq, encRes, err
-	}
-
-	return encReq, encRes, nil
 }
 
 // Extra method - Do a TLS Handshake and record progress
