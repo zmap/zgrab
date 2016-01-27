@@ -242,6 +242,7 @@ zgrab_telnet = Record({
     })
 }, extends=zgrab_base)
 
+register_schema("zgrab-telnet", zgrab_telnet)
 
 zgrab_tls_banner = Record({
     "data":SubRecord({
