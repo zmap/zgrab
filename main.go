@@ -15,6 +15,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"io"
@@ -121,6 +122,7 @@ func init() {
 	flag.StringVar(&config.SSH.Client, "ssh-client", "", "Mimic behavior of a specific SSH client")
 	flag.StringVar(&config.SSH.KexAlgorithms, "ssh-kex-algorithms", "", "Set SSH Key Exchange Algorithms")
 	flag.StringVar(&config.SSH.HostKeyAlgorithms, "ssh-host-key-algorithms", "", "Set SSH Host Key Algorithms")
+	flag.StringVar(&config.SSH.FixedKexValue, "ssh-kex-value", "", "Set SSH DH kex value in hexadecimal")
 	flag.BoolVar(&config.Telnet, "telnet", false, "Read telnet banners")
 	flag.IntVar(&config.TelnetMaxSize, "telnet-max-size", 65536, "Max bytes to read for telnet banner")
 	flag.Parse()
@@ -145,6 +147,13 @@ func init() {
 		}
 		if _, err := config.SSH.MakeHostKeyNameList(); err != nil {
 			zlog.Fatalf("Bad SSH Host Key Algorithms: %s", err.Error())
+		}
+		if len(config.SSH.FixedKexValue) > 0 {
+			b, err := hex.DecodeString(config.SSH.FixedKexValue)
+			if err != nil {
+				zlog.Fatalf("Bad SSH kex value (must be hex): %s", err.Error())
+			}
+			config.SSH.FixedKexBytes = append([]byte{0x00}, b...)
 		}
 	}
 

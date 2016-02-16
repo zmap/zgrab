@@ -61,6 +61,7 @@ type Config struct {
 	CompressionClientToServer NameList
 	CompressionServerToClient NameList
 	Random                    io.Reader
+	KexValue                  []byte
 }
 
 func (c *Config) getKexAlgorithms() NameList {
