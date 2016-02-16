@@ -327,6 +327,9 @@ func (c *Conn) dhGroupExchange() error {
 	order.Sub(p, big.NewInt(1))
 	if len(c.config.KexValue) > 0 {
 		gexInit.E.SetBytes(c.config.KexValue)
+	} else if c.config.NegativeOne {
+		one := big.NewInt(1)
+		gexInit.E.Sub(p, one)
 	} else {
 		x, err := rand.Int(c.config.getRandom(), order)
 		if err != nil {
@@ -349,6 +352,9 @@ func (c *Conn) dhExchange(params *DHParams) error {
 	dhi := new(KeyExchangeDHInit)
 	if len(c.config.KexValue) > 0 {
 		dhi.E.SetBytes(c.config.KexValue)
+	} else if c.config.NegativeOne {
+		one := big.NewInt(1)
+		dhi.E.Sub(params.Prime, one)
 	} else {
 		x, err := rand.Int(c.config.getRandom(), params.order)
 		if err != nil {

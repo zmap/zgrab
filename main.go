@@ -123,6 +123,7 @@ func init() {
 	flag.StringVar(&config.SSH.KexAlgorithms, "ssh-kex-algorithms", "", "Set SSH Key Exchange Algorithms")
 	flag.StringVar(&config.SSH.HostKeyAlgorithms, "ssh-host-key-algorithms", "", "Set SSH Host Key Algorithms")
 	flag.StringVar(&config.SSH.FixedKexValue, "ssh-kex-value", "", "Set SSH DH kex value in hexadecimal")
+	flag.BoolVar(&config.SSH.NegativeOne, "ssh-negative-one", false, "Set SSH DH kex value to -1 in the selected group")
 	flag.BoolVar(&config.Telnet, "telnet", false, "Read telnet banners")
 	flag.IntVar(&config.TelnetMaxSize, "telnet-max-size", 65536, "Max bytes to read for telnet banner")
 	flag.Parse()
