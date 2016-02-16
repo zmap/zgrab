@@ -17,7 +17,6 @@ package ssh
 import (
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"math/big"
 	"strings"
 )
@@ -29,7 +28,7 @@ type mpint struct {
 func (mp *mpint) Marshal() ([]byte, error) {
 	b := mp.Bytes()
 	if len(b) == 0 {
-		return nil, errors.New("Cannot encode empty mpint")
+		b = make([]byte, 1)
 	}
 	if b[0] < 0x80 {
 		return b, nil
