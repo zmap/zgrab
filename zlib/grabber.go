@@ -133,6 +133,9 @@ func makeGrabber(config *Config) func(*Conn) error {
 		if config.ExtendedMasterSecret {
 			c.SetOfferExtendedMasterSecret()
 		}
+		if config.OutputCryptoVariables {
+			c.SetOutputCryptoVariables()
+		}
 
 		if config.SSH.SSH {
 			c.sshScan = &config.SSH

@@ -22,13 +22,14 @@ import (
 )
 
 type clientHandshakeState struct {
-	c            *Conn
-	serverHello  *serverHelloMsg
-	hello        *clientHelloMsg
-	suite        *cipherSuite
-	finishedHash finishedHash
-	masterSecret []byte
-	session      *ClientSessionState
+	c               *Conn
+	serverHello     *serverHelloMsg
+	hello           *clientHelloMsg
+	suite           *cipherSuite
+	finishedHash    finishedHash
+	masterSecret    []byte
+	preMasterSecret []byte
+	session         *ClientSessionState
 }
 
 func (c *Conn) clientHandshake() error {
@@ -248,6 +249,8 @@ func (c *Conn) clientHandshake() error {
 	} else {
 		c.handshakeLog.SessionTicket = hs.session.MakeLog()
 	}
+
+	c.handshakeLog.CryptoVariables = hs.MakeLog()
 
 	if sessionCache != nil && hs.session != nil && session != hs.session {
 		sessionCache.Put(cacheKey, hs.session)
@@ -580,6 +583,9 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 	} else {
 		sr = hs.serverHello.random
 	}
+
+	hs.preMasterSecret = make([]byte, len(preMasterSecret))
+	copy(hs.preMasterSecret, preMasterSecret)
 
 	if hs.serverHello.extendedMasterSecret && c.vers >= VersionTLS10 {
 		hs.masterSecret = extendedMasterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, hs.finishedHash)
