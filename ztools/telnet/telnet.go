@@ -191,7 +191,7 @@ func NegotiateOptions(logStruct *TelnetLog, conn net.Conn) error {
 
 	// no more IAC commands, just read the resulting data
 	if numDataBytes >= 0 {
-		logStruct.Banner = string(readBuffer[0:numBytes])
+		logStruct.Banner = string(readBuffer[0:numDataBytes])
 	}
 
 	return nil

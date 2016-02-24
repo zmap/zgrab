@@ -29,16 +29,17 @@ type ClientHello struct {
 }
 
 type ServerHello struct {
-	Version             TLSVersion  `json:"version"`
-	Random              []byte      `json:"random"`
-	SessionID           []byte      `json:"session_id"`
-	CipherSuite         CipherSuite `json:"cipher_suite"`
-	CompressionMethod   uint8       `json:"compression_method"`
-	OcspStapling        bool        `json:"ocsp_stapling"`
-	TicketSupported     bool        `json:"ticket"`
-	SecureRenegotiation bool        `json:"secure_renegotiation"`
-	HeartbeatSupported  bool        `json:"heartbeat"`
-	ExtendedRandom      []byte      `json:"extended_random,omitempty"`
+	Version              TLSVersion  `json:"version"`
+	Random               []byte      `json:"random"`
+	SessionID            []byte      `json:"session_id"`
+	CipherSuite          CipherSuite `json:"cipher_suite"`
+	CompressionMethod    uint8       `json:"compression_method"`
+	OcspStapling         bool        `json:"ocsp_stapling"`
+	TicketSupported      bool        `json:"ticket"`
+	SecureRenegotiation  bool        `json:"secure_renegotiation"`
+	HeartbeatSupported   bool        `json:"heartbeat"`
+	ExtendedRandom       []byte      `json:"extended_random,omitempty"`
+	ExtendedMasterSecret bool        `json:"extended_master_secret"`
 }
 
 // SimpleCertificate holds a *x509.Certificate and a []byte for the certificate
@@ -70,6 +71,14 @@ type Finished struct {
 	VerifyData []byte `json:"verify_data"`
 }
 
+// SessionTicket represents the new session ticket sent by the server to the
+// client
+type SessionTicket struct {
+	Value        []uint8 `json:"value,omitempty"`
+	Length       int     `json:"length,omitempty"`
+	LifetimeHint uint32  `json:"lifetime_hint,omitempty"`
+}
+
 // ServerHandshake stores all of the messages sent by the server during a standard TLS Handshake.
 // It implements zgrab.EventData interface
 type ServerHandshake struct {
@@ -78,6 +87,7 @@ type ServerHandshake struct {
 	ServerCertificates *Certificates      `json:"server_certificates,omitempty"`
 	ServerKeyExchange  *ServerKeyExchange `json:"server_key_exchange,omitempty"`
 	ServerFinished     *Finished          `json:"server_finished,omitempty"`
+	SessionTicket      *SessionTicket     `json:"session_ticket,omitempty"`
 }
 
 // MarshalJSON implements the json.Marshler interface
@@ -177,6 +187,7 @@ func (m *serverHelloMsg) MakeLog() *ServerHello {
 		sh.ExtendedRandom = make([]byte, len(m.extendedRandom))
 		copy(sh.ExtendedRandom, m.extendedRandom)
 	}
+	sh.ExtendedMasterSecret = m.extendedMasterSecret
 	return sh
 }
 
@@ -259,4 +270,13 @@ func (m *finishedMsg) MakeLog() *Finished {
 	sf.VerifyData = make([]byte, len(m.verifyData))
 	copy(sf.VerifyData, m.verifyData)
 	return sf
+}
+
+func (m *ClientSessionState) MakeLog() *SessionTicket {
+	st := new(SessionTicket)
+	st.Length = len(m.sessionTicket)
+	st.Value = make([]uint8, st.Length)
+	copy(st.Value, m.sessionTicket)
+	st.LifetimeHint = m.lifetimeHint
+	return st
 }

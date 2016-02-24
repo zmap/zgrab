@@ -163,6 +163,7 @@ Curves:
 	}
 	hs.hello.secureRenegotiation = hs.clientHello.secureRenegotiation
 	hs.hello.compressionMethod = compressionNone
+	hs.hello.extendedMasterSecret = c.vers >= VersionTLS10 && hs.clientHello.extendedMasterSecret && c.config.ExtendedMasterSecret
 	if len(hs.clientHello.serverName) > 0 {
 		c.serverName = hs.clientHello.serverName
 	}
@@ -280,6 +281,7 @@ func (hs *serverHandshakeState) doResumeHandshake() error {
 	}
 
 	hs.masterSecret = hs.sessionState.masterSecret
+	c.extendedMasterSecret = hs.sessionState.extendedMasterSecret
 
 	return nil
 }
@@ -294,6 +296,7 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 
 	hs.hello.ticketSupported = hs.clientHello.ticketSupported && !config.SessionTicketsDisabled
 	hs.hello.cipherSuite = hs.suite.id
+	c.extendedMasterSecret = hs.hello.extendedMasterSecret
 	hs.finishedHash.Write(hs.hello.marshal())
 	c.writeRecord(recordTypeHandshake, hs.hello.marshal())
 
@@ -394,6 +397,18 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 	}
 	hs.finishedHash.Write(ckx.marshal())
 
+	preMasterSecret, err := keyAgreement.processClientKeyExchange(config, hs.cert, ckx)
+	if err != nil {
+		c.sendAlert(alertHandshakeFailure)
+		return err
+	}
+
+	if c.extendedMasterSecret {
+		hs.masterSecret = extendedMasterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, hs.finishedHash)
+	} else {
+		hs.masterSecret = masterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, hs.clientHello.random, hs.hello.random)
+	}
+
 	// If we received a client cert in response to our certificate request message,
 	// the client will send us a certificateVerifyMsg immediately after the
 	// clientKeyExchangeMsg.  This message is a digest of all preceding
@@ -473,13 +488,6 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 
 		hs.writeClientHash(certVerify.marshal())
 	}
-
-	preMasterSecret, err := keyAgreement.processClientKeyExchange(config, hs.cert, ckx)
-	if err != nil {
-		c.sendAlert(alertHandshakeFailure)
-		return err
-	}
-	hs.masterSecret = masterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, hs.clientHello.random, hs.hello.random)
 
 	return nil
 }

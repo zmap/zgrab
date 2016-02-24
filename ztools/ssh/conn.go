@@ -325,16 +325,23 @@ func (c *Conn) dhGroupExchange() error {
 	p := big.NewInt(0).SetBytes(gexParams.Prime.Bytes())
 	order := big.NewInt(0)
 	order.Sub(p, big.NewInt(1))
-	x, err := rand.Int(c.config.getRandom(), order)
-	if err != nil {
-		return err
+	if len(c.config.KexValue) > 0 {
+		gexInit.E.SetBytes(c.config.KexValue)
+	} else if c.config.NegativeOne {
+		one := big.NewInt(1)
+		gexInit.E.Sub(p, one)
+	} else {
+		x, err := rand.Int(c.config.getRandom(), order)
+		if err != nil {
+			return err
+		}
+		gexInit.E.Exp(g, x, p)
 	}
-	gexInit.E.Exp(g, x, p)
-	if err = c.writePacket(gexInit); err != nil {
+	if err := c.writePacket(gexInit); err != nil {
 		return err
 	}
 	gexReply := new(KeyExchangeDHGroupReply)
-	if err = c.readPacket(gexReply); err != nil {
+	if err := c.readPacket(gexReply); err != nil {
 		return err
 	}
 	c.handshakeLog.KexDHGroupReply = gexReply
@@ -342,17 +349,24 @@ func (c *Conn) dhGroupExchange() error {
 }
 
 func (c *Conn) dhExchange(params *DHParams) error {
-	x, err := rand.Int(c.config.getRandom(), params.order)
-	if err != nil {
-		return err
-	}
 	dhi := new(KeyExchangeDHInit)
-	E := big.NewInt(0)
-	E.Exp(params.Generator, x, params.Prime)
-	dhi.E.Set(E)
+	if len(c.config.KexValue) > 0 {
+		dhi.E.SetBytes(c.config.KexValue)
+	} else if c.config.NegativeOne {
+		one := big.NewInt(1)
+		dhi.E.Sub(params.Prime, one)
+	} else {
+		x, err := rand.Int(c.config.getRandom(), params.order)
+		if err != nil {
+			return err
+		}
+		E := big.NewInt(0)
+		E.Exp(params.Generator, x, params.Prime)
+		dhi.E.Set(E)
+	}
 	c.writePacket(dhi)
 	dhReply := new(KeyExchangeDHInitReply)
-	if err = c.readPacket(dhReply); err != nil {
+	if err := c.readPacket(dhReply); err != nil {
 		return err
 	}
 

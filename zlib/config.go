@@ -40,6 +40,9 @@ type SSHScanConfig struct {
 	Client            string
 	KexAlgorithms     string
 	HostKeyAlgorithms string
+	FixedKexValue     string
+	FixedKexBytes     []byte
+	NegativeOne       bool
 }
 
 func (sc *SSHScanConfig) GetClientImplementation() (*ssh.ClientImplementation, bool) {
@@ -84,6 +87,8 @@ func (sc *SSHScanConfig) MakeConfig() *ssh.Config {
 	config := new(ssh.Config)
 	config.KexAlgorithms, _ = sc.MakeKexNameList()
 	config.HostKeyAlgorithms, _ = sc.MakeHostKeyNameList()
+	config.KexValue = sc.FixedKexBytes
+	config.NegativeOne = sc.NegativeOne
 	return config
 }
 
@@ -98,21 +103,23 @@ type Config struct {
 	Encoding string
 
 	// TLS
-	TLS               bool
-	TLSVersion        uint16
-	Heartbleed        bool
-	RootCAPool        *x509.CertPool
-	DHEOnly           bool
-	ExportsOnly       bool
-	ExportsDHOnly     bool
-	FirefoxOnly       bool
-	FirefoxNoDHE      bool
-	ChromeOnly        bool
-	ChromeNoDHE       bool
-	SafariOnly        bool
-	SafariNoDHE       bool
-	NoSNI             bool
-	TLSExtendedRandom bool
+	TLS                  bool
+	TLSVersion           uint16
+	Heartbleed           bool
+	RootCAPool           *x509.CertPool
+	DHEOnly              bool
+	ExportsOnly          bool
+	ExportsDHOnly        bool
+	FirefoxOnly          bool
+	FirefoxNoDHE         bool
+	ChromeOnly           bool
+	ChromeNoDHE          bool
+	SafariOnly           bool
+	SafariNoDHE          bool
+	NoSNI                bool
+	TLSExtendedRandom    bool
+	GatherSessionTicket  bool
+	ExtendedMasterSecret bool
 
 	// SSH
 	SSH SSHScanConfig

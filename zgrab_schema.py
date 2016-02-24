@@ -136,6 +136,7 @@ zgrab_tls = SubRecord({
         "secure_renegotiation":Boolean(),
         "heartbeat":Boolean(),
         "extended_random":Binary(),
+        "extended_master_secret": Boolean(),
     }),
     "server_certificates":SubRecord({
         "certificate":zgrab_certificate,
@@ -199,6 +200,11 @@ zgrab_tls = SubRecord({
     }),
     "server_finished":SubRecord({
         "verify_data":Binary()
+    }),
+    "session_ticket":SubRecord({
+        "value":Binary(),
+        "length":Integer(),
+        "lifetime_hint":Long()
     })
 })
 
@@ -236,6 +242,7 @@ zgrab_telnet = Record({
     })
 }, extends=zgrab_base)
 
+register_schema("zgrab-telnet", zgrab_telnet)
 
 zgrab_tls_banner = Record({
     "data":SubRecord({

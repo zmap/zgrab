@@ -124,6 +124,7 @@ const (
 )
 
 var masterSecretLabel = []byte("master secret")
+var extendedMasterSecretLabel = []byte("extended master secret")
 var keyExpansionLabel = []byte("key expansion")
 var clientFinishedLabel = []byte("client finished")
 var serverFinishedLabel = []byte("server finished")
@@ -155,6 +156,15 @@ func masterFromPreMasterSecret(version uint16, suite *cipherSuite, preMasterSecr
 	copy(seed[len(clientRandom):], serverRandom)
 	masterSecret := make([]byte, masterSecretLength)
 	prfForVersion(version, suite)(masterSecret, preMasterSecret, masterSecretLabel, seed[0:])
+	return masterSecret
+}
+
+// extendedMasterFromPreMasterSecret generates the master secret from the
+// pre-master secret when the Triple Handshake fix is in effect. See
+// https://tools.ietf.org/html/draft-ietf-tls-session-hash-01
+func extendedMasterFromPreMasterSecret(version uint16, suite *cipherSuite, preMasterSecret []byte, h finishedHash) []byte {
+	masterSecret := make([]byte, masterSecretLength)
+	prfForVersion(version, suite)(masterSecret, preMasterSecret, extendedMasterSecretLabel, h.Sum())
 	return masterSecret
 }
 

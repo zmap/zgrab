@@ -18,10 +18,11 @@ import (
 // sessionState contains the information that is serialized into a session
 // ticket in order to later resume a connection.
 type sessionState struct {
-	vers         uint16
-	cipherSuite  uint16
-	masterSecret []byte
-	certificates [][]byte
+	vers                 uint16
+	cipherSuite          uint16
+	masterSecret         []byte
+	certificates         [][]byte
+	extendedMasterSecret bool
 }
 
 func (s *sessionState) equal(i interface{}) bool {
@@ -32,7 +33,8 @@ func (s *sessionState) equal(i interface{}) bool {
 
 	if s.vers != s1.vers ||
 		s.cipherSuite != s1.cipherSuite ||
-		!bytes.Equal(s.masterSecret, s1.masterSecret) {
+		!bytes.Equal(s.masterSecret, s1.masterSecret) ||
+		s.extendedMasterSecret != s1.extendedMasterSecret {
 		return false
 	}
 
@@ -78,6 +80,10 @@ func (s *sessionState) marshal() []byte {
 		x[3] = byte(len(cert))
 		copy(x[4:], cert)
 		x = x[4+len(cert):]
+	}
+
+	if s.extendedMasterSecret {
+		x[0] = 1
 	}
 
 	return ret
