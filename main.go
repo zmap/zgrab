@@ -145,8 +145,8 @@ func init() {
 	}
 
 	// Validate HTTP
-	if config.HTTP.Method != "GET" {
-		zlog.Fatalf("Bad HTTP Method: %s (should be GET or just GET, really)", config.HTTP.Method)
+	if config.HTTP.Method != "GET" && config.HTTP.Method != "HEAD" {
+		zlog.Fatalf("Bad HTTP Method: %s. Valid options are: GET, HEAD.", config.HTTP.Method)
 	}
 
 	// Validate FTP
