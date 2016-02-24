@@ -120,6 +120,7 @@ type Config struct {
 	TLSExtendedRandom    bool
 	GatherSessionTicket  bool
 	ExtendedMasterSecret bool
+	TLSVerbose           bool
 
 	// SSH
 	SSH SSHScanConfig

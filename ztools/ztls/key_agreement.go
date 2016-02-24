@@ -459,12 +459,15 @@ func (ka *signedKeyAgreement) verifyParameters(config *Config, clientHello *clie
 // pre-master secret is then calculated using ECDH. The signature may
 // either be ECDSA or RSA.
 type ecdheKeyAgreement struct {
-	auth        keyAgreementAuthentication
-	privateKey  []byte
-	curve       elliptic.Curve
-	x, y        *big.Int
-	verifyError error
-	curveID     uint16
+	auth          keyAgreementAuthentication
+	privateKey    []byte
+	curve         elliptic.Curve
+	x, y          *big.Int
+	verifyError   error
+	curveID       uint16
+	clientPrivKey []byte
+	clientX       *big.Int
+	clientY       *big.Int
 }
 
 func (ka *ecdheKeyAgreement) generateServerKeyExchange(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
@@ -567,6 +570,12 @@ func (ka *ecdheKeyAgreement) generateClientKeyExchange(config *Config, clientHel
 	if err != nil {
 		return nil, nil, err
 	}
+
+	ka.clientPrivKey = make([]byte, len(priv))
+	copy(ka.clientPrivKey, priv)
+	ka.clientX = mx
+	ka.clientY = my
+
 	x, _ := ka.curve.ScalarMult(ka.x, ka.y, priv)
 	preMasterSecret := make([]byte, (ka.curve.Params().BitSize+7)>>3)
 	xBytes := x.Bytes()
@@ -711,6 +720,7 @@ func (ka *dheKeyAgreement) generateClientKeyExchange(config *Config, clientHello
 
 	yOurs := new(big.Int).Exp(ka.g, xOurs, ka.p)
 	ka.yOurs = yOurs
+	ka.xOurs = xOurs
 	ka.yClient = new(big.Int).Set(yOurs)
 	yBytes := yOurs.Bytes()
 	ckx := new(clientKeyExchangeMsg)

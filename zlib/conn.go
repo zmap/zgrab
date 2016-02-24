@@ -79,6 +79,7 @@ type Conn struct {
 	extendedRandom            bool
 	gatherSessionTicket       bool
 	offerExtendedMasterSecret bool
+	tlsVerbose                bool
 
 	domain string
 
@@ -157,6 +158,10 @@ func (c *Conn) SetGatherSessionTicket() {
 
 func (c *Conn) SetOfferExtendedMasterSecret() {
 	c.offerExtendedMasterSecret = true
+}
+
+func (c *Conn) SetTLSVerbose() {
+	c.tlsVerbose = true
 }
 
 // Layer in the regular conn methods
@@ -486,6 +491,14 @@ func (c *Conn) TLSHandshake() error {
 		err = nil
 	}
 	hl := c.tlsConn.GetHandshakeLog()
+
+	if !c.tlsVerbose {
+		hl.KeyMaterial = nil
+		hl.ClientHello = nil
+		hl.ClientFinished = nil
+		hl.ClientKeyExchange = nil
+	}
+
 	c.grabData.TLSHandshake = hl
 	return err
 }
