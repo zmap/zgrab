@@ -4,55 +4,30 @@
 
 package pkix
 
-import "encoding/json"
+import (
+	"encoding/asn1"
+	"encoding/json"
+	"errors"
+	"strconv"
+	"strings"
+)
 
-type jsonName struct {
-	CommonName         []string
-	SerialNumber       []string
-	Country            []string
-	Locality           []string
-	Province           []string
-	StreetAddress      []string
-	Organization       []string
-	OrganizationalUnit []string
-	PostalCode         []string
-	UnknownAttributes  []AttributeTypeAndValue
-}
-
-func (jn *jsonName) MarshalJSON() ([]byte, error) {
-	enc := make(map[string]interface{})
-	if len(jn.CommonName) > 0 {
-		enc["common_name"] = jn.CommonName
+func oidFromString(s string, oid *asn1.ObjectIdentifier) (err error) {
+	parts := strings.Split(s, ".")
+	if len(parts) == 0 {
+		*oid = nil
+		err = errors.New("invalid OID string")
+		return
 	}
-	if len(jn.SerialNumber) > 0 {
-		enc["serial_number"] = jn.SerialNumber
-
+	*oid = make([]int, len(parts))
+	for idx, p := range parts {
+		var n int
+		if n, err = strconv.Atoi(p); err != nil {
+			return
+		}
+		(*oid)[idx] = n
 	}
-	if len(jn.Country) > 0 {
-		enc["country"] = jn.Country
-	}
-	if len(jn.Locality) > 0 {
-		enc["locality"] = jn.Locality
-	}
-	if len(jn.Province) > 0 {
-		enc["province"] = jn.Province
-	}
-	if len(jn.StreetAddress) > 0 {
-		enc["street_address"] = jn.StreetAddress
-	}
-	if len(jn.Organization) > 0 {
-		enc["organization"] = jn.Organization
-	}
-	if len(jn.OrganizationalUnit) > 0 {
-		enc["organizational_unit"] = jn.OrganizationalUnit
-	}
-	if len(jn.PostalCode) > 0 {
-		enc["postal_code"] = jn.PostalCode
-	}
-	for _, a := range jn.UnknownAttributes {
-		enc[a.Type.String()] = a.Value
-	}
-	return json.Marshal(enc)
+	return
 }
 
 type jsonAttributeTypeAndValue struct {
@@ -60,11 +35,26 @@ type jsonAttributeTypeAndValue struct {
 	Value interface{} `json:"value"`
 }
 
+// MarshalJSON implements the json.Marshaler interface
 func (a *AttributeTypeAndValue) MarshalJSON() ([]byte, error) {
-	var enc jsonAttributeTypeAndValue
-	enc.Type = a.Type.String()
-	enc.Value = a.Value
+	enc := jsonAttributeTypeAndValue{
+		Type:  a.Type.String(),
+		Value: a.Value,
+	}
 	return json.Marshal(&enc)
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (a *AttributeTypeAndValue) UnmarshalJSON(b []byte) error {
+	dec := jsonAttributeTypeAndValue{}
+	if err := json.Unmarshal(b, &dec); err != nil {
+		return err
+	}
+	if err := oidFromString(dec.Type, &a.Type); err != nil {
+		return err
+	}
+	a.Value = dec.Value
+	return nil
 }
 
 type jsonExtension struct {
@@ -73,6 +63,7 @@ type jsonExtension struct {
 	Value    []byte `json:"value"`
 }
 
+// MarshalJSON implements the json.Marshaler interface
 func (e *Extension) MarshalJSON() ([]byte, error) {
 	ext := jsonExtension{
 		Id:       e.Id.String(),
@@ -82,6 +73,35 @@ func (e *Extension) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ext)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (e *Extension) UnmarshalJSON(b []byte) error {
+	dec := jsonExtension{}
+	if err := json.Unmarshal(b, &dec); err != nil {
+		return err
+	}
+	if err := oidFromString(dec.Id, &e.Id); err != nil {
+		return err
+	}
+	e.Critical = dec.Critical
+	e.Value = dec.Value
+	return nil
+}
+
+type jsonName struct {
+	CommonName         []string `json:"common_name,omitempty"`
+	SerialNumber       []string `json:"serial_number,omitempty"`
+	Country            []string `json:"country,omitempty"`
+	Locality           []string `json:"locality,omitempty"`
+	Province           []string `json:"province,omitempty"`
+	StreetAddress      []string `json:"street_address,omitempty"`
+	Organization       []string `json:"organization,omitempty"`
+	OrganizationalUnit []string `json:"organizational_unit,omitempty"`
+	PostalCode         []string `json:"postal_code,omitempty"`
+
+	UnknownAttributes []AttributeTypeAndValue `json:"unknown_attributes,omitempty"`
+}
+
+// MarshalJSON implements the json.Marshaler interface
 func (n *Name) MarshalJSON() ([]byte, error) {
 	var enc jsonName
 	attrs := n.ToRDNSequence()
@@ -112,4 +132,27 @@ func (n *Name) MarshalJSON() ([]byte, error) {
 		}
 	}
 	return json.Marshal(&enc)
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (n *Name) UnmarshalJSON(b []byte) error {
+	dec := jsonName{}
+	if err := json.Unmarshal(b, &dec); err != nil {
+		return err
+	}
+	if len(dec.CommonName) > 0 {
+		n.CommonName = dec.CommonName[0]
+	}
+	if len(dec.SerialNumber) > 0 {
+		n.SerialNumber = dec.SerialNumber[0]
+	}
+	n.Country = dec.Country
+	n.Locality = dec.Locality
+	n.Province = dec.Province
+	n.StreetAddress = dec.StreetAddress
+	n.Organization = dec.Organization
+	n.OrganizationalUnit = dec.OrganizationalUnit
+	n.PostalCode = dec.PostalCode
+	n.ExtraNames = dec.UnknownAttributes
+	return nil
 }
