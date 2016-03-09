@@ -79,7 +79,7 @@ type Conn struct {
 	extendedRandom            bool
 	gatherSessionTicket       bool
 	offerExtendedMasterSecret bool
-	outputCryptoVariables     bool
+	logMasterSecret           bool
 
 	domain string
 
@@ -160,8 +160,8 @@ func (c *Conn) SetOfferExtendedMasterSecret() {
 	c.offerExtendedMasterSecret = true
 }
 
-func (c *Conn) SetOutputCryptoVariables() {
-	c.outputCryptoVariables = true
+func (c *Conn) SetLogMasterSecret() {
+	c.logMasterSecret = true
 }
 
 // Layer in the regular conn methods
@@ -492,7 +492,7 @@ func (c *Conn) TLSHandshake() error {
 	}
 	hl := c.tlsConn.GetHandshakeLog()
 
-	if !c.outputCryptoVariables {
+	if !c.logMasterSecret {
 		hl.CryptoVariables = nil
 	}
 
