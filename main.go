@@ -112,7 +112,7 @@ func init() {
 
 	flag.BoolVar(&config.GatherSessionTicket, "tls-session-ticket", false, "Send support for TLS Session Tickets and output ticket if presented")
 	flag.BoolVar(&config.ExtendedMasterSecret, "tls-extended-master-secret", false, "Offer RFC 7627 Extended Master Secret extension")
-	flag.BoolVar(&config.LogMasterSecret, "log-master-secret", false, "Add premaster and master secrets to JSON output")
+	flag.BoolVar(&config.TLSVerbose, "tls-verbose", false, "Add client_hello and key_material to JSON output")
 
 	flag.StringVar(&rootCAFileName, "ca-file", "", "List of trusted root certificate authorities in PEM format")
 	flag.IntVar(&config.GOMAXPROCS, "gomaxprocs", 3, "Set GOMAXPROCS (default 3)")
@@ -127,6 +127,7 @@ func init() {
 	flag.BoolVar(&config.SSH.NegativeOne, "ssh-negative-one", false, "Set SSH DH kex value to -1 in the selected group")
 	flag.BoolVar(&config.Telnet, "telnet", false, "Read telnet banners")
 	flag.IntVar(&config.TelnetMaxSize, "telnet-max-size", 65536, "Max bytes to read for telnet banner")
+
 	flag.Parse()
 
 	// Validate Go Runtime config

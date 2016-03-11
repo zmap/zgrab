@@ -79,11 +79,19 @@ type SessionTicket struct {
 	LifetimeHint uint32  `json:"lifetime_hint,omitempty"`
 }
 
-// CryptoVariables explicitly represent the cryptographic values negotiated by
+type MasterSecret struct {
+	Value []byte `json:"value,omitempty"`
+}
+
+type PreMasterSecret struct {
+	Value []byte `json:"value,omitempty"`
+}
+
+// KeyMaterial explicitly represent the cryptographic values negotiated by
 // the client and server
-type CryptoVariables struct {
-	MasterSecret    []uint8 `json:"master_secret,omitempty"`
-	PreMasterSecret []uint8 `json:"premaster_secret,omitempty"`
+type KeyMaterial struct {
+	MasterSecret    *MasterSecret    `json:"master_secret,omitempty"`
+	PreMasterSecret *PreMasterSecret `json:"pre_master_secret,omitempty"`
 }
 
 // ServerHandshake stores all of the messages sent by the server during a standard TLS Handshake.
@@ -95,7 +103,7 @@ type ServerHandshake struct {
 	ServerKeyExchange  *ServerKeyExchange `json:"server_key_exchange,omitempty"`
 	ServerFinished     *Finished          `json:"server_finished,omitempty"`
 	SessionTicket      *SessionTicket     `json:"session_ticket,omitempty"`
-	CryptoVariables    *CryptoVariables   `json:"crypto_variables,omitempty"`
+	KeyMaterial        *KeyMaterial       `json:"key_material,omitempty"`
 }
 
 // MarshalJSON implements the json.Marshler interface
@@ -289,11 +297,16 @@ func (m *ClientSessionState) MakeLog() *SessionTicket {
 	return st
 }
 
-func (m *clientHandshakeState) MakeLog() *CryptoVariables {
-	cv := new(CryptoVariables)
-	cv.MasterSecret = make([]byte, len(m.masterSecret))
-	copy(cv.MasterSecret, m.masterSecret)
-	cv.PreMasterSecret = make([]byte, len(m.preMasterSecret))
-	copy(cv.PreMasterSecret, m.preMasterSecret)
-	return cv
+func (m *clientHandshakeState) MakeLog() *KeyMaterial {
+	keymat := new(KeyMaterial)
+	keymat.MasterSecret = new(MasterSecret)
+	keymat.PreMasterSecret = new(PreMasterSecret)
+
+	keymat.MasterSecret.Value = make([]byte, len(m.masterSecret))
+	copy(keymat.MasterSecret.Value, m.masterSecret)
+
+	keymat.PreMasterSecret.Value = make([]byte, len(m.preMasterSecret))
+	copy(keymat.PreMasterSecret.Value, m.preMasterSecret)
+
+	return keymat
 }

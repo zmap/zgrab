@@ -250,7 +250,7 @@ func (c *Conn) clientHandshake() error {
 		c.handshakeLog.SessionTicket = hs.session.MakeLog()
 	}
 
-	c.handshakeLog.CryptoVariables = hs.MakeLog()
+	c.handshakeLog.KeyMaterial = hs.MakeLog()
 
 	if sessionCache != nil && hs.session != nil && session != hs.session {
 		sessionCache.Put(cacheKey, hs.session)

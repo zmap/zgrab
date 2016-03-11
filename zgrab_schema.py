@@ -206,9 +206,13 @@ zgrab_tls = SubRecord({
         "length":Integer(),
         "lifetime_hint":Long()
     }),
-    "crypto_variables":SubRecord({
-            "premaster_secret":Binary(),
-            "master_secret":Binary(),
+    "key_material":SubRecord({
+        "pre_master_secret":SubRecord({
+            "value":Binary()
+        }),
+        "master_secret":SubRecord({
+            "value":Binary()
+        }),
     }),
 })
 
