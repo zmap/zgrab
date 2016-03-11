@@ -208,10 +208,59 @@ zgrab_tls = SubRecord({
     }),
     "key_material":SubRecord({
         "pre_master_secret":SubRecord({
-            "value":Binary()
+            "value":Binary(),
+            "length":Integer()
         }),
         "master_secret":SubRecord({
-            "value":Binary()
+            "value":Binary(),
+            "length":Integer()
+        }),
+    }),
+    "client_finished":SubRecord({
+        "verify_data":Binary()
+    }),
+    "client_key_exchange":SubRecord({
+        "dh_params":SubRecord({
+            "prime":SubRecord({
+                "value":Binary(),
+                "length":Integer()
+            }),
+            "generator":SubRecord({
+                "value":Binary(),
+                "length":Integer()
+            }),
+            "client_public":SubRecord({
+                "value":Binary(),
+                "length":Integer()
+            }),
+            "client_private":SubRecord({
+                "value":Binary(),
+                "length":Integer()
+            }),
+        }),
+        "ecdh_params":SubRecord({
+            "curve_id":SubRecord({
+                "name":String(),
+                "id":Integer()
+            }),
+            "client_public":SubRecord({
+                "x":SubRecord({
+                    "value":Binary(),
+                    "length":Integer()
+                }),
+                "y":SubRecord({
+                    "value":Binary(),
+                    "length":Integer()
+                }),
+            }),
+            "client_private":SubRecord({
+                "value":Binary(),
+                "length":Integer()
+            }),
+        }),
+        "rsa_params":SubRecord({
+            "length":Integer(),
+            "encrypted_pre_master_secret":Binary()
         }),
     }),
 })

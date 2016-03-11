@@ -66,6 +66,14 @@ type ServerKeyExchange struct {
 	SignatureError string             `json:"signature_error,omitempty"`
 }
 
+// ClientKeyExchange represents the raw key data sent by the client in TLS key exchange message
+type ClientKeyExchange struct {
+	Raw        []byte                `json:"-"`
+	RSAParams  *keys.RSAClientParams `json:"rsa_params,omitempty"`
+	DHParams   *keys.DHParams        `json:"dh_params,omitempty"`
+	ECDHParams *keys.ECDHParams      `json:"ecdh_params,omitempty"`
+}
+
 // Finished represents a TLS Finished message
 type Finished struct {
 	VerifyData []byte `json:"verify_data"`
@@ -80,11 +88,13 @@ type SessionTicket struct {
 }
 
 type MasterSecret struct {
-	Value []byte `json:"value,omitempty"`
+	Value  []byte `json:"value,omitempty"`
+	Length int    `json:"length,omitempty"`
 }
 
 type PreMasterSecret struct {
-	Value []byte `json:"value,omitempty"`
+	Value  []byte `json:"value,omitempty"`
+	Length int    `json:"length,omitempty"`
 }
 
 // KeyMaterial explicitly represent the cryptographic values negotiated by
@@ -101,8 +111,10 @@ type ServerHandshake struct {
 	ServerHello        *ServerHello       `json:"server_hello,omitempty"`
 	ServerCertificates *Certificates      `json:"server_certificates,omitempty"`
 	ServerKeyExchange  *ServerKeyExchange `json:"server_key_exchange,omitempty"`
-	ServerFinished     *Finished          `json:"server_finished,omitempty"`
+	ClientKeyExchange  *ClientKeyExchange `json:"client_key_exchange,omitempty"`
+	ClientFinished     *Finished          `json:"client_finished,omitempty"`
 	SessionTicket      *SessionTicket     `json:"session_ticket,omitempty"`
+	ServerFinished     *Finished          `json:"server_finished,omitempty"`
 	KeyMaterial        *KeyMaterial       `json:"key_material,omitempty"`
 }
 
@@ -299,14 +311,39 @@ func (m *ClientSessionState) MakeLog() *SessionTicket {
 
 func (m *clientHandshakeState) MakeLog() *KeyMaterial {
 	keymat := new(KeyMaterial)
-	keymat.MasterSecret = new(MasterSecret)
-	keymat.PreMasterSecret = new(PreMasterSecret)
 
+	keymat.MasterSecret = new(MasterSecret)
+	keymat.MasterSecret.Length = len(m.masterSecret)
 	keymat.MasterSecret.Value = make([]byte, len(m.masterSecret))
 	copy(keymat.MasterSecret.Value, m.masterSecret)
 
+	keymat.PreMasterSecret = new(PreMasterSecret)
+	keymat.PreMasterSecret.Length = len(m.preMasterSecret)
 	keymat.PreMasterSecret.Value = make([]byte, len(m.preMasterSecret))
 	copy(keymat.PreMasterSecret.Value, m.preMasterSecret)
 
 	return keymat
+}
+
+func (m *clientKeyExchangeMsg) MakeLog(ka keyAgreement) *ClientKeyExchange {
+	ckx := new(ClientKeyExchange)
+	ckx.Raw = make([]byte, len(m.raw))
+	copy(ckx.Raw, m.raw)
+
+	switch ka := ka.(type) {
+	case *rsaKeyAgreement:
+		ckx.RSAParams = new(keys.RSAClientParams)
+		ckx.RSAParams.Length = uint16(len(m.ciphertext) - 2) // First 2 bytes are length
+		ckx.RSAParams.EncryptedPMS = make([]byte, len(m.ciphertext)-2)
+		copy(ckx.RSAParams.EncryptedPMS, m.ciphertext[2:])
+		// Premaster-Secret is available in KeyMaterial record
+	case *dheKeyAgreement:
+		ckx.DHParams = ka.ClientDHParams()
+	case *ecdheKeyAgreement:
+		ckx.ECDHParams = ka.ClientECDHParams()
+	default:
+		break
+	}
+
+	return ckx
 }

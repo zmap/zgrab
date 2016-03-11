@@ -64,6 +64,26 @@ func (ka *ecdheKeyAgreement) ECDHParams() *keys.ECDHParams {
 	return out
 }
 
+func (ka *ecdheKeyAgreement) ClientECDHParams() *keys.ECDHParams {
+	out := new(keys.ECDHParams)
+	out.TLSCurveID = keys.TLSCurveID(ka.curveID)
+	out.ClientPublic = &keys.ECPoint{}
+	if ka.x != nil {
+		out.ClientPublic.X = new(big.Int)
+		out.ClientPublic.X.Set(ka.clientX)
+	}
+	if ka.y != nil {
+		out.ClientPublic.Y = new(big.Int)
+		out.ClientPublic.Y.Set(ka.clientY)
+	}
+
+	out.ClientPrivate = new(keys.ECDHPrivateParams)
+	out.ClientPrivate.Length = len(ka.clientPrivKey)
+	out.ClientPrivate.Value = make([]byte, len(ka.clientPrivKey))
+	copy(out.ClientPrivate.Value, ka.clientPrivKey)
+	return out
+}
+
 func (ka *dheKeyAgreement) DHParams() *keys.DHParams {
 	out := new(keys.DHParams)
 	if ka.p != nil {
@@ -74,6 +94,23 @@ func (ka *dheKeyAgreement) DHParams() *keys.DHParams {
 	}
 	if ka.yServer != nil {
 		out.ServerPublic = new(big.Int).Set(ka.yServer)
+	}
+	return out
+}
+
+func (ka *dheKeyAgreement) ClientDHParams() *keys.DHParams {
+	out := new(keys.DHParams)
+	if ka.p != nil {
+		out.Prime = new(big.Int).Set(ka.p)
+	}
+	if ka.g != nil {
+		out.Generator = new(big.Int).Set(ka.g)
+	}
+	if ka.yClient != nil {
+		out.ClientPublic = new(big.Int).Set(ka.yClient)
+	}
+	if ka.xOurs != nil {
+		out.ClientPrivate = new(big.Int).Set(ka.xOurs)
 	}
 	return out
 }
