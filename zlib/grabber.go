@@ -16,6 +16,7 @@ package zlib
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/csv"
 	"errors"
 	"fmt"
@@ -177,6 +178,9 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string) error {
 					return err
 				} else {
 					res.BodyText = str
+					m := sha256.New()
+					m.Write([]byte(str))
+					res.BodySHA256 = m.Sum(nil)
 				}
 				res.Body.Close()
 
@@ -199,6 +203,10 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string) error {
 				return err
 			} else {
 				grabData.HTTP.Response.BodyText = str
+				m := sha256.New()
+				m.Write([]byte(str))
+				grabData.HTTP.Response.BodySHA256 = m.Sum(nil)
+
 			}
 
 			resp.Body.Close()

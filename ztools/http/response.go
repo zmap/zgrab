@@ -27,7 +27,7 @@ var respExcludeHeader = map[string]bool{
 type Response struct {
 	Status     string   `json:"status,omitempty"`      // e.g. "200 OK"
 	StatusCode int      `json:"status_code,omitempty"` // e.g. 200
-	Protocol   Protocol `json:"protocol, omitempty`
+	Protocol   Protocol `json:"protocol, omitempty"`
 
 	// Header maps header keys to values.  If the response had multiple
 	// headers with the same key, they will be concatenated, with comma
@@ -44,8 +44,9 @@ type Response struct {
 	// The http Client and Transport guarantee that Body is always
 	// non-nil, even on responses without a body or responses with
 	// a zero-lengthed body.
-	Body     io.ReadCloser `json:"-"`
-	BodyText string        `json:"body,omitempty"`
+	Body       io.ReadCloser `json:"-"`
+	BodyText   string        `json:"body,omitempty"`
+	BodySHA256 []byte        `json:"body_sha256,omitempty"`
 
 	// ContentLength records the length of the associated content.  The
 	// value -1 indicates that the length is unknown.  Unless RequestMethod
