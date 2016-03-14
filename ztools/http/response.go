@@ -25,7 +25,7 @@ var respExcludeHeader = map[string]bool{
 // Response represents the response from an HTTP request.
 //
 type Response struct {
-	Status     string   `json:"status,omitempty"`      // e.g. "200 OK"
+	Status     string   `json:"status_line,omitempty"` // e.g. "200 OK"
 	StatusCode int      `json:"status_code,omitempty"` // e.g. 200
 	Protocol   Protocol `json:"protocol, omitempty"`
 
