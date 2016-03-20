@@ -19,11 +19,15 @@ var respWriteTests = []respWriteTest{
 	// HTTP/1.0, identity coding; no trailer
 	{
 		Response{
-			StatusCode:    503,
-			ProtoMajor:    1,
-			ProtoMinor:    0,
+			StatusCode: 503,
+
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 			Request:       dummyReq("GET"),
-			Header:        Header{},
+			Headers:       Header{},
 			Body:          ioutil.NopCloser(bytes.NewBufferString("abcdef")),
 			ContentLength: 6,
 		},
@@ -35,11 +39,14 @@ var respWriteTests = []respWriteTest{
 	// Unchunked response without Content-Length.
 	{
 		Response{
-			StatusCode:    200,
-			ProtoMajor:    1,
-			ProtoMinor:    0,
+			StatusCode: 200,
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 			Request:       dummyReq("GET"),
-			Header:        Header{},
+			Headers:       Header{},
 			Body:          ioutil.NopCloser(bytes.NewBufferString("abcdef")),
 			ContentLength: -1,
 		},
@@ -50,11 +57,14 @@ var respWriteTests = []respWriteTest{
 	// HTTP/1.1, chunked coding; empty trailer; close
 	{
 		Response{
-			StatusCode:       200,
-			ProtoMajor:       1,
-			ProtoMinor:       1,
+			StatusCode: 200,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Request:          dummyReq("GET"),
-			Header:           Header{},
+			Headers:          Header{},
 			Body:             ioutil.NopCloser(bytes.NewBufferString("abcdef")),
 			ContentLength:    6,
 			TransferEncoding: []string{"chunked"},
@@ -72,10 +82,13 @@ var respWriteTests = []respWriteTest{
 	{
 		Response{
 			StatusCode: 204,
-			ProtoMajor: 1,
-			ProtoMinor: 1,
-			Request:    dummyReq("GET"),
-			Header: Header{
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
+			Request: dummyReq("GET"),
+			Headers: Header{
 				"Foo": []string{" Bar\nBaz "},
 			},
 			Body:             nil,

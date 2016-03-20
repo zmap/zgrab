@@ -9,7 +9,11 @@
 package util
 
 import (
+	"bytes"
 	"errors"
+	"io"
+	"io/ioutil"
+	"math"
 	"net"
 	"regexp"
 	"strings"
@@ -49,4 +53,44 @@ func TLDMatches(host1 string, host2 string) bool {
 
 func stripPortNumber(host string) string {
 	return strings.Split(host, ":")[0]
+}
+
+/* Reads a io.Reader up to maxReadLen. If maxReadLen < 0, reads until EOF or nil. No-ops if maxReadLen == 0 */
+func ReadString(reader io.Reader, maxReadLen int) (str string, err error) {
+
+	var readBytes []byte
+	var totalBytesRead int = 0
+
+	if maxReadLen < 0 {
+		readBytes, err = ioutil.ReadAll(reader)
+		totalBytesRead = bytes.IndexByte(readBytes, 0)
+	} else {
+		READ_BUFFER_LEN := 8192
+
+		buffer := make([]byte, READ_BUFFER_LEN)
+
+		numBytes := len(buffer)
+		rounds := int(math.Ceil(float64(maxReadLen) / float64(READ_BUFFER_LEN)))
+		count := 0
+		for numBytes != 0 && count < rounds && numBytes == READ_BUFFER_LEN {
+
+			numBytes, err = reader.Read(buffer)
+
+			if err != nil && err != io.EOF {
+				return "", err
+			}
+
+			if count == rounds-1 {
+				appendBytesLen := int(math.Min(float64(numBytes), float64(maxReadLen%READ_BUFFER_LEN)))
+				readBytes = append(readBytes, buffer[0:appendBytesLen]...)
+				totalBytesRead += appendBytesLen
+			} else {
+				readBytes = append(readBytes, buffer[0:numBytes]...)
+				totalBytesRead += numBytes
+			}
+			count += 1
+		}
+	}
+
+	return string(readBytes[:totalBytesRead]), nil
 }

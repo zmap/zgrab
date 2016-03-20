@@ -322,6 +322,7 @@ zgrab_http_headers = SubRecord({
     "pragma":String(),
     "proxy_authenticate":String(),
     "public_key_pins":String(),
+    "referer":String(),
     "refresh":String(),
     "retry_after":String(),
     "server":AnalyzedString(),
@@ -350,32 +351,40 @@ zgrab_http_headers = SubRecord({
     "unknown":ListOf(zgrab_unknown_http_header)
 })
 
-zgrab_http_request = SubRecord({
-    "method":String(),
-    "endpoint":String(),
-    "user_agent":String()
+zgrab_url = SubRecord({
+    "scheme":String(),
+    "host":String(),
+    "path":String()
 })
 
-zgrab_http_response = SubRecord({
-    "version_major":Integer(),
-    "version_minor":Integer(),
-    "status_code":Integer(),
-    "status_line":AnalyzedString(),
-    "body":HTML(),
-    "body_sha256": Binary(),
+zgrab_http_request = SubRecord({
+    "url":zgrab_url,
+    "method":String(),
     "headers":zgrab_http_headers
 })
 
-zgrab_http_request_response = SubRecord({
-    "request":zgrab_http_request,
-    "response":zgrab_http_response
+zgrab_http_protocol = SubRecord({
+    "name":String(),
+    "major":Integer(),
+    "minor":Integer()
+})
+
+zgrab_http_response = SubRecord({
+    "protocol":zgrab_http_protocol,
+    "status_line":AnalyzedString(),
+    "status_code":Integer(),
+    "body":HTML(),
+    "body_sha256": Binary(),
+    "headers":zgrab_http_headers,
+    "content_length":Integer(),
+    "request":zgrab_http_request
 })
 
 zgrab_http = Record({
     "data":SubRecord({
       "http":SubRecord({
         "response":zgrab_http_response,
-        "request_response_chain":ListOf(zgrab_http_request_response)
+        "redirect_response_chain":ListOf(zgrab_http_response)
       })
     })
 }, extends=zgrab_base)

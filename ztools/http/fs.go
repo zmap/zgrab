@@ -144,7 +144,7 @@ func serveContent(w ResponseWriter, r *Request, name string, modtime time.Time, 
 	// TODO(adg): handle multiple ranges
 	sendSize := size
 	if size >= 0 {
-		ranges, err := parseRange(r.Header.Get("Range"), size)
+		ranges, err := parseRange(r.Headers.Get("Range"), size)
 		if err == nil && len(ranges) > 1 {
 			err = errors.New("multiple ranges not supported")
 		}
@@ -189,7 +189,7 @@ func checkLastModified(w ResponseWriter, r *Request, modtime time.Time) bool {
 
 	// The Date-Modified header truncates sub-second precision, so
 	// use mtime < t+1s instead of mtime <= t to check for unmodified.
-	if t, err := time.Parse(TimeFormat, r.Header.Get("If-Modified-Since")); err == nil && modtime.Before(t.Add(1*time.Second)) {
+	if t, err := time.Parse(TimeFormat, r.Headers.Get("If-Modified-Since")); err == nil && modtime.Before(t.Add(1*time.Second)) {
 		w.WriteHeader(StatusNotModified)
 		return true
 	}

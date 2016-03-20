@@ -48,10 +48,12 @@ var reqTests = []reqTest{
 				Host:   "www.techcrunch.com",
 				Path:   "/",
 			},
-			Proto:      "HTTP/1.1",
-			ProtoMajor: 1,
-			ProtoMinor: 1,
-			Header: Header{
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
+			Headers: Header{
 				"Accept":           {"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
 				"Accept-Language":  {"en-us,en;q=0.5"},
 				"Accept-Encoding":  {"gzip,deflate"},
@@ -83,10 +85,12 @@ var reqTests = []reqTest{
 			URL: &url.URL{
 				Path: "/",
 			},
-			Proto:         "HTTP/1.1",
-			ProtoMajor:    1,
-			ProtoMinor:    1,
-			Header:        Header{},
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
+			Headers:       Header{},
 			Close:         false,
 			ContentLength: 0,
 			Host:          "foo.com",
@@ -109,10 +113,12 @@ var reqTests = []reqTest{
 			URL: &url.URL{
 				Path: "//user@host/is/actually/a/path/",
 			},
-			Proto:         "HTTP/1.1",
-			ProtoMajor:    1,
-			ProtoMinor:    1,
-			Header:        Header{},
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
+			Headers:       Header{},
 			Close:         false,
 			ContentLength: 0,
 			Host:          "test",
@@ -160,13 +166,15 @@ var reqTests = []reqTest{
 				Path: "/",
 			},
 			TransferEncoding: []string{"chunked"},
-			Proto:            "HTTP/1.1",
-			ProtoMajor:       1,
-			ProtoMinor:       1,
-			Header:           Header{},
-			ContentLength:    -1,
-			Host:             "foo.com",
-			RequestURI:       "/",
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
+			Headers:       Header{},
+			ContentLength: -1,
+			Host:          "foo.com",
+			RequestURI:    "/",
 		},
 
 		"foobar",
@@ -185,10 +193,12 @@ var reqTests = []reqTest{
 			URL: &url.URL{
 				Host: "www.google.com:443",
 			},
-			Proto:         "HTTP/1.1",
-			ProtoMajor:    1,
-			ProtoMinor:    1,
-			Header:        Header{},
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
+			Headers:       Header{},
 			Close:         false,
 			ContentLength: 0,
 			Host:          "www.google.com:443",
@@ -209,10 +219,12 @@ var reqTests = []reqTest{
 			URL: &url.URL{
 				Host: "127.0.0.1:6060",
 			},
-			Proto:         "HTTP/1.1",
-			ProtoMajor:    1,
-			ProtoMinor:    1,
-			Header:        Header{},
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
+			Headers:       Header{},
 			Close:         false,
 			ContentLength: 0,
 			Host:          "127.0.0.1:6060",
@@ -233,10 +245,12 @@ var reqTests = []reqTest{
 			URL: &url.URL{
 				Path: "/_goRPC_",
 			},
-			Proto:         "HTTP/1.1",
-			ProtoMajor:    1,
-			ProtoMinor:    1,
-			Header:        Header{},
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
+			Headers:       Header{},
 			Close:         false,
 			ContentLength: 0,
 			Host:          "",
@@ -276,8 +290,8 @@ func TestReadRequest(t *testing.T) {
 		if body != tt.Body {
 			t.Errorf("#%d: Body = %q want %q", i, body, tt.Body)
 		}
-		if !reflect.DeepEqual(tt.Trailer, req.Trailer) {
-			t.Errorf("#%d. Trailers differ.\n got: %v\nwant: %v", i, req.Trailer, tt.Trailer)
+		if !reflect.DeepEqual(tt.Trailer, req.Trailers) {
+			t.Errorf("#%d. Trailers differ.\n got: %v\nwant: %v", i, req.Trailers, tt.Trailer)
 		}
 	}
 }

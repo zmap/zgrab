@@ -12,10 +12,10 @@ package http
 import (
 	"bufio"
 	"compress/gzip"
-	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/zmap/zgrab/ztools/ztls"
 	"io"
 	"io/ioutil"
 	"log"
@@ -62,7 +62,7 @@ type Transport struct {
 
 	// TLSClientConfig specifies the TLS configuration to use with
 	// tls.Client. If nil, the default configuration is used.
-	TLSClientConfig *tls.Config
+	TLSClientConfig *ztls.Config
 
 	DisableKeepAlives  bool
 	DisableCompression bool
@@ -127,7 +127,7 @@ func (t *Transport) RoundTrip(req *Request) (resp *Response, err error) {
 	if req.URL == nil {
 		return nil, errors.New("http: nil Request.URL")
 	}
-	if req.Header == nil {
+	if req.Headers == nil {
 		return nil, errors.New("http: nil Request.Header")
 	}
 	if req.URL.Scheme != "http" && req.URL.Scheme != "https" {
@@ -153,8 +153,13 @@ func (t *Transport) RoundTrip(req *Request) (resp *Response, err error) {
 	// pre-CONNECTed to https server.  In any case, we'll be ready
 	// to send it requests.
 	pconn, err := t.getConn(cm)
+
 	if err != nil {
 		return nil, err
+	}
+
+	if cm.targetScheme == "https" {
+		req.TLSHandshake = pconn.conn.(*ztls.Conn).GetHandshakeLog()
 	}
 
 	return pconn.roundTrip(treq)
@@ -337,13 +342,13 @@ func (t *Transport) getConn(cm *connectMethod) (*persistConn, error) {
 		}
 	case cm.targetScheme == "https":
 		connectReq := &Request{
-			Method: "CONNECT",
-			URL:    &url.URL{Opaque: cm.targetAddr},
-			Host:   cm.targetAddr,
-			Header: make(Header),
+			Method:  "CONNECT",
+			URL:     &url.URL{Opaque: cm.targetAddr},
+			Host:    cm.targetAddr,
+			Headers: make(Header),
 		}
 		if pa != "" {
-			connectReq.Header.Set("Proxy-Authorization", pa)
+			connectReq.Headers.Set("Proxy-Authorization", pa)
 		}
 		connectReq.Write(conn)
 
@@ -365,12 +370,13 @@ func (t *Transport) getConn(cm *connectMethod) (*persistConn, error) {
 
 	if cm.targetScheme == "https" {
 		// Initiate TLS and check remote host name against certificate.
-		conn = tls.Client(conn, t.TLSClientConfig)
-		if err = conn.(*tls.Conn).Handshake(); err != nil {
+		conn = ztls.Client(conn, t.TLSClientConfig)
+		if err = conn.(*ztls.Conn).Handshake(); err != nil {
 			return nil, err
 		}
+
 		if t.TLSClientConfig == nil || !t.TLSClientConfig.InsecureSkipVerify {
-			if err = conn.(*tls.Conn).VerifyHostname(cm.tlsHost()); err != nil {
+			if err = conn.(*ztls.Conn).VerifyHostname(cm.tlsHost()); err != nil {
 				return nil, err
 			}
 		}
@@ -546,9 +552,9 @@ func (pc *persistConn) readLoop() {
 			pc.close()
 		} else {
 			hasBody := rc.req.Method != "HEAD" && resp.ContentLength != 0
-			if rc.addedGzip && hasBody && resp.Header.Get("Content-Encoding") == "gzip" {
-				resp.Header.Del("Content-Encoding")
-				resp.Header.Del("Content-Length")
+			if rc.addedGzip && hasBody && resp.Headers.Get("Content-Encoding") == "gzip" {
+				resp.Headers.Del("Content-Encoding")
+				resp.Headers.Del("Content-Length")
 				resp.ContentLength = -1
 				gzReader, zerr := gzip.NewReader(resp.Body)
 				if zerr != nil {
@@ -628,7 +634,7 @@ func (pc *persistConn) roundTrip(req *transportRequest) (resp *Response, err err
 	// uncompress the gzip stream if we were the layer that
 	// requested it.
 	requestedGzip := false
-	if !pc.t.DisableCompression && req.Header.Get("Accept-Encoding") == "" {
+	if !pc.t.DisableCompression && req.Headers.Get("Accept-Encoding") == "" {
 		// Request gzip only, not deflate. Deflate is ambiguous and
 		// not as universally supported anyway.
 		// See: http://www.gzip.org/zlib/zlib_faq.html#faq38

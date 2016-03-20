@@ -5,6 +5,7 @@
 package http
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/textproto"
@@ -76,3 +77,13 @@ func (h Header) WriteSubset(w io.Writer, exclude map[string]bool) error {
 // the rest are converted to lowercase.  For example, the
 // canonical key for "accept-encoding" is "Accept-Encoding".
 func CanonicalHeaderKey(s string) string { return textproto.CanonicalMIMEHeaderKey(s) }
+
+// Custom JSON Marshaller to comply with snake_case header names
+func (h Header) MarshalJSON() ([]byte, error) {
+	headerMap := make(map[string]interface{})
+	for k, v := range h {
+		headerMap[strings.Replace(strings.ToLower(k), "-", "_", 10)] = v
+	}
+
+	return json.Marshal(headerMap)
+}
