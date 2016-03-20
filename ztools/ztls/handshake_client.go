@@ -22,13 +22,14 @@ import (
 )
 
 type clientHandshakeState struct {
-	c            *Conn
-	serverHello  *serverHelloMsg
-	hello        *clientHelloMsg
-	suite        *cipherSuite
-	finishedHash finishedHash
-	masterSecret []byte
-	session      *ClientSessionState
+	c               *Conn
+	serverHello     *serverHelloMsg
+	hello           *clientHelloMsg
+	suite           *cipherSuite
+	finishedHash    finishedHash
+	masterSecret    []byte
+	preMasterSecret []byte
+	session         *ClientSessionState
 }
 
 func (c *Conn) clientHandshake() error {
@@ -248,6 +249,8 @@ func (c *Conn) clientHandshake() error {
 	} else {
 		c.handshakeLog.SessionTicket = hs.session.MakeLog()
 	}
+
+	c.handshakeLog.KeyMaterial = hs.MakeLog()
 
 	if sessionCache != nil && hs.session != nil && session != hs.session {
 		sessionCache.Put(cacheKey, hs.session)
@@ -503,6 +506,9 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		c.sendAlert(alertInternalError)
 		return err
 	}
+
+	c.handshakeLog.ClientKeyExchange = ckx.MakeLog(keyAgreement)
+
 	if ckx != nil {
 		hs.finishedHash.Write(ckx.marshal())
 		c.writeRecord(recordTypeHandshake, ckx.marshal())
@@ -580,6 +586,9 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 	} else {
 		sr = hs.serverHello.random
 	}
+
+	hs.preMasterSecret = make([]byte, len(preMasterSecret))
+	copy(hs.preMasterSecret, preMasterSecret)
 
 	if hs.serverHello.extendedMasterSecret && c.vers >= VersionTLS10 {
 		hs.masterSecret = extendedMasterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, hs.finishedHash)
@@ -718,6 +727,9 @@ func (hs *clientHandshakeState) sendFinished() error {
 	finished := new(finishedMsg)
 	finished.verifyData = hs.finishedHash.clientSum(hs.masterSecret)
 	hs.finishedHash.Write(finished.marshal())
+
+	c.handshakeLog.ClientFinished = finished.MakeLog()
+
 	c.writeRecord(recordTypeHandshake, finished.marshal())
 	return nil
 }
