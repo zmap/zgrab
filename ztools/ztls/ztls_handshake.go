@@ -5,6 +5,7 @@
 package ztls
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -29,17 +30,131 @@ type ClientHello struct {
 }
 
 type ServerHello struct {
-	Version              TLSVersion  `json:"version"`
-	Random               []byte      `json:"random"`
-	SessionID            []byte      `json:"session_id"`
-	CipherSuite          CipherSuite `json:"cipher_suite"`
-	CompressionMethod    uint8       `json:"compression_method"`
-	OcspStapling         bool        `json:"ocsp_stapling"`
-	TicketSupported      bool        `json:"ticket"`
-	SecureRenegotiation  bool        `json:"secure_renegotiation"`
-	HeartbeatSupported   bool        `json:"heartbeat"`
-	ExtendedRandom       []byte      `json:"extended_random,omitempty"`
-	ExtendedMasterSecret bool        `json:"extended_master_secret"`
+	Version                     TLSVersion
+	Random                      []byte
+	SessionID                   []byte
+	CipherSuite                 CipherSuite
+	CompressionMethod           uint8
+	OcspStapling                bool
+	TicketOffered               bool
+	TicketSupported             bool
+	SecureRenegotiation         bool
+	HeartbeatSupported          bool
+	ExtendedRandom              []byte
+	ExtendedMasterSecretOffered bool
+	ExtendedMasterSecret        bool
+}
+
+type MarshallingServerHello struct {
+	Version             *TLSVersion  `json:"version"`
+	Random              []byte       `json:"random"`
+	SessionID           []byte       `json:"session_id"`
+	CipherSuite         *CipherSuite `json:"cipher_suite"`
+	CompressionMethod   uint8        `json:"compression_method"`
+	OcspStapling        bool         `json:"ocsp_stapling"`
+	SecureRenegotiation bool         `json:"secure_renegotiation"`
+	HeartbeatSupported  bool         `json:"heartbeat"`
+	ExtendedRandom      []byte       `json:"extended_random,omitempty"`
+}
+
+// Custom marshal required to omit the "ticket" and "extended_master_secret"
+// boolean fields if the extensions were not offered in the Client Hello
+func (sh *ServerHello) MarshalJSON() ([]byte, error) {
+	var msh MarshallingServerHello
+
+	msh.Version = &sh.Version
+	msh.Random = make([]byte, len(sh.Random))
+	copy(msh.Random, sh.Random)
+	msh.SessionID = make([]byte, len(sh.SessionID))
+	copy(msh.SessionID, sh.SessionID)
+	msh.CipherSuite = &sh.CipherSuite
+	msh.CompressionMethod = sh.CompressionMethod
+	msh.OcspStapling = sh.OcspStapling
+	msh.SecureRenegotiation = sh.SecureRenegotiation
+	msh.HeartbeatSupported = sh.HeartbeatSupported
+	msh.ExtendedRandom = make([]byte, len(sh.ExtendedRandom))
+	copy(msh.ExtendedRandom, sh.ExtendedRandom)
+
+	ret, err := json.Marshal(msh)
+	if err != nil {
+		return nil, errors.New("Couldn't marshal base ServerHello : " + err.Error())
+	}
+
+	if !sh.TicketOffered && !sh.ExtendedMasterSecretOffered {
+		return ret, nil
+	}
+
+	// If Session Ticket or Extended Master Secret sent in Client Hello,
+	// only then is the field added to the JSON output
+	buffer := bytes.NewBuffer(ret)
+	buffer.Truncate(buffer.Len() - 1) // Remove '}'
+
+	if sh.TicketOffered {
+		buffer.WriteString(`,"ticket":`)
+		marshaledTicket, err := json.Marshal(sh.TicketSupported)
+		if err != nil {
+			return nil, errors.New("Couldn't marshal ServerHello.Ticket : " + err.Error())
+		}
+		buffer.Write(marshaledTicket)
+	}
+
+	if sh.ExtendedMasterSecretOffered {
+		buffer.WriteString(`,"extended_master_secret":`)
+		marshaledEms, err := json.Marshal(sh.ExtendedMasterSecret)
+		if err != nil {
+			return nil, errors.New("Couldn't marshal ServerHello.ExtendedMasterSecret : " + err.Error())
+		}
+		buffer.Write(marshaledEms)
+	}
+
+	buffer.WriteString("}")
+	return buffer.Bytes(), nil
+}
+
+// Custom unmarshal required to determine if scan offered session ticket
+// extension and/or extended master secret extension as well as the outcome
+// if it was offered
+func (sh *ServerHello) UnmarshalJSON(data []byte) error {
+	var msh MarshallingServerHello
+	err := json.Unmarshal(data, &msh)
+	if err != nil {
+		return errors.New("Couldn't unmarshal base ServerHello : " + err.Error())
+	}
+
+	sh.Version = *msh.Version
+	sh.Random = make([]byte, len(msh.Random))
+	copy(sh.Random, msh.Random)
+	sh.SessionID = make([]byte, len(msh.SessionID))
+	copy(sh.SessionID, msh.SessionID)
+	sh.CipherSuite = *msh.CipherSuite
+	sh.CompressionMethod = msh.CompressionMethod
+	sh.OcspStapling = msh.OcspStapling
+	sh.SecureRenegotiation = msh.SecureRenegotiation
+	sh.HeartbeatSupported = msh.HeartbeatSupported
+	sh.ExtendedRandom = make([]byte, len(msh.ExtendedRandom))
+	copy(sh.ExtendedRandom, msh.ExtendedRandom)
+
+	// Un-marshal a 2nd time IOT check for Session Ticket and Extended Master Secret
+	var jsonObj map[string]*json.RawMessage
+	err = json.Unmarshal(data, &jsonObj)
+
+	if value, ok := jsonObj["ticket"]; ok {
+		sh.TicketOffered = true
+		err = json.Unmarshal(*value, &sh.TicketSupported)
+		if err != nil {
+			return errors.New("Couldn't unmarshal ServerHello.TicketSupported : " + err.Error())
+		}
+	}
+
+	if value, ok := jsonObj["extended_master_secret"]; ok {
+		sh.ExtendedMasterSecretOffered = true
+		err = json.Unmarshal(*value, &sh.ExtendedMasterSecret)
+		if err != nil {
+			return errors.New("Couldn't unmarshal ServerHello.ExtendedMasterSecret : " + err.Error())
+		}
+	}
+
+	return nil
 }
 
 // SimpleCertificate holds a *x509.Certificate and a []byte for the certificate
@@ -198,7 +313,7 @@ func (m *clientHelloMsg) MakeLog() *ClientHello {
 	return ch
 }
 
-func (m *serverHelloMsg) MakeLog() *ServerHello {
+func (m *serverHelloMsg) MakeLog(config *Config) *ServerHello {
 	sh := new(ServerHello)
 	sh.Version = TLSVersion(m.vers)
 	sh.Random = make([]byte, len(m.random))
@@ -208,14 +323,28 @@ func (m *serverHelloMsg) MakeLog() *ServerHello {
 	sh.CipherSuite = CipherSuite(m.cipherSuite)
 	sh.CompressionMethod = m.compressionMethod
 	sh.OcspStapling = m.ocspStapling
-	sh.TicketSupported = m.ticketSupported
+
+	if config.ForceSessionTicketExt {
+		sh.TicketSupported = m.ticketSupported
+		sh.TicketOffered = true
+	} else {
+		sh.TicketOffered = false
+	}
+
 	sh.SecureRenegotiation = m.secureRenegotiation
 	sh.HeartbeatSupported = m.heartbeatEnabled
 	if len(m.extendedRandom) > 0 {
 		sh.ExtendedRandom = make([]byte, len(m.extendedRandom))
 		copy(sh.ExtendedRandom, m.extendedRandom)
 	}
-	sh.ExtendedMasterSecret = m.extendedMasterSecret
+
+	if config.ExtendedMasterSecret {
+		sh.ExtendedMasterSecret = m.extendedMasterSecret
+		sh.ExtendedMasterSecretOffered = true
+	} else {
+		sh.ExtendedMasterSecretOffered = false
+	}
+
 	return sh
 }
 
