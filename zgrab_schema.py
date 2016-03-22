@@ -382,7 +382,7 @@ zgrab_http_headers = SubRecord({
     "referer":ListOf(String()),
     "refresh":ListOf(String()),
     "retry_after":ListOf(String()),
-    "server":AnalyzedListOf(String()),
+    "server":ListOf(String()),
     "set_cookie":ListOf(String()),
     "status":ListOf(String()),
     "strict_transport_security":ListOf(String()),
@@ -405,7 +405,7 @@ zgrab_http_headers = SubRecord({
     "x_real_ip":ListOf(String()),
     "x_forwarded_for": ListOf(String()),
     "proxy_agent":ListOf(String()),
-    "unknown":ListOf(zgrab_unknown_http_header)),
+    "unknown":ListOf(zgrab_unknown_http_header),
 })
 
 zgrab_url = SubRecord({
