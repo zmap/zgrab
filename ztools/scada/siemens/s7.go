@@ -163,7 +163,8 @@ func makeNegotiatePDUParamBytes() (bytes []byte) {
 	bytes = append(bytes, uint16BytesHolder...) // min # of parallel jobs
 	binary.BigEndian.PutUint16(uint16BytesHolder, 0x01)
 	bytes = append(bytes, uint16BytesHolder...) // max # of parallel jobs
-
+	binary.BigEndian.PutUint16(uint16BytesHolder, 0x01e0)
+	bytes = append(bytes, uint16BytesHolder...) // pdu length
 	return bytes
 }
 
