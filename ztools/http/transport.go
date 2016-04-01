@@ -18,7 +18,6 @@ import (
 	"github.com/zmap/zgrab/ztools/ztls"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/url"
 	"os"
@@ -524,7 +523,7 @@ func (pc *persistConn) readLoop() {
 	var lastbody io.ReadCloser // last response body, if any, read on this connection
 
 	for alive {
-		pb, err := pc.br.Peek(1)
+		_, err := pc.br.Peek(1)
 
 		pc.lk.Lock()
 		if pc.numExpectedResponses == 0 {
