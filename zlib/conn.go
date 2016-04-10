@@ -65,6 +65,7 @@ type Conn struct {
 	caPool *x509.CertPool
 
 	onlyDHE                   bool
+	onlyECDHE                 bool
 	onlyExports               bool
 	onlyExportsDH             bool
 	chromeCiphers             bool
@@ -100,6 +101,10 @@ func (c *Conn) getUnderlyingConn() net.Conn {
 
 func (c *Conn) SetDHEOnly() {
 	c.onlyDHE = true
+}
+
+func (c *Conn) SetECDHEOnly() {
+	c.onlyECDHE = true
 }
 
 func (c *Conn) SetExportsOnly() {
@@ -339,6 +344,9 @@ func (c *Conn) TLSHandshake() error {
 	}
 	if c.onlyDHE {
 		tlsConfig.CipherSuites = ztls.DHECiphers
+	}
+	if c.onlyECDHE {
+		tlsConfig.CipherSuites = ztls.ECDHECiphers
 	}
 	if c.onlyExports {
 		tlsConfig.CipherSuites = ztls.RSA512ExportCiphers
