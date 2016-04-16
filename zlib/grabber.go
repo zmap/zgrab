@@ -18,6 +18,8 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/csv"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/zmap/zgrab/ztools/ftp"
@@ -438,6 +440,16 @@ func makeGrabber(config *Config) func(*Conn) error {
 	}
 }
 
+func encodeBanner(config *Config, grabData *GrabData) {
+       buf := []byte(grabData.Banner)
+       switch config.Encoding {
+       case "base64":
+               grabData.Banner = base64.StdEncoding.EncodeToString(buf)
+       case "hex":
+               grabData.Banner = hex.EncodeToString(buf)
+       }
+}
+
 func GrabBanner(config *Config, target *GrabTarget) *Grab {
 
 	if len(config.HTTP.Endpoint) == 0 {
@@ -464,6 +476,7 @@ func GrabBanner(config *Config, target *GrabTarget) *Grab {
 			}
 		}
 		err := grabber(conn)
+		encodeBanner(config, &conn.grabData)
 		return &Grab{
 			IP:             target.Addr,
 			Domain:         target.Domain,
@@ -481,7 +494,7 @@ func GrabBanner(config *Config, target *GrabTarget) *Grab {
 		t := time.Now()
 
 		err := httpGrabber(rhost)
-
+		encodeBanner(config, &grabData)
 		return &Grab{
 			IP:     target.Addr,
 			Domain: target.Domain,
