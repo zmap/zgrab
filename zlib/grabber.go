@@ -167,7 +167,7 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string) error {
 			Dial:                makeNetDialer(config),
 			DisableKeepAlives:   false,
 			DisableCompression:  false,
-			MaxIdleConnsPerHost: 1,
+			MaxIdleConnsPerHost: -1,
 			TLSClientConfig:     tlsConfig,
 		}
 
