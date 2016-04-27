@@ -15,6 +15,7 @@
 package zlib
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"encoding/csv"
@@ -64,12 +65,40 @@ func (gtd *grabTargetDecoder) DecodeNext() (interface{}, error) {
 	return target, nil
 }
 
-func NewGrabTargetDecoder(reader io.Reader) processing.Decoder {
-	csvReader := csv.NewReader(reader)
-	d := grabTargetDecoder{
-		reader: csvReader,
+type grabDomainDecoder struct {
+	reader *bufio.Reader
+}
+
+func (gdd *grabDomainDecoder) DecodeNext() (interface{}, error) {
+	record, err := gdd.reader.ReadBytes('\n')
+	if err != nil {
+		return nil, err
 	}
-	return &d
+
+	var target GrabTarget
+	if record == nil {
+		return nil, errors.New("No domains were found")
+	}
+
+	target.Domain = string(record[:len(record)-1])
+	return target, nil
+}
+
+func NewGrabTargetDecoder(reader io.Reader, domainOnly bool) processing.Decoder {
+
+	if domainOnly {
+		domainReader := bufio.NewReader(reader)
+		d := grabDomainDecoder{
+			reader: domainReader,
+		}
+		return &d
+	} else {
+		csvReader := csv.NewReader(reader)
+		d := grabTargetDecoder{
+			reader: csvReader,
+		}
+		return &d
+	}
 }
 
 func makeDialer(c *Config) func(string) (*Conn, error) {
@@ -494,9 +523,13 @@ func GrabBanner(config *Config, target *GrabTarget) *Grab {
 		grabData := GrabData{HTTP: new(HTTP)}
 		httpGrabber := makeHTTPGrabber(config, grabData)
 		port := strconv.FormatUint(uint64(config.Port), 10)
-		addr := target.Addr.String()
-		rhost := net.JoinHostPort(addr, port)
 		t := time.Now()
+		var rhost string
+		if config.LookupDomain {
+			rhost = target.Domain
+		} else {
+			rhost = net.JoinHostPort(target.Addr.String(), port)
+		}
 
 		err := httpGrabber(rhost)
 

@@ -99,6 +99,9 @@ type Config struct {
 	Senders            uint
 	ConnectionsPerHost uint
 
+	// DNS
+	LookupDomain bool
+
 	// Encoding
 	Encoding string
 
