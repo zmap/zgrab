@@ -350,7 +350,7 @@ zschema.registry.register_schema("zgrab-https-heartbleed", zgrab_https_heartblee
 
 zgrab_unknown_http_header = SubRecord({
     "key":String(),
-    "value":String()
+    "value":ListOf(String())
 })
 
 zgrab_http_headers = SubRecord({

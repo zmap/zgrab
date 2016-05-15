@@ -78,12 +78,39 @@ func (h Header) WriteSubset(w io.Writer, exclude map[string]bool) error {
 // canonical key for "accept-encoding" is "Accept-Encoding".
 func CanonicalHeaderKey(s string) string { return textproto.CanonicalMIMEHeaderKey(s) }
 
+func FormatHeaderName(s string) string {
+	return strings.Replace(strings.ToLower(s), "-", "_", 30)
+}
+
+type UnknownHeader struct {
+	Key    string   `json:"key,omitempty"`
+	Values []string `json:"value,omitempty"`
+}
+
+func formatHeaderValues(v []string) {
+	for idx := range v {
+		if len(v[idx]) >= 8192 {
+			v[idx] = v[idx][0:8191]
+		}
+	}
+}
+
 // Custom JSON Marshaller to comply with snake_case header names
 func (h Header) MarshalJSON() ([]byte, error) {
 	headerMap := make(map[string]interface{})
 	for k, v := range h {
-		headerMap[strings.Replace(strings.ToLower(k), "-", "_", 10)] = v
+		// Need to special-case unknown header object, since it's not a true header (aka map[string][]string)
+		if k == "Unknown" && len(v) > 0 {
+			var unknownHeaders []UnknownHeader
+			json.Unmarshal([]byte(v[0]), &unknownHeaders)
+			for idx := range unknownHeaders {
+				formatHeaderValues(unknownHeaders[idx].Values)
+			}
+			headerMap[FormatHeaderName(k)] = unknownHeaders
+		} else {
+			formatHeaderValues(v)
+			headerMap[FormatHeaderName(k)] = v
+		}
 	}
-
 	return json.Marshal(headerMap)
 }
