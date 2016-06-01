@@ -1038,6 +1038,11 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				}
 
 				for _, dp := range cdp {
+					// Per RFC 5280, 4.2.1.13, one of distributionPoint or cRLIssuer may be empty.
+					if len(dp.DistributionPoint.FullName.Bytes) == 0 {
+						continue
+					}
+
 					var n asn1.RawValue
 					_, err = asn1.Unmarshal(dp.DistributionPoint.FullName.Bytes, &n)
 					if err != nil {
