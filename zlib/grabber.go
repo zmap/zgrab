@@ -124,6 +124,9 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string) error {
 			if config.DHEOnly {
 				tlsConfig.CipherSuites = ztls.DHECiphers
 			}
+			if config.ECDHEOnly {
+				tlsConfig.CipherSuites = ztls.ECDHECiphers
+			}
 			if config.ExportsOnly {
 				tlsConfig.CipherSuites = ztls.RSA512ExportCiphers
 			}
@@ -236,6 +239,9 @@ func makeGrabber(config *Config) func(*Conn) error {
 		c.SetCAPool(config.RootCAPool)
 		if config.DHEOnly {
 			c.SetDHEOnly()
+		}
+		if config.ECDHEOnly {
+			c.SetECDHEOnly()
 		}
 		if config.ExportsOnly {
 			c.SetExportsOnly()

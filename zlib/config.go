@@ -108,6 +108,7 @@ type Config struct {
 	Heartbleed           bool
 	RootCAPool           *x509.CertPool
 	DHEOnly              bool
+	ECDHEOnly            bool
 	ExportsOnly          bool
 	ExportsDHOnly        bool
 	FirefoxOnly          bool
