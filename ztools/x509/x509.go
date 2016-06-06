@@ -1132,12 +1132,9 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				}
 			}
 		} else if e.Id.Equal(oidExtensionCTPrecertificatePoison) {
-			var value []int8
-			if _, err = asn1.Unmarshal(e.Value, value); err != nil {
-				return nil, err
-			}
-			if value[0] == 5 && value[1] == 0 {
+			if e.Value[0] == 5 && e.Value[1] == 0 {
 				out.IsPrecert = true
+				continue
 			} else {
 				return nil, UnhandledCriticalExtension{}
 			}
