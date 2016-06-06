@@ -14,16 +14,18 @@ import (
 )
 
 var (
-	oidExtKeyUsage            = asn1.ObjectIdentifier{2, 5, 29, 15}
-	oidExtBasicConstraints    = asn1.ObjectIdentifier{2, 5, 29, 19}
-	oidExtSubjectAltName      = asn1.ObjectIdentifier{2, 5, 29, 17}
-	oidExtNameConstraints     = asn1.ObjectIdentifier{2, 5, 29, 30}
-	oidCRLDistributionPoints  = asn1.ObjectIdentifier{2, 5, 29, 31}
-	oidExtAuthKeyId           = asn1.ObjectIdentifier{2, 5, 29, 35}
-	oidExtSubjectKeyId        = asn1.ObjectIdentifier{2, 5, 29, 14}
-	oidExtExtendedKeyUsage    = asn1.ObjectIdentifier{2, 5, 29, 37}
-	oidExtCertificatePolicy   = asn1.ObjectIdentifier{2, 5, 29, 32}
-	oidExtAuthorityInfoAccess = oidExtensionAuthorityInfoAccess
+	oidExtKeyUsage           = asn1.ObjectIdentifier{2, 5, 29, 15}
+	oidExtBasicConstraints   = asn1.ObjectIdentifier{2, 5, 29, 19}
+	oidExtSubjectAltName     = asn1.ObjectIdentifier{2, 5, 29, 17}
+	oidExtNameConstraints    = asn1.ObjectIdentifier{2, 5, 29, 30}
+	oidCRLDistributionPoints = asn1.ObjectIdentifier{2, 5, 29, 31}
+	oidExtAuthKeyId          = asn1.ObjectIdentifier{2, 5, 29, 35}
+	oidExtSubjectKeyId       = asn1.ObjectIdentifier{2, 5, 29, 14}
+	oidExtExtendedKeyUsage   = asn1.ObjectIdentifier{2, 5, 29, 37}
+	oidExtCertificatePolicy  = asn1.ObjectIdentifier{2, 5, 29, 32}
+
+	oidExtAuthorityInfoAccess          = oidExtensionAuthorityInfoAccess
+	oidExtensionCTPrecertificatePoison = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11129, 2, 4, 3}
 )
 
 type encodedUnknownExtensions []encodedUnknownExtension
@@ -39,6 +41,7 @@ type CertificateExtensions struct {
 	ExtendedKeyUsage      ExtendedKeyUsage      `json:"extended_key_usage,omitempty"`
 	CertificatePolicies   CertificatePolicies   `json:"certificate_policies,omitmepty"`
 	AuthorityInfoAccess   *AuthorityInfoAccess  `json:"authority_info_access,omitempty"`
+	IsPrecert             IsPrecert             `json:"is_precert,omitempty"`
 }
 
 type UnknownCertificateExtensions []pkix.Extension
@@ -48,6 +51,8 @@ type encodedUnknownExtension struct {
 	Critical bool   `json:"critical"`
 	Value    []byte `json:"raw,omitempty"`
 }
+
+type IsPrecert bool
 
 type BasicConstraints struct {
 	IsCA       bool `json:"is_ca"`
@@ -130,6 +135,8 @@ func (c *Certificate) jsonifyExtensions() (*CertificateExtensions, UnknownCertif
 			exts.AuthorityInfoAccess.IssuingCertificateURL = c.IssuingCertificateURL
 		} else if e.Id.Equal(oidExtSubjectKeyId) {
 			exts.SubjectKeyID = c.SubjectKeyId
+		} else if e.Id.Equal(oidExtensionCTPrecertificatePoison) {
+			exts.IsPrecert = true
 		} else {
 			// Unknown extension
 			unk = append(unk, e)

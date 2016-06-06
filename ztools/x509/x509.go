@@ -1198,17 +1198,16 @@ func reverseBitsInAByte(in byte) byte {
 }
 
 var (
-	oidExtensionSubjectKeyId           = []int{2, 5, 29, 14}
-	oidExtensionKeyUsage               = []int{2, 5, 29, 15}
-	oidExtensionExtendedKeyUsage       = []int{2, 5, 29, 37}
-	oidExtensionAuthorityKeyId         = []int{2, 5, 29, 35}
-	oidExtensionBasicConstraints       = []int{2, 5, 29, 19}
-	oidExtensionSubjectAltName         = []int{2, 5, 29, 17}
-	oidExtensionCertificatePolicies    = []int{2, 5, 29, 32}
-	oidExtensionNameConstraints        = []int{2, 5, 29, 30}
-	oidExtensionCRLDistributionPoints  = []int{2, 5, 29, 31}
-	oidExtensionAuthorityInfoAccess    = []int{1, 3, 6, 1, 5, 5, 7, 1, 1}
-	oidExtensionCTPrecertificatePoison = []int{1, 3, 6, 1, 4, 1, 11129, 2, 4, 3}
+	oidExtensionSubjectKeyId          = []int{2, 5, 29, 14}
+	oidExtensionKeyUsage              = []int{2, 5, 29, 15}
+	oidExtensionExtendedKeyUsage      = []int{2, 5, 29, 37}
+	oidExtensionAuthorityKeyId        = []int{2, 5, 29, 35}
+	oidExtensionBasicConstraints      = []int{2, 5, 29, 19}
+	oidExtensionSubjectAltName        = []int{2, 5, 29, 17}
+	oidExtensionCertificatePolicies   = []int{2, 5, 29, 32}
+	oidExtensionNameConstraints       = []int{2, 5, 29, 30}
+	oidExtensionCRLDistributionPoints = []int{2, 5, 29, 31}
+	oidExtensionAuthorityInfoAccess   = []int{1, 3, 6, 1, 5, 5, 7, 1, 1}
 )
 
 var (
