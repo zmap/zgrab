@@ -561,6 +561,8 @@ type Certificate struct {
 	FingerprintSHA1   CertificateFingerprint
 	FingerprintSHA256 CertificateFingerprint
 
+	IsPrecert bool
+
 	// Internal
 	validSignature bool
 }
@@ -1129,6 +1131,17 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 					out.IssuingCertificateURL = append(out.IssuingCertificateURL, string(v.Location.Bytes))
 				}
 			}
+		} else if e.Id.Equal(oidExtensionCTPrecertificatePoison) {
+			var value []int8
+			if _, err = asn1.Unmarshal(e.Value, value); err != nil {
+				return nil, err
+			}
+			if value[0] == 5 && value[1] == 0 {
+				out.IsPrecert = true
+			} else {
+				return nil, UnhandledCriticalExtension{}
+			}
+
 		}
 
 		if e.Critical {
@@ -1188,16 +1201,17 @@ func reverseBitsInAByte(in byte) byte {
 }
 
 var (
-	oidExtensionSubjectKeyId          = []int{2, 5, 29, 14}
-	oidExtensionKeyUsage              = []int{2, 5, 29, 15}
-	oidExtensionExtendedKeyUsage      = []int{2, 5, 29, 37}
-	oidExtensionAuthorityKeyId        = []int{2, 5, 29, 35}
-	oidExtensionBasicConstraints      = []int{2, 5, 29, 19}
-	oidExtensionSubjectAltName        = []int{2, 5, 29, 17}
-	oidExtensionCertificatePolicies   = []int{2, 5, 29, 32}
-	oidExtensionNameConstraints       = []int{2, 5, 29, 30}
-	oidExtensionCRLDistributionPoints = []int{2, 5, 29, 31}
-	oidExtensionAuthorityInfoAccess   = []int{1, 3, 6, 1, 5, 5, 7, 1, 1}
+	oidExtensionSubjectKeyId           = []int{2, 5, 29, 14}
+	oidExtensionKeyUsage               = []int{2, 5, 29, 15}
+	oidExtensionExtendedKeyUsage       = []int{2, 5, 29, 37}
+	oidExtensionAuthorityKeyId         = []int{2, 5, 29, 35}
+	oidExtensionBasicConstraints       = []int{2, 5, 29, 19}
+	oidExtensionSubjectAltName         = []int{2, 5, 29, 17}
+	oidExtensionCertificatePolicies    = []int{2, 5, 29, 32}
+	oidExtensionNameConstraints        = []int{2, 5, 29, 30}
+	oidExtensionCRLDistributionPoints  = []int{2, 5, 29, 31}
+	oidExtensionAuthorityInfoAccess    = []int{1, 3, 6, 1, 5, 5, 7, 1, 1}
+	oidExtensionCTPrecertificatePoison = []int{1, 3, 6, 1, 4, 1, 11129, 2, 4, 3}
 )
 
 var (
