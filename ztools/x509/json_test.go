@@ -53,3 +53,12 @@ func (s *JSONSuite) TestEncodeCertificate(c *C) {
 	c.Assert(err, IsNil)
 	fmt.Println(string(b))
 }
+
+func (s *JSONSuite) TestDecodeCertificate(c *C) {
+	b, errMarshal := json.Marshal(s.parsedCert)
+	c.Assert(errMarshal, IsNil)
+	cert := new(Certificate)
+	errUnmarshal := json.Unmarshal(b, cert)
+	c.Assert(errUnmarshal, IsNil)
+	c.Check(cert, DeepEquals, s.parsedCert)
+}

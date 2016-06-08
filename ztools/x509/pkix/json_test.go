@@ -6,82 +6,96 @@ package pkix
 
 import (
 	"encoding/asn1"
-	"encoding/json"
-	"fmt"
+	"reflect"
 	"testing"
-
-	"github.com/zmap/zgrab/ztools/zlog"
-	. "gopkg.in/check.v1"
 )
 
-func TestJSON(t *testing.T) { TestingT(t) }
-
-type JSONSuite struct {
-	name             *Name
-	ext              *Extension
-	unknownAttribute AttributeTypeAndValue
+func TestAttributeTypeAndValueJSON(t *testing.T) {
+	var atvs = []AttributeTypeAndValue{
+		{Type: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: "some string"},
+		{Type: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: 8.0},
+		{Type: asn1.ObjectIdentifier{0, 0, 3, 4, 5, 2018, 0, 1, 0}, Value: "another string"},
+	}
+	for idx, atv := range atvs {
+		b, errMarshal := atv.MarshalJSON()
+		if errMarshal != nil {
+			t.Errorf("unabled to marshal %v (index %d)", atv, idx)
+			continue
+		}
+		dec := AttributeTypeAndValue{}
+		errUnmarshal := dec.UnmarshalJSON(b)
+		if errUnmarshal != nil {
+			t.Errorf("unable to unmarshal %b to %v, (index %d)", b, atv, idx)
+			continue
+		}
+		if !dec.Type.Equal(atv.Type) {
+			t.Errorf("mismatched OID's: got %v, wanted %v", dec.Type, atv.Type)
+			continue
+		}
+		originalValueType := reflect.TypeOf(atv.Value)
+		decodedValueType := reflect.TypeOf(dec.Value)
+		if originalValueType != decodedValueType {
+			t.Errorf("mismatched types for Value: got %v, wanted %v", decodedValueType, originalValueType)
+		}
+		if !reflect.DeepEqual(dec.Value, atv.Value) {
+			t.Errorf("mismatched values: got %v, wanted %v", dec.Value, atv.Value)
+		}
+	}
 }
 
-var _ = Suite(&JSONSuite{})
-
-func (s *JSONSuite) SetUpTest(c *C) {
-	s.name = new(Name)
-	s.name.CommonName = "davidadrian.org"
-	s.name.SerialNumber = "12345678910"
-	s.name.Country = []string{"US"}
-	s.name.Organization = []string{"University of Michigan", "Computer Science Department"}
-	s.name.Locality = []string{"Ann Arbor"}
-	s.name.Province = []string{"MI"}
-
-	s.ext = new(Extension)
-	s.ext.Id = oidCommonName
-	s.ext.Critical = true
-	s.ext.Value = []byte{1, 2, 3, 4, 5, 6, 7, 8}
-
-	s.unknownAttribute.Type = asn1.ObjectIdentifier{1, 2, 3, 4}
-	s.unknownAttribute.Value = "this is an unknown extension"
+func TestExtensionJSON(t *testing.T) {
+	var exts = []Extension{
+		{Id: asn1.ObjectIdentifier{1, 0, 2018, 65888}, Critical: true, Value: []byte{6, 6, 255, 0}},
+		{Id: asn1.ObjectIdentifier{1, 0, 2018, 65888}, Critical: false, Value: []byte{6, 6, 255, 0}},
+	}
+	for idx, e := range exts {
+		b, errMarshal := e.MarshalJSON()
+		if errMarshal != nil {
+			t.Errorf("unable to marshal %v (index %d)", e, idx)
+			continue
+		}
+		var dec Extension
+		errUnmarshal := dec.UnmarshalJSON(b)
+		if errUnmarshal != nil {
+			t.Errorf("unabled to unmarshal %v (index %d, byte %b)", e, idx, b)
+			continue
+		}
+		if !reflect.DeepEqual(dec, e) {
+			t.Errorf("mistmached values: got %v, wanted %v", dec, e)
+		}
+	}
 }
 
-func (s *JSONSuite) TestEncodeDecodeName(c *C) {
-	var encoded []byte
-	var err error
-	s.name.ExtraNames = append(s.name.Names, s.unknownAttribute)
-	encoded, err = json.Marshal(s.name)
-	c.Assert(err, IsNil)
-	zlog.Info(string(encoded))
-}
-
-func (s *JSONSuite) TestEncodeDecodeExtension(c *C) {
-	b, err := json.Marshal(s.ext)
-	c.Assert(err, IsNil)
-	fmt.Println(string(b))
-}
-
-func (s *JSONSuite) TestEncodeDecodeAuxOID(c *C) {
-	var oid AuxOID = []int{1, 2, 1122, 45, 8}
-	b, errEnc := json.Marshal(&oid)
-	c.Assert(errEnc, IsNil)
-	c.Assert(b, Not(IsNil))
-	c.Assert(len(b) > 0, Equals, true)
-	var dec AuxOID
-	errDec := json.Unmarshal(b, &dec)
-	c.Assert(errDec, IsNil)
-	c.Check(dec.Equal(&oid), Equals, true)
-}
-
-func (s *JSONSuite) TestNegativeOIDFailsNicely(c *C) {
-	var b = []byte("\"1.2.-88.5\"")
-	var aux AuxOID
-	errDecNeg := json.Unmarshal(b, &aux)
-	c.Assert(errDecNeg, ErrorMatches, `Invalid OID integer -\d+`)
-}
-
-func (s *JSONSuite) TestInvalidOIDFailsNicely(c *C) {
-	var b = []byte("\"1.aa4\"")
-	var aux AuxOID
-	errDecASCII := json.Unmarshal(b, &aux)
-	c.Assert(errDecASCII, ErrorMatches, `Invalid OID integer aa4`)
-	b = []byte("\"1..3\"")
-	errDecMissing := json.Unmarshal(b, &aux)
-	c.Assert(errDecMissing, ErrorMatches, `Invalid OID integer \d*`)
+func TestNameJSON(t *testing.T) {
+	var names = []Name{
+		{},
+		{
+			CommonName:   "davidadrian.org",
+			SerialNumber: "1543402260525779",
+			Country:      []string{"US"},
+			Organization: []string{"who", "really", "cares"},
+			ExtraNames: []AttributeTypeAndValue{
+				{
+					Type:  asn1.ObjectIdentifier{0, 7, 3, 4},
+					Value: "value",
+				},
+			},
+		},
+	}
+	for idx, n := range names {
+		b, errMarshal := n.MarshalJSON()
+		if errMarshal != nil {
+			t.Errorf("unable to marshal %v (index %d)", n, idx)
+			continue
+		}
+		var dec Name
+		errUnmarshal := dec.UnmarshalJSON(b)
+		if errUnmarshal != nil {
+			t.Errorf("unabled to unmarshal %v (index %d, byte %b)", n, idx, b)
+			continue
+		}
+		if !reflect.DeepEqual(dec, n) {
+			t.Errorf("mistmached values: got %v, wanted %v", dec, n)
+		}
+	}
 }
