@@ -94,6 +94,13 @@ zgrab_parsed_certificate = SubRecord({
             "critical":Boolean(),
             "permitted_names":ListOf(String()),
         }),
+        "scts":ListOf(SubRecord({
+            "version":Integer(),
+            "log_id":Binary(es_index=True),
+            "timestamp":DateTime(),
+            "extensions":Binary(),
+            "signature":Binary()
+        })
     }),
     "unknown_extensions":ListOf(unknown_extension),
     "signature":SubRecord({
