@@ -6,7 +6,6 @@
 package x509
 
 import (
-	"log"
 
 	// all of the hash libraries need to be imported for side-effects,
 	// so that crypto.RegisterHash is called
@@ -1050,7 +1049,6 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 						}
 						var dn pkix.Name
 						dn.FillFromRDNSequence(&rawdn)
-						log.Print(dn)
 						out.PermittedDirectoryNames = append(out.PermittedDirectoryNames, dn)
 					case 7:
 						switch len(subtree.Value.Bytes) {

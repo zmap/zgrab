@@ -505,7 +505,7 @@ func matchHostnames(pattern, host string) bool {
 	}
 
 	for i, patternPart := range patternParts {
-		if i == 0 && patternPart == "*" {
+		if /*i == 0 &&*/ patternPart == "*" {
 			continue
 		}
 		if patternPart != hostParts[i] {
