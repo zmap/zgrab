@@ -27,7 +27,7 @@ import (
 	"net"
 	"strconv"
 	"time"
-	_"fmt"
+	"fmt"
 
 	"github.com/zmap/zgrab/ztools/x509/pkix"
 	"github.com/zmap/zgrab/ztools/zct"
@@ -730,10 +730,13 @@ func (c *Certificate) CheckCRLSignature(crl *pkix.CertificateList) (err error) {
 	return c.CheckSignature(algo, crl.TBSCertList.Raw, crl.SignatureValue.RightAlign())
 }
 
-type UnhandledCriticalExtension struct{}
+type UnhandledCriticalExtension struct{
+	oid asn1.ObjectIdentifier
+	
+}
 
 func (h UnhandledCriticalExtension) Error() string {
-	return "x509: unhandled critical extension"
+	return fmt.Sprintf("x509: unhandled critical extension: %s", h.oid)
 }
 
 type basicConstraints struct {
@@ -1164,9 +1167,9 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				return nil, UnhandledCriticalExtension{}
 			}
 		}
-		if e.Critical {
-			return out, UnhandledCriticalExtension{}
-		}
+		//if e.Critical {
+		//	return out, UnhandledCriticalExtension{e.Id}
+		//}
 	}
 	return out, nil
 }
