@@ -11,6 +11,7 @@ import (
 	"net"
 
 	"github.com/zmap/zgrab/ztools/x509/pkix"
+	"github.com/zmap/zgrab/ztools/zct"
 )
 
 var (
@@ -26,6 +27,7 @@ var (
 
 	oidExtAuthorityInfoAccess          = oidExtensionAuthorityInfoAccess
 	oidExtensionCTPrecertificatePoison = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11129, 2, 4, 3}
+	oidExtSignedCertificateTimestampList = oidExtensionSignedCertificateTimestampList
 )
 
 type encodedUnknownExtensions []encodedUnknownExtension
@@ -42,6 +44,7 @@ type CertificateExtensions struct {
 	CertificatePolicies   CertificatePolicies   `json:"certificate_policies,omitmepty"`
 	AuthorityInfoAccess   *AuthorityInfoAccess  `json:"authority_info_access,omitempty"`
 	IsPrecert             IsPrecert             `json:"ct_poison,omitempty"`
+	SignedCertificateTimestampList []*ct.SignedCertificateTimestamp `json:"signed_certificate_timestamps,omitempty"`
 }
 
 type UnknownCertificateExtensions []pkix.Extension
@@ -135,6 +138,8 @@ func (c *Certificate) jsonifyExtensions() (*CertificateExtensions, UnknownCertif
 			exts.AuthorityInfoAccess.IssuingCertificateURL = c.IssuingCertificateURL
 		} else if e.Id.Equal(oidExtSubjectKeyId) {
 			exts.SubjectKeyID = c.SubjectKeyId
+		} else if e.Id.Equal(oidExtSignedCertificateTimestampList) {
+			exts.SignedCertificateTimestampList = c.SignedCertificateTimestampList
 		} else if e.Id.Equal(oidExtensionCTPrecertificatePoison) {
 			exts.IsPrecert = true
 		} else {

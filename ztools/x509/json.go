@@ -14,7 +14,6 @@ import (
 
 	"github.com/zmap/zgrab/ztools/keys"
 	"github.com/zmap/zgrab/ztools/x509/pkix"
-	"github.com/zmap/zgrab/ztools/zct"
 )
 
 type auxKeyUsage struct {
@@ -249,6 +248,5 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.FingerprintSHA1 = c.FingerprintSHA1
 	jc.FingerprintSHA256 = c.FingerprintSHA256
 
-	jc.SignedCertificateTimestampList = c.SignedCertificateTimestampList
 	return json.Marshal(jc)
 }

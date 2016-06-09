@@ -1137,7 +1137,7 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 					out.IssuingCertificateURL = append(out.IssuingCertificateURL, string(v.Location.Bytes))
 				}
 			}
-		} else if e.Id.Equal(oidExtSignedCertificateTimestampList) {
+		} else if e.Id.Equal(oidExtensionSignedCertificateTimestampList) {
 			// SignedCertificateTimestamp
 			//var scts asn1.RawValue
 			var scts []byte;
@@ -1230,7 +1230,7 @@ var (
 	oidExtensionNameConstraints          = []int{2, 5, 29, 30}
 	oidExtensionCRLDistributionPoints    = []int{2, 5, 29, 31}
 	oidExtensionAuthorityInfoAccess      = []int{1, 3, 6, 1, 5, 5, 7, 1, 1}
-	oidExtSignedCertificateTimestampList = []int{1, 3, 6, 1, 4, 1, 11129, 2, 4, 2}
+	oidExtensionSignedCertificateTimestampList = []int{1, 3, 6, 1, 4, 1, 11129, 2, 4, 2}
 )
 
 var (
