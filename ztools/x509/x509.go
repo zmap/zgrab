@@ -22,12 +22,12 @@ import (
 	"encoding/asn1"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"io"
 	"math/big"
 	"net"
 	"strconv"
 	"time"
-	"fmt"
 
 	"github.com/zmap/zgrab/ztools/x509/pkix"
 	"github.com/zmap/zgrab/ztools/zct"
@@ -152,7 +152,6 @@ type publicKeyInfo struct {
 	Algorithm pkix.AlgorithmIdentifier
 	PublicKey asn1.BitString
 }
-
 
 // RFC 5280,  4.2.1.1
 type authKeyId struct {
@@ -730,13 +729,13 @@ func (c *Certificate) CheckCRLSignature(crl *pkix.CertificateList) (err error) {
 	return c.CheckSignature(algo, crl.TBSCertList.Raw, crl.SignatureValue.RightAlign())
 }
 
-type UnhandledCriticalExtension struct{
-	oid asn1.ObjectIdentifier
-	
+type UnhandledCriticalExtension struct {
+	oid     asn1.ObjectIdentifier
+	message string
 }
 
 func (h UnhandledCriticalExtension) Error() string {
-	return fmt.Sprintf("x509: unhandled critical extension: %s", h.oid)
+	return fmt.Sprintf("x509: unhandled critical extension: %s | %s", h.oid, h.message)
 }
 
 type basicConstraints struct {
@@ -1014,13 +1013,13 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				}
 
 				if len(constraints.Excluded) > 0 && e.Critical {
-					return out, UnhandledCriticalExtension{}
+					return out, UnhandledCriticalExtension{e.Id, "Excluded"}
 				}
 
 				for _, subtree := range constraints.Permitted {
 					if len(subtree.Name) == 0 {
 						if e.Critical {
-							return out, UnhandledCriticalExtension{}
+							return out, UnhandledCriticalExtension{e.Id, "Invalid subtree"}
 						}
 						continue
 					}
@@ -1143,7 +1142,7 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 		} else if e.Id.Equal(oidExtensionSignedCertificateTimestampList) {
 			// SignedCertificateTimestamp
 			//var scts asn1.RawValue
-			var scts []byte;
+			var scts []byte
 			if _, err = asn1.Unmarshal(e.Value, &scts); err != nil {
 				return nil, err
 			}
@@ -1152,7 +1151,7 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 			for len(scts) > 0 {
 				length := int(scts[1]) + (int(scts[0]) << 8)
 				//var sct *ct.SignedCertificateTimestamp
-				sct, err := ct.DeserializeSCT(bytes.NewReader(scts[2:length+2]))
+				sct, err := ct.DeserializeSCT(bytes.NewReader(scts[2 : length+2]))
 				if err != nil {
 					return nil, err
 				}
@@ -1164,7 +1163,7 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				out.IsPrecert = true
 				continue
 			} else {
-				return nil, UnhandledCriticalExtension{}
+				return nil, UnhandledCriticalExtension{e.Id, "Malformed precert poison"}
 			}
 		}
 		//if e.Critical {
@@ -1223,16 +1222,16 @@ func reverseBitsInAByte(in byte) byte {
 }
 
 var (
-	oidExtensionSubjectKeyId             = []int{2, 5, 29, 14}
-	oidExtensionKeyUsage                 = []int{2, 5, 29, 15}
-	oidExtensionExtendedKeyUsage         = []int{2, 5, 29, 37}
-	oidExtensionAuthorityKeyId           = []int{2, 5, 29, 35}
-	oidExtensionBasicConstraints         = []int{2, 5, 29, 19}
-	oidExtensionSubjectAltName           = []int{2, 5, 29, 17}
-	oidExtensionCertificatePolicies      = []int{2, 5, 29, 32}
-	oidExtensionNameConstraints          = []int{2, 5, 29, 30}
-	oidExtensionCRLDistributionPoints    = []int{2, 5, 29, 31}
-	oidExtensionAuthorityInfoAccess      = []int{1, 3, 6, 1, 5, 5, 7, 1, 1}
+	oidExtensionSubjectKeyId                   = []int{2, 5, 29, 14}
+	oidExtensionKeyUsage                       = []int{2, 5, 29, 15}
+	oidExtensionExtendedKeyUsage               = []int{2, 5, 29, 37}
+	oidExtensionAuthorityKeyId                 = []int{2, 5, 29, 35}
+	oidExtensionBasicConstraints               = []int{2, 5, 29, 19}
+	oidExtensionSubjectAltName                 = []int{2, 5, 29, 17}
+	oidExtensionCertificatePolicies            = []int{2, 5, 29, 32}
+	oidExtensionNameConstraints                = []int{2, 5, 29, 30}
+	oidExtensionCRLDistributionPoints          = []int{2, 5, 29, 31}
+	oidExtensionAuthorityInfoAccess            = []int{1, 3, 6, 1, 5, 5, 7, 1, 1}
 	oidExtensionSignedCertificateTimestampList = []int{1, 3, 6, 1, 4, 1, 11129, 2, 4, 2}
 )
 
