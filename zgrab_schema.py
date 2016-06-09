@@ -101,6 +101,7 @@ zgrab_parsed_certificate = SubRecord({
             "extensions":Binary(),
             "signature":Binary()
         })
+        "ct_poison":Boolean()
     }),
     "unknown_extensions":ListOf(unknown_extension),
     "signature":SubRecord({

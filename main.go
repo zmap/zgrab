@@ -99,6 +99,7 @@ func init() {
 	flag.BoolVar(&config.ExportsOnly, "export-ciphers", false, "Send only export ciphers")
 	flag.BoolVar(&config.ExportsDHOnly, "export-dhe-ciphers", false, "Send only export DHE ciphers")
 	flag.BoolVar(&config.DHEOnly, "dhe-ciphers", false, "Send only DHE ciphers (not ECDHE)")
+	flag.BoolVar(&config.ECDHEOnly, "ecdhe-ciphers", false, "Send only ECDHE ciphers (not DHE)")
 
 	flag.BoolVar(&config.ChromeOnly, "chrome-ciphers", false, "Send Chrome Ordered Cipher Suites")
 	flag.BoolVar(&config.ChromeNoDHE, "chrome-no-dhe-ciphers", false, "Send chrome ciphers minus DHE suites")

@@ -194,7 +194,6 @@ type jsonCertificate struct {
 	FingerprintMD5     CertificateFingerprint       `json:"fingerprint_md5"`
 	FingerprintSHA1    CertificateFingerprint       `json:"fingerprint_sha1"`
 	FingerprintSHA256  CertificateFingerprint       `json:"fingerprint_sha256"`
-	SignedCertificateTimestampList []*ct.SignedCertificateTimestamp `json:"scts"`
 }
 
 func (c *Certificate) MarshalJSON() ([]byte, error) {

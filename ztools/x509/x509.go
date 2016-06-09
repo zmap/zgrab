@@ -564,6 +564,8 @@ type Certificate struct {
 	FingerprintSHA1   CertificateFingerprint
 	FingerprintSHA256 CertificateFingerprint
 
+	IsPrecert bool
+
 	// Internal
 	validSignature bool
 
@@ -1044,6 +1046,11 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				}
 
 				for _, dp := range cdp {
+					// Per RFC 5280, 4.2.1.13, one of distributionPoint or cRLIssuer may be empty.
+					if len(dp.DistributionPoint.FullName.Bytes) == 0 {
+						continue
+					}
+
 					var n asn1.RawValue
 					_, err = asn1.Unmarshal(dp.DistributionPoint.FullName.Bytes, &n)
 					if err != nil {
@@ -1149,19 +1156,18 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				scts = scts[2+length:]
 				out.SignedCertificateTimestampList = append(out.SignedCertificateTimestampList, sct)
 			}
-
-			//for _, raw := range scts {
-			//	var v asn1.RawValue
-			//	raw, err = asn1.Unmarshal(raw, &v)
-			//	//fmt.Printf("fuck %i\n", v)
-			//}
+		} else if e.Id.Equal(oidExtensionCTPrecertificatePoison) {
+			if e.Value[0] == 5 && e.Value[1] == 0 {
+				out.IsPrecert = true
+				continue
+			} else {
+				return nil, UnhandledCriticalExtension{}
+			}
 		}
-
 		if e.Critical {
 			return out, UnhandledCriticalExtension{}
 		}
 	}
-
 	return out, nil
 }
 
