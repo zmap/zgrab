@@ -26,6 +26,18 @@ const (
 	// certificate has a name constraint which doesn't include the name
 	// being checked.
 	CANotAuthorizedForThisName
+	// CANotAuthorizedForThisEmail results when an intermediate or root
+	// certificate has a name constraint which doesn't include the email
+	// being checked.
+	CANotAuthorizedForThisEmail
+	// CANotAuthorizedForThisEmail results when an intermediate or root
+	// certificate has a name constraint which doesn't include the IP
+	// being checked.
+	CANotAuthorizedForThisIP
+	// CANotAuthorizedForThisDirectory results when an intermediate or root
+	// certificate has a name constraint which doesn't include the directory
+	// being checked.
+	CANotAuthorizedForThisDirectory
 	// TooManyIntermediates results when a path length constraint is
 	// violated.
 	TooManyIntermediates
@@ -49,6 +61,12 @@ func (e CertificateInvalidError) Error() string {
 		return "x509: certificate has expired or is not yet valid"
 	case CANotAuthorizedForThisName:
 		return "x509: a root or intermediate certificate is not authorized to sign in this domain"
+	case CANotAuthorizedForThisEmail:
+		return "x509: a root or intermediate certificate is not authorized to sign this email address"
+	case CANotAuthorizedForThisIP:
+		return "x509: a root or intermediate certificate is not authorized to sign this IP address"
+	case CANotAuthorizedForThisDirectory:
+		return "x509: a root or intermediate certificate is not authorized to sign in this directory"
 	case TooManyIntermediates:
 		return "x509: too many intermediates for path length constraint"
 	case IncompatibleUsage:
@@ -125,7 +143,10 @@ func (SystemRootsError) Error() string {
 // VerifyOptions contains parameters for Certificate.Verify. It's a structure
 // because other PKIX verification APIs have ended up needing many options.
 type VerifyOptions struct {
-	DNSName       string
+	DNSName      string
+	EmailAddress string
+	IPAddress    net.IP
+
 	Intermediates *CertPool
 	Roots         *CertPool // if nil, the system roots are used
 	CurrentTime   time.Time // if zero, the current time is used
@@ -152,20 +173,162 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
 		return CertificateInvalidError{c, Expired}
 	}
 
-	if len(c.PermittedDNSDomains) > 0 {
-		ok := false
-		for _, domain := range c.PermittedDNSDomains {
-			if opts.DNSName == domain ||
-				(strings.HasSuffix(opts.DNSName, domain) &&
-					len(opts.DNSName) >= 1+len(domain) &&
-					opts.DNSName[len(opts.DNSName)-len(domain)-1] == '.') {
-				ok = true
-				break
+	// The name constraints extension, which MUST be used only in a CA
+	// certificate, indicates a name space within which all subject names in
+	// subsequent certificates in a certification path MUST be located.
+	if certType != leafCertificate {
+		// PermittedDNSDomains
+		if len(opts.DNSName) > 0 && len(c.PermittedDNSDomains) > 0 {
+			ok := false
+			for _, domain := range c.PermittedDNSDomains {
+				if opts.DNSName == domain ||
+					(strings.HasPrefix(domain, ".") && strings.HasSuffix(opts.DNSName, domain)) ||
+					(!strings.HasPrefix(domain, ".") && strings.HasSuffix(opts.DNSName, "."+domain)) {
+
+					ok = true
+					break
+				}
+			}
+
+			if !ok {
+				return CertificateInvalidError{c, CANotAuthorizedForThisName}
 			}
 		}
 
-		if !ok {
-			return CertificateInvalidError{c, CANotAuthorizedForThisName}
+		// ExcludedDNSDomains
+		if len(opts.DNSName) > 0 && len(c.ExcludedDNSDomains) > 0 {
+			ok := false
+			for _, domain := range c.ExcludedDNSDomains {
+				if opts.DNSName == domain ||
+					(strings.HasPrefix(domain, ".") && strings.HasSuffix(opts.DNSName, domain)) ||
+					(!strings.HasPrefix(domain, ".") && strings.HasSuffix(opts.DNSName, "."+domain)) {
+
+					ok = true
+					break
+				}
+			}
+
+			if !ok {
+				return CertificateInvalidError{c, CANotAuthorizedForThisName}
+			}
+		}
+
+		// PermittedEmailDomains
+		if len(opts.EmailAddress) > 0 && len(c.PermittedEmailDomains) > 0 {
+			ok := false
+			for _, email := range c.PermittedEmailDomains {
+				if opts.EmailAddress == email ||
+					(strings.HasPrefix(email, ".") && strings.HasSuffix(opts.EmailAddress, email)) ||
+					(!strings.HasPrefix(email, ".") && strings.HasSuffix(opts.EmailAddress, "@"+email)) {
+
+					ok = true
+					break
+
+				}
+			}
+
+			if !ok {
+				return CertificateInvalidError{c, CANotAuthorizedForThisEmail}
+			}
+		}
+
+		// ExcludedEmailDomains
+		if len(opts.EmailAddress) > 0 && len(c.ExcludedEmailDomains) > 0 {
+			ok := true
+			for _, email := range c.PermittedEmailDomains {
+				if opts.EmailAddress == email ||
+					(strings.HasPrefix(email, ".") && strings.HasSuffix(opts.EmailAddress, email)) ||
+					(!strings.HasPrefix(email, ".") && strings.HasSuffix(opts.EmailAddress, "@"+email)) {
+
+					ok = false
+					break
+				}
+			}
+
+			if !ok {
+				return CertificateInvalidError{c, CANotAuthorizedForThisEmail}
+			}
+		}
+
+		// PermittedIPAddresses
+		if len(opts.IPAddress) > 0 && len(c.PermittedIPAddresses) > 0 {
+			ok := false
+			for _, ip := range c.PermittedIPAddresses {
+				if ip.Contains(opts.IPAddress) {
+					ok = true
+					break
+				}
+			}
+
+			if !ok {
+				return CertificateInvalidError{c, CANotAuthorizedForThisIP}
+			}
+		}
+
+		// ExcludedIPAddresses
+		if len(opts.IPAddress) > 0 && len(c.ExcludedIPAddresses) > 0 {
+			ok := true
+			for _, ip := range c.ExcludedIPAddresses {
+				if ip.Contains(opts.IPAddress) {
+					ok = false
+					break
+				}
+			}
+
+			if !ok {
+				return CertificateInvalidError{c, CANotAuthorizedForThisIP}
+			}
+		}
+
+		// Directory Names need to be checked against the leaf certificate
+		if len(currentChain) > 0 {
+			leaf := currentChain[0]
+
+			// PermittedDirectoryNames
+			if len(leaf.Subject.Names) > 0 && len(c.PermittedDirectoryNames) > 0 {
+				for _, name := range leaf.Subject.Names {
+					for _, dn := range c.PermittedDirectoryNames {
+						ok := true
+						for _, dnName := range dn.Names {
+							if name.Type.Equal(dnName.Type) {
+								ok = false
+								if fmt.Sprintf("%v", name.Value) == fmt.Sprintf("%v", dnName.Value) {
+									ok = true
+									break
+								}
+							}
+						}
+
+						if !ok {
+							return CertificateInvalidError{c, CANotAuthorizedForThisDirectory}
+						}
+
+					}
+				}
+			}
+
+			// ExcludedDirectoryNames
+			if len(leaf.Subject.Names) > 0 && len(c.ExcludedDirectoryNames) > 0 {
+				for _, name := range leaf.Subject.Names {
+					for _, dn := range c.ExcludedDirectoryNames {
+						ok := true
+						for _, dnName := range dn.Names {
+							if name.Type.Equal(dnName.Type) {
+								ok = true
+								if fmt.Sprintf("%v", name.Value) == fmt.Sprintf("%v", dnName.Value) {
+									ok = false
+									break
+								}
+							}
+						}
+
+						if !ok {
+							return CertificateInvalidError{c, CANotAuthorizedForThisDirectory}
+						}
+
+					}
+				}
+			}
 		}
 	}
 
@@ -210,11 +373,13 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
 //
 // WARNING: this doesn't do any revocation checking.
 func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, err error) {
-
 	// Use Windows's own verification and chain building.
 	if opts.Roots == nil && runtime.GOOS == "windows" {
-		panic("ztls does not support windows")
-		//chains, err = c.systemVerify(&opts)
+		return c.systemVerify(&opts)
+	}
+
+	if len(c.UnhandledCriticalExtensions) > 0 {
+		return nil, UnhandledCriticalExtension{nil, ""}
 	}
 
 	if opts.Roots == nil {
@@ -224,21 +389,16 @@ func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, err e
 		}
 	}
 
-	// Check if it's a root
-	if indicies, ok := opts.Roots.bySubjectKeyId[string(c.SubjectKeyId)]; ok {
-		for _, certIdx := range indicies {
-			chain := []*Certificate{opts.Roots.certs[certIdx]}
-			chains = append(chains, chain)
-		}
-		if len(opts.DNSName) > 0 {
-			return nil, HostnameError{c, opts.DNSName}
-		}
-		return chains, nil
-	}
-
 	err = c.isValid(leafCertificate, nil, &opts)
 	if err != nil {
 		return
+	}
+
+	if len(opts.DNSName) > 0 {
+		err = c.VerifyHostname(opts.DNSName)
+		if err != nil {
+			return
+		}
 	}
 
 	candidateChains, err := c.buildChains(make(map[int][][]*Certificate), []*Certificate{c}, &opts)
@@ -252,18 +412,12 @@ func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, err e
 	}
 
 	// If any key usage is acceptable then we're done.
-
-	// dadrian: This gets checked later on in checkChainForKeyUsage. In ztls,
-	// we want to do hostname checking absolutely last, so we'll skip this
-	// step where we quit early and move hostname checking down.
-	/*
-		for _, usage := range keyUsages {
-			if usage == ExtKeyUsageAny {
-				chains = candidateChains
-				break
-			}
+	for _, usage := range keyUsages {
+		if usage == ExtKeyUsageAny {
+			chains = candidateChains
+			return
 		}
-	*/
+	}
 
 	for _, candidate := range candidateChains {
 		if checkChainForKeyUsage(candidate, keyUsages) {
@@ -273,15 +427,6 @@ func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, err e
 
 	if len(chains) == 0 {
 		err = CertificateInvalidError{c, IncompatibleUsage}
-		return
-	}
-
-	if len(opts.DNSName) > 0 {
-		err = c.VerifyHostname(opts.DNSName)
-		if err != nil {
-			chains = nil
-			return
-		}
 	}
 
 	return
@@ -345,6 +490,9 @@ nextIntermediate:
 }
 
 func matchHostnames(pattern, host string) bool {
+	host = strings.TrimSuffix(host, ".")
+	pattern = strings.TrimSuffix(pattern, ".")
+
 	if len(pattern) == 0 || len(host) == 0 {
 		return false
 	}
@@ -357,7 +505,7 @@ func matchHostnames(pattern, host string) bool {
 	}
 
 	for i, patternPart := range patternParts {
-		if patternPart == "*" {
+		if i == 0 && patternPart == "*" {
 			continue
 		}
 		if patternPart != hostParts[i] {

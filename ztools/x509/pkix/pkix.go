@@ -49,13 +49,13 @@ type Extension struct {
 // Name represents an X.509 distinguished name. This only includes the common
 // elements of a DN.  Additional elements in the name are ignored.
 type Name struct {
-	Country, Organization, OrganizationalUnit []string
-	Locality, Province                        []string
-	StreetAddress, PostalCode                 []string
-	SerialNumber, CommonName                  string
+	Country, Organization, OrganizationalUnit  []string `json:"omitempty"`
+	Locality, Province                         []string `json:"omitempty"`
+	StreetAddress, PostalCode, DomainComponent []string `json:"omitempty"`
+	SerialNumber, CommonName                   string   `json:"omitempty"`
 
-	Names      []AttributeTypeAndValue
-	ExtraNames []AttributeTypeAndValue
+	Names      []AttributeTypeAndValue `json:"omitempty"`
+	ExtraNames []AttributeTypeAndValue `json:"omitempty"`
 }
 
 func (n *Name) FillFromRDNSequence(rdns *RDNSequence) {
@@ -92,6 +92,8 @@ func (n *Name) FillFromRDNSequence(rdns *RDNSequence) {
 			case 17:
 				n.PostalCode = append(n.PostalCode, value)
 			}
+		} else if t.Equal(oidDomainComponent) {
+			n.DomainComponent = append(n.DomainComponent, value)
 		}
 	}
 }
@@ -106,6 +108,7 @@ var (
 	oidProvince           = []int{2, 5, 4, 8}
 	oidStreetAddress      = []int{2, 5, 4, 9}
 	oidPostalCode         = []int{2, 5, 4, 17}
+	oidDomainComponent    = []int{0, 9, 2342, 19200300, 100, 1, 25}
 )
 
 // appendRDNs appends a relativeDistinguishedNameSET to the given RDNSequence
@@ -134,6 +137,7 @@ func (n Name) ToRDNSequence() (ret RDNSequence) {
 	ret = appendRDNs(ret, n.Province, oidProvince)
 	ret = appendRDNs(ret, n.StreetAddress, oidStreetAddress)
 	ret = appendRDNs(ret, n.PostalCode, oidPostalCode)
+	ret = appendRDNs(ret, n.DomainComponent, oidDomainComponent)
 	if len(n.CommonName) > 0 {
 		ret = appendRDNs(ret, []string{n.CommonName}, oidCommonName)
 	}

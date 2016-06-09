@@ -25,25 +25,25 @@ var (
 	oidExtExtendedKeyUsage   = asn1.ObjectIdentifier{2, 5, 29, 37}
 	oidExtCertificatePolicy  = asn1.ObjectIdentifier{2, 5, 29, 32}
 
-	oidExtAuthorityInfoAccess          = oidExtensionAuthorityInfoAccess
-	oidExtensionCTPrecertificatePoison = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11129, 2, 4, 3}
+	oidExtAuthorityInfoAccess            = oidExtensionAuthorityInfoAccess
+	oidExtensionCTPrecertificatePoison   = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11129, 2, 4, 3}
 	oidExtSignedCertificateTimestampList = oidExtensionSignedCertificateTimestampList
 )
 
 type encodedUnknownExtensions []encodedUnknownExtension
 
 type CertificateExtensions struct {
-	KeyUsage              KeyUsage              `json:"key_usage,omitempty"`
-	BasicConstraints      *BasicConstraints     `json:"basic_constraints,omitempty"`
-	SubjectAltName        *SubjectAltName       `json:"subject_alt_name,omitempty"`
-	NameConstriants       *NameConstriants      `json:"name_constraints,omitempty"`
-	CRLDistributionPoints CRLDistributionPoints `json:"crl_distribution_points,omitempty"`
-	AuthKeyID             AuthKeyId             `json:"authority_key_id,omitempty"`
-	SubjectKeyID          []byte                `json:"subject_key_id,omitempty"`
-	ExtendedKeyUsage      ExtendedKeyUsage      `json:"extended_key_usage,omitempty"`
-	CertificatePolicies   CertificatePolicies   `json:"certificate_policies,omitmepty"`
-	AuthorityInfoAccess   *AuthorityInfoAccess  `json:"authority_info_access,omitempty"`
-	IsPrecert             IsPrecert             `json:"ct_poison,omitempty"`
+	KeyUsage                       KeyUsage                         `json:"key_usage,omitempty"`
+	BasicConstraints               *BasicConstraints                `json:"basic_constraints,omitempty"`
+	SubjectAltName                 *SubjectAltName                  `json:"subject_alt_name,omitempty"`
+	NameConstraints                *NameConstraints                 `json:"name_constraints,omitempty"`
+	CRLDistributionPoints          CRLDistributionPoints            `json:"crl_distribution_points,omitempty"`
+	AuthKeyID                      AuthKeyId                        `json:"authority_key_id,omitempty"`
+	SubjectKeyID                   []byte                           `json:"subject_key_id,omitempty"`
+	ExtendedKeyUsage               ExtendedKeyUsage                 `json:"extended_key_usage,omitempty"`
+	CertificatePolicies            CertificatePolicies              `json:"certificate_policies,omitmepty"`
+	AuthorityInfoAccess            *AuthorityInfoAccess             `json:"authority_info_access,omitempty"`
+	IsPrecert                      IsPrecert                        `json:"ct_poison,omitempty"`
 	SignedCertificateTimestampList []*ct.SignedCertificateTimestamp `json:"signed_certificate_timestamps,omitempty"`
 }
 
@@ -70,9 +70,18 @@ type SubjectAltName struct {
 
 // TODO: Handle excluded names
 
-type NameConstriants struct {
-	Critical       bool     `json:"critical"`
-	PermittedNames []string `json:"permitted_names,omitempty"`
+type NameConstraints struct {
+	Critical bool `json:"critical"`
+
+	PermittedDNSDomains     []string    `json:"permitted_dns_domains,omitempty"`
+	PermittedEmailDomains   []string    `json:"permitted_email_domains,omitempty"`
+	PermittedIPAddresses    []net.IPNet `json:"permitted_ip_addresses,omitempty"`
+	PermittedDirectoryNames []pkix.Name `json:"permitted_directory_names,omitempty"`
+
+	ExcludedEmailDomains   []string    `json:"excluded_dns_domains,omitempty"`
+	ExcludedDNSDomains     []string    `json:"excluded_email_domains,omitempty"`
+	ExcludedIPAddresses    []net.IPNet `json:"excluded_ip_addresses,omitempty"`
+	ExcludedDirectoryNames []pkix.Name `json:"excluded_directory_names,omitempty"`
 }
 
 type CRLDistributionPoints []string
@@ -121,9 +130,18 @@ func (c *Certificate) jsonifyExtensions() (*CertificateExtensions, UnknownCertif
 			exts.SubjectAltName.EmailAddresses = c.EmailAddresses
 			exts.SubjectAltName.IPAddresses = c.IPAddresses
 		} else if e.Id.Equal(oidExtNameConstraints) {
-			exts.NameConstriants = new(NameConstriants)
-			exts.NameConstriants.Critical = c.PermittedDNSDomainsCritical
-			exts.NameConstriants.PermittedNames = c.PermittedDNSDomains
+			exts.NameConstraints = new(NameConstraints)
+			exts.NameConstraints.Critical = c.PermittedDNSDomainsCritical
+
+			exts.NameConstraints.PermittedDNSDomains = c.PermittedDNSDomains
+			exts.NameConstraints.PermittedEmailDomains = c.PermittedEmailDomains
+			exts.NameConstraints.PermittedIPAddresses = c.PermittedIPAddresses
+			exts.NameConstraints.PermittedDirectoryNames = c.PermittedDirectoryNames
+
+			exts.NameConstraints.ExcludedEmailDomains = c.ExcludedEmailDomains
+			exts.NameConstraints.ExcludedDNSDomains = c.ExcludedDNSDomains
+			exts.NameConstraints.ExcludedIPAddresses = c.ExcludedIPAddresses
+			exts.NameConstraints.ExcludedDirectoryNames = c.ExcludedDirectoryNames
 		} else if e.Id.Equal(oidCRLDistributionPoints) {
 			exts.CRLDistributionPoints = c.CRLDistributionPoints
 		} else if e.Id.Equal(oidExtAuthKeyId) {

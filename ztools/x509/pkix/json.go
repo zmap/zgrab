@@ -16,6 +16,7 @@ type jsonName struct {
 	Organization       []string
 	OrganizationalUnit []string
 	PostalCode         []string
+	DomainComponent    []string //technically depricated, but yolo
 	UnknownAttributes  []AttributeTypeAndValue
 }
 
@@ -48,6 +49,9 @@ func (jn *jsonName) MarshalJSON() ([]byte, error) {
 	}
 	if len(jn.PostalCode) > 0 {
 		enc["postal_code"] = jn.PostalCode
+	}
+	if len(jn.DomainComponent) > 0 {
+		enc["domain_component"] = jn.DomainComponent
 	}
 	for _, a := range jn.UnknownAttributes {
 		enc[a.Type.String()] = a.Value
@@ -106,6 +110,8 @@ func (n *Name) MarshalJSON() ([]byte, error) {
 				enc.OrganizationalUnit = append(enc.OrganizationalUnit, s)
 			} else if a.Type.Equal(oidPostalCode) {
 				enc.PostalCode = append(enc.PostalCode, s)
+			} else if a.Type.Equal(oidDomainComponent) {
+				enc.DomainComponent = append(enc.DomainComponent, s)
 			} else {
 				enc.UnknownAttributes = append(enc.UnknownAttributes, a)
 			}
