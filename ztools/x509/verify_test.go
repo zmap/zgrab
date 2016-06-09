@@ -1,33 +1,34 @@
 // Copyright 2011 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+
 package x509
+
 import (
-    "crypto/x509/pkix"
     "encoding/pem"
     "errors"
-    "net"
     "runtime"
     "strings"
     "testing"
     "time"
+
+    "github.com/zmap/zgrab/ztools/x509/pkix"
 )
-var supportSHA2 = true
+
 type verifyTest struct {
     leaf                 string
     intermediates        []string
     roots                []string
     currentTime          int64
     dnsName              string
-    emailAddress         string
-    ipAddress            net.IP
     systemSkip           bool
     keyUsages            []ExtKeyUsage
     testSystemRootsError bool
-    sha2                 bool
+
     errorCallback  func(*testing.T, int, error) bool
     expectedChains [][]string
 }
+
 var verifyTests = []verifyTest{
     {
         leaf:                 googleLeaf,
@@ -35,6 +36,7 @@ var verifyTests = []verifyTest{
         currentTime:          1395785200,
         dnsName:              "www.google.com",
         testSystemRootsError: true,
+
         // Without any roots specified we should get a system roots
         // error.
         errorCallback: expectSystemRootsError,
@@ -45,6 +47,7 @@ var verifyTests = []verifyTest{
         roots:         []string{geoTrustRoot},
         currentTime:   1395785200,
         dnsName:       "www.google.com",
+
         expectedChains: [][]string{
             {"Google", "Google Internet Authority", "GeoTrust"},
         },
@@ -55,6 +58,7 @@ var verifyTests = []verifyTest{
         roots:         []string{geoTrustRoot},
         currentTime:   1395785200,
         dnsName:       "WwW.GooGLE.coM",
+
         expectedChains: [][]string{
             {"Google", "Google Internet Authority", "GeoTrust"},
         },
@@ -65,6 +69,7 @@ var verifyTests = []verifyTest{
         roots:         []string{geoTrustRoot},
         currentTime:   1395785200,
         dnsName:       "www.example.com",
+
         errorCallback: expectHostnameError,
     },
     {
@@ -73,6 +78,7 @@ var verifyTests = []verifyTest{
         roots:         []string{geoTrustRoot},
         currentTime:   1,
         dnsName:       "www.example.com",
+
         errorCallback: expectExpired,
     },
     {
@@ -80,6 +86,7 @@ var verifyTests = []verifyTest{
         roots:       []string{geoTrustRoot},
         currentTime: 1395785200,
         dnsName:     "www.google.com",
+
         // Skip when using systemVerify, since Windows
         // *will* find the missing intermediate cert.
         systemSkip:    true,
@@ -91,6 +98,7 @@ var verifyTests = []verifyTest{
         roots:         []string{geoTrustRoot},
         currentTime:   1395785200,
         dnsName:       "www.google.com",
+
         expectedChains: [][]string{
             {"Google", "Google Internet Authority", "GeoTrust"},
             // TODO(agl): this is ok, but it would be nice if the
@@ -108,6 +116,7 @@ var verifyTests = []verifyTest{
         intermediates: []string{startComIntermediate},
         roots:         []string{startComRoot},
         currentTime:   1302726541,
+
         expectedChains: [][]string{
             {"dnssec-exp", "StartCom Class 1", "StartCom Certification Authority"},
         },
@@ -117,6 +126,7 @@ var verifyTests = []verifyTest{
         intermediates: []string{startComIntermediate, startComRoot},
         roots:         []string{startComRoot},
         currentTime:   1302726541,
+
         // Skip when using systemVerify, since Windows
         // can only return a single chain to us (for now).
         systemSkip: true,
@@ -131,6 +141,7 @@ var verifyTests = []verifyTest{
         roots:         []string{geoTrustRoot},
         currentTime:   1395785200,
         dnsName:       "www.google.com",
+
         // The specific error message may not occur when using system
         // verification.
         systemSkip:    true,
@@ -141,6 +152,7 @@ var verifyTests = []verifyTest{
         leaf:        smimeLeaf,
         roots:       []string{smimeIntermediate},
         currentTime: 1339436154,
+
         // Key usage not implemented for Windows yet.
         systemSkip:    true,
         errorCallback: expectUsageError,
@@ -150,6 +162,7 @@ var verifyTests = []verifyTest{
         roots:       []string{smimeIntermediate},
         currentTime: 1339436154,
         keyUsages:   []ExtKeyUsage{ExtKeyUsageServerAuth},
+
         // Key usage not implemented for Windows yet.
         systemSkip:    true,
         errorCallback: expectUsageError,
@@ -159,6 +172,7 @@ var verifyTests = []verifyTest{
         roots:       []string{smimeIntermediate},
         currentTime: 1339436154,
         keyUsages:   []ExtKeyUsage{ExtKeyUsageEmailProtection},
+
         // Key usage not implemented for Windows yet.
         systemSkip: true,
         expectedChains: [][]string{
@@ -170,6 +184,7 @@ var verifyTests = []verifyTest{
         intermediates: []string{comodoIntermediate1},
         roots:         []string{comodoRoot},
         currentTime:   1360431182,
+
         // CryptoAPI can find alternative validation paths so we don't
         // perform this test with system validation.
         systemSkip: true,
@@ -185,6 +200,7 @@ var verifyTests = []verifyTest{
         roots:         []string{globalSignRoot},
         currentTime:   1382387896,
         dnsName:       "secure.iddl.vt.edu",
+
         expectedChains: [][]string{
             {
                 "Technology-enhanced Learning and Online Strategies",
@@ -195,170 +211,6 @@ var verifyTests = []verifyTest{
         },
     },
     {
-        // Check that a name constrained intermediate doesn allow a dnsname that
-        // includes a subdomain when it's constraint to subdomains only.
-        leaf:          goNameConstraintsCert1,
-        intermediates: []string{goNameConstraintsIssuer},
-        roots:         []string{goNameConstraintsRoot},
-        currentTime:   1435058029,
-        dnsName:       "www.golang.org",
-        expectedChains: [][]string{
-            {
-                "Gopher Inc.",
-                "Golang ECC Issuing CA",
-                "Golang ECC CA",
-            },
-        },
-    },
-    {
-        // Check that a name constrained intermediate doesn't allow a domain
-        // when it's constraint to subdomains only.
-        leaf:          goNameConstraintsCert1,
-        intermediates: []string{goNameConstraintsIssuer},
-        roots:         []string{goNameConstraintsRoot},
-        currentTime:   1435058029,
-        dnsName:       "golang.org",
-        errorCallback: expectCANotAuthorizedForThisName,
-    },
-    {
-        // Check that a name constrained intermediate does allow a dnsname with
-        // no subdomain when it's constraint to a domain wihtout leading dot.
-        leaf:          goNameConstraintsCert1,
-        intermediates: []string{goNameConstraintsIssuer},
-        roots:         []string{goNameConstraintsRoot},
-        currentTime:   1435058029,
-        dnsName:       "golang.com",
-        expectedChains: [][]string{
-            {
-                "Gopher Inc.",
-                "Golang ECC Issuing CA",
-                "Golang ECC CA",
-            },
-        },
-    },
-    {
-        // Check that a name constrained intermediate does allow a dnsname with
-        // subdomain when it's constraint to a domain wihtout leading dot.
-        leaf:          goNameConstraintsCert1,
-        intermediates: []string{goNameConstraintsIssuer},
-        roots:         []string{goNameConstraintsRoot},
-        currentTime:   1435058029,
-        dnsName:       "www.golang.com",
-        expectedChains: [][]string{
-            {
-                "Gopher Inc.",
-                "Golang ECC Issuing CA",
-                "Golang ECC CA",
-            },
-        },
-    },
-    {
-        // Check that a name constrained intermediate doesn't allow a different
-        // dnsname then it's constraint to.
-        leaf:          goNameConstraintsCert1,
-        intermediates: []string{goNameConstraintsIssuer},
-        roots:         []string{goNameConstraintsRoot},
-        currentTime:   1435058029,
-        dnsName:       "www.example.com",
-        errorCallback: expectCANotAuthorizedForThisName,
-    },
-    {
-        // Check that a name constrained intermediate doesn't allow a different
-        // email domain then it's constraint to. The certificate is contraint to
-        // the email domain golang.com and should not allow subdomains.
-        leaf:          goNameConstraintsCert1,
-        intermediates: []string{goNameConstraintsIssuer},
-        roots:         []string{goNameConstraintsRoot},
-        currentTime:   1435058029,
-        emailAddress:  "mail@golang.com",
-        expectedChains: [][]string{
-            {
-                "Gopher Inc.",
-                "Golang ECC Issuing CA",
-                "Golang ECC CA",
-            },
-        },
-    },
-    {
-        // Check that a name constrained intermediate doesn't allow a different
-        // email domain then it's constraint to. The certificate is contraint to
-        // the email domain golang.com and should not allow subdomains.
-        leaf:          goNameConstraintsCert1,
-        intermediates: []string{goNameConstraintsIssuer},
-        roots:         []string{goNameConstraintsRoot},
-        currentTime:   1435058029,
-        emailAddress:  "mail@subdomain.golang.com",
-        errorCallback: expectCANotAuthorizedForThisEmail,
-    },
-    {
-        // Check that a name constrained intermediate doesn't allow a different
-        // email domain then it's constraint to. The certificate is contraint to
-        // subdomains of golang.org.
-        leaf:          goNameConstraintsCert1,
-        intermediates: []string{goNameConstraintsIssuer},
-        roots:         []string{goNameConstraintsRoot},
-        currentTime:   1435058029,
-        emailAddress:  "mail@subdomain.golang.org",
-        expectedChains: [][]string{
-            {
-                "Gopher Inc.",
-                "Golang ECC Issuing CA",
-                "Golang ECC CA",
-            },
-        },
-    },
-    {
-        // Check that a name constrained intermediate doesn't allow a different
-        // email domain then it's constraint to. The certificate is contraint to
-        // subdomains of golang.org.
-        leaf:          goNameConstraintsCert1,
-        intermediates: []string{goNameConstraintsIssuer},
-        roots:         []string{goNameConstraintsRoot},
-        currentTime:   1435058029,
-        emailAddress:  "mail@golang.org",
-        errorCallback: expectCANotAuthorizedForThisEmail,
-    },
-    {
-        // Check that a name constrained intermediate doesn't allow an email
-        // address when it's constraint to a different domain.
-        leaf:          goNameConstraintsCert1,
-        intermediates: []string{goNameConstraintsIssuer},
-        roots:         []string{goNameConstraintsRoot},
-        currentTime:   1435058029,
-        emailAddress:  "mail@example.com",
-        errorCallback: expectCANotAuthorizedForThisEmail,
-    },
-    {
-        // Check that a name constrained intermediate doesn't allow an IPv4
-        // address when it's constraint to exluded the entire IP space.
-        leaf:          goNameConstraintsCert1,
-        intermediates: []string{goNameConstraintsIssuer},
-        roots:         []string{goNameConstraintsRoot},
-        currentTime:   1435058029,
-        ipAddress:     net.IPv4(127, 0, 0, 1),
-        errorCallback: expectCANotAuthorizedForThisIP,
-    },
-    {
-        // Check that a name constrained intermediate doesn't allow an IPv6
-        // address when it's constraint to exluded the entire IP space.
-        leaf:          goNameConstraintsCert1,
-        intermediates: []string{goNameConstraintsIssuer},
-        roots:         []string{goNameConstraintsRoot},
-        currentTime:   1435058029,
-        ipAddress:     net.ParseIP("::1"),
-        errorCallback: expectCANotAuthorizedForThisIP,
-    },
-    {
-        // Check that a name constrained intermediate doesn't allow a mofified
-        // directory name when constraint to certain values.
-        leaf:          goNameConstraintsCert2,
-        intermediates: []string{goNameConstraintsIssuer},
-        roots:         []string{goNameConstraintsRoot},
-        currentTime:   1435058029,
-        dnsName:       "test2.golang.org",
-        errorCallback: expectCANotAuthorizedForThisDirectory,
-    },
-    {
         // Check that SHA-384 intermediates (which are popping up)
         // work.
         leaf:          moipLeafCert,
@@ -366,7 +218,7 @@ var verifyTests = []verifyTest{
         roots:         []string{addTrustRoot},
         currentTime:   1397502195,
         dnsName:       "api.moip.com.br",
-        sha2: true,
+
         expectedChains: [][]string{
             {
                 "api.moip.com.br",
@@ -377,6 +229,7 @@ var verifyTests = []verifyTest{
         },
     },
 }
+
 func expectHostnameError(t *testing.T, i int, err error) (ok bool) {
     if _, ok := err.(HostnameError); !ok {
         t.Errorf("#%d: error was not a HostnameError: %s", i, err)
@@ -384,6 +237,7 @@ func expectHostnameError(t *testing.T, i int, err error) (ok bool) {
     }
     return true
 }
+
 func expectExpired(t *testing.T, i int, err error) (ok bool) {
     if inval, ok := err.(CertificateInvalidError); !ok || inval.Reason != Expired {
         t.Errorf("#%d: error was not Expired: %s", i, err)
@@ -391,6 +245,7 @@ func expectExpired(t *testing.T, i int, err error) (ok bool) {
     }
     return true
 }
+
 func expectUsageError(t *testing.T, i int, err error) (ok bool) {
     if inval, ok := err.(CertificateInvalidError); !ok || inval.Reason != IncompatibleUsage {
         t.Errorf("#%d: error was not IncompatibleUsage: %s", i, err)
@@ -398,6 +253,7 @@ func expectUsageError(t *testing.T, i int, err error) (ok bool) {
     }
     return true
 }
+
 func expectAuthorityUnknown(t *testing.T, i int, err error) (ok bool) {
     if _, ok := err.(UnknownAuthorityError); !ok {
         t.Errorf("#%d: error was not UnknownAuthorityError: %s", i, err)
@@ -405,6 +261,7 @@ func expectAuthorityUnknown(t *testing.T, i int, err error) (ok bool) {
     }
     return true
 }
+
 func expectSystemRootsError(t *testing.T, i int, err error) bool {
     if _, ok := err.(SystemRootsError); !ok {
         t.Errorf("#%d: error was not SystemRootsError: %s", i, err)
@@ -412,6 +269,7 @@ func expectSystemRootsError(t *testing.T, i int, err error) bool {
     }
     return true
 }
+
 func expectHashError(t *testing.T, i int, err error) bool {
     if err == nil {
         t.Errorf("#%d: no error resulted from invalid hash", i)
@@ -423,34 +281,7 @@ func expectHashError(t *testing.T, i int, err error) bool {
     }
     return true
 }
-func expectCANotAuthorizedForThisName(t *testing.T, i int, err error) (ok bool) {
-    if inval, ok := err.(CertificateInvalidError); !ok || inval.Reason != CANotAuthorizedForThisName {
-        t.Errorf("#%d: error was not CANotAuthorizedForThisName: %s", i, err)
-        return false
-    }
-    return true
-}
-func expectCANotAuthorizedForThisEmail(t *testing.T, i int, err error) (ok bool) {
-    if inval, ok := err.(CertificateInvalidError); !ok || inval.Reason != CANotAuthorizedForThisEmail {
-        t.Errorf("#%d: error was not CANotAuthorizedForThisEmail: %s", i, err)
-        return false
-    }
-    return true
-}
-func expectCANotAuthorizedForThisIP(t *testing.T, i int, err error) (ok bool) {
-    if inval, ok := err.(CertificateInvalidError); !ok || inval.Reason != CANotAuthorizedForThisIP {
-        t.Errorf("#%d: error was not CANotAuthorizedForThisIP: %s", i, err)
-        return false
-    }
-    return true
-}
-func expectCANotAuthorizedForThisDirectory(t *testing.T, i int, err error) (ok bool) {
-    if inval, ok := err.(CertificateInvalidError); !ok || inval.Reason != CANotAuthorizedForThisDirectory {
-        t.Errorf("#%d: error was not CANotAuthorizedForThisDirectory: %s", i, err)
-        return false
-    }
-    return true
-}
+
 func certificateFromPEM(pemBytes string) (*Certificate, error) {
     block, _ := pem.Decode([]byte(pemBytes))
     if block == nil {
@@ -458,6 +289,7 @@ func certificateFromPEM(pemBytes string) (*Certificate, error) {
     }
     return ParseCertificate(block.Bytes)
 }
+
 func testVerify(t *testing.T, useSystemRoots bool) {
     for i, test := range verifyTests {
         if useSystemRoots && test.systemSkip {
@@ -466,17 +298,14 @@ func testVerify(t *testing.T, useSystemRoots bool) {
         if runtime.GOOS == "windows" && test.testSystemRootsError {
             continue
         }
-        if useSystemRoots && !supportSHA2 && test.sha2 {
-            continue
-        }
+
         opts := VerifyOptions{
             Intermediates: NewCertPool(),
             DNSName:       test.dnsName,
-            EmailAddress:  test.emailAddress,
-            IPAddress:     test.ipAddress,
             CurrentTime:   time.Unix(test.currentTime, 0),
             KeyUsages:     test.keyUsages,
         }
+
         if !useSystemRoots {
             opts.Roots = NewCertPool()
             for j, root := range test.roots {
@@ -487,6 +316,7 @@ func testVerify(t *testing.T, useSystemRoots bool) {
                 }
             }
         }
+
         for j, intermediate := range test.intermediates {
             ok := opts.Intermediates.AppendCertsFromPEM([]byte(intermediate))
             if !ok {
@@ -494,21 +324,26 @@ func testVerify(t *testing.T, useSystemRoots bool) {
                 return
             }
         }
+
         leaf, err := certificateFromPEM(test.leaf)
         if err != nil {
             t.Errorf("#%d: failed to parse leaf: %s", i, err)
             return
         }
+
         var oldSystemRoots *CertPool
         if test.testSystemRootsError {
             oldSystemRoots = systemRootsPool()
             systemRoots = nil
             opts.Roots = nil
         }
+
         chains, err := leaf.Verify(opts)
+
         if test.testSystemRootsError {
             systemRoots = oldSystemRoots
         }
+
         if test.errorCallback == nil && err != nil {
             t.Errorf("#%d: unexpected error: %s", i, err)
         }
@@ -517,9 +352,11 @@ func testVerify(t *testing.T, useSystemRoots bool) {
                 return
             }
         }
+
         if len(chains) != len(test.expectedChains) {
             t.Errorf("#%d: wanted %d chains, got %d", i, len(test.expectedChains), len(chains))
         }
+
         // We check that each returned chain matches a chain from
         // expectedChains but an entry in expectedChains can't match
         // two chains.
@@ -547,15 +384,19 @@ func testVerify(t *testing.T, useSystemRoots bool) {
         }
     }
 }
+
 func TestGoVerify(t *testing.T) {
     testVerify(t, false)
 }
+
 func TestSystemVerify(t *testing.T) {
     if runtime.GOOS != "windows" {
         t.Skipf("skipping verify test using system APIs on %q", runtime.GOOS)
     }
+
     testVerify(t, true)
 }
+
 func chainToDebugString(chain []*Certificate) string {
     var chainStr string
     for _, cert := range chain {
@@ -566,9 +407,11 @@ func chainToDebugString(chain []*Certificate) string {
     }
     return chainStr
 }
+
 func nameToKey(name *pkix.Name) string {
     return strings.Join(name.Country, ",") + "/" + strings.Join(name.Organization, ",") + "/" + strings.Join(name.OrganizationalUnit, ",") + "/" + name.CommonName
 }
+
 const geoTrustRoot = `-----BEGIN CERTIFICATE-----
 MIIDVDCCAjygAwIBAgIDAjRWMA0GCSqGSIb3DQEBBQUAMEIxCzAJBgNVBAYTAlVT
 MRYwFAYDVQQKEw1HZW9UcnVzdCBJbmMuMRswGQYDVQQDExJHZW9UcnVzdCBHbG9i
@@ -590,6 +433,7 @@ hw4EbNX/3aBd7YdStysVAq45pmp06drE57xNNB6pXE0zX5IJL4hmXXeXxx12E6nV
 5fEWCRE11azbJHFwLJhWC9kXtNHjUStedejV0NxPNO3CBWaAocvmMw==
 -----END CERTIFICATE-----
 `
+
 const giag2Intermediate = `-----BEGIN CERTIFICATE-----
 MIIEBDCCAuygAwIBAgIDAjppMA0GCSqGSIb3DQEBBQUAMEIxCzAJBgNVBAYTAlVT
 MRYwFAYDVQQKEw1HZW9UcnVzdCBJbmMuMRswGQYDVQQDExJHZW9UcnVzdCBHbG9i
@@ -615,6 +459,7 @@ WHPbqCRiOwY1nQ2pM714A5AuTHhdUDqB1O6gyHA43LL5Z/qHQF1hwFGPa4NrzQU6
 yuGnBXj8ytqU0CwIPX4WecigUCAkVDNx
 -----END CERTIFICATE-----
 `
+
 const googleLeaf = `-----BEGIN CERTIFICATE-----
 MIIEdjCCA16gAwIBAgIIcR5k4dkoe04wDQYJKoZIhvcNAQEFBQAwSTELMAkGA1UE
 BhMCVVMxEzARBgNVBAoTCkdvb2dsZSBJbmMxJTAjBgNVBAMTHEdvb2dsZSBJbnRl
@@ -642,6 +487,7 @@ orKqTuAPzXK7imQk6+OycYABbqCtC/9qmwRd8wwn7sF97DtYfK8WuNHtFalCAwyi
 Kom08eUK8skxAzfDDijZPh10VtJ66uBoiDPdT+uCBehcBIcmSTrKjFGX
 -----END CERTIFICATE-----
 `
+
 // googleLeafWithInvalidHash is the same as googleLeaf, but the signature
 // algorithm in the certificate contains a nonsense OID.
 const googleLeafWithInvalidHash = `-----BEGIN CERTIFICATE-----
@@ -671,6 +517,7 @@ orKqTuAPzXK7imQk6+OycYABbqCtC/9qmwRd8wwn7sF97DtYfK8WuNHtFalCAwyi
 Kom08eUK8skxAzfDDijZPh10VtJ66uBoiDPdT+uCBehcBIcmSTrKjFGX
 -----END CERTIFICATE-----
 `
+
 const dnssecExpLeaf = `-----BEGIN CERTIFICATE-----
 MIIGzTCCBbWgAwIBAgIDAdD6MA0GCSqGSIb3DQEBBQUAMIGMMQswCQYDVQQGEwJJ
 TDEWMBQGA1UEChMNU3RhcnRDb20gTHRkLjErMCkGA1UECxMiU2VjdXJlIERpZ2l0
@@ -710,6 +557,7 @@ CSS+ObZbfkreRt3cNCf5LfCXe9OsTnCfc8Cuq81c0oLaG+SmaLUQNBuToq8e9/Zm
 +b+/a3RVjxmkV5OCcGVBxsXNDn54Q6wsdw0TBMcjwoEndzpLS7yWgFbbkq5ZiGpw
 Qibb2+CfKuQ+WFV1GkVQmVA=
 -----END CERTIFICATE-----`
+
 const startComIntermediate = `-----BEGIN CERTIFICATE-----
 MIIGNDCCBBygAwIBAgIBGDANBgkqhkiG9w0BAQUFADB9MQswCQYDVQQGEwJJTDEW
 MBQGA1UEChMNU3RhcnRDb20gTHRkLjErMCkGA1UECxMiU2VjdXJlIERpZ2l0YWwg
@@ -746,6 +594,7 @@ wuTSxv0JS3QJ3fGz0xk+gA2iCxnwOOfFwq/iI9th4p1cbiCJSS4jarJiwUW0n6+L
 p/EiO/h94pDQehn7Skzj0n1fSoMD7SfWI55rjbRZotnvbIIp3XUZPD9MEI3vu3Un
 0q6Dp6jOW6c=
 -----END CERTIFICATE-----`
+
 const startComRoot = `-----BEGIN CERTIFICATE-----
 MIIHyTCCBbGgAwIBAgIBATANBgkqhkiG9w0BAQUFADB9MQswCQYDVQQGEwJJTDEW
 MBQGA1UEChMNU3RhcnRDb20gTHRkLjErMCkGA1UECxMiU2VjdXJlIERpZ2l0YWwg
@@ -790,6 +639,7 @@ O3NJo2pXh5Tl1njFmUNj403gdy3hZZlyaQQaRwnmDwFWJPsfvw55qVguucQJAX6V
 um0ABj6y6koQOdjQK/W/7HW/lwLFCRsI3FU34oH7N4RDYiDK51ZLZer+bMEkkySh
 NOsF/5oirpt9P/FlUQqmMGqz9IgcgA38corog14=
 -----END CERTIFICATE-----`
+
 const startComRootSHA256 = `-----BEGIN CERTIFICATE-----
 MIIHhzCCBW+gAwIBAgIBLTANBgkqhkiG9w0BAQsFADB9MQswCQYDVQQGEwJJTDEW
 MBQGA1UEChMNU3RhcnRDb20gTHRkLjErMCkGA1UECxMiU2VjdXJlIERpZ2l0YWwg
@@ -833,6 +683,7 @@ JnHEhV5xJMqlG2zYYdMa4FTbzrqpMrUi9nNBCV24F10OD5mQ1kfabwo6YigUZ4LZ
 8dCAWZvLMdibD4x3TrVoivJs9iQOLWxwxXPR3hTQcY+203sC9uO41Alua551hDnm
 fyWl8kgAwKQB2j8=
 -----END CERTIFICATE-----`
+
 const smimeLeaf = `-----BEGIN CERTIFICATE-----
 MIIFBjCCA+6gAwIBAgISESFvrjT8XcJTEe6rBlPptILlMA0GCSqGSIb3DQEBBQUA
 MFQxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWduIG52LXNhMSowKAYD
@@ -862,6 +713,7 @@ C3AHYLzvNU4Dwc4QQ1BaMOg6KzYSrKbABRZajfrpC9uiePsv7mDIXLx/toBPxWNl
 a5vJm5DrZdn7uHdvBCE6kMykbOLN5pmEK0UIlwKh6Qi5XD0pzlVkEZliFkBMJgub
 d/eF7xeg7TKPWC5xyOFp9SdMolJM7LTC3wnSO3frBAev+q/nGs9Xxyvs
 -----END CERTIFICATE-----`
+
 const smimeIntermediate = `-----BEGIN CERTIFICATE-----
 MIIEFjCCAv6gAwIBAgILBAAAAAABL07hL1IwDQYJKoZIhvcNAQEFBQAwVzELMAkG
 A1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExEDAOBgNVBAsTB1Jv
@@ -886,6 +738,7 @@ YEvTWbWwGdPytDFPYIl3/6OqNSXSnZ7DxPcdLJq2uyiga8PB/TTIIHYkdM2+1DE0
 7y3rH/7TjwDVD7SLu5/SdOfKskuMPTjOEvz3K161mymW06klVhubCIWOro/Gx1Q2
 2FQOZ7/2k4uYoOdBTSlb8kTAuzZNgIE0rB2BIYCTz/P6zZIKW0ogbRSH
 -----END CERTIFICATE-----`
+
 var megaLeaf = `-----BEGIN CERTIFICATE-----
 MIIFOjCCBCKgAwIBAgIQWYE8Dup170kZ+k11Lg51OjANBgkqhkiG9w0BAQUFADBy
 MQswCQYDVQQGEwJHQjEbMBkGA1UECBMSR3JlYXRlciBNYW5jaGVzdGVyMRAwDgYD
@@ -916,6 +769,7 @@ j2BUlPniNBjCqXe/HndUTVUewlxbVps9FyCmH+C4o9DWzdGBzDpCkcmo5nM+cp7q
 ZhTIFTvZfo3zGuBoyu8BzuopCJcFRm3cRiXkpI7iOMUIixO1szkJS6WpL1sKdT73
 UXp08U0LBqoqG130FbzEJBBV3ixbvY6BWMHoCWuaoF12KJnC5kHt2RoWAAgMXA==
 -----END CERTIFICATE-----`
+
 var comodoIntermediate1 = `-----BEGIN CERTIFICATE-----
 MIIFAzCCA+ugAwIBAgIQGLLLuqME8aAPwfLzJkYqSjANBgkqhkiG9w0BAQUFADCB
 gTELMAkGA1UEBhMCR0IxGzAZBgNVBAgTEkdyZWF0ZXIgTWFuY2hlc3RlcjEQMA4G
@@ -945,6 +799,7 @@ F6r7yJiIatnyfKH2cboZT7g440LX8NqxwCPf3dfxp+0Jj1agq8MLy6SSgIGSH6lv
 +Wwz3D5XxqfyH8wqfOQsTEZf6/Nh9yvENZ+NWPU6g0QO2JOsTGvMd/QDzczc4BxL
 XSXaPV7Od4rhPsbXlM1wSTz/Dr0ISKvlUhQVnQ6cGodWaK2cCQBk
 -----END CERTIFICATE-----`
+
 var comodoRoot = `-----BEGIN CERTIFICATE-----
 MIIEHTCCAwWgAwIBAgIQToEtioJl4AsC7j41AkblPTANBgkqhkiG9w0BAQUFADCB
 gTELMAkGA1UEBhMCR0IxGzAZBgNVBAgTEkdyZWF0ZXIgTWFuY2hlc3RlcjEQMA4G
@@ -970,6 +825,7 @@ zJVSk/BwJVmcIGfE7vmLV2H0knZ9P4SNVbfo5azV8fUZVqZa+5Acr5Pr5RzUZ5dd
 BA6+C4OmF4O5MBKgxTMVBbkN+8cFduPYSo38NBejxiEovjBFMR7HeL5YYTisO+IB
 ZQ==
 -----END CERTIFICATE-----`
+
 var nameConstraintsLeaf = `-----BEGIN CERTIFICATE-----
 MIIHMTCCBRmgAwIBAgIIIZaV/3ezOJkwDQYJKoZIhvcNAQEFBQAwgcsxCzAJBgNV
 BAYTAlVTMREwDwYDVQQIEwhWaXJnaW5pYTETMBEGA1UEBxMKQmxhY2tzYnVyZzEj
@@ -1011,6 +867,7 @@ timWNOdRd57Tfpk3USaVsumWZAf9MP3wPiC7gb4d5tYEEAG5BuDT8ruFw838wU8G
 1VvAVutSiYBg7k3NYO7AUqZ+Ax4klQX3aM9lgonmJ78Qt94UPtbptrfZ4/lSqEf8
 GBUwDrQNTb+gsXsDkjd5lcYxNx6l
 -----END CERTIFICATE-----`
+
 var nameConstraintsIntermediate1 = `-----BEGIN CERTIFICATE-----
 MIINLjCCDBagAwIBAgIRIqpyf/YoGgvHc8HiDAxAI8owDQYJKoZIhvcNAQEFBQAw
 XDELMAkGA1UEBhMCQkUxFTATBgNVBAsTDFRydXN0ZWQgUm9vdDEZMBcGA1UEChMQ
@@ -1084,6 +941,7 @@ UdbGmj3laknO9YPsBGgHfv73pVVsTJkW4ZfY/7KdD/yaVv6ophpOB3coXfjl2+kd
 Z4ypn2zK+cx9IL/LSewqd/7W9cD55PCUy4X9OTbEmAccwiz3LB66mQoUGfdHdkoB
 jUY+v9vLQXmaVwI0AYL7g9LN
 -----END CERTIFICATE-----`
+
 var nameConstraintsIntermediate2 = `-----BEGIN CERTIFICATE-----
 MIIEXTCCA0WgAwIBAgILBAAAAAABNuk6OrMwDQYJKoZIhvcNAQEFBQAwVzELMAkG
 A1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExEDAOBgNVBAsTB1Jv
@@ -1110,6 +968,7 @@ tbbg0zMm3kyfQITRusMSg6IBsDJqOnjaiaKQRcXiD0Sk43ZXb2bUKMxC7+Td3QL4
 RyHcWJbQ7YylLTS/x+jxWIcOQ0oO5/54t5PTQ14neYhOz9x4gUk2AYAW6d1vePwb
 hcC8roQwkHT7HvfYBoc74FM=
 -----END CERTIFICATE-----`
+
 var globalSignRoot = `-----BEGIN CERTIFICATE-----
 MIIDdTCCAl2gAwIBAgILBAAAAAABFUtaw5QwDQYJKoZIhvcNAQEFBQAwVzELMAkG
 A1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExEDAOBgNVBAsTB1Jv
@@ -1131,6 +990,7 @@ AbEVtQwdpf5pLGkkeB6zpxxxYu7KyJesF12KwvhHhm4qxFYxldBniYUr+WymXUad
 DKqC5JlR3XC321Y9YeRq4VzW9v493kHMB65jUr9TU/Qr6cf9tveCX4XSQRjbgbME
 HMUfpIBvFSDJ3gyICh3WZlXi/EjJKSZp4A==
 -----END CERTIFICATE-----`
+
 var moipLeafCert = `-----BEGIN CERTIFICATE-----
 MIIGQDCCBSigAwIBAgIRAPe/cwh7CUWizo8mYSDavLIwDQYJKoZIhvcNAQELBQAw
 gZIxCzAJBgNVBAYTAkdCMRswGQYDVQQIExJHcmVhdGVyIE1hbmNoZXN0ZXIxEDAO
@@ -1167,6 +1027,7 @@ z/gOaMjEDMarMCMw4VUIG1pvNraZrG5oTaALPaIXXpd8VqbQYPudYJ6fR5eY3FeW
 H/ofbYFdRcuD26MfBFWE9VGGral9Fgo8sEHffho+UWhgApuQV4/l5fMzxB5YBXyQ
 jhuy8PqqZS9OuLilTeLu4a8z2JI=
 -----END CERTIFICATE-----`
+
 var comodoIntermediateSHA384 = `-----BEGIN CERTIFICATE-----
 MIIGDjCCA/agAwIBAgIQBqdDgNTr/tQ1taP34Wq92DANBgkqhkiG9w0BAQwFADCB
 hTELMAkGA1UEBhMCR0IxGzAZBgNVBAgTEkdyZWF0ZXIgTWFuY2hlc3RlcjEQMA4G
@@ -1202,6 +1063,7 @@ tmnYOosxWd2R5nwnI4fdAw+PKowegwFOAWEMUnNt/AiiuSpm5HZNMaBWm9lTjaK2
 jwLI5jqmBNFI+8NKAnb9L9K8E7bobTQk+p0pisehKxTxlgBzuRPpwLk6R1YCcYAn
 pLwltum95OmYdBbxN4SBB7SC
 -----END CERTIFICATE-----`
+
 const comodoRSAAuthority = `-----BEGIN CERTIFICATE-----
 MIIFdDCCBFygAwIBAgIQJ2buVutJ846r13Ci/ITeIjANBgkqhkiG9w0BAQwFADBv
 MQswCQYDVQQGEwJTRTEUMBIGA1UEChMLQWRkVHJ1c3QgQUIxJjAkBgNVBAsTHUFk
@@ -1234,6 +1096,7 @@ B5a6SE2Q8pTIqXOi6wZ7I53eovNNVZ96YUWYGGjHXkBrI/V5eu+MtWuLt29G9Hvx
 PUsE2JOAWVrgQSQdso8VYFhH2+9uRv0V9dlfmrPb2LjkQLPNlzmuhbsdjrzch5vR
 pu/xO28QOG8=
 -----END CERTIFICATE-----`
+
 const addTrustRoot = `-----BEGIN CERTIFICATE-----
 MIIENjCCAx6gAwIBAgIBATANBgkqhkiG9w0BAQUFADBvMQswCQYDVQQGEwJTRTEU
 MBIGA1UEChMLQWRkVHJ1c3QgQUIxJjAkBgNVBAsTHUFkZFRydXN0IEV4dGVybmFs
@@ -1258,65 +1121,4 @@ YINRsPkyPef89iYTx4AWpb9a/IfPeHmJIZriTAcKhjW88t5RxNKWt9x+Tu5w/Rw5
 Nr4TDea9Y355e6cJDUCrat2PisP29owaQgVR1EX1n6diIWgVIEM8med8vSTYqZEX
 c4g/VhsxOBi0cQ+azcgOno4uG+GMmIPLHzHxREzGBHNJdmAPx/i9F4BrLunMTA5a
 mnkPIAou1Z5jJh5VkpTYghdae9C8x49OhgQ=
------END CERTIFICATE-----`
-const goNameConstraintsRoot = `-----BEGIN CERTIFICATE-----
-MIICCjCCAbCgAwIBAgIBATAKBggqhkjOPQQDAjA7MQswCQYDVQQGEwJVUzEUMBIG
-A1UEChMLR29waGVyIEluYy4xFjAUBgNVBAMTDUdvbGFuZyBFQ0MgQ0EwHhcNMTUw
-MTAxMDAwMDAwWhcNMzAwMTAxMDAwMDAwWjA7MQswCQYDVQQGEwJVUzEUMBIGA1UE
-ChMLR29waGVyIEluYy4xFjAUBgNVBAMTDUdvbGFuZyBFQ0MgQ0EwWTATBgcqhkjO
-PQIBBggqhkjOPQMBBwNCAATuzCtZ3RqF0uCAg7eZLOFUS9x0FXs8+B7J9lF5Z3Mk
-JoTzt66cK+2H7PclCSYk1S3nnWkNtPcM8CwSe7JTgM86o4GkMIGhMA4GA1UdDwEB
-/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBTImlHSWW2kyRYt0Fh8
-gCuLRzwNTzAfBgNVHSMEGDAWgBTImlHSWW2kyRYt0Fh8gCuLRzwNTzA+BgNVHR4B
-Af8ENDAyoTAwCocIAAAAAAAAAAAwIocgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAwCgYIKoZIzj0EAwIDSAAwRQIhAKQvDWAd5XFcow3NEdv1o55fqCYF
-/th12INKOvqoiBdBAiB7KTDaYKbkcMEYl2Ig+z3BE9K5rFM4gPgfN9ufBzMdfg==
------END CERTIFICATE-----`
-const goNameConstraintsIssuer = `-----BEGIN CERTIFICATE-----
-MIICSTCCAe6gAwIBAgIBAjAKBggqhkjOPQQDAjA7MQswCQYDVQQGEwJVUzEUMBIG
-A1UEChMLR29waGVyIEluYy4xFjAUBgNVBAMTDUdvbGFuZyBFQ0MgQ0EwHhcNMTUw
-MTAxMDAwMDAwWhcNMjAwMTAxMDAwMDAwWjBDMQswCQYDVQQGEwJVUzEUMBIGA1UE
-ChMLR29waGVyIEluYy4xHjAcBgNVBAMTFUdvbGFuZyBFQ0MgSXNzdWluZyBDQTBZ
-MBMGByqGSM49AgEGCCqGSM49AwEHA0IABBsiD/pakdrz9zYevDoYHfsSVURzPnXz
-UBmSXAS4/mo8Rw96LugAq0NqZFeJGzG6y6cH2GYHFKbYnxyEznZ3ZbGjgdowgdcw
-DgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQEwHQYDVR0OBBYEFIL2
-mM8QeOX04ivhd+G2KqYo22IfMB8GA1UdIwQYMBaAFMiaUdJZbaTJFi3QWHyAK4tH
-PA1PMHEGA1UdHgEB/wRnMGWgYzANgQsuZ29sYW5nLm9yZzAMgQpnb2xhbmcuY29t
-MA2CCy5nb2xhbmcub3JnMAyCCmdvbGFuZy5jb20wJ6QlMCMxCzAJBgNVBAYTAlVT
-MRQwEgYDVQQKEwtHb3BoZXIgSW5jLjAKBggqhkjOPQQDAgNJADBGAiEApR+7qM3K
-GXZH0P2snDUrJb2v3wiXIakQzDptvJVcBmoCIQCxAm+u6FrgzpyBKmiZwAvVVbNG
-Q2SJSdRcbzFWk+AzPg==
------END CERTIFICATE-----`
-const goNameConstraintsCert1 = `-----BEGIN CERTIFICATE-----
-MIIDLjCCAtOgAwIBAgIBAzAKBggqhkjOPQQDAjBDMQswCQYDVQQGEwJVUzEUMBIG
-A1UEChMLR29waGVyIEluYy4xHjAcBgNVBAMTFUdvbGFuZyBFQ0MgSXNzdWluZyBD
-QTAeFw0xNTAxMDEwMDAwMDBaFw0yNjAxMDEwMDAwMDBaMD4xCzAJBgNVBAYTAlVT
-MRQwEgYDVQQKEwtHb3BoZXIgSW5jLjEZMBcGA1UEAxMQdGVzdDEuZ29sYW5nLm9y
-ZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABKJbnIEmT/F/6di0qJESdPPL1x8x
-0qklJMbbEe7ZC7SBjLq+w/EX0HXnfuNSOGpeXB/Yv6c+VgDuMBVxBr6i6n6jggG7
-MIIBtzAOBgNVHQ8BAf8EBAMCBsAwHQYDVR0lBBYwFAYIKwYBBQUHAwEGCCsGAQUF
-BwMCMAwGA1UdEwEB/wQCMAAwHQYDVR0OBBYEFCV9X+f6fFqSn1yRsosn1uY2voe8
-MB8GA1UdIwQYMBaAFIL2mM8QeOX04ivhd+G2KqYo22IfMIIBNgYDVR0RBIIBLTCC
-ASmCCmdvbGFuZy5jb22CCmdvbGFuZy5vcmeCEHRlc3QxLmdvbGFuZy5vcmeCD3d3
-dy5leGFtcGxlLmNvbYIOd3d3LmdvbGFuZy5jb22CDnd3dy5nb2xhbmcub3Jnghh3
-d3cuc3ViZG9tYWluLmdvbGFuZy5jb22CGHd3dy5zdWJkb21haW4uZ29sYW5nLm9y
-Z4EQbWFpbEBleGFtcGxlLmNvbYEPbWFpbEBnb2xhbmcuY29tgQ9tYWlsQGdvbGFu
-Zy5vcmeBGW1haWxAc3ViZG9tYWluLmdvbGFuZy5jb22BGW1haWxAc3ViZG9tYWlu
-LmdvbGFuZy5vcmeHBH8AAAGHECABSGBIYAAAAAAAAAAAiIiHBAgICAiHEAAAAAAA
-AAAAAAAAAAAAAAEwCgYIKoZIzj0EAwIDSQAwRgIhAMF0mHw4s9Swfaji89dlmiZ4
-9uQR5bkjTscS1U2cvPuiAiEAws8sA+BeT6fkKq5HXNh22o62F8Srzb7ZjbuOEGOP
-qj8=
------END CERTIFICATE-----`
-const goNameConstraintsCert2 = `-----BEGIN CERTIFICATE-----
-MIICCTCCAbCgAwIBAgIBAzAKBggqhkjOPQQDAjBDMQswCQYDVQQGEwJVUzEUMBIG
-A1UEChMLR29waGVyIEluYy4xHjAcBgNVBAMTFUdvbGFuZyBFQ0MgSXNzdWluZyBD
-QTAeFw0xNTAxMDEwMDAwMDBaFw0yNjAxMDEwMDAwMDBaMDoxCzAJBgNVBAYTAlVT
-MRAwDgYDVQQKEwdHbyBJbmMuMRkwFwYDVQQDExB0ZXN0Mi5nb2xhbmcub3JnMFkw
-EwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEolucgSZP8X/p2LSokRJ088vXHzHSqSUk
-xtsR7tkLtIGMur7D8RfQded+41I4al5cH9i/pz5WAO4wFXEGvqLqfqOBnTCBmjAO
-BgNVHQ8BAf8EBAMCBsAwHQYDVR0lBBYwFAYIKwYBBQUHAwEGCCsGAQUFBwMCMAwG
-A1UdEwEB/wQCMAAwHQYDVR0OBBYEFCV9X+f6fFqSn1yRsosn1uY2voe8MB8GA1Ud
-IwQYMBaAFIL2mM8QeOX04ivhd+G2KqYo22IfMBsGA1UdEQQUMBKCEHRlc3QyLmdv
-bGFuZy5vcmcwCgYIKoZIzj0EAwIDRwAwRAIgRvA24K2uYvOMVf/DHMspHrEmmdT4
-SBBin6GWa6N0p10CIAhwWEMou2ZNXORqjQ1S2CKq2eMhQ5r1lHK8IZVFqKVi
 -----END CERTIFICATE-----`
