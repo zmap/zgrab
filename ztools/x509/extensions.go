@@ -41,7 +41,7 @@ type CertificateExtensions struct {
 	ExtendedKeyUsage      ExtendedKeyUsage      `json:"extended_key_usage,omitempty"`
 	CertificatePolicies   CertificatePolicies   `json:"certificate_policies,omitmepty"`
 	AuthorityInfoAccess   *AuthorityInfoAccess  `json:"authority_info_access,omitempty"`
-	IsPrecert             IsPrecert             `json:"is_precert,omitempty"`
+	IsPrecert             IsPrecert             `json:"ct_poison,omitempty"`
 }
 
 type UnknownCertificateExtensions []pkix.Extension
