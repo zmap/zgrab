@@ -12,6 +12,7 @@ zgrab_subj_issuer = SubRecord({
     "organization":ListOf(String()),
     "organizational_unit":ListOf(String()),
     "postal_code":ListOf(String()),
+    "domain_component":ListOf(String()),
 })
 
 unknown_extension = SubRecord({
@@ -93,6 +94,14 @@ zgrab_parsed_certificate = SubRecord({
         "name_constraints":SubRecord({
             "critical":Boolean(),
             "permitted_names":ListOf(String()),
+            "permitted_email_addresses":ListOf(String()),
+            "permitted_ip_addresses":ListOf(String()),
+            "permitted_directory_names":ListOf(zgrab_subj_issuer),
+            "excluded_names":ListOf(String()),
+            "excluded_email_addresses":ListOf(String()),
+            "excluded_ip_addresses":ListOf(String()),
+            "excluded_directory_names":ListOf(zgrab_subj_issuer)
+
         }),
         "signed_certificate_timestamps":ListOf(SubRecord({
             "version":Integer(),

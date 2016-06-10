@@ -73,13 +73,13 @@ type SubjectAltName struct {
 type NameConstraints struct {
 	Critical bool `json:"critical"`
 
-	PermittedDNSDomains     []string    `json:"permitted_dns_domains,omitempty"`
-	PermittedEmailDomains   []string    `json:"permitted_email_domains,omitempty"`
+	PermittedDNSDomains     []string    `json:"permitted_names,omitempty"`
+	PermittedEmailDomains   []string    `json:"permitted_email_addresses,omitempty"`
 	PermittedIPAddresses    []net.IPNet `json:"permitted_ip_addresses,omitempty"`
 	PermittedDirectoryNames []pkix.Name `json:"permitted_directory_names,omitempty"`
 
-	ExcludedEmailDomains   []string    `json:"excluded_dns_domains,omitempty"`
-	ExcludedDNSDomains     []string    `json:"excluded_email_domains,omitempty"`
+	ExcludedEmailDomains   []string    `json:"excluded_names,omitempty"`
+	ExcludedDNSDomains     []string    `json:"excluded_email_addresses,omitempty"`
 	ExcludedIPAddresses    []net.IPNet `json:"excluded_ip_addresses,omitempty"`
 	ExcludedDirectoryNames []pkix.Name `json:"excluded_directory_names,omitempty"`
 }

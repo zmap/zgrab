@@ -27,7 +27,6 @@ func (jn *jsonName) MarshalJSON() ([]byte, error) {
 	}
 	if len(jn.SerialNumber) > 0 {
 		enc["serial_number"] = jn.SerialNumber
-
 	}
 	if len(jn.Country) > 0 {
 		enc["country"] = jn.Country
