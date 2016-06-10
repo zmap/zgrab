@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"log"
 	"bytes"
 	"encoding/pem"
 	"fmt"
@@ -26,30 +25,36 @@ import (
 	"github.com/zmap/zgrab/ztools/x509"
 )
 
+func exitErr(a ...interface{}) {
+	fmt.Fprint(os.Stderr, "FATAL: ")
+    fmt.Fprintln(os.Stderr, a...)
+    os.Exit(1)
+}
+
 func main() {
 
 	if len(os.Args) != 2 {
-		log.Fatal("No path to certificate provided")
+		exitErr("No path to certificate provided")
 	}
 	f, err := os.Open(os.Args[1])
 	if err != nil {
-		log.Fatal("Could not open specified certificate:", err)
+		exitErr("Could not open specified certificate:", err)
 	}
 	buf := bytes.NewBuffer(nil)
 	io.Copy(buf, f)
 
 	p, _ := pem.Decode(buf.Bytes())
 	if p == nil {
-		log.Fatal("Unable to parse PEM file: ", err)
+		exitErr("Unable to parse PEM file: ", err)
 	}
 	x509Cert, err := x509.ParseCertificate(p.Bytes)
 	if err != nil {
-		log.Fatal("Unable to parse certificate: ", err)
+		exitErr("Unable to parse certificate: ", err)
 	}
 
 	out, err := json.Marshal(x509Cert)
 	if err != nil {
-		log.Fatal("Unable to convert certificate to JSON: ", err)
+		exitErr("Unable to convert certificate to JSON: ", err)
 	}
 	fmt.Println(string(out))
 }
