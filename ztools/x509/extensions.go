@@ -84,6 +84,38 @@ type NameConstraints struct {
 	ExcludedDirectoryNames []pkix.Name `json:"excluded_directory_names,omitempty"`
 }
 
+type NameConstraintsJSON struct {
+	Critical bool `json:"critical"`
+
+	PermittedDNSDomains     []string    `json:"permitted_names,omitempty"`
+	PermittedEmailDomains   []string    `json:"permitted_email_addresses,omitempty"`
+	PermittedIPAddresses    []string	`json:"permitted_ip_addresses,omitempty"`
+	PermittedDirectoryNames []pkix.Name `json:"permitted_directory_names,omitempty"`
+
+	ExcludedEmailDomains   []string    `json:"excluded_names,omitempty"`
+	ExcludedDNSDomains     []string    `json:"excluded_email_addresses,omitempty"`
+	ExcludedIPAddresses    []string		`json:"excluded_ip_addresses,omitempty"`
+	ExcludedDirectoryNames []pkix.Name `json:"excluded_directory_names,omitempty"`
+}
+
+func (nc NameConstraints) MarshalJSON() ([]byte, error) {
+	var out NameConstraintsJSON
+	out.PermittedDNSDomains = nc.PermittedDNSDomains
+	out.PermittedEmailDomains = nc.PermittedEmailDomains
+	out.PermittedIPAddresses = make([]string, len(nc.PermittedIPAddresses))
+	for _, ip := range nc.PermittedIPAddresses {
+		out.PermittedIPAddresses = append(out.PermittedIPAddresses, ip.String())
+	}
+	out.ExcludedDNSDomains = nc.ExcludedDNSDomains
+	out.ExcludedEmailDomains = nc.ExcludedEmailDomains
+	out.ExcludedIPAddresses = make([]string, len(nc.ExcludedIPAddresses))
+	for _, ip := range nc.ExcludedIPAddresses {
+		out.ExcludedIPAddresses = append(out.ExcludedIPAddresses, ip.String())
+	}
+	return json.Marshal(out)
+}
+
+
 type CRLDistributionPoints []string
 
 type AuthKeyId []byte

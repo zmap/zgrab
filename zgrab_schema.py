@@ -101,7 +101,6 @@ zgrab_parsed_certificate = SubRecord({
             "excluded_email_addresses":ListOf(String()),
             "excluded_ip_addresses":ListOf(String()),
             "excluded_directory_names":ListOf(zgrab_subj_issuer)
-
         }),
         "signed_certificate_timestamps":ListOf(SubRecord({
             "version":Integer(),
