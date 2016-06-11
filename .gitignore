@@ -26,6 +26,7 @@ _testmain.go
 tls-banner-grab-go
 banner-grab
 zgrab
+zcertificate/zcertificate
 
 # Mac OS X files
 .DS_Store

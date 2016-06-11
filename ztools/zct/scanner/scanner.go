@@ -10,7 +10,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	//	"github.com/google/certificate-transparency/go/x509"
 	"github.com/zmap/zgrab/ztools/zct"
 	"github.com/zmap/zgrab/ztools/zct/client"
 	"github.com/zmap/zgrab/ztools/zct/x509"
