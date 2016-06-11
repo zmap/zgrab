@@ -6,7 +6,7 @@
 package x509
 
 import (
-
+	"log"
 	// all of the hash libraries need to be imported for side-effects,
 	// so that crypto.RegisterHash is called
 	_ "crypto/md5"
@@ -31,7 +31,8 @@ import (
 	"time"
 
 	"github.com/zmap/zgrab/ztools/x509/pkix"
-	"github.com/zmap/zgrab/ztools/zct"
+	//	"github.com/zmap/zgrab/ztools/zct"
+	"github.com/google/certificate-transparency/go"
 )
 
 // pkixPublicKey reflects a PKIX public key structure. See SubjectPublicKeyInfo
@@ -953,6 +954,7 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 
 	var issuer, subject pkix.RDNSequence
 	if _, err := asn1.Unmarshal(in.TBSCertificate.Subject.FullBytes, &subject); err != nil {
+		log.Print("Err parsing asn1 of TBSCertificate %s", in.TBSCertificate.Subject)
 		return nil, err
 	}
 	if _, err := asn1.Unmarshal(in.TBSCertificate.Issuer.FullBytes, &issuer); err != nil {
@@ -1239,6 +1241,7 @@ func ParseCertificate(asn1Data []byte) (*Certificate, error) {
 	var cert certificate
 	rest, err := asn1.Unmarshal(asn1Data, &cert)
 	if err != nil {
+		log.Print("Err unmarshalling asn1Data", asn1Data, rest)
 		return nil, err
 	}
 	if len(rest) > 0 {

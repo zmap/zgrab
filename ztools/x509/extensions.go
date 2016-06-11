@@ -89,12 +89,12 @@ type NameConstraintsJSON struct {
 
 	PermittedDNSDomains     []string    `json:"permitted_names,omitempty"`
 	PermittedEmailDomains   []string    `json:"permitted_email_addresses,omitempty"`
-	PermittedIPAddresses    []string	`json:"permitted_ip_addresses,omitempty"`
+	PermittedIPAddresses    []string    `json:"permitted_ip_addresses,omitempty"`
 	PermittedDirectoryNames []pkix.Name `json:"permitted_directory_names,omitempty"`
 
 	ExcludedEmailDomains   []string    `json:"excluded_names,omitempty"`
 	ExcludedDNSDomains     []string    `json:"excluded_email_addresses,omitempty"`
-	ExcludedIPAddresses    []string		`json:"excluded_ip_addresses,omitempty"`
+	ExcludedIPAddresses    []string    `json:"excluded_ip_addresses,omitempty"`
 	ExcludedDirectoryNames []pkix.Name `json:"excluded_directory_names,omitempty"`
 }
 
@@ -114,7 +114,6 @@ func (nc NameConstraints) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(out)
 }
-
 
 type CRLDistributionPoints []string
 
