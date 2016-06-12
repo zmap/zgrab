@@ -119,7 +119,7 @@ type ScannerOptions struct {
 	PrecertOnly bool
 
 	// Number of entries to request in one batch from the Log
-	BatchSize int
+	BatchSize int64
 
 	// Number of concurrent matchers to run
 	NumWorkers int
@@ -343,7 +343,7 @@ func (s Scanner) Log(msg string) {
 //
 // This method blocks until the scan is complete.
 func (s *Scanner) Scan(foundCert func(*ct.LogEntry, string),
-	foundPrecert func(*ct.LogEntry, string)) error {
+	foundPrecert func(*ct.LogEntry, string)) (int64, error) {
 	s.Log("Starting up...\n")
 	s.certsProcessed = 0
 	s.precertsSeen = 0
@@ -352,7 +352,7 @@ func (s *Scanner) Scan(foundCert func(*ct.LogEntry, string),
 
 	latestSth, err := s.logClient.GetSTH()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	s.Log(fmt.Sprintf("Got STH with %d certs", latestSth.TreeSize))
 
@@ -400,7 +400,7 @@ func (s *Scanner) Scan(foundCert func(*ct.LogEntry, string),
 	s.Log(fmt.Sprintf("Completed %d certs in %s", s.certsProcessed, humanTime(int(time.Since(startTime).Seconds()))))
 	s.Log(fmt.Sprintf("Saw %d precerts", s.precertsSeen))
 	s.Log(fmt.Sprintf("%d unparsable entries, %d non-fatal errors", s.unparsableEntries, s.entriesWithNonFatalErrors))
-	return nil
+	return s.certsProcessed + s.precertsSeen, nil
 }
 
 // Creates a new Scanner instance using |client| to talk to the log, and taking
