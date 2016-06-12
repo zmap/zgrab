@@ -366,7 +366,7 @@ func (s *Scanner) Scan(foundCert func(*ct.LogEntry, string),
 			remainingCerts := int64(latestSth.TreeSize) - int64(s.opts.StartIndex) - s.certsProcessed
 			remainingSeconds := int(float64(remainingCerts) / throughput)
 			remainingString := humanTime(remainingSeconds)
-			s.Log(fmt.Sprintf("Processed: %d certs (to index %d). Throughput: %3.2f ETA: %s\n", s.certsProcessed,
+			s.Log(fmt.Sprintf("Processed: %d %s certs (to index %d). Throughput: %3.2f ETA: %s\n", s.certsProcessed, s.opts.Name,
 				s.opts.StartIndex+int64(s.certsProcessed), throughput, remainingString))
 
 			updater <- s.certsProcessed
