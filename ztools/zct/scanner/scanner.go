@@ -343,7 +343,7 @@ func (s Scanner) Log(msg string) {
 //
 // This method blocks until the scan is complete.
 func (s *Scanner) Scan(foundCert func(*ct.LogEntry, string),
-	foundPrecert func(*ct.LogEntry, string)) (int64, error) {
+	foundPrecert func(*ct.LogEntry, string), updater chan int64) (int64, error) {
 	s.Log("Starting up...\n")
 	s.certsProcessed = 0
 	s.precertsSeen = 0
@@ -368,6 +368,8 @@ func (s *Scanner) Scan(foundCert func(*ct.LogEntry, string),
 			remainingString := humanTime(remainingSeconds)
 			s.Log(fmt.Sprintf("Processed: %d certs (to index %d). Throughput: %3.2f ETA: %s\n", s.certsProcessed,
 				s.opts.StartIndex+int64(s.certsProcessed), throughput, remainingString))
+
+			updater <- s.certsProcessed
 		}
 	}()
 
@@ -400,7 +402,7 @@ func (s *Scanner) Scan(foundCert func(*ct.LogEntry, string),
 	s.Log(fmt.Sprintf("Completed %d certs in %s", s.certsProcessed, humanTime(int(time.Since(startTime).Seconds()))))
 	s.Log(fmt.Sprintf("Saw %d precerts", s.precertsSeen))
 	s.Log(fmt.Sprintf("%d unparsable entries, %d non-fatal errors", s.unparsableEntries, s.entriesWithNonFatalErrors))
-	return s.certsProcessed + s.precertsSeen, nil
+	return s.certsProcessed, nil
 }
 
 // Creates a new Scanner instance using |client| to talk to the log, and taking
