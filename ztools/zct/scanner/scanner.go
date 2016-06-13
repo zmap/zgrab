@@ -360,8 +360,11 @@ func (s *Scanner) Scan(foundCert func(*ct.LogEntry, string),
 	startTime := time.Now()
 	fetches := make(chan fetchRange, 1000)
 	jobs := make(chan matcherJob, 100000)
+	//done := make(chan bool)
 	go func() {
+		//oldProc := int64(0)
 		for range ticker.C {
+
 			throughput := float64(s.certsProcessed) / time.Since(startTime).Seconds()
 			remainingCerts := int64(latestSth.TreeSize) - int64(s.opts.StartIndex) - s.certsProcessed
 			remainingSeconds := int(float64(remainingCerts) / throughput)
@@ -369,7 +372,11 @@ func (s *Scanner) Scan(foundCert func(*ct.LogEntry, string),
 			s.Log(fmt.Sprintf("Processed: %d %s certs (to index %d). Throughput: %3.2f ETA: %s\n", s.certsProcessed, s.opts.Name,
 				s.opts.StartIndex+int64(s.certsProcessed), throughput, remainingString))
 
+			//	if s.certsProcessed-oldProc > 1000 {
 			updater <- s.certsProcessed
+			//		oldProc = s.certsProcessed
+			//	}
+
 		}
 	}()
 
@@ -402,6 +409,7 @@ func (s *Scanner) Scan(foundCert func(*ct.LogEntry, string),
 	s.Log(fmt.Sprintf("Completed %d certs in %s", s.certsProcessed, humanTime(int(time.Since(startTime).Seconds()))))
 	s.Log(fmt.Sprintf("Saw %d precerts", s.precertsSeen))
 	s.Log(fmt.Sprintf("%d unparsable entries, %d non-fatal errors", s.unparsableEntries, s.entriesWithNonFatalErrors))
+	ticker.Stop()
 	return s.certsProcessed, nil
 }
 
