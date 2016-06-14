@@ -1211,13 +1211,13 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 			}
 			// ignore length of
 			if len(scts) < 2 {
-				return nil, "malformed SCT extension: length field"
+				return nil, errors.New("malformed SCT extension: length field")
 			}
 			scts = scts[2:]
 			for len(scts) > 0 {
 				length := int(scts[1]) + (int(scts[0]) << 8)
 				if (length + 2) > len(scts) {
-					return nil, "malformed SCT extension: incomplete SCT"
+					return nil, errors.New("malformed SCT extension: incomplete SCT")
 				}
 				sct, err := ct.DeserializeSCT(bytes.NewReader(scts[2 : length+2]))
 				if err != nil {
