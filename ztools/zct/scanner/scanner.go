@@ -354,7 +354,7 @@ func (s *Scanner) Scan(foundCert func(*ct.LogEntry, string),
 	if err != nil {
 		return 0, err
 	}
-	s.Log(fmt.Sprintf("Got STH with %d certs", latestSth.TreeSize))
+	s.Log(fmt.Sprintf("Got %s STH with %d certs", s.opts.Name, latestSth.TreeSize))
 
 	ticker := time.NewTicker(time.Second)
 	startTime := time.Now()
@@ -367,16 +367,16 @@ func (s *Scanner) Scan(foundCert func(*ct.LogEntry, string),
 
 			throughput := float64(s.certsProcessed) / time.Since(startTime).Seconds()
 			remainingCerts := int64(latestSth.TreeSize) - int64(s.opts.StartIndex) - s.certsProcessed
+
+			if remainingCerts == 0 {
+				return
+			}
 			remainingSeconds := int(float64(remainingCerts) / throughput)
 			remainingString := humanTime(remainingSeconds)
 			s.Log(fmt.Sprintf("Processed: %d %s certs (to index %d). Throughput: %3.2f ETA: %s\n", s.certsProcessed, s.opts.Name,
 				s.opts.StartIndex+int64(s.certsProcessed), throughput, remainingString))
 
-			//	if s.certsProcessed-oldProc > 1000 {
-			updater <- s.certsProcessed
-			//		oldProc = s.certsProcessed
-			//	}
-
+			updater <- int64(latestSth.TreeSize) - remainingCerts
 		}
 	}()
 
@@ -406,11 +406,10 @@ func (s *Scanner) Scan(foundCert func(*ct.LogEntry, string),
 	close(jobs)
 	matcherWG.Wait()
 
-	s.Log(fmt.Sprintf("Completed %d certs in %s", s.certsProcessed, humanTime(int(time.Since(startTime).Seconds()))))
+	s.Log(fmt.Sprintf("Completed %d %s certs in %s", s.certsProcessed, s.opts.Name, humanTime(int(time.Since(startTime).Seconds()))))
 	s.Log(fmt.Sprintf("Saw %d precerts", s.precertsSeen))
 	s.Log(fmt.Sprintf("%d unparsable entries, %d non-fatal errors", s.unparsableEntries, s.entriesWithNonFatalErrors))
-	ticker.Stop()
-	return s.certsProcessed, nil
+	return int64(s.opts.StartIndex) - s.certsProcessed, nil
 }
 
 // Creates a new Scanner instance using |client| to talk to the log, and taking
