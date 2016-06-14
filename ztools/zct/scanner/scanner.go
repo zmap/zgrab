@@ -369,8 +369,10 @@ func (s *Scanner) Scan(foundCert func(*ct.LogEntry, string),
 			remainingCerts := int64(latestSth.TreeSize) - int64(s.opts.StartIndex) - s.certsProcessed
 
 			if remainingCerts == 0 {
+				updater <- int64(latestSth.TreeSize)
 				return
 			}
+
 			remainingSeconds := int(float64(remainingCerts) / throughput)
 			remainingString := humanTime(remainingSeconds)
 			s.Log(fmt.Sprintf("Processed: %d %s certs (to index %d). Throughput: %3.2f ETA: %s\n", s.certsProcessed, s.opts.Name,
@@ -409,7 +411,7 @@ func (s *Scanner) Scan(foundCert func(*ct.LogEntry, string),
 	s.Log(fmt.Sprintf("Completed %d %s certs in %s", s.certsProcessed, s.opts.Name, humanTime(int(time.Since(startTime).Seconds()))))
 	s.Log(fmt.Sprintf("Saw %d precerts", s.precertsSeen))
 	s.Log(fmt.Sprintf("%d unparsable entries, %d non-fatal errors", s.unparsableEntries, s.entriesWithNonFatalErrors))
-	return int64(s.opts.StartIndex) - s.certsProcessed, nil
+	return int64(s.opts.StartIndex) + s.certsProcessed, nil
 }
 
 // Creates a new Scanner instance using |client| to talk to the log, and taking
