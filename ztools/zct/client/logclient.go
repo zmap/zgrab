@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"crypto/tls"
 
 	"github.com/zmap/zgrab/ztools/zct"
 	"github.com/mreiferson/go-httpclient"
