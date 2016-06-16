@@ -118,6 +118,7 @@ func New(uri string) *LogClient {
 		ResponseHeaderTimeout: 30 * time.Second,
 		MaxIdleConnsPerHost:   10,
 		DisableKeepAlives:     false,
+		TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
 	}
 	c.httpClient = &http.Client{Transport: transport}
 	return &c
