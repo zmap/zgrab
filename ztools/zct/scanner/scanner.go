@@ -3,17 +3,19 @@ package scanner
 import (
 	"container/list"
 	"fmt"
-	"log"
 	"math/big"
 	"regexp"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/op/go-logging"
 	"github.com/zmap/zgrab/ztools/zct"
 	"github.com/zmap/zgrab/ztools/zct/client"
 	"github.com/zmap/zgrab/ztools/zct/x509"
 )
+
+var log *logging.Logger
 
 // Clients wishing to implement their own Matchers should implement this interface:
 type Matcher interface {
@@ -200,10 +202,10 @@ func (s *Scanner) handleParseEntryError(err error, entryType ct.LogEntryType, in
 	case x509.NonFatalErrors:
 		s.entriesWithNonFatalErrors++
 		// We'll make a note, but continue.
-		s.Log(fmt.Sprintf("Non-fatal error in %+v at index %d: %s", entryType, index, err.Error()))
+		s.LogWarn(fmt.Sprintf("Non-fatal error in %+v at index %d: %s", entryType, index, err.Error()))
 	default:
 		s.unparsableEntries++
-		s.Log(fmt.Sprintf("Failed to parse in %+v at index %d : %s", entryType, index, err.Error()))
+		s.LogError(fmt.Sprintf("Failed to parse in %+v at index %d : %s", entryType, index, err.Error()))
 		return err
 	}
 	return nil
@@ -331,7 +333,19 @@ func humanTime(seconds int) string {
 
 func (s Scanner) Log(msg string) {
 	if !s.opts.Quiet {
-		log.Print(msg)
+		log.Info(msg)
+	}
+}
+
+func (s Scanner) LogWarn(msg string) {
+	if !s.opts.Quiet {
+		log.Warning(msg)
+	}
+}
+
+func (s Scanner) LogError(msg string) {
+	if !s.opts.Quiet {
+		log.Error(msg)
 	}
 }
 
@@ -416,7 +430,7 @@ func (s *Scanner) Scan(foundCert func(*ct.LogEntry, string),
 
 // Creates a new Scanner instance using |client| to talk to the log, and taking
 // configuration options from |opts|.
-func NewScanner(client *client.LogClient, opts ScannerOptions) *Scanner {
+func NewScanner(client *client.LogClient, opts ScannerOptions, scanLog *logging.Logger) *Scanner {
 	var scanner Scanner
 	scanner.logClient = client
 	// Set a default match-everything regex if none was provided:
@@ -424,5 +438,6 @@ func NewScanner(client *client.LogClient, opts ScannerOptions) *Scanner {
 		opts.Matcher = &MatchAll{}
 	}
 	scanner.opts = opts
+	log = scanLog
 	return &scanner
 }
