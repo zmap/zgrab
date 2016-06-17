@@ -238,34 +238,36 @@ func makeGrabber(config *Config) func(*Conn) error {
 		response := make([]byte, 65536)
 		c.SetCAPool(config.RootCAPool)
 		if config.DHEOnly {
-			c.SetDHEOnly()
+			c.CipherSuites = ztls.DHECiphers
 		}
 		if config.ECDHEOnly {
-			c.SetECDHEOnly()
+			c.CipherSuites = ztls.ECDHECiphers
 		}
 		if config.ExportsOnly {
-			c.SetExportsOnly()
+			c.CipherSuites = ztls.RSA512ExportCiphers
 		}
 		if config.ExportsDHOnly {
-			c.SetExportsDHOnly()
+			c.CipherSuites = ztls.DHEExportCiphers
 		}
 		if config.ChromeOnly {
-			c.SetChromeCiphers()
+			c.CipherSuites = ztls.ChromeCiphers
 		}
 		if config.ChromeNoDHE {
-			c.SetChromeNoDHECiphers()
+			c.CipherSuites = ztls.ChromeNoDHECiphers
 		}
 		if config.FirefoxOnly {
-			c.SetFirefoxCiphers()
+			c.CipherSuites = ztls.FirefoxCiphers
 		}
 		if config.FirefoxNoDHE {
-			c.SetFirefoxNoDHECiphers()
+			c.CipherSuites = ztls.FirefoxNoDHECiphers
 		}
 		if config.SafariOnly {
-			c.SetSafariCiphers()
+			c.CipherSuites = ztls.SafariCiphers
+			c.ForceSuites = true
 		}
 		if config.SafariNoDHE {
-			c.SetSafariNoDHECiphers()
+			c.CipherSuites = ztls.SafariNoDHECiphers
+			c.ForceSuites = true
 		}
 		if config.NoSNI {
 			c.SetNoSNI()

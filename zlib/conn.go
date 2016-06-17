@@ -64,16 +64,8 @@ type Conn struct {
 
 	caPool *x509.CertPool
 
-	onlyDHE                   bool
-	onlyECDHE                 bool
-	onlyExports               bool
-	onlyExportsDH             bool
-	chromeCiphers             bool
-	chromeNoDHE               bool
-	firefoxCiphers            bool
-	firefoxNoDHECiphers       bool
-	safariCiphers             bool
-	safariNoDHECiphers        bool
+	CipherSuites              []uint16
+	ForceSuites               bool
 	noSNI                     bool
 	extendedRandom            bool
 	gatherSessionTicket       bool
@@ -97,46 +89,6 @@ func (c *Conn) getUnderlyingConn() net.Conn {
 		return c.tlsConn
 	}
 	return c.conn
-}
-
-func (c *Conn) SetDHEOnly() {
-	c.onlyDHE = true
-}
-
-func (c *Conn) SetECDHEOnly() {
-	c.onlyECDHE = true
-}
-
-func (c *Conn) SetExportsOnly() {
-	c.onlyExports = true
-}
-
-func (c *Conn) SetExportsDHOnly() {
-	c.onlyExportsDH = true
-}
-
-func (c *Conn) SetChromeCiphers() {
-	c.chromeCiphers = true
-}
-
-func (c *Conn) SetChromeNoDHECiphers() {
-	c.chromeNoDHE = true
-}
-
-func (c *Conn) SetFirefoxCiphers() {
-	c.firefoxCiphers = true
-}
-
-func (c *Conn) SetFirefoxNoDHECiphers() {
-	c.firefoxNoDHECiphers = true
-}
-
-func (c *Conn) SetSafariCiphers() {
-	c.safariCiphers = true
-}
-
-func (c *Conn) SetSafariNoDHECiphers() {
-	c.safariNoDHECiphers = true
 }
 
 func (c *Conn) SetExtendedRandom() {
@@ -339,41 +291,10 @@ func (c *Conn) TLSHandshake() error {
 	tlsConfig.RootCAs = c.caPool
 	tlsConfig.HeartbeatEnabled = true
 	tlsConfig.ClientDSAEnabled = true
+	tlsConfig.ForceSuites = c.ForceSuites
+	tlsConfig.CipherSuites = c.CipherSuites
 	if !c.noSNI && c.domain != "" {
 		tlsConfig.ServerName = c.domain
-	}
-	if c.onlyDHE {
-		tlsConfig.CipherSuites = ztls.DHECiphers
-	}
-	if c.onlyECDHE {
-		tlsConfig.CipherSuites = ztls.ECDHECiphers
-	}
-	if c.onlyExports {
-		tlsConfig.CipherSuites = ztls.RSA512ExportCiphers
-	}
-	if c.onlyExportsDH {
-		tlsConfig.CipherSuites = ztls.DHEExportCiphers
-	}
-	if c.chromeCiphers {
-		tlsConfig.CipherSuites = ztls.ChromeCiphers
-	}
-	if c.chromeNoDHE {
-		tlsConfig.CipherSuites = ztls.ChromeNoDHECiphers
-	}
-	if c.firefoxCiphers {
-		tlsConfig.CipherSuites = ztls.FirefoxCiphers
-	}
-	if c.firefoxNoDHECiphers {
-		tlsConfig.CipherSuites = ztls.FirefoxNoDHECiphers
-	}
-
-	if c.safariCiphers {
-		tlsConfig.CipherSuites = ztls.SafariCiphers
-		tlsConfig.ForceSuites = true
-	}
-	if c.safariNoDHECiphers {
-		tlsConfig.CipherSuites = ztls.SafariNoDHECiphers
-		tlsConfig.ForceSuites = true
 	}
 	if c.extendedRandom {
 		tlsConfig.ExtendedRandom = true
