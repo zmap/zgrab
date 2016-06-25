@@ -16,7 +16,7 @@ import (
 	"crypto/sha512"
 	"hash"
 
-	"github.com/dadrian/rc2"
+	"github.com/zmap/rc2"
 	"github.com/zmap/zgrab/ztools/x509"
 )
 
