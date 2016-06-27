@@ -27,6 +27,8 @@ var knownHeaders = map[string]bool{
 	"accept_ranges":               true,
 	"age":                         true,
 	"allow":                       true,
+	"alt_svc":                     true,
+	"alternate_protocol":          true,
 	"cache_control":               true,
 	"connection":                  true,
 	"content_disposition":         true,
