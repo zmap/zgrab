@@ -375,6 +375,8 @@ zgrab_http_headers = SubRecord({
     "accept_ranges":ListOf(String()),
     "age":ListOf(String()),
     "allow":ListOf(String()),
+    "alt_svc":ListOf(String()),
+    "alternate_protocol":ListOf(String()),
     "cache_control":ListOf(String()),
     "connection":ListOf(String()),
     "content_disposition":ListOf(String()),
