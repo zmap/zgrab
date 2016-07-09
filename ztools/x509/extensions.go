@@ -38,8 +38,8 @@ type CertificateExtensions struct {
 	SubjectAltName                 *SubjectAltName                  `json:"subject_alt_name,omitempty"`
 	NameConstraints                *NameConstraints                 `json:"name_constraints,omitempty"`
 	CRLDistributionPoints          CRLDistributionPoints            `json:"crl_distribution_points,omitempty"`
-	AuthKeyID                      AuthKeyId                        `json:"authority_key_id,omitempty"`
-	SubjectKeyID                   []byte                           `json:"subject_key_id,omitempty"`
+	AuthKeyID                      SubjAuthKeyId                    `json:"authority_key_id,omitempty"`
+	SubjectKeyID                   SubjAuthKeyId                    `json:"subject_key_id,omitempty"`
 	ExtendedKeyUsage               ExtendedKeyUsage                 `json:"extended_key_usage,omitempty"`
 	CertificatePolicies            CertificatePolicies              `json:"certificate_policies,omitmepty"`
 	AuthorityInfoAccess            *AuthorityInfoAccess             `json:"authority_info_access,omitempty"`
@@ -117,10 +117,10 @@ func (nc NameConstraints) MarshalJSON() ([]byte, error) {
 
 type CRLDistributionPoints []string
 
-type AuthKeyId []byte
+type SubjAuthKeyId []byte
 
-func (akid AuthKeyId) MarshalJSON() ([]byte, error) {
-	enc := hex.EncodeToString(akid)
+func (kid SubjAuthKeyId) MarshalJSON() ([]byte, error) {
+	enc := hex.EncodeToString(kid)
 	return json.Marshal(enc)
 }
 
