@@ -28,7 +28,8 @@ zgrab_parsed_certificate = SubRecord({
     "serial_number":String(doc="Serial number as an unsigned decimal integer. Stored as string to support >uint lengths. Negative values are allowed."),
     "validity":SubRecord({
         "start":DateTime(doc="Timestamp of when certificate is first valid. Timezone is UTC."),
-        "end":DateTime(doc="Timestamp of when certificate expires. Timezone is UTC.")
+        "end":DateTime(doc="Timestamp of when certificate expires. Timezone is UTC."),
+        "length":Integer(),
     }),
     "signature_algorithm":SubRecord({
         "name":String(),
@@ -51,6 +52,7 @@ zgrab_parsed_certificate = SubRecord({
             "y":Binary(),
         }),
         "ecdsa_public_key":SubRecord({
+            "pub":Binary()
             "b":Binary(),
             "gx":Binary(),
             "gy":Binary(),
@@ -58,6 +60,7 @@ zgrab_parsed_certificate = SubRecord({
             "p":Binary(),
             "x":Binary(),
             "y":Binary(),
+            "asn1_oid":String()
         })
     }),
     "extensions":SubRecord({
