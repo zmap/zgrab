@@ -204,29 +204,28 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string) error {
 			TLSClientConfig:     tlsConfig,
 		}
 
-		client := &http.Client{
-			UserAgent: config.HTTP.UserAgent,
-			CheckRedirect: func(req *http.Request, res *http.Response, via []*http.Request) error {
-				grabData.HTTP.RedirectResponseChain = append(grabData.HTTP.RedirectResponseChain, res)
-				if str, err := util.ReadString(res.Body, config.HTTP.MaxSize*1000); err != nil {
-					return err
-				} else {
-					res.BodyText = str
-					m := sha256.New()
-					m.Write([]byte(str))
-					res.BodySHA256 = m.Sum(nil)
-				}
-				res.Body.Close()
+		client := http.MakeNewClient()
+		client.UserAgent = config.HTTP.UserAgent
+		client.CheckRedirect = func(req *http.Request, res *http.Response, via []*http.Request) error {
+			grabData.HTTP.RedirectResponseChain = append(grabData.HTTP.RedirectResponseChain, res)
+			if str, err := util.ReadString(res.Body, config.HTTP.MaxSize*1000); err != nil {
+				return err
+			} else {
+				res.BodyText = str
+				m := sha256.New()
+				m.Write([]byte(str))
+				res.BodySHA256 = m.Sum(nil)
+			}
+			res.Body.Close()
 
-				if len(via) > config.HTTP.MaxRedirects {
-					return errors.New(fmt.Sprintf("stopped after %d redirects", config.HTTP.MaxRedirects))
-				}
+			if len(via) > config.HTTP.MaxRedirects {
+				return errors.New(fmt.Sprintf("stopped after %d redirects", config.HTTP.MaxRedirects))
+			}
 
-				return nil
-			}, //Defaults to following up to 10 redirects
-			Jar:       nil, // Don't send or receive cookies (otherwise use CookieJar)
-			Transport: transport,
-		}
+			return nil
+		} //Defaults to following up to 10 redirects
+		client.Jar = nil // Don't send or receive cookies (otherwise use CookieJar)
+		client.Transport = transport
 
 		var fullURL string
 
