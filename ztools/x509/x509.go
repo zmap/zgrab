@@ -82,6 +82,8 @@ func marshalPublicKey(pub interface{}) (publicKeyBytes []byte, publicKeyAlgorith
 			return
 		}
 		publicKeyAlgorithm.Parameters.FullBytes = paramBytes
+	case *augmentedECDSA:
+		return marshalPublicKey(pub.Pub)
 	default:
 		return nil, pkix.AlgorithmIdentifier{}, errors.New("x509: only RSA and ECDSA public keys supported")
 	}
@@ -152,6 +154,11 @@ type publicKeyInfo struct {
 	Raw       asn1.RawContent
 	Algorithm pkix.AlgorithmIdentifier
 	PublicKey asn1.BitString
+}
+
+type augmentedECDSA struct {
+	Pub *ecdsa.PublicKey
+	Raw asn1.BitString
 }
 
 // RFC 5280,  4.2.1.1
@@ -740,6 +747,18 @@ func (c *Certificate) CheckSignature(algo SignatureAlgorithm, signed, signature 
 			return errors.New("x509: ECDSA verification failure")
 		}
 		return
+	case *augmentedECDSA:
+		ecdsaSig := new(ecdsaSignature)
+		if _, err := asn1.Unmarshal(signature, ecdsaSig); err != nil {
+			return err
+		}
+		if ecdsaSig.R.Sign() <= 0 || ecdsaSig.S.Sign() <= 0 {
+			return errors.New("x509: ECDSA signature contained zero or negative values")
+		}
+		if !ecdsa.Verify(pub.Pub, digest, ecdsaSig.R, ecdsaSig.S) {
+			return errors.New("x509: ECDSA verification failure")
+		}
+		return
 	}
 	return ErrUnsupportedAlgorithm
 }
@@ -859,10 +878,15 @@ func parsePublicKey(algo PublicKeyAlgorithm, keyData *publicKeyInfo) (interface{
 		if x == nil {
 			return nil, errors.New("x509: failed to unmarshal elliptic curve point")
 		}
-		pub := &ecdsa.PublicKey{
+		key := &ecdsa.PublicKey{
 			Curve: namedCurve,
 			X:     x,
 			Y:     y,
+		}
+
+		pub := &augmentedECDSA{
+			Pub: key,
+			Raw: keyData.PublicKey,
 		}
 		return pub, nil
 	default:
