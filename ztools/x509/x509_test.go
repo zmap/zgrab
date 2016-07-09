@@ -551,12 +551,12 @@ func TestECDSA(t *testing.T) {
 		if parsedKey, ok := cert.PublicKey.(*AugmentedECDSA); !ok {
 			t.Errorf("%d: wanted an AugmentedECDSA public key but found: %#v", i, parsedKey)
 		}
-		//		if parsedKey, ok := cert.PublicKey.Pub(*ecdsa.PublicKey); !ok {
-		//			t.Errorf("%d: wanted an ECDSA public key but found: %#v", i, parsedKey)
-		//		}
-		//		if parsedKey, ok := cert.PublicKey.Raw(*asn.BitString); !ok {
-		//			t.Errorf("%d: wanted an ECDSA public key but found: %#v", i, parsedKey)
-		//		}
+		//      if parsedKey, ok := cert.PublicKey.Pub(*ecdsa.PublicKey); !ok {
+		//          t.Errorf("%d: wanted an ECDSA public key but found: %#v", i, parsedKey)
+		//      }
+		//      if parsedKey, ok := cert.PublicKey.Raw(*asn.BitString); !ok {
+		//          t.Errorf("%d: wanted an ECDSA public key but found: %#v", i, parsedKey)
+		//      }
 		if pka := cert.PublicKeyAlgorithm; pka != ECDSA {
 			t.Errorf("%d: public key algorithm is %v, want ECDSA", i, pka)
 		}
