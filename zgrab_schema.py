@@ -157,6 +157,7 @@ zgrab_certificate = SubRecord({
 zgrab_server_certificate_valid = SubRecord({
     "complete_chain":Bool(doc="does server provide a chain up to a root"),
     "valid":Bool(doc="is this certificate currently valid in this browser"),
+    "error":String()
 })
 
 zgrab_tls = SubRecord({
