@@ -165,7 +165,7 @@ func (c *Conn) clientHandshake() error {
 		c.sendAlert(alertUnexpectedMessage)
 		return unexpectedMessageError(serverHello, msg)
 	}
-	c.handshakeLog.ServerHello = serverHello.MakeLog()
+	c.handshakeLog.ServerHello = serverHello.MakeLog(c.config)
 
 	if serverHello.heartbeatEnabled {
 		c.heartbeat = true
