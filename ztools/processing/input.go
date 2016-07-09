@@ -15,6 +15,7 @@
 package processing
 
 import (
+	"github.com/zmap/zgrab/ztools/zlog"
 	"io"
 	"sync"
 )
@@ -83,6 +84,8 @@ func Process(in Decoder, out io.Writer, w Worker, m Marshaler, workers uint) {
 		obj, err := in.DecodeNext()
 		if err == io.EOF {
 			break
+		} else if err != nil {
+			zlog.Error(err)
 		}
 		processQueue <- obj
 	}
