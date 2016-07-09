@@ -184,6 +184,7 @@ type jsonCertificate struct {
 	Issuer             pkix.Name                    `json:"issuer"`
 	IssuerDN           string                       `json:"issuer_dn,omitempty"`
 	Validity           validity                     `json:"validity"`
+	ValidFor           time.Duration                `json:"valid_for"`
 	Subject            pkix.Name                    `json:"subject"`
 	SubjectDN          string                       `json:"subject_dn,omitempty"`
 	SubjectKeyInfo     jsonSubjectKeyInfo           `json:"subject_key_info"`
@@ -206,6 +207,7 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.IssuerDN = c.Issuer.String()
 	jc.Validity.NotBefore = c.NotBefore
 	jc.Validity.NotAfter = c.NotAfter
+	jc.ValidFor = c.ValidFor
 	jc.Subject = c.Subject
 	jc.SubjectDN = c.Subject.String()
 	jc.SubjectKeyInfo.KeyAlgorithm = c.PublicKeyAlgorithm
@@ -233,6 +235,23 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		keyMap["gy"] = params.Gy.Bytes()
 		keyMap["x"] = key.X.Bytes()
 		keyMap["y"] = key.Y.Bytes()
+		jc.SubjectKeyInfo.ECDSAPublicKey = keyMap
+	case *AugmentedECDSA:
+		pub := key.Pub
+
+		keyMap["pub"] = key.Raw.Bytes
+
+		params := pub.Params()
+		keyMap["p"] = params.P.Bytes()
+		keyMap["n"] = params.N.Bytes()
+		keyMap["b"] = params.B.Bytes()
+		keyMap["gx"] = params.Gx.Bytes()
+		keyMap["gy"] = params.Gy.Bytes()
+		keyMap["x"] = pub.X.Bytes()
+		keyMap["y"] = pub.Y.Bytes()
+
+		keyMap["asn1_oid"] = c.SignatureAlgorithmOID
+
 		jc.SubjectKeyInfo.ECDSAPublicKey = keyMap
 	}
 
