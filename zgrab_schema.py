@@ -124,6 +124,7 @@ zgrab_parsed_certificate = SubRecord({
     "fingerprint_md5":Binary(),
     "fingerprint_sha1":Binary(),
     "fingerprint_sha256":Binary(),
+    "spki_fingerprint":Binary(),
 })
 
 zgrab_certificate = SubRecord({
