@@ -519,6 +519,7 @@ type Certificate struct {
 	Issuer              pkix.Name
 	Subject             pkix.Name
 	NotBefore, NotAfter time.Time // Validity bounds.
+	ValidFor            time.Duration
 	KeyUsage            KeyUsage
 
 	// Extensions contains raw X.509 extensions. When parsing certificates,
@@ -992,6 +993,8 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 
 	out.NotBefore = in.TBSCertificate.Validity.NotBefore
 	out.NotAfter = in.TBSCertificate.Validity.NotAfter
+
+	out.ValidFor = out.NotAfter.Sub(out.NotBefore)
 
 	for _, e := range in.TBSCertificate.Extensions {
 		out.Extensions = append(out.Extensions, e)
