@@ -205,6 +205,7 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string) error {
 		}
 
 		client := &http.Client{
+			UserAgent: config.HTTP.UserAgent,
 			CheckRedirect: func(req *http.Request, res *http.Response, via []*http.Request) error {
 				grabData.HTTP.RedirectResponseChain = append(grabData.HTTP.RedirectResponseChain, res)
 				if str, err := util.ReadString(res.Body, config.HTTP.MaxSize*1000); err != nil {

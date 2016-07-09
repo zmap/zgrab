@@ -77,7 +77,7 @@ func init() {
 	flag.StringVar(&messageFileName, "data", "", "Send a message and read response (%s will be replaced with destination IP)")
 	flag.StringVar(&config.HTTP.Endpoint, "http", "", "Send an HTTP request to an endpoint")
 	flag.StringVar(&config.HTTP.Method, "http-method", "GET", "Set HTTP request method type")
-	flag.StringVar(&config.HTTP.UserAgent, "http-user-agent", "", "Set a custom HTTP user agent")
+	flag.StringVar(&config.HTTP.UserAgent, "http-user-agent", "Mozilla/5.0 zgrab/0.x", "Set a custom HTTP user agent")
 	flag.StringVar(&config.HTTP.ProxyDomain, "http-proxy-domain", "", "Send a CONNECT <domain> first")
 	flag.IntVar(&config.HTTP.MaxSize, "http-max-size", 256, "Max kilobytes to read in response to an HTTP request")
 	flag.IntVar(&config.HTTP.MaxRedirects, "http-max-redirects", 0, "Max number of redirects to follow")

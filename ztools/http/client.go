@@ -45,10 +45,13 @@ type Client struct {
 	// If Jar is nil, cookies are not sent in requests and ignored
 	// in responses.
 	Jar CookieJar
+
+	// HTTP User Agent header for an instantiated client
+	UserAgent string
 }
 
 // DefaultClient is the default Client and is used by Get, Head, and Post.
-var DefaultClient = &Client{}
+var DefaultClient = &Client{UserAgent: "Mozilla/5.0 zgrab/0.x"}
 
 // RoundTripper is an interface representing the ability to execute a
 // single HTTP transaction, obtaining the Response for a given Request.
@@ -96,9 +99,17 @@ type readClose struct {
 //
 // Generally Get, Post, or PostForm will be used instead of Do.
 func (c *Client) Do(req *Request) (resp *Response, err error) {
+	if c.UserAgent == "" {
+		err = errors.New("http: no client.UserAgent set")
+		return
+	}
+
+	req.Headers.Set("User-Agent", c.UserAgent)
+
 	if req.Method == "GET" || req.Method == "HEAD" {
 		return c.doFollowingRedirects(req)
 	}
+
 	return send(req, c.Transport)
 }
 
@@ -173,10 +184,16 @@ func (c *Client) Get(url string) (r *Response, err error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return c.doFollowingRedirects(req)
 }
 
 func (c *Client) doFollowingRedirects(ireq *Request) (r *Response, err error) {
+	if c.UserAgent == "" {
+		err = errors.New("http: no client.UserAgent set")
+		return
+	}
+
 	// TODO: if/when we add cookie support, the redirected request shouldn't
 	// necessarily supply the same cookies as the original.
 	var base *url.URL
@@ -225,6 +242,7 @@ func (c *Client) doFollowingRedirects(ireq *Request) (r *Response, err error) {
 			req.AddCookie(cookie)
 		}
 		urlStr = req.URL.String()
+		req.Headers.Set("User-Agent", c.UserAgent)
 		if r, err = send(req, c.Transport); err != nil {
 			break
 		}
@@ -279,6 +297,14 @@ func (c *Client) Post(url string, bodyType string, body io.Reader) (r *Response,
 	if err != nil {
 		return nil, err
 	}
+
+	if c.UserAgent == "" {
+		err = errors.New("http: no client.UserAgent set")
+		return
+	}
+
+	req.Headers.Set("User-Agent", c.UserAgent)
+
 	req.Headers.Set("Content-Type", bodyType)
 	r, err = send(req, c.Transport)
 	if err == nil && c.Jar != nil {
