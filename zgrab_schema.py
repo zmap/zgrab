@@ -118,7 +118,7 @@ zgrab_parsed_certificate = SubRecord({
             "oid":String(),
         }),
         "value":Binary(),
-        "valid":Boolean(),
+        #"valid":Boolean(),
         "self_signed":Boolean(),
     }),
     "fingerprint_md5":Binary(),
@@ -127,9 +127,36 @@ zgrab_parsed_certificate = SubRecord({
     "spki_fingerprint":Binary(),
 })
 
+zgrab_certificate_trust = SubRecord({
+    "type":String(doc="root, intermediate, or leaf certificate"),
+    "trusted_path":Bool(doc="Does certificate chain up to browser root store"),
+    "valid":Bool(doc="is this certificate currently valid in this browser"),
+    "was_valid":Bool(doc="was this certificate ever valid in this browser")
+})
+
+zgrab_lint_result = SubRecord({
+
+})
+
+zgrab_lint = SubRecord({})
+
 zgrab_certificate = SubRecord({
     "raw":Binary(),
     "parsed":zgrab_parsed_certificate,
+    "validation":SubRecord({
+        "nss":zgrab_certificate_trust,
+        "apple":zgrab_certificate_trust,
+        "microsoft":zgrab_certificate_trust,
+        "android":zgrab_certificate_trust,
+        "java":zgrab_certificate_trust,
+    })
+    "lint":zgrab_lint
+})
+
+
+zgrab_server_certificate_valid = SubRecord({
+    "complete_chain":Bool(doc="does server provide a chain up to a root"),
+    "valid":Bool(doc="is this certificate currently valid in this browser"),
 })
 
 zgrab_tls = SubRecord({
@@ -161,9 +188,14 @@ zgrab_tls = SubRecord({
         "certificate":zgrab_certificate,
         "chain":ListOf(zgrab_certificate),
         "validation":SubRecord({
-            "browser_trusted":Boolean(),
-            "browser_error":String(),
             "matches_domain":Boolean(),
+            "stores":SubRecord({
+                "nss":zgrab_server_certificate_valid,
+                "microsoft":zgrab_server_certificate_valid,
+                "apple":zgrab_server_certificate_valid,
+                "java":zgrab_server_certificate_valid,
+                "android":zgrab_server_certificate_valid,
+            })
         }),
     }),
     "server_key_exchange":SubRecord({
