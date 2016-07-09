@@ -581,6 +581,8 @@ type Certificate struct {
 	FingerprintMD5    CertificateFingerprint
 	FingerprintSHA1   CertificateFingerprint
 	FingerprintSHA256 CertificateFingerprint
+	// SPKI
+	SPKIFingerprint CertificateFingerprint
 
 	IsPrecert bool
 
@@ -932,6 +934,7 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 	out.FingerprintMD5 = MD5Fingerprint(in.Raw)
 	out.FingerprintSHA1 = SHA1Fingerprint(in.Raw)
 	out.FingerprintSHA256 = SHA256Fingerprint(in.Raw)
+	out.SPKIFingerprint = SHA256Fingerprint(in.TBSCertificate.PublicKey.Raw)
 
 	out.Signature = in.SignatureValue.RightAlign()
 	out.SignatureAlgorithm =
