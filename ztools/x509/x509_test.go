@@ -315,8 +315,8 @@ func TestCreateSelfSignedCertificate(t *testing.T) {
 	}{
 		{"RSA/RSA", &rsaPriv.PublicKey, rsaPriv, true, SHA1WithRSA},
 		{"RSA/ECDSA", &rsaPriv.PublicKey, ecdsaPriv, false, ECDSAWithSHA384},
-		{"ECDSA/RSA", &augmentedECDSA{Pub: &ecdsaPriv.PublicKey, Raw: null}, rsaPriv, false, SHA256WithRSA},
-		{"ECDSA/ECDSA", &augmentedECDSA{Pub: &ecdsaPriv.PublicKey, Raw: null}, ecdsaPriv, true, ECDSAWithSHA1},
+		{"ECDSA/RSA", &AugmentedECDSA{Pub: &ecdsaPriv.PublicKey, Raw: null}, rsaPriv, false, SHA256WithRSA},
+		{"ECDSA/ECDSA", &AugmentedECDSA{Pub: &ecdsaPriv.PublicKey, Raw: null}, ecdsaPriv, true, ECDSAWithSHA1},
 	}
 
 	testExtKeyUsage := []ExtKeyUsage{ExtKeyUsageClientAuth, ExtKeyUsageServerAuth}
@@ -548,8 +548,8 @@ func TestECDSA(t *testing.T) {
 		if sa := cert.SignatureAlgorithm; sa != test.sigAlgo {
 			t.Errorf("%d: signature algorithm is %v, want %v", i, sa, test.sigAlgo)
 		}
-		if parsedKey, ok := cert.PublicKey.(*augmentedECDSA); !ok {
-			t.Errorf("%d: wanted an augmentedECDSA public key but found: %#v", i, parsedKey)
+		if parsedKey, ok := cert.PublicKey.(*AugmentedECDSA); !ok {
+			t.Errorf("%d: wanted an AugmentedECDSA public key but found: %#v", i, parsedKey)
 		}
 		//		if parsedKey, ok := cert.PublicKey.Pub(*ecdsa.PublicKey); !ok {
 		//			t.Errorf("%d: wanted an ECDSA public key but found: %#v", i, parsedKey)

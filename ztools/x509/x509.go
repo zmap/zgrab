@@ -82,7 +82,7 @@ func marshalPublicKey(pub interface{}) (publicKeyBytes []byte, publicKeyAlgorith
 			return
 		}
 		publicKeyAlgorithm.Parameters.FullBytes = paramBytes
-	case *augmentedECDSA:
+	case *AugmentedECDSA:
 		return marshalPublicKey(pub.Pub)
 	default:
 		return nil, pkix.AlgorithmIdentifier{}, errors.New("x509: only RSA and ECDSA public keys supported")
@@ -156,7 +156,7 @@ type publicKeyInfo struct {
 	PublicKey asn1.BitString
 }
 
-type augmentedECDSA struct {
+type AugmentedECDSA struct {
 	Pub *ecdsa.PublicKey
 	Raw asn1.BitString
 }
@@ -747,7 +747,7 @@ func (c *Certificate) CheckSignature(algo SignatureAlgorithm, signed, signature 
 			return errors.New("x509: ECDSA verification failure")
 		}
 		return
-	case *augmentedECDSA:
+	case *AugmentedECDSA:
 		ecdsaSig := new(ecdsaSignature)
 		if _, err := asn1.Unmarshal(signature, ecdsaSig); err != nil {
 			return err
@@ -884,7 +884,7 @@ func parsePublicKey(algo PublicKeyAlgorithm, keyData *publicKeyInfo) (interface{
 			Y:     y,
 		}
 
-		pub := &augmentedECDSA{
+		pub := &AugmentedECDSA{
 			Pub: key,
 			Raw: keyData.PublicKey,
 		}

@@ -356,7 +356,7 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 
 		var supportedCertKeyType bool
 		switch serverCert.PublicKey.(type) {
-		case *rsa.PublicKey, *ecdsa.PublicKey:
+		case *rsa.PublicKey, *ecdsa.PublicKey, *x509.AugmentedECDSA:
 			supportedCertKeyType = true
 			break
 		case *dsa.PublicKey:
