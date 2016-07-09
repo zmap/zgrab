@@ -530,6 +530,7 @@ func GrabBanner(config *Config, target *GrabTarget) *Grab {
 		} else {
 			rhost = net.JoinHostPort(target.Addr.String(), port)
 		}
+		rhost += config.HTTP.Endpoint
 
 		err := httpGrabber(rhost)
 
