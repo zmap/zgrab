@@ -202,6 +202,7 @@ type jsonCertificate struct {
 	FingerprintSHA1    CertificateFingerprint       `json:"fingerprint_sha1"`
 	FingerprintSHA256  CertificateFingerprint       `json:"fingerprint_sha256"`
 	SPKIFingerprint    CertificateFingerprint       `json:"spki_fingerprint"`
+	Names              []string                     `json:"names"1`
 }
 
 func (c *Certificate) MarshalJSON() ([]byte, error) {
@@ -218,6 +219,16 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.Subject = c.Subject
 	jc.SubjectDN = c.Subject.String()
 	jc.SubjectKeyInfo.KeyAlgorithm = c.PublicKeyAlgorithm
+
+	// 1 for the DN, and then however many DNS names there are
+	jc.Names = make([]string, 1+len(c.DNSNames))
+
+	jc.Names[0] = jc.SubjectDN
+
+	// populate with the rest of the names
+	for i, name := range c.DNSNames {
+		jc.Names[i+1] = name
+	}
 
 	// Pull out the key
 	keyMap := make(map[string]interface{})
