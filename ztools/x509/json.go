@@ -228,13 +228,13 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 
 		switch name := obj.Value.(type) {
 		case string:
+			// Check that this is actually a url and not something else
 			if _, err := url.Parse(name); err == nil {
 				jc.Names = append(jc.Names, name)
 			}
 		}
 	}
 
-	// populate with the rest of the names
 	for _, name := range c.DNSNames {
 
 		if _, err := url.Parse(name); err == nil {
