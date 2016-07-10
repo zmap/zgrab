@@ -129,9 +129,9 @@ zgrab_parsed_certificate = SubRecord({
 
 zgrab_certificate_trust = SubRecord({
     "type":String(doc="root, intermediate, or leaf certificate"),
-    "trusted_path":Bool(doc="Does certificate chain up to browser root store"),
-    "valid":Bool(doc="is this certificate currently valid in this browser"),
-    "was_valid":Bool(doc="was this certificate ever valid in this browser")
+    "trusted_path":Boolean(doc="Does certificate chain up to browser root store"),
+    "valid":Boolean(doc="is this certificate currently valid in this browser"),
+    "was_valid":Boolean(doc="was this certificate ever valid in this browser")
 })
 
 zgrab_lint_result = SubRecord({
@@ -149,14 +149,14 @@ zgrab_certificate = SubRecord({
         "microsoft":zgrab_certificate_trust,
         "android":zgrab_certificate_trust,
         "java":zgrab_certificate_trust,
-    })
+    }),
     "lint":zgrab_lint
 })
 
 
 zgrab_server_certificate_valid = SubRecord({
-    "complete_chain":Bool(doc="does server provide a chain up to a root"),
-    "valid":Bool(doc="is this certificate currently valid in this browser"),
+    "complete_chain":Boolean(doc="does server provide a chain up to a root"),
+    "valid":Boolean(doc="is this certificate currently valid in this browser"),
     "error":String()
 })
 
