@@ -168,10 +168,11 @@ func (v *validity) UnmarshalJSON(b []byte) error {
 }
 
 type jsonSubjectKeyInfo struct {
-	KeyAlgorithm   PublicKeyAlgorithm `json:"key_algorithm"`
-	RSAPublicKey   *keys.RSAPublicKey `json:"rsa_public_key,omitempty"`
-	DSAPublicKey   interface{}        `json:"dsa_public_key,omitempty"`
-	ECDSAPublicKey interface{}        `json:"ecdsa_public_key,omitempty"`
+	KeyAlgorithm    PublicKeyAlgorithm     `json:"key_algorithm"`
+	RSAPublicKey    *keys.RSAPublicKey     `json:"rsa_public_key,omitempty"`
+	DSAPublicKey    interface{}            `json:"dsa_public_key,omitempty"`
+	ECDSAPublicKey  interface{}            `json:"ecdsa_public_key,omitempty"`
+	SPKIFingerprint CertificateFingerprint `json:"fingerprint_sha256"`
 }
 
 type jsonSignature struct {
@@ -202,11 +203,10 @@ type jsonCertificate struct {
 	FingerprintMD5            CertificateFingerprint       `json:"fingerprint_md5"`
 	FingerprintSHA1           CertificateFingerprint       `json:"fingerprint_sha1"`
 	FingerprintSHA256         CertificateFingerprint       `json:"fingerprint_sha256"`
-	SPKIFingerprint           CertificateFingerprint       `json:"spki_fingerprint"`
 	SPKISubjectFingerprint    CertificateFingerprint       `json:"spki_subject_fingerprint"`
 	TBSCertificateFingerprint CertificateFingerprint       `json:"tbs_fingerprint"`
-	Names                     []string                     `json:"names"`
 	ValidationLevel           CertValidationLevel          `json:"validation_level"`
+	Names                     []string                     `json:"names"`
 }
 
 func (c *Certificate) MarshalJSON() ([]byte, error) {
