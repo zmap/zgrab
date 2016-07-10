@@ -202,7 +202,7 @@ type jsonCertificate struct {
 	FingerprintSHA1    CertificateFingerprint       `json:"fingerprint_sha1"`
 	FingerprintSHA256  CertificateFingerprint       `json:"fingerprint_sha256"`
 	SPKIFingerprint    CertificateFingerprint       `json:"spki_fingerprint"`
-	Names              []string                     `json:"names"1`
+	Names              []string                     `json:"names"`
 }
 
 func (c *Certificate) MarshalJSON() ([]byte, error) {
