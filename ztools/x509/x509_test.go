@@ -352,7 +352,7 @@ func TestCreateSelfSignedCertificate(t *testing.T) {
 			EmailAddresses: []string{"gopher@golang.org"},
 			IPAddresses:    []net.IP{net.IPv4(127, 0, 0, 1).To4(), net.ParseIP("2001:4860:0:2001::68")},
 
-			PolicyIdentifiers:   []asn1.ObjectIdentifier{[]int{1, 2, 3}},
+			PolicyIdentifiers:   []asn1.ObjectIdentifier{[]int{1, 2, 3}, []int{2, 23, 140, 1, 1}},
 			PermittedDNSDomains: []string{".example.com", "example.com"},
 
 			CRLDistributionPoints: []string{"http://crl1.example.com/ca1.crl", "http://crl2.example.com/ca1.crl"},
@@ -383,7 +383,7 @@ func TestCreateSelfSignedCertificate(t *testing.T) {
 			continue
 		}
 
-		if len(cert.PolicyIdentifiers) != 1 || !cert.PolicyIdentifiers[0].Equal(template.PolicyIdentifiers[0]) {
+		if len(cert.PolicyIdentifiers) != 2 || !cert.PolicyIdentifiers[0].Equal(template.PolicyIdentifiers[0]) {
 			t.Errorf("%s: failed to parse policy identifiers: got:%#v want:%#v", test.name, cert.PolicyIdentifiers, template.PolicyIdentifiers)
 		}
 
@@ -401,6 +401,10 @@ func TestCreateSelfSignedCertificate(t *testing.T) {
 
 		if cert.SignatureAlgorithm != test.sigAlgo {
 			t.Errorf("%s: SignatureAlgorithm wasn't copied from template. Got %v, want %v", test.name, cert.SignatureAlgorithm, test.sigAlgo)
+		}
+
+		if cert.ValidationLevel != EV {
+			t.Errorf("%s: ValidationLevel was not set properly. Got %s, want %s", test.name, cert.ValidationLevel.String(), EV.String())
 		}
 
 		if !reflect.DeepEqual(cert.ExtKeyUsage, testExtKeyUsage) {
