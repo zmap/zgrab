@@ -93,7 +93,9 @@ func (t *recordingTransport) RoundTrip(req *Request) (resp *Response, err error)
 
 func TestGetRequestFormat(t *testing.T) {
 	tr := &recordingTransport{}
-	client := &Client{Transport: tr}
+	client := MakeNewClient()
+	client.Transport = tr
+
 	url := "http://dummy.faketld/"
 	client.Get(url) // Note: doesn't hit network
 	if tr.req.Method != "GET" {
@@ -109,7 +111,8 @@ func TestGetRequestFormat(t *testing.T) {
 
 func TestPostRequestFormat(t *testing.T) {
 	tr := &recordingTransport{}
-	client := &Client{Transport: tr}
+	client := MakeNewClient()
+	client.Transport = tr
 
 	url := "http://dummy.faketld/"
 	json := `{"key":"value"}`
@@ -135,7 +138,8 @@ func TestPostRequestFormat(t *testing.T) {
 
 func TestPostFormRequestFormat(t *testing.T) {
 	tr := &recordingTransport{}
-	client := &Client{Transport: tr}
+	client := MakeNewClient()
+	client.Transport = tr
 
 	urlStr := "http://dummy.faketld/"
 	form := make(url.Values)
@@ -192,7 +196,7 @@ func TestRedirects(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	c := &Client{}
+	c := MakeNewClient()
 	_, err := c.Get(ts.URL)
 	if e, g := "Get /?n=10: stopped after 10 redirects", fmt.Sprintf("%v", err); e != g {
 		t.Errorf("with default client Get, expected error %q, got %q", e, g)
@@ -213,10 +217,12 @@ func TestRedirects(t *testing.T) {
 
 	var checkErr error
 	var lastVia []*Request
-	c = &Client{CheckRedirect: func(_ *Request, _ *Response, via []*Request) error {
+	c = MakeNewClient()
+	c.CheckRedirect = func(_ *Request, _ *Response, via []*Request) error {
 		lastVia = via
 		return checkErr
-	}}
+	}
+
 	res, err := c.Get(ts.URL)
 	finalUrl := res.Request.URL.String()
 	if e, g := "<nil>", fmt.Sprintf("%v", err); e != g {
@@ -279,7 +285,8 @@ func TestRedirectCookiesOnRequest(t *testing.T) {
 	var ts *httptest.Server
 	ts = httptest.NewServer(echoCookiesRedirectHandler)
 	defer ts.Close()
-	c := &Client{}
+	c := MakeNewClient()
+
 	req, _ := NewRequest("GET", ts.URL, nil)
 	req.AddCookie(expectedCookies[0])
 	// TODO: Uncomment when an implementation of a RFC6265 cookie jar lands.
@@ -296,7 +303,8 @@ func TestRedirectCookiesJar(t *testing.T) {
 	var ts *httptest.Server
 	ts = httptest.NewServer(echoCookiesRedirectHandler)
 	defer ts.Close()
-	c := &Client{}
+	c := MakeNewClient()
+
 	c.Jar = &TestJar{perURL: make(map[string][]*Cookie)}
 	u, _ := url.Parse(ts.URL)
 	c.Jar.SetCookies(u, []*Cookie{expectedCookies[0]})
@@ -334,7 +342,8 @@ func TestStreamingGet(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	c := &Client{}
+	c := MakeNewClient()
+
 	res, err := c.Get(ts.URL)
 	if err != nil {
 		t.Fatal(err)
@@ -386,7 +395,9 @@ func TestClientWrites(t *testing.T) {
 		}
 		return c, err
 	}
-	c := &Client{Transport: &Transport{Dial: dialer}}
+
+	c := MakeNewClient()
+	c.Transport = &Transport{Dial: dialer}
 
 	_, err := c.Get(ts.URL)
 	if err != nil {
@@ -421,7 +432,9 @@ func TestClientInsecureTransport(t *testing.T) {
 				InsecureSkipVerify: insecure,
 			},
 		}
-		c := &Client{Transport: tr}
+		c := MakeNewClient()
+		c.Transport = tr
+
 		_, err := c.Get(ts.URL)
 		if (err == nil) != insecure {
 			t.Errorf("insecure=%v: got unexpected err=%v", insecure, err)

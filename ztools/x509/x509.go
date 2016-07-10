@@ -590,7 +590,8 @@ type Certificate struct {
 	FingerprintSHA1   CertificateFingerprint
 	FingerprintSHA256 CertificateFingerprint
 	// SPKI
-	SPKIFingerprint CertificateFingerprint
+	SPKIFingerprint        CertificateFingerprint
+	SPKISubjectFingerprint CertificateFingerprint
 
 	IsPrecert bool
 
@@ -960,6 +961,11 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 	out.FingerprintSHA1 = SHA1Fingerprint(in.Raw)
 	out.FingerprintSHA256 = SHA256Fingerprint(in.Raw)
 	out.SPKIFingerprint = SHA256Fingerprint(in.TBSCertificate.PublicKey.Raw)
+	// Hash both SPKI and Subject to create a fingerprint that we can use to describe a CA
+	hasher := sha1.New()
+	hasher.Write(in.TBSCertificate.PublicKey.Raw)
+	hasher.Write(in.TBSCertificate.Subject.FullBytes)
+	out.SPKISubjectFingerprint = hasher.Sum(nil)
 
 	out.Signature = in.SignatureValue.RightAlign()
 	out.SignatureAlgorithm =

@@ -36,6 +36,7 @@ zgrab_parsed_certificate = SubRecord({
         "oid":String(),
     }),
     "subject_key_info":SubRecord({
+        "fingerprint_sha256":Binary(),
         "key_algorithm":SubRecord({
             "name":String(doc="Name of public key type, e.g., RSA or ECDSA. More information is available the named SubRecord (e.g., rsa_public_key)."),
             "oid":String(doc="OID of the public key on the certificate. This is helpful when an unknown type is present. This field is reserved and not current populated.")
@@ -52,7 +53,7 @@ zgrab_parsed_certificate = SubRecord({
             "y":Binary(),
         }),
         "ecdsa_public_key":SubRecord({
-            "pub":Binary()
+            "pub":Binary(),
             "b":Binary(),
             "gx":Binary(),
             "gy":Binary(),
@@ -127,14 +128,14 @@ zgrab_parsed_certificate = SubRecord({
     "fingerprint_md5":Binary(),
     "fingerprint_sha1":Binary(),
     "fingerprint_sha256":Binary(),
-    "spki_fingerprint":Binary(),
+    "spki_subject_sha256":Binary(),
 })
 
 zgrab_certificate_trust = SubRecord({
     "type":String(doc="root, intermediate, or leaf certificate"),
-    "trusted_path":Bool(doc="Does certificate chain up to browser root store"),
-    "valid":Bool(doc="is this certificate currently valid in this browser"),
-    "was_valid":Bool(doc="was this certificate ever valid in this browser")
+    "trusted_path":Boolean(doc="Does certificate chain up to browser root store"),
+    "valid":Boolean(doc="is this certificate currently valid in this browser"),
+    "was_valid":Boolean(doc="was this certificate ever valid in this browser")
 })
 
 zgrab_lint_result = SubRecord({
@@ -152,14 +153,14 @@ zgrab_certificate = SubRecord({
         "microsoft":zgrab_certificate_trust,
         "android":zgrab_certificate_trust,
         "java":zgrab_certificate_trust,
-    })
+    }),
     "lint":zgrab_lint
 })
 
 
 zgrab_server_certificate_valid = SubRecord({
-    "complete_chain":Bool(doc="does server provide a chain up to a root"),
-    "valid":Bool(doc="is this certificate currently valid in this browser"),
+    "complete_chain":Boolean(doc="does server provide a chain up to a root"),
+    "valid":Boolean(doc="is this certificate currently valid in this browser"),
     "error":String()
 })
 

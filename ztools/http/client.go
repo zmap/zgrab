@@ -45,10 +45,13 @@ type Client struct {
 	// If Jar is nil, cookies are not sent in requests and ignored
 	// in responses.
 	Jar CookieJar
+
+	// HTTP User Agent header for an instantiated client
+	UserAgent string
 }
 
 // DefaultClient is the default Client and is used by Get, Head, and Post.
-var DefaultClient = &Client{}
+var DefaultClient = MakeNewClient()
 
 // RoundTripper is an interface representing the ability to execute a
 // single HTTP transaction, obtaining the Response for a given Request.
@@ -74,7 +77,9 @@ type RoundTripper interface {
 
 // Given a string of the form "host", "host:port", or "[ipv6::address]:port",
 // return true if the string includes a port.
-func hasPort(s string) bool { return strings.LastIndex(s, ":") > strings.LastIndex(s, "]") }
+func hasPort(s string) bool {
+	return strings.LastIndex(s, ":") > strings.LastIndex(s, "]")
+}
 
 // Used in Send to implement io.ReadCloser by bundling together the
 // bufio.Reader through which we read the response, and the underlying
@@ -82,6 +87,10 @@ func hasPort(s string) bool { return strings.LastIndex(s, ":") > strings.LastInd
 type readClose struct {
 	io.Reader
 	io.Closer
+}
+
+func MakeNewClient() *Client {
+	return &Client{UserAgent: "Mozilla/5.0 zgrab/0.x"}
 }
 
 // Do sends an HTTP request and returns an HTTP response, following
@@ -96,9 +105,21 @@ type readClose struct {
 //
 // Generally Get, Post, or PostForm will be used instead of Do.
 func (c *Client) Do(req *Request) (resp *Response, err error) {
+	if c.UserAgent == "" {
+		err = errors.New("http: no client.UserAgent set")
+		return
+	}
+
+	if req.Headers == nil {
+		req.Headers = make(Header)
+	}
+
+	req.Headers.Set("User-Agent", c.UserAgent)
+
 	if req.Method == "GET" || req.Method == "HEAD" {
 		return c.doFollowingRedirects(req)
 	}
+
 	return send(req, c.Transport)
 }
 
@@ -173,10 +194,16 @@ func (c *Client) Get(url string) (r *Response, err error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return c.doFollowingRedirects(req)
 }
 
 func (c *Client) doFollowingRedirects(ireq *Request) (r *Response, err error) {
+	if c.UserAgent == "" {
+		err = errors.New("http: no client.UserAgent set")
+		return
+	}
+
 	// TODO: if/when we add cookie support, the redirected request shouldn't
 	// necessarily supply the same cookies as the original.
 	var base *url.URL
@@ -225,6 +252,12 @@ func (c *Client) doFollowingRedirects(ireq *Request) (r *Response, err error) {
 			req.AddCookie(cookie)
 		}
 		urlStr = req.URL.String()
+		if req.Headers == nil {
+			req.Headers = make(Header)
+		}
+
+		req.Headers.Set("User-Agent", c.UserAgent)
+
 		if r, err = send(req, c.Transport); err != nil {
 			break
 		}
@@ -279,6 +312,18 @@ func (c *Client) Post(url string, bodyType string, body io.Reader) (r *Response,
 	if err != nil {
 		return nil, err
 	}
+
+	if c.UserAgent == "" {
+		err = errors.New("http: no client.UserAgent set")
+		return
+	}
+
+	if req.Headers == nil {
+		req.Headers = make(Header)
+	}
+
+	req.Headers.Set("User-Agent", c.UserAgent)
+
 	req.Headers.Set("Content-Type", bodyType)
 	r, err = send(req, c.Transport)
 	if err == nil && c.Jar != nil {

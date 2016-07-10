@@ -43,7 +43,8 @@ func TestTransportKeepAlives(t *testing.T) {
 
 	for _, disableKeepAlive := range []bool{false, true} {
 		tr := &Transport{DisableKeepAlives: disableKeepAlive}
-		c := &Client{Transport: tr}
+		c := MakeNewClient()
+		c.Transport = tr
 
 		fetch := func(n int) string {
 			res, err := c.Get(ts.URL)
@@ -74,7 +75,8 @@ func TestTransportConnectionCloseOnResponse(t *testing.T) {
 
 	for _, connectionClose := range []bool{false, true} {
 		tr := &Transport{}
-		c := &Client{Transport: tr}
+		c := MakeNewClient()
+		c.Transport = tr
 
 		fetch := func(n int) string {
 			req := new(Request)
@@ -117,7 +119,8 @@ func TestTransportConnectionCloseOnRequest(t *testing.T) {
 
 	for _, connectionClose := range []bool{false, true} {
 		tr := &Transport{}
-		c := &Client{Transport: tr}
+		c := MakeNewClient()
+		c.Transport = tr
 
 		fetch := func(n int) string {
 			req := new(Request)
@@ -159,7 +162,8 @@ func TestTransportIdleCacheKeys(t *testing.T) {
 	defer ts.Close()
 
 	tr := &Transport{DisableKeepAlives: false}
-	c := &Client{Transport: tr}
+	c := MakeNewClient()
+	c.Transport = tr
 
 	if e, g := 0, len(tr.IdleConnKeysForTesting()); e != g {
 		t.Errorf("After CloseIdleConnections expected %d idle conn cache keys; got %d", e, g)
@@ -200,7 +204,8 @@ func TestTransportMaxPerHostIdleConns(t *testing.T) {
 	defer ts.Close()
 	maxIdleConns := 2
 	tr := &Transport{DisableKeepAlives: false, MaxIdleConnsPerHost: maxIdleConns}
-	c := &Client{Transport: tr}
+	c := MakeNewClient()
+	c.Transport = tr
 
 	// Start 3 outstanding requests and wait for the server to get them.
 	// Their responses will hang until we we write to resch, though.
@@ -259,7 +264,8 @@ func TestTransportServerClosingUnexpectedly(t *testing.T) {
 	defer ts.Close()
 
 	tr := &Transport{}
-	c := &Client{Transport: tr}
+	c := MakeNewClient()
+	c.Transport = tr
 
 	fetch := func(n, retries int) string {
 		condFatalf := func(format string, arg ...interface{}) {
@@ -327,7 +333,8 @@ func TestStressSurpriseServerCloses(t *testing.T) {
 	defer ts.Close()
 
 	tr := &Transport{DisableKeepAlives: false}
-	c := &Client{Transport: tr}
+	c := MakeNewClient()
+	c.Transport = tr
 
 	// Do a bunch of traffic from different goroutines. Send to activityc
 	// after each request completes, regardless of whether it failed.
@@ -377,7 +384,9 @@ func TestTransportHeadResponses(t *testing.T) {
 	defer ts.Close()
 
 	tr := &Transport{DisableKeepAlives: false}
-	c := &Client{Transport: tr}
+	c := MakeNewClient()
+	c.Transport = tr
+
 	for i := 0; i < 2; i++ {
 		res, err := c.Head(ts.URL)
 		if err != nil {
@@ -406,7 +415,8 @@ func TestTransportHeadChunkedResponse(t *testing.T) {
 	defer ts.Close()
 
 	tr := &Transport{DisableKeepAlives: false}
-	c := &Client{Transport: tr}
+	c := MakeNewClient()
+	c.Transport = tr
 
 	res1, err := c.Head(ts.URL)
 	if err != nil {
@@ -522,7 +532,8 @@ func TestTransportGzip(t *testing.T) {
 	defer ts.Close()
 
 	for _, chunked := range []string{"1", "0"} {
-		c := &Client{Transport: &Transport{}}
+		c := MakeNewClient()
+		c.Transport = &Transport{}
 
 		// First fetch something large, but only read some of it.
 		res, err := c.Get(ts.URL + "/?body=large&chunked=" + chunked)
@@ -573,7 +584,9 @@ func TestTransportGzip(t *testing.T) {
 	}
 
 	// And a HEAD request too, because they're always weird.
-	c := &Client{Transport: &Transport{}}
+	c := MakeNewClient()
+	c.Transport = &Transport{}
+
 	res, err := c.Head(ts.URL)
 	if err != nil {
 		t.Fatalf("Head: %v", err)
@@ -598,7 +611,10 @@ func TestTransportProxy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c := &Client{Transport: &Transport{Proxy: ProxyURL(pu)}}
+
+	c := MakeNewClient()
+	c.Transport = &Transport{Proxy: ProxyURL(pu)}
+
 	c.Head(ts.URL)
 	got := <-ch
 	want := "proxy for " + ts.URL + "/"
@@ -618,7 +634,9 @@ func TestTransportGzipRecursive(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	c := &Client{Transport: &Transport{}}
+	c := MakeNewClient()
+	c.Transport = &Transport{}
+
 	res, err := c.Get(ts.URL)
 	if err != nil {
 		t.Fatal(err)
@@ -649,7 +667,8 @@ func TestTransportPersistConnLeak(t *testing.T) {
 	defer ts.Close()
 
 	tr := &Transport{}
-	c := &Client{Transport: tr}
+	c := MakeNewClient()
+	c.Transport = tr
 
 	n0 := runtime.NumGoroutine()
 
@@ -703,7 +722,8 @@ func TestTransportPersistConnLeak(t *testing.T) {
 // This used to crash; http://golang.org/issue/3266
 func TestTransportIdleConnCrash(t *testing.T) {
 	tr := &Transport{}
-	c := &Client{Transport: tr}
+	c := MakeNewClient()
+	c.Transport = tr
 
 	unblockCh := make(chan bool, 1)
 	ts := httptest.NewServer(HandlerFunc(func(w ResponseWriter, r *Request) {
@@ -740,7 +760,9 @@ func (fooProto) RoundTrip(req *Request) (*Response, error) {
 
 func TestTransportAltProto(t *testing.T) {
 	tr := &Transport{}
-	c := &Client{Transport: tr}
+	c := MakeNewClient()
+	c.Transport = tr
+
 	tr.RegisterProtocol("foo", fooProto{})
 	res, err := c.Get("foo://bar.com/path")
 	if err != nil {
