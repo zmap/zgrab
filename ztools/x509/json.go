@@ -33,31 +33,31 @@ type auxKeyUsage struct {
 func (k KeyUsage) MarshalJSON() ([]byte, error) {
 	var enc auxKeyUsage
 	enc.Value = uint32(k)
-	if k&KeyUsageDigitalSignature > 0 {
+	if k & KeyUsageDigitalSignature > 0 {
 		enc.DigitalSignature = true
 	}
-	if k&KeyUsageContentCommitment > 0 {
+	if k & KeyUsageContentCommitment > 0 {
 		enc.ContentCommitment = true
 	}
-	if k&KeyUsageKeyEncipherment > 0 {
+	if k & KeyUsageKeyEncipherment > 0 {
 		enc.KeyEncipherment = true
 	}
-	if k&KeyUsageDataEncipherment > 0 {
+	if k & KeyUsageDataEncipherment > 0 {
 		enc.DataEncipherment = true
 	}
-	if k&KeyUsageKeyAgreement > 0 {
+	if k & KeyUsageKeyAgreement > 0 {
 		enc.KeyAgreement = true
 	}
-	if k&KeyUsageCertSign > 0 {
+	if k & KeyUsageCertSign > 0 {
 		enc.CertificateSign = true
 	}
-	if k&KeyUsageCRLSign > 0 {
+	if k & KeyUsageCRLSign > 0 {
 		enc.CRLSign = true
 	}
-	if k&KeyUsageEncipherOnly > 0 {
+	if k & KeyUsageEncipherOnly > 0 {
 		enc.EncipherOnly = true
 	}
-	if k&KeyUsageDecipherOnly > 0 {
+	if k & KeyUsageDecipherOnly > 0 {
 		enc.DecipherOnly = true
 	}
 	return json.Marshal(&enc)
@@ -204,6 +204,7 @@ type jsonCertificate struct {
 	FingerprintSHA256         CertificateFingerprint       `json:"fingerprint_sha256"`
 	SPKISubjectFingerprint    CertificateFingerprint       `json:"spki_subject_fingerprint"`
 	TBSCertificateFingerprint CertificateFingerprint       `json:"tbs_fingerprint"`
+	CertValidationLevel       CertValidationLevel          `json:"cert_validation_level"`
 }
 
 func (c *Certificate) MarshalJSON() ([]byte, error) {
@@ -279,6 +280,7 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.FingerprintSHA256 = c.FingerprintSHA256
 	jc.SPKISubjectFingerprint = c.SPKISubjectFingerprint
 	jc.TBSCertificateFingerprint = c.TBSCertificateFingerprint
+	jc.CertValidationLevel = c.CertValidationLevel
 
 	return json.Marshal(jc)
 }
