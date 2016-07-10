@@ -302,7 +302,7 @@ func valueOrDefault(value, def string) string {
 	return def
 }
 
-const defaultUserAgent = "Go http package"
+const defaultUserAgent = "Mozilla/5.0 zgrab/0.x"
 
 // Write writes an HTTP/1.1 request -- header and body -- in wire format.
 // This method consults the following fields of the request:
