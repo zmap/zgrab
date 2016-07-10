@@ -212,7 +212,7 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.SignatureAlgorithm = c.SignatureAlgorithm
 	jc.Issuer = c.Issuer
 	jc.IssuerDN = c.Issuer.String()
-	jc.alidity.NotBefore = c.NotBefore
+	jc.Validity.NotBefore = c.NotBefore
 	jc.Validity.NotAfter = c.NotAfter
 	jc.Validity.ValidityPeriod = c.ValidityPeriod
 	jc.Subject = c.Subject
