@@ -446,6 +446,28 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 		}
 
 		switch key := pub.(type) {
+		case *x509.AugmentedECDSA:
+			if signatureAndHash.signature != signatureECDSA {
+				err = errors.New("tls: bad signature type for client's ECDSA certificate")
+				break
+			}
+			ecdsaSig := new(ecdsaSignature)
+			if _, err = asn1.Unmarshal(certVerify.signature, ecdsaSig); err != nil {
+				break
+			}
+			if ecdsaSig.R.Sign() <= 0 || ecdsaSig.S.Sign() <= 0 {
+				err = errors.New("ECDSA signature contained zero or negative values")
+				break
+			}
+			var digest []byte
+			digest, _, err = hs.finishedHash.hashForClientCertificate(signatureAndHash, hs.masterSecret)
+			if err != nil {
+				break
+			}
+			if !ecdsa.Verify(key.Pub, digest, ecdsaSig.R, ecdsaSig.S) {
+				err = errors.New("ECDSA verification failure")
+				break
+			}
 		case *ecdsa.PublicKey:
 			if signatureAndHash.signature != signatureECDSA {
 				err = errors.New("tls: bad signature type for client's ECDSA certificate")
@@ -655,6 +677,8 @@ func (hs *serverHandshakeState) processCertsFromClient(certificates [][]byte) (c
 		switch key := certs[0].PublicKey.(type) {
 		case *ecdsa.PublicKey, *rsa.PublicKey:
 			pub = key
+		case *x509.AugmentedECDSA:
+			pub = key.Pub
 		default:
 			c.sendAlert(alertUnsupportedCertificate)
 			return nil, fmt.Errorf("tls: client's certificate contains an unsupported public key of type %T", certs[0].PublicKey)

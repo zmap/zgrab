@@ -82,6 +82,8 @@ func marshalPublicKey(pub interface{}) (publicKeyBytes []byte, publicKeyAlgorith
 			return
 		}
 		publicKeyAlgorithm.Parameters.FullBytes = paramBytes
+	case *AugmentedECDSA:
+		return marshalPublicKey(pub.Pub)
 	default:
 		return nil, pkix.AlgorithmIdentifier{}, errors.New("x509: only RSA and ECDSA public keys supported")
 	}
@@ -152,6 +154,11 @@ type publicKeyInfo struct {
 	Raw       asn1.RawContent
 	Algorithm pkix.AlgorithmIdentifier
 	PublicKey asn1.BitString
+}
+
+type AugmentedECDSA struct {
+	Pub *ecdsa.PublicKey
+	Raw asn1.BitString
 }
 
 // RFC 5280,  4.2.1.1
@@ -512,6 +519,7 @@ type Certificate struct {
 	Issuer              pkix.Name
 	Subject             pkix.Name
 	NotBefore, NotAfter time.Time // Validity bounds.
+	ValidityPeriod      int
 	KeyUsage            KeyUsage
 
 	// Extensions contains raw X.509 extensions. When parsing certificates,
@@ -740,6 +748,18 @@ func (c *Certificate) CheckSignature(algo SignatureAlgorithm, signed, signature 
 			return errors.New("x509: ECDSA verification failure")
 		}
 		return
+	case *AugmentedECDSA:
+		ecdsaSig := new(ecdsaSignature)
+		if _, err := asn1.Unmarshal(signature, ecdsaSig); err != nil {
+			return err
+		}
+		if ecdsaSig.R.Sign() <= 0 || ecdsaSig.S.Sign() <= 0 {
+			return errors.New("x509: ECDSA signature contained zero or negative values")
+		}
+		if !ecdsa.Verify(pub.Pub, digest, ecdsaSig.R, ecdsaSig.S) {
+			return errors.New("x509: ECDSA verification failure")
+		}
+		return
 	}
 	return ErrUnsupportedAlgorithm
 }
@@ -859,10 +879,15 @@ func parsePublicKey(algo PublicKeyAlgorithm, keyData *publicKeyInfo) (interface{
 		if x == nil {
 			return nil, errors.New("x509: failed to unmarshal elliptic curve point")
 		}
-		pub := &ecdsa.PublicKey{
+		key := &ecdsa.PublicKey{
 			Curve: namedCurve,
 			X:     x,
 			Y:     y,
+		}
+
+		pub := &AugmentedECDSA{
+			Pub: key,
+			Raw: keyData.PublicKey,
 		}
 		return pub, nil
 	default:
@@ -968,6 +993,8 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 
 	out.NotBefore = in.TBSCertificate.Validity.NotBefore
 	out.NotAfter = in.TBSCertificate.Validity.NotAfter
+
+	out.ValidityPeriod = int(out.NotAfter.Sub(out.NotBefore).Seconds())
 
 	for _, e := range in.TBSCertificate.Extensions {
 		out.Extensions = append(out.Extensions, e)

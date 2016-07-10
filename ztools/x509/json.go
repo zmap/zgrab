@@ -136,14 +136,16 @@ func (p *PublicKeyAlgorithm) UnmarshalJSON(b []byte) error {
 }
 
 type auxValidity struct {
-	Start string `json:"start"`
-	End   string `json:"end"`
+	Start          string `json:"start"`
+	End            string `json:"end"`
+	ValidityPeriod int    `json:"length"`
 }
 
 func (v *validity) MarshalJSON() ([]byte, error) {
 	aux := auxValidity{
-		Start: v.NotBefore.UTC().Format(time.RFC3339),
-		End:   v.NotAfter.UTC().Format(time.RFC3339),
+		Start:          v.NotBefore.UTC().Format(time.RFC3339),
+		End:            v.NotAfter.UTC().Format(time.RFC3339),
+		ValidityPeriod: int(v.NotAfter.Sub(v.NotBefore).Seconds()),
 	}
 	return json.Marshal(&aux)
 }
@@ -160,6 +162,7 @@ func (v *validity) UnmarshalJSON(b []byte) error {
 	if v.NotAfter, err = time.Parse(time.RFC3339, aux.End); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -177,13 +180,18 @@ type jsonSignature struct {
 	SelfSigned         bool               `json:"self_signed"`
 }
 
+type fullValidity struct {
+	validity
+	ValidityPeriod int
+}
+
 type jsonCertificate struct {
 	Version            int                          `json:"version"`
 	SerialNumber       string                       `json:"serial_number"`
 	SignatureAlgorithm SignatureAlgorithm           `json:"signature_algorithm"`
 	Issuer             pkix.Name                    `json:"issuer"`
 	IssuerDN           string                       `json:"issuer_dn,omitempty"`
-	Validity           validity                     `json:"validity"`
+	Validity           fullValidity                 `json:"validity"`
 	Subject            pkix.Name                    `json:"subject"`
 	SubjectDN          string                       `json:"subject_dn,omitempty"`
 	SubjectKeyInfo     jsonSubjectKeyInfo           `json:"subject_key_info"`
@@ -206,6 +214,7 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.IssuerDN = c.Issuer.String()
 	jc.Validity.NotBefore = c.NotBefore
 	jc.Validity.NotAfter = c.NotAfter
+	jc.Validity.ValidityPeriod = c.ValidityPeriod
 	jc.Subject = c.Subject
 	jc.SubjectDN = c.Subject.String()
 	jc.SubjectKeyInfo.KeyAlgorithm = c.PublicKeyAlgorithm
@@ -233,6 +242,23 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		keyMap["gy"] = params.Gy.Bytes()
 		keyMap["x"] = key.X.Bytes()
 		keyMap["y"] = key.Y.Bytes()
+		jc.SubjectKeyInfo.ECDSAPublicKey = keyMap
+	case *AugmentedECDSA:
+		pub := key.Pub
+
+		keyMap["pub"] = key.Raw.Bytes
+
+		params := pub.Params()
+		keyMap["p"] = params.P.Bytes()
+		keyMap["n"] = params.N.Bytes()
+		keyMap["b"] = params.B.Bytes()
+		keyMap["gx"] = params.Gx.Bytes()
+		keyMap["gy"] = params.Gy.Bytes()
+		keyMap["x"] = pub.X.Bytes()
+		keyMap["y"] = pub.Y.Bytes()
+
+		keyMap["asn1_oid"] = c.SignatureAlgorithmOID
+
 		jc.SubjectKeyInfo.ECDSAPublicKey = keyMap
 	}
 

@@ -18,7 +18,8 @@
 		},
 		"validity": {
 			"start": "20140102",
-			"end": "20150102"
+			"end": "20150102",
+            "length" :8760    
 		},
 		"subject": {
 			"common_name": "*.tools.ieft.org",
