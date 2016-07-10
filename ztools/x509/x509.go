@@ -345,6 +345,29 @@ func getPublicKeyAlgorithmFromOID(oid asn1.ObjectIdentifier) PublicKeyAlgorithm 
 	return UnknownPublicKeyAlgorithm
 }
 
+func getMaxCertValidationLevel(oids []asn1.ObjectIdentifier) CertValidationLevel {
+
+	sliceContains := func(oidSlice []asn1.ObjectIdentifier, target asn1.ObjectIdentifier) bool {
+		for _, oid := range oidSlice {
+			if target.Equal(oid) {
+				return true
+			}
+		}
+		return false
+	}
+
+	maxOID := DV
+	for _, oid := range oids {
+		if sliceContains(ExtendedValidationOIDs, oid) {
+			return EV
+		} else if sliceContains(OrganizationValidationOIDs, oid) {
+			maxOID = OV
+		}
+	}
+
+	return maxOID
+}
+
 // RFC 5480, 2.1.1.1. Named Curve
 //
 // secp224r1 OBJECT IDENTIFIER ::= {
@@ -583,7 +606,8 @@ type Certificate struct {
 	// CRL Distribution Points
 	CRLDistributionPoints []string
 
-	PolicyIdentifiers []asn1.ObjectIdentifier
+	PolicyIdentifiers   []asn1.ObjectIdentifier
+	CertValidationLevel CertValidationLevel
 
 	// Fingerprints
 	FingerprintMD5    CertificateFingerprint
@@ -1220,6 +1244,7 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				for i, policy := range policies {
 					out.PolicyIdentifiers[i] = policy.Policy
 				}
+				out.CertValidationLevel = getMaxCertValidationLevel(out.PolicyIdentifiers)
 			}
 		} else if e.Id.Equal(oidExtensionAuthorityInfoAccess) {
 			// RFC 5280 4.2.2.1: Authority Information Access

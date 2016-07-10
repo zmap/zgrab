@@ -128,6 +128,21 @@ type ExtendedKeyUsage []ExtKeyUsage
 
 type CertificatePolicies []asn1.ObjectIdentifier
 
+// The string functions for CertValidationLevel are auto-generated via
+// `go generate <full_path_to_x509_package>` or running `go generate` in the package directory
+//go:generate stringer -type=CertValidationLevel -output=generated_certvalidationlevel_string.go
+type CertValidationLevel int
+
+const (
+	DV CertValidationLevel = iota
+	OV
+	EV
+)
+
+func (c *CertValidationLevel) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.String())
+}
+
 // UNION of Chromium (https://chromium.googlesource.com/chromium/src/net/+/master/cert/ev_root_ca_metadata.cc)
 // and Firefox (http://hg.mozilla.org/mozilla-central/file/tip/security/certverifier/ExtendedValidation.cpp) EV OID lists
 var ExtendedValidationOIDs = []asn1.ObjectIdentifier{
