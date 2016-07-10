@@ -167,10 +167,11 @@ func (v *validity) UnmarshalJSON(b []byte) error {
 }
 
 type jsonSubjectKeyInfo struct {
-	KeyAlgorithm   PublicKeyAlgorithm `json:"key_algorithm"`
-	RSAPublicKey   *keys.RSAPublicKey `json:"rsa_public_key,omitempty"`
-	DSAPublicKey   interface{}        `json:"dsa_public_key,omitempty"`
-	ECDSAPublicKey interface{}        `json:"ecdsa_public_key,omitempty"`
+	KeyAlgorithm    PublicKeyAlgorithm     `json:"key_algorithm"`
+	RSAPublicKey    *keys.RSAPublicKey     `json:"rsa_public_key,omitempty"`
+	DSAPublicKey    interface{}            `json:"dsa_public_key,omitempty"`
+	ECDSAPublicKey  interface{}            `json:"ecdsa_public_key,omitempty"`
+	SPKIFingerprint CertificateFingerprint `json:"fingerprint_sha256"`
 }
 
 type jsonSignature struct {
@@ -201,7 +202,6 @@ type jsonCertificate struct {
 	FingerprintMD5     CertificateFingerprint       `json:"fingerprint_md5"`
 	FingerprintSHA1    CertificateFingerprint       `json:"fingerprint_sha1"`
 	FingerprintSHA256  CertificateFingerprint       `json:"fingerprint_sha256"`
-	SPKIFingerprint    CertificateFingerprint       `json:"spki_fingerprint"`
 }
 
 func (c *Certificate) MarshalJSON() ([]byte, error) {
@@ -218,6 +218,7 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.Subject = c.Subject
 	jc.SubjectDN = c.Subject.String()
 	jc.SubjectKeyInfo.KeyAlgorithm = c.PublicKeyAlgorithm
+	jc.SubjectKeyInfo.SPKIFingerprint = c.SPKIFingerprint
 
 	// Pull out the key
 	keyMap := make(map[string]interface{})
@@ -274,7 +275,6 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.FingerprintMD5 = c.FingerprintMD5
 	jc.FingerprintSHA1 = c.FingerprintSHA1
 	jc.FingerprintSHA256 = c.FingerprintSHA256
-	jc.SPKIFingerprint = c.SPKIFingerprint
 
 	return json.Marshal(jc)
 }
