@@ -52,7 +52,7 @@ zgrab_parsed_certificate = SubRecord({
             "y":Binary(),
         }),
         "ecdsa_public_key":SubRecord({
-            "pub":Binary()
+            "pub":Binary(),
             "b":Binary(),
             "gx":Binary(),
             "gy":Binary(),
