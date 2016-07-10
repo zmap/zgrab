@@ -187,21 +187,22 @@ type fullValidity struct {
 }
 
 type jsonCertificate struct {
-	Version            int                          `json:"version"`
-	SerialNumber       string                       `json:"serial_number"`
-	SignatureAlgorithm SignatureAlgorithm           `json:"signature_algorithm"`
-	Issuer             pkix.Name                    `json:"issuer"`
-	IssuerDN           string                       `json:"issuer_dn,omitempty"`
-	Validity           fullValidity                 `json:"validity"`
-	Subject            pkix.Name                    `json:"subject"`
-	SubjectDN          string                       `json:"subject_dn,omitempty"`
-	SubjectKeyInfo     jsonSubjectKeyInfo           `json:"subject_key_info"`
-	Extensions         *CertificateExtensions       `json:"extensions,omitempty"`
-	UnknownExtensions  UnknownCertificateExtensions `json:"unknown_extensions,omitempty"`
-	Signature          jsonSignature                `json:"signature"`
-	FingerprintMD5     CertificateFingerprint       `json:"fingerprint_md5"`
-	FingerprintSHA1    CertificateFingerprint       `json:"fingerprint_sha1"`
-	FingerprintSHA256  CertificateFingerprint       `json:"fingerprint_sha256"`
+	Version                int                          `json:"version"`
+	SerialNumber           string                       `json:"serial_number"`
+	SignatureAlgorithm     SignatureAlgorithm           `json:"signature_algorithm"`
+	Issuer                 pkix.Name                    `json:"issuer"`
+	IssuerDN               string                       `json:"issuer_dn,omitempty"`
+	Validity               fullValidity                 `json:"validity"`
+	Subject                pkix.Name                    `json:"subject"`
+	SubjectDN              string                       `json:"subject_dn,omitempty"`
+	SubjectKeyInfo         jsonSubjectKeyInfo           `json:"subject_key_info"`
+	Extensions             *CertificateExtensions       `json:"extensions,omitempty"`
+	UnknownExtensions      UnknownCertificateExtensions `json:"unknown_extensions,omitempty"`
+	Signature              jsonSignature                `json:"signature"`
+	FingerprintMD5         CertificateFingerprint       `json:"fingerprint_md5"`
+	FingerprintSHA1        CertificateFingerprint       `json:"fingerprint_sha1"`
+	FingerprintSHA256      CertificateFingerprint       `json:"fingerprint_sha256"`
+	SPKISubjectFingerprint CertificateFingerprint       `json:"spki_subject_fingerprint"`
 }
 
 func (c *Certificate) MarshalJSON() ([]byte, error) {
@@ -275,6 +276,7 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.FingerprintMD5 = c.FingerprintMD5
 	jc.FingerprintSHA1 = c.FingerprintSHA1
 	jc.FingerprintSHA256 = c.FingerprintSHA256
+	jc.SPKISubjectFingerprint = c.SPKISubjectFingerprint
 
 	return json.Marshal(jc)
 }
