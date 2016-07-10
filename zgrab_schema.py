@@ -130,7 +130,7 @@ zgrab_parsed_certificate = SubRecord({
     "fingerprint_sha256":Binary(),
     "spki_subject_fingerprint":Binary(),
     "tbs_fingerprint":Binary(),
-    "cert_validation_level": String(),
+    "validation_level": String(),
 })
 
 zgrab_certificate_trust = SubRecord({

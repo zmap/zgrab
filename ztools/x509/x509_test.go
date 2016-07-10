@@ -403,8 +403,8 @@ func TestCreateSelfSignedCertificate(t *testing.T) {
 			t.Errorf("%s: SignatureAlgorithm wasn't copied from template. Got %v, want %v", test.name, cert.SignatureAlgorithm, test.sigAlgo)
 		}
 
-		if cert.CertValidationLevel != EV {
-			t.Errorf("%s: CertValidationLevel was not set properly. Got %s, want %s", test.name, cert.CertValidationLevel.String(), EV.String())
+		if cert.ValidationLevel != EV {
+			t.Errorf("%s: ValidationLevel was not set properly. Got %s, want %s", test.name, cert.ValidationLevel.String(), EV.String())
 		}
 
 		if !reflect.DeepEqual(cert.ExtKeyUsage, testExtKeyUsage) {

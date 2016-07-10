@@ -596,8 +596,8 @@ type Certificate struct {
 	// CRL Distribution Points
 	CRLDistributionPoints []string
 
-	PolicyIdentifiers   []asn1.ObjectIdentifier
-	CertValidationLevel CertValidationLevel
+	PolicyIdentifiers []asn1.ObjectIdentifier
+	ValidationLevel   CertValidationLevel
 
 	// Fingerprints
 	FingerprintMD5    CertificateFingerprint
@@ -1234,7 +1234,7 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				for i, policy := range policies {
 					out.PolicyIdentifiers[i] = policy.Policy
 				}
-				out.CertValidationLevel = getMaxCertValidationLevel(out.PolicyIdentifiers)
+				out.ValidationLevel = getMaxCertValidationLevel(out.PolicyIdentifiers)
 			}
 		} else if e.Id.Equal(oidExtensionAuthorityInfoAccess) {
 			// RFC 5280 4.2.2.1: Authority Information Access

@@ -204,7 +204,7 @@ type jsonCertificate struct {
 	FingerprintSHA256         CertificateFingerprint       `json:"fingerprint_sha256"`
 	SPKISubjectFingerprint    CertificateFingerprint       `json:"spki_subject_fingerprint"`
 	TBSCertificateFingerprint CertificateFingerprint       `json:"tbs_fingerprint"`
-	CertValidationLevel       CertValidationLevel          `json:"cert_validation_level"`
+	ValidationLevel           CertValidationLevel          `json:"validation_level"`
 }
 
 func (c *Certificate) MarshalJSON() ([]byte, error) {
@@ -280,7 +280,7 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.FingerprintSHA256 = c.FingerprintSHA256
 	jc.SPKISubjectFingerprint = c.SPKISubjectFingerprint
 	jc.TBSCertificateFingerprint = c.TBSCertificateFingerprint
-	jc.CertValidationLevel = c.CertValidationLevel
+	jc.ValidationLevel = c.ValidationLevel
 
 	return json.Marshal(jc)
 }
