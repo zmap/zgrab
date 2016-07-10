@@ -994,7 +994,7 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 	out.NotBefore = in.TBSCertificate.Validity.NotBefore
 	out.NotAfter = in.TBSCertificate.Validity.NotAfter
 
-	out.ValidityPeriod = int(out.NotAfter.Sub(out.NotBefore).Hours())
+	out.ValidityPeriod = int(out.NotAfter.Sub(out.NotBefore).Seconds())
 
 	for _, e := range in.TBSCertificate.Extensions {
 		out.Extensions = append(out.Extensions, e)

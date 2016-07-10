@@ -145,7 +145,7 @@ func (v *validity) MarshalJSON() ([]byte, error) {
 	aux := auxValidity{
 		Start:          v.NotBefore.UTC().Format(time.RFC3339),
 		End:            v.NotAfter.UTC().Format(time.RFC3339),
-		ValidityPeriod: int(v.NotAfter.Sub(v.NotBefore).Hours()),
+		ValidityPeriod: int(v.NotAfter.Sub(v.NotBefore).Seconds()),
 	}
 	return json.Marshal(&aux)
 }
@@ -212,7 +212,7 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.SignatureAlgorithm = c.SignatureAlgorithm
 	jc.Issuer = c.Issuer
 	jc.IssuerDN = c.Issuer.String()
-	jc.Validity.NotBefore = c.NotBefore
+	jc.alidity.NotBefore = c.NotBefore
 	jc.Validity.NotAfter = c.NotAfter
 	jc.Validity.ValidityPeriod = c.ValidityPeriod
 	jc.Subject = c.Subject
