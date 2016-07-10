@@ -128,6 +128,271 @@ type ExtendedKeyUsage []ExtKeyUsage
 
 type CertificatePolicies []asn1.ObjectIdentifier
 
+// UNION of Chromium (https://chromium.googlesource.com/chromium/src/net/+/master/cert/ev_root_ca_metadata.cc)
+// and Firefox (http://hg.mozilla.org/mozilla-central/file/tip/security/certverifier/ExtendedValidation.cpp) EV OID lists
+var extendedValidationOIDs = [...]string{
+	// AC Camerfirma S.A. Chambers of Commerce Root - 2008
+	// https://www.camerfirma.com
+	// AC Camerfirma uses the last two arcs to track how the private key
+	// is managed - the effective verification policy is the same.
+	"1.3.6.1.4.1.17326.10.14.2.1.2",
+	"1.3.6.1.4.1.17326.10.14.2.2.2",
+	// AC Camerfirma S.A. Global Chambersign Root - 2008
+	// https://server2.camerfirma.com:8082
+	// AC Camerfirma uses the last two arcs to track how the private key
+	// is managed - the effective verification policy is the same.
+	"1.3.6.1.4.1.17326.10.8.12.1.2",
+	"1.3.6.1.4.1.17326.10.8.12.2.2",
+	// AddTrust External CA Root
+	// https://addtrustexternalcaroot-ev.comodoca.com
+	"1.3.6.1.4.1.6449.1.2.1.5.1",
+	// This is the Network Solutions EV OID. However, this root
+	// cross-certifies NetSol and so we need it here too.
+	"1.3.6.1.4.1.782.1.2.1.8.1",
+	// Actalis Authentication Root CA
+	// https://ssltest-a.actalis.it:8443
+	"1.3.159.1.17.1",
+	// AffirmTrust Commercial
+	// https://commercial.affirmtrust.com/
+	"1.3.6.1.4.1.34697.2.1",
+	// AffirmTrust Networking
+	// https://networking.affirmtrust.com:4431
+	"1.3.6.1.4.1.34697.2.2",
+	// AffirmTrust Premium
+	// https://premium.affirmtrust.com:4432/
+	"1.3.6.1.4.1.34697.2.3",
+	// AffirmTrust Premium ECC
+	// https://premiumecc.affirmtrust.com:4433/
+	"1.3.6.1.4.1.34697.2.4",
+	// Autoridad de Certificacion Firmaprofesional CIF A62634068
+	// https://publifirma.firmaprofesional.com/
+	"1.3.6.1.4.1.13177.10.1.3.10",
+	// Baltimore CyberTrust Root
+	// https://secure.omniroot.com/repository/
+	"1.3.6.1.4.1.6334.1.100.1",
+	// Buypass Class 3 CA 1
+	// https://valid.evident.ca13.ssl.buypass.no/
+	"2.16.578.1.26.1.3.3",
+	// Buypass Class 3 Root CA
+	// https://valid.evident.ca23.ssl.buypass.no/
+	"2.16.578.1.26.1.3.3",
+	// CA 沃通根证书
+	// https://root2evtest.wosign.com/
+	"1.3.6.1.4.1.36305.2",
+	// Certification Authority of WoSign
+	// https://root1evtest.wosign.com/
+	"1.3.6.1.4.1.36305.2",
+	// CertPlus Class 2 Primary CA (KEYNECTIS)
+	// https://www.keynectis.com/
+	"1.3.6.1.4.1.22234.2.5.2.3.1",
+	// Certum Trusted Network CA
+	// https://juice.certum.pl/
+	"1.2.616.1.113527.2.5.1.1",
+	// China Internet Network Information Center EV Certificates Root
+	// https://evdemo.cnnic.cn/
+	"1.3.6.1.4.1.29836.1.10",
+	// COMODO Certification Authority
+	// https://secure.comodo.com/
+	"1.3.6.1.4.1.6449.1.2.1.5.1",
+	// COMODO Certification Authority (reissued certificate with NotBefore of
+	// Jan 1 00:00:00 2011 GMT)
+	// https://secure.comodo.com/
+	"1.3.6.1.4.1.6449.1.2.1.5.1",
+	// COMODO ECC Certification Authority
+	// https://comodoecccertificationauthority-ev.comodoca.com/
+	"1.3.6.1.4.1.6449.1.2.1.5.1",
+	// COMODO RSA Certification Authority
+	// https://comodorsacertificationauthority-ev.comodoca.com/
+	"1.3.6.1.4.1.6449.1.2.1.5.1",
+	// Cybertrust Global Root
+	// https://evup.cybertrust.ne.jp/ctj-ev-upgrader/evseal.gif
+	"1.3.6.1.4.1.6334.1.100.1",
+	// DigiCert High Assurance EV Root CA
+	// https://www.digicert.com
+	"2.16.840.1.114412.2.1",
+	// D-TRUST Root Class 3 CA 2 EV 2009
+	// https://certdemo-ev-valid.ssl.d-trust.net/
+	"1.3.6.1.4.1.4788.2.202.1",
+	// Entrust.net Secure Server Certification Authority
+	// https://www.entrust.net/
+	"2.16.840.1.114028.10.1.2",
+	// Entrust Root Certification Authority
+	// https://www.entrust.net/
+	"2.16.840.1.114028.10.1.2",
+	// Equifax Secure Certificate Authority (GeoTrust)
+	// https://www.geotrust.com/
+	"1.3.6.1.4.1.14370.1.6",
+	// E-Tugra Certification Authority
+	// https://sslev.e-tugra.com.tr
+	"2.16.792.3.0.4.1.1.4",
+	// GeoTrust Primary Certification Authority
+	// https://www.geotrust.com/
+	"1.3.6.1.4.1.14370.1.6",
+	// GeoTrust Primary Certification Authority - G2
+	"1.3.6.1.4.1.14370.1.6",
+	// GeoTrust Primary Certification Authority - G3
+	"1.3.6.1.4.1.14370.1.6",
+	// GlobalSign Root CA - R2
+	// https://www.globalsign.com/
+	"1.3.6.1.4.1.4146.1.1",
+	// GlobalSign Root CA
+	"1.3.6.1.4.1.4146.1.1",
+	// GlobalSign Root CA - R3
+	// https://2029.globalsign.com/
+	"1.3.6.1.4.1.4146.1.1",
+	// GlobalSign ECC Root CA - R4
+	// https://2038r4.globalsign.com
+	"1.3.6.1.4.1.4146.1.1",
+	// GlobalSign ECC Root CA - R5
+	// https://2038r5.globalsign.com/
+	"1.3.6.1.4.1.4146.1.1",
+	// Go Daddy Class 2 Certification Authority
+	// https://www.godaddy.com/
+	"2.16.840.1.114413.1.7.23.3",
+	// Go Daddy Root Certificate Authority - G2
+	// https://valid.gdig2.catest.godaddy.com/
+	"2.16.840.1.114413.1.7.23.3",
+	// GTE CyberTrust Global Root
+	// https://www.cybertrust.ne.jp/
+	"1.3.6.1.4.1.6334.1.100.1",
+	// Izenpe.com - SHA256 root
+	// The first OID is for businesses and the second for government entities.
+	// These are the test sites, respectively:
+	// https://servicios.izenpe.com
+	// https://servicios1.izenpe.com
+	"1.3.6.1.4.1.14777.6.1.1",
+	"1.3.6.1.4.1.14777.6.1.2",
+	// Izenpe.com - SHA1 root
+	// Windows XP finds this, SHA1, root instead. The policy OIDs are the same
+	// as for the SHA256 root, above.
+	"1.3.6.1.4.1.14777.6.1.1",
+	"1.3.6.1.4.1.14777.6.1.2",
+	// Network Solutions Certificate Authority
+	// https://www.networksolutions.com/website-packages/index.jsp
+	"1.3.6.1.4.1.782.1.2.1.8.1",
+	// Network Solutions Certificate Authority (reissued certificate with
+	// NotBefore of Jan  1 00:00:00 2011 GMT).
+	// https://www.networksolutions.com/website-packages/index.jsp
+	"1.3.6.1.4.1.782.1.2.1.8.1",
+	// QuoVadis Root CA 2
+	// https://www.quovadis.bm/
+	"1.3.6.1.4.1.8024.0.2.100.1.2",
+	// QuoVadis Root CA 2 G3
+	// https://evsslicag3-v.quovadisglobal.com/
+	"1.3.6.1.4.1.8024.0.2.100.1.2",
+	// SecureTrust CA, SecureTrust Corporation
+	// https://www.securetrust.com
+	// https://www.trustwave.com/
+	"2.16.840.1.114404.1.1.2.4.1",
+	// Secure Global CA, SecureTrust Corporation
+	"2.16.840.1.114404.1.1.2.4.1",
+	// Security Communication RootCA1
+	// https://www.secomtrust.net/contact/form.html
+	"1.2.392.200091.100.721.1",
+	// Security Communication EV RootCA1
+	// https://www.secomtrust.net/contact/form.html
+	"1.2.392.200091.100.721.1",
+	// Security Communication EV RootCA2
+	// https://www.secomtrust.net/contact/form.html
+	"1.2.392.200091.100.721.1",
+	// Staat der Nederlanden EV Root CA
+	// https://pkioevssl-v.quovadisglobal.com/
+	"2.16.528.1.1003.1.2.7",
+	// StartCom Certification Authority
+	// https://www.startssl.com/
+	"1.3.6.1.4.1.23223.1.1.1",
+	// Starfield Class 2 Certification Authority
+	// https://www.starfieldtech.com/
+	"2.16.840.1.114414.1.7.23.3",
+	// Starfield Root Certificate Authority - G2
+	// https://valid.sfig2.catest.starfieldtech.com/
+	"2.16.840.1.114414.1.7.23.3",
+	// Starfield Services Root Certificate Authority - G2
+	// https://valid.sfsg2.catest.starfieldtech.com/
+	"2.16.840.1.114414.1.7.24.3",
+	// SwissSign Gold CA - G2
+	// https://testevg2.swisssign.net/
+	"2.16.756.1.89.1.2.1.1",
+	// Swisscom Root EV CA 2
+	// https://test-quarz-ev-ca-2.pre.swissdigicert.ch
+	"2.16.756.1.83.21.0",
+	// Thawte Premium Server CA
+	// https://www.thawte.com/
+	"2.16.840.1.113733.1.7.48.1",
+	// thawte Primary Root CA
+	// https://www.thawte.com/
+	"2.16.840.1.113733.1.7.48.1",
+	// thawte Primary Root CA - G2
+	"2.16.840.1.113733.1.7.48.1",
+	// thawte Primary Root CA - G3
+	"2.16.840.1.113733.1.7.48.1",
+	// TWCA Global Root CA
+	// https://evssldemo3.twca.com.tw/index.html
+	"1.3.6.1.4.1.40869.1.1.22.3",
+	// TWCA Root Certification Authority
+	// https://evssldemo.twca.com.tw/index.html
+	"1.3.6.1.4.1.40869.1.1.22.3",
+	// T-TeleSec GlobalRoot Class 3
+	// http://www.telesec.de/ / https://root-class3.test.telesec.de/
+	"1.3.6.1.4.1.7879.13.24.1",
+	// USERTrust ECC Certification Authority
+	// https://usertrustecccertificationauthority-ev.comodoca.com/
+	"1.3.6.1.4.1.6449.1.2.1.5.1",
+	// USERTrust RSA Certification Authority
+	// https://usertrustrsacertificationauthority-ev.comodoca.com/
+	"1.3.6.1.4.1.6449.1.2.1.5.1",
+	// UTN-USERFirst-Hardware
+	"1.3.6.1.4.1.6449.1.2.1.5.1",
+	// This is the Network Solutions EV OID. However, this root
+	// cross-certifies NetSol and so we need it here too.
+	"1.3.6.1.4.1.782.1.2.1.8.1",
+	// ValiCert Class 2 Policy Validation Authority
+	"2.16.840.1.114413.1.7.23.3",
+	"2.16.840.1.114414.1.7.23.3",
+	// VeriSign Class 3 Public Primary Certification Authority
+	// https://www.verisign.com/
+	"2.16.840.1.113733.1.7.23.6",
+	// VeriSign Class 3 Public Primary Certification Authority - G4
+	"2.16.840.1.113733.1.7.23.6",
+	// VeriSign Class 3 Public Primary Certification Authority - G5
+	// https://www.verisign.com/
+	"2.16.840.1.113733.1.7.23.6",
+	// VeriSign Universal Root Certification Authority
+	"2.16.840.1.113733.1.7.23.6",
+	// Wells Fargo WellsSecure Public Root Certificate Authority
+	// https://nerys.wellsfargo.com/test.html
+	"2.16.840.1.114171.500.9",
+	// XRamp Global Certification Authority
+	"2.16.840.1.114404.1.1.2.4.1",
+	// CN=CFCA EV ROOT,O=China Financial Certification Authority,C=CN
+	// https://www.cfca.com.cn/
+	"2.16.156.112554.3",
+	// CN=OISTE WISeKey Global Root GB CA,OU=OISTE Foundation Endorsed,O=WISeKey,C=CH
+	// https://www.wisekey.com/repository/cacertificates/
+	"2.16.756.5.14.7.4.8",
+	// CN=TÜRKTRUST Elektronik Sertifika Hizmet Sağlayıcısı H6,O=TÜRKTRUST Bilgi İletişim ve Bilişim Güvenliği Hizmetleri A...,L=Ankara,C=TR
+	// https://www.turktrust.com.tr/
+	"2.16.792.3.0.3.1.1.5",
+}
+
+// CA specific OV OIDs from https://cabforum.org/object-registry/
+var organizationValidationOIDs = [...]string{
+	// Digicert
+	"2.16.840.1.114412.1.1",
+	// D-Trust
+	"1.3.6.1.4.1.4788.2.200.1",
+	// GoDaddy
+	"2.16.840.1.114413.1.7.23.2",
+	// Logius
+	"2.16.528.1.1003.1.2.5.6",
+	// QuoVadis
+	"1.3.6.1.4.1.8024.0.2.100.1.1",
+	// Starfield
+	"2.16.840.1.114414.1.7.23.2",
+	// TurkTrust
+	"2.16.792.3.0.3.1.1.2",
+}
+
 func (cp CertificatePolicies) MarshalJSON() ([]byte, error) {
 	out := make([]string, len(cp))
 	for idx, oid := range cp {
