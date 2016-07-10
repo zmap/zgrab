@@ -346,21 +346,11 @@ func getPublicKeyAlgorithmFromOID(oid asn1.ObjectIdentifier) PublicKeyAlgorithm 
 }
 
 func getMaxCertValidationLevel(oids []asn1.ObjectIdentifier) CertValidationLevel {
-
-	sliceContains := func(oidSlice []asn1.ObjectIdentifier, target asn1.ObjectIdentifier) bool {
-		for _, oid := range oidSlice {
-			if target.Equal(oid) {
-				return true
-			}
-		}
-		return false
-	}
-
 	maxOID := DV
 	for _, oid := range oids {
-		if sliceContains(ExtendedValidationOIDs, oid) {
+		if _, ok := ExtendedValidationOIDs[oid.String()]; ok {
 			return EV
-		} else if sliceContains(OrganizationValidationOIDs, oid) {
+		} else if _, ok := OrganizationValidationOIDs[oid.String()]; ok {
 			maxOID = OV
 		}
 	}
