@@ -10,6 +10,7 @@ import (
 	"crypto/rsa"
 	"encoding/asn1"
 	"encoding/json"
+	"net/url"
 	"time"
 
 	"github.com/zmap/zgrab/ztools/keys"
@@ -222,14 +223,23 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.SubjectDN = c.Subject.String()
 	jc.SubjectKeyInfo.KeyAlgorithm = c.PublicKeyAlgorithm
 
-	// 1 for the DN, and then however many DNS names there are
-	jc.Names = make([]string, 1+len(c.DNSNames))
+	// Include all subject names, DNS names there are
+	for _, obj := range c.Subject.Names {
 
-	jc.Names[0] = jc.SubjectDN
+		switch name := obj.Value.(type) {
+		case string:
+			if _, err := url.Parse(name); err == nil {
+				jc.Names = append(jc.Names, name)
+			}
+		}
+	}
 
 	// populate with the rest of the names
-	for i, name := range c.DNSNames {
-		jc.Names[i+1] = name
+	for _, name := range c.DNSNames {
+
+		if _, err := url.Parse(name); err == nil {
+			jc.Names = append(jc.Names, name)
+		}
 	}
 
 	// Pull out the key
