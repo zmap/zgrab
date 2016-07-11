@@ -10,9 +10,10 @@ import (
 	"crypto/rsa"
 	"encoding/asn1"
 	"encoding/json"
-	"net/url"
+
 	"time"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/zmap/zgrab/ztools/keys"
 	"github.com/zmap/zgrab/ztools/x509/pkix"
 )
@@ -229,8 +230,12 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 
 		switch name := obj.Value.(type) {
 		case string:
+
+			if name[0] == '*' {
+				name = name[2:]
+			}
 			// Check that this is actually a url and not something else
-			if _, err := url.Parse(name); err == nil {
+			if govalidator.IsURL(name) {
 				jc.Names = append(jc.Names, name)
 			}
 		}
@@ -238,7 +243,11 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 
 	for _, name := range c.DNSNames {
 
-		if _, err := url.Parse(name); err == nil {
+		if name[0] == '*' {
+			name = name[2:]
+		}
+
+		if govalidator.IsURL(name) {
 			jc.Names = append(jc.Names, name)
 		}
 	}
