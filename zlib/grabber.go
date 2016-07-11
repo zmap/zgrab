@@ -142,7 +142,7 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string) err
 	g := func(host, endpoint string) error {
 
 		var tlsConfig *ztls.Config
-		if config.TLS {
+		if config.TLS || config.HTTP.MaxRedirects > 0 {
 			tlsConfig = new(ztls.Config)
 			tlsConfig.InsecureSkipVerify = true
 			tlsConfig.MinVersion = ztls.VersionSSL30
