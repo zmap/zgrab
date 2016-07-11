@@ -184,7 +184,7 @@ func init() {
 		config.TLS = true
 	}
 
-	if config.TLS {
+	if config.TLS || config.HTTP.MaxRedirects > 0 {
 
 		switch tv {
 		case "SSLV3", "SSLV30", "SSLV3.0":
