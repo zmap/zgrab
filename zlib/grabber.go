@@ -29,6 +29,7 @@ import (
 	"github.com/zmap/zgrab/ztools/scada/siemens"
 	"github.com/zmap/zgrab/ztools/telnet"
 	"github.com/zmap/zgrab/ztools/util"
+	"github.com/zmap/zgrab/ztools/zlog"
 	"github.com/zmap/zgrab/ztools/ztls"
 	"io"
 	"net"
@@ -139,7 +140,7 @@ func makeNetDialer(c *Config) func(string, string) (net.Conn, error) {
 }
 
 func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string) error {
-	g := func(host, endpoint string) error {
+	g := func(host, endpoint string) (err error) {
 
 		var tlsConfig *ztls.Config
 		if config.TLS || config.HTTP.MaxRedirects > 0 {
@@ -223,7 +224,7 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string) err
 			}
 
 			return nil
-		} //Defaults to following up to 10 redirects
+		}
 		client.Jar = nil // Don't send or receive cookies (otherwise use CookieJar)
 		client.Transport = transport
 
@@ -235,24 +236,34 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string) err
 			fullURL = "http://" + host + endpoint
 		}
 
-		if resp, err := client.Get(fullURL); err != nil {
+		var resp *http.Response
+
+		switch config.HTTP.Method {
+		case "GET":
+			resp, err = client.Get(fullURL)
+		case "HEAD":
+			resp, err = client.Head(fullURL)
+		default:
+			zlog.Fatalf("Bad HTTP Method: %s. Valid options are: GET, HEAD.", config.HTTP.Method)
+		}
+
+		if err != nil {
 			config.ErrorLog.Errorf("Could not connect to remote host %s: %s", fullURL, err.Error())
 			return err
-		} else {
-			grabData.HTTP.Response = resp
-
-			if str, err := util.ReadString(resp.Body, config.HTTP.MaxSize*1000); err != nil {
-				return err
-			} else {
-				grabData.HTTP.Response.BodyText = str
-				m := sha256.New()
-				m.Write([]byte(str))
-				grabData.HTTP.Response.BodySHA256 = m.Sum(nil)
-
-			}
-
-			resp.Body.Close()
 		}
+
+		grabData.HTTP.Response = resp
+
+		if str, err := util.ReadString(resp.Body, config.HTTP.MaxSize*1000); err != nil {
+			return err
+		} else {
+			grabData.HTTP.Response.BodyText = str
+			m := sha256.New()
+			m.Write([]byte(str))
+			grabData.HTTP.Response.BodySHA256 = m.Sum(nil)
+		}
+
+		resp.Body.Close()
 
 		return nil
 	}
