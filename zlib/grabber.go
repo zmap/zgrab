@@ -138,8 +138,8 @@ func makeNetDialer(c *Config) func(string, string) (net.Conn, error) {
 	}
 }
 
-func makeHTTPGrabber(config *Config, grabData GrabData) func(string) error {
-	g := func(addr string) error {
+func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string) error {
+	g := func(host, endpoint string) error {
 
 		var tlsConfig *ztls.Config
 		if config.TLS {
@@ -189,8 +189,8 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string) error {
 			if config.GatherSessionTicket {
 				tlsConfig.ForceSessionTicketExt = true
 			}
-			if !config.NoSNI && addr != "" {
-				tlsConfig.ServerName = addr
+			if !config.NoSNI && host != "" {
+				tlsConfig.ServerName = host
 			}
 
 		}
@@ -230,13 +230,13 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string) error {
 		var fullURL string
 
 		if config.TLS {
-			fullURL = "https://" + addr
+			fullURL = "https://" + host + endpoint
 		} else {
-			fullURL = "http://" + addr
+			fullURL = "http://" + host + endpoint
 		}
 
 		if resp, err := client.Get(fullURL); err != nil {
-			config.ErrorLog.Errorf("Could not connect to remote host %s: %s", addr, err.Error())
+			config.ErrorLog.Errorf("Could not connect to remote host %s: %s", fullURL, err.Error())
 			return err
 		} else {
 			grabData.HTTP.Response = resp
@@ -530,9 +530,8 @@ func GrabBanner(config *Config, target *GrabTarget) *Grab {
 		} else {
 			rhost = net.JoinHostPort(target.Addr.String(), port)
 		}
-		rhost += config.HTTP.Endpoint
 
-		err := httpGrabber(rhost)
+		err := httpGrabber(rhost, config.HTTP.Endpoint)
 
 		return &Grab{
 			IP:     target.Addr,
