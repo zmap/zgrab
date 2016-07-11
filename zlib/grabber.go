@@ -139,8 +139,8 @@ func makeNetDialer(c *Config) func(string, string) (net.Conn, error) {
 	}
 }
 
-func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string) error {
-	g := func(host, endpoint string) (err error) {
+func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, string) error {
+	g := func(urlHost, endpoint, httpHost string) (err error) {
 
 		var tlsConfig *ztls.Config
 		if config.TLS || config.HTTP.MaxRedirects > 0 {
@@ -190,8 +190,8 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string) err
 			if config.GatherSessionTicket {
 				tlsConfig.ForceSessionTicketExt = true
 			}
-			if !config.NoSNI && host != "" {
-				tlsConfig.ServerName = host
+			if !config.NoSNI && urlHost != "" {
+				tlsConfig.ServerName = urlHost
 			}
 
 		}
@@ -231,18 +231,18 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string) err
 		var fullURL string
 
 		if config.TLS {
-			fullURL = "https://" + host + endpoint
+			fullURL = "https://" + urlHost + endpoint
 		} else {
-			fullURL = "http://" + host + endpoint
+			fullURL = "http://" + urlHost + endpoint
 		}
 
 		var resp *http.Response
 
 		switch config.HTTP.Method {
 		case "GET":
-			resp, err = client.Get(fullURL)
+			resp, err = client.GetWithHost(fullURL, httpHost)
 		case "HEAD":
-			resp, err = client.Head(fullURL)
+			resp, err = client.HeadWithHost(fullURL, httpHost)
 		default:
 			zlog.Fatalf("Bad HTTP Method: %s. Valid options are: GET, HEAD.", config.HTTP.Method)
 		}
@@ -542,7 +542,7 @@ func GrabBanner(config *Config, target *GrabTarget) *Grab {
 			rhost = net.JoinHostPort(target.Addr.String(), port)
 		}
 
-		err := httpGrabber(rhost, config.HTTP.Endpoint)
+		err := httpGrabber(rhost, config.HTTP.Endpoint, target.Domain)
 
 		return &Grab{
 			IP:     target.Addr,
