@@ -25,14 +25,23 @@ type JSONSuite struct {
 var _ = Suite(&JSONSuite{})
 
 func (s *JSONSuite) SetUpTest(c *C) {
-	var err error
-	s.pemData, err = ioutil.ReadFile("testdata/davidadrian.org.cert")
-	c.Assert(err, IsNil)
-	block, _ := pem.Decode(s.pemData)
-	c.Assert(block, NotNil)
-	s.rawCert = block.Bytes
-	s.parsedCert, err = ParseCertificate(s.rawCert)
-	c.Assert(err, IsNil)
+	tests, err := ioutil.ReadDir("testdata")
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	for _, test := range tests {
+		var err error
+		s.pemData, err = ioutil.ReadFile("testdata/" + test.Name())
+		c.Assert(err, IsNil)
+		block, _ := pem.Decode(s.pemData)
+		c.Assert(block, NotNil)
+		s.rawCert = block.Bytes
+		s.parsedCert, err = ParseCertificate(s.rawCert)
+		c.Assert(err, IsNil)
+	}
 }
 
 func (s *JSONSuite) TestEncodeDecodeSignatureAlgorithmInt(c *C) {
