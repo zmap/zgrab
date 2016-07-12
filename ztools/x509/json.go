@@ -10,8 +10,10 @@ import (
 	"crypto/rsa"
 	"encoding/asn1"
 	"encoding/json"
+
 	"time"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/zmap/zgrab/ztools/keys"
 	"github.com/zmap/zgrab/ztools/x509/pkix"
 )
@@ -33,31 +35,31 @@ type auxKeyUsage struct {
 func (k KeyUsage) MarshalJSON() ([]byte, error) {
 	var enc auxKeyUsage
 	enc.Value = uint32(k)
-	if k & KeyUsageDigitalSignature > 0 {
+	if k&KeyUsageDigitalSignature > 0 {
 		enc.DigitalSignature = true
 	}
-	if k & KeyUsageContentCommitment > 0 {
+	if k&KeyUsageContentCommitment > 0 {
 		enc.ContentCommitment = true
 	}
-	if k & KeyUsageKeyEncipherment > 0 {
+	if k&KeyUsageKeyEncipherment > 0 {
 		enc.KeyEncipherment = true
 	}
-	if k & KeyUsageDataEncipherment > 0 {
+	if k&KeyUsageDataEncipherment > 0 {
 		enc.DataEncipherment = true
 	}
-	if k & KeyUsageKeyAgreement > 0 {
+	if k&KeyUsageKeyAgreement > 0 {
 		enc.KeyAgreement = true
 	}
-	if k & KeyUsageCertSign > 0 {
+	if k&KeyUsageCertSign > 0 {
 		enc.CertificateSign = true
 	}
-	if k & KeyUsageCRLSign > 0 {
+	if k&KeyUsageCRLSign > 0 {
 		enc.CRLSign = true
 	}
-	if k & KeyUsageEncipherOnly > 0 {
+	if k&KeyUsageEncipherOnly > 0 {
 		enc.EncipherOnly = true
 	}
-	if k & KeyUsageDecipherOnly > 0 {
+	if k&KeyUsageDecipherOnly > 0 {
 		enc.DecipherOnly = true
 	}
 	return json.Marshal(&enc)
@@ -205,6 +207,7 @@ type jsonCertificate struct {
 	SPKISubjectFingerprint    CertificateFingerprint       `json:"spki_subject_fingerprint"`
 	TBSCertificateFingerprint CertificateFingerprint       `json:"tbs_fingerprint"`
 	ValidationLevel           CertValidationLevel          `json:"validation_level"`
+	Names                     []string                     `json:"names"`
 }
 
 func (c *Certificate) MarshalJSON() ([]byte, error) {
@@ -221,7 +224,42 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.Subject = c.Subject
 	jc.SubjectDN = c.Subject.String()
 	jc.SubjectKeyInfo.KeyAlgorithm = c.PublicKeyAlgorithm
-	jc.SubjectKeyInfo.SPKIFingerprint = c.SPKIFingerprint
+
+	// Include all subject names, DNS names there are
+	for _, obj := range c.Subject.Names {
+
+		switch name := obj.Value.(type) {
+		case string:
+
+			flag := true
+
+			if name[0] == '*' {
+				flag = govalidator.IsURL(name[2:])
+			} else {
+				flag = govalidator.IsURL(name)
+			}
+
+			// Check that this is actually a url and not something else
+			if flag {
+				jc.Names = append(jc.Names, name)
+			}
+		}
+	}
+
+	for _, name := range c.DNSNames {
+
+		flag := true
+
+		if name[0] == '*' {
+			flag = govalidator.IsURL(name[2:])
+		} else {
+			flag = govalidator.IsURL(name)
+		}
+
+		if flag {
+			jc.Names = append(jc.Names, name)
+		}
+	}
 
 	// Pull out the key
 	keyMap := make(map[string]interface{})
