@@ -231,9 +231,9 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		switch name := obj.Value.(type) {
 		case string:
 
-			flag := true
+			flag := false
 
-			if name[0] == '*' {
+			if len(name) > 2 && name[0] == '*' {
 				flag = govalidator.IsURL(name[2:])
 			} else {
 				flag = govalidator.IsURL(name)
@@ -248,9 +248,9 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 
 	for _, name := range c.DNSNames {
 
-		flag := true
+		flag := false
 
-		if name[0] == '*' {
+		if len(name) > 2 && name[0] == '*' {
 			flag = govalidator.IsURL(name[2:])
 		} else {
 			flag = govalidator.IsURL(name)
