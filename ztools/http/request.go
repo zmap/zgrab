@@ -437,12 +437,21 @@ func ParseHTTPVersion(vers string) (major, minor int, ok bool) {
 	return major, minor, true
 }
 
-// NewRequest returns a new Request given a method, URL, and optional body.
 func NewRequest(method, urlStr string, body io.Reader) (*Request, error) {
+	return NewRequestWithHost(method, urlStr, "", body)
+}
+
+// NewRequest returns a new Request given a method, URL, and optional body.
+func NewRequestWithHost(method, urlStr, host string, body io.Reader) (*Request, error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, err
 	}
+
+	if host == "" {
+		host = u.Host
+	}
+
 	rc, ok := body.(io.ReadCloser)
 	if !ok && body != nil {
 		rc = ioutil.NopCloser(body)
@@ -457,7 +466,7 @@ func NewRequest(method, urlStr string, body io.Reader) (*Request, error) {
 		},
 		Headers: make(Header),
 		Body:    rc,
-		Host:    u.Host,
+		Host:    host,
 	}
 	if body != nil {
 		switch v := body.(type) {

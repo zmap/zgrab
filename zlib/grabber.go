@@ -29,6 +29,7 @@ import (
 	"github.com/zmap/zgrab/ztools/scada/siemens"
 	"github.com/zmap/zgrab/ztools/telnet"
 	"github.com/zmap/zgrab/ztools/util"
+	"github.com/zmap/zgrab/ztools/zlog"
 	"github.com/zmap/zgrab/ztools/ztls"
 	"io"
 	"net"
@@ -138,8 +139,8 @@ func makeNetDialer(c *Config) func(string, string) (net.Conn, error) {
 	}
 }
 
-func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string) error {
-	g := func(host, endpoint string) error {
+func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, string) error {
+	g := func(urlHost, endpoint, httpHost string) (err error) {
 
 		var tlsConfig *ztls.Config
 		if config.TLS || config.HTTP.MaxRedirects > 0 {
@@ -189,8 +190,8 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string) err
 			if config.GatherSessionTicket {
 				tlsConfig.ForceSessionTicketExt = true
 			}
-			if !config.NoSNI && host != "" {
-				tlsConfig.ServerName = host
+			if !config.NoSNI && urlHost != "" {
+				tlsConfig.ServerName = urlHost
 			}
 
 		}
@@ -208,7 +209,7 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string) err
 		client.UserAgent = config.HTTP.UserAgent
 		client.CheckRedirect = func(req *http.Request, res *http.Response, via []*http.Request) error {
 			grabData.HTTP.RedirectResponseChain = append(grabData.HTTP.RedirectResponseChain, res)
-			if str, err := util.ReadString(res.Body, config.HTTP.MaxSize*1000); err != nil {
+			if str, err := util.ReadString(res.Body, config.HTTP.MaxSize*1024); err != nil {
 				return err
 			} else {
 				res.BodyText = str
@@ -223,36 +224,45 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string) err
 			}
 
 			return nil
-		} //Defaults to following up to 10 redirects
+		}
 		client.Jar = nil // Don't send or receive cookies (otherwise use CookieJar)
 		client.Transport = transport
 
 		var fullURL string
 
 		if config.TLS {
-			fullURL = "https://" + host + endpoint
+			fullURL = "https://" + urlHost + endpoint
 		} else {
-			fullURL = "http://" + host + endpoint
+			fullURL = "http://" + urlHost + endpoint
 		}
 
-		if resp, err := client.Get(fullURL); err != nil {
+		var resp *http.Response
+		switch config.HTTP.Method {
+		case "GET":
+			resp, err = client.GetWithHost(fullURL, httpHost)
+		case "HEAD":
+			resp, err = client.HeadWithHost(fullURL, httpHost)
+		default:
+			zlog.Fatalf("Bad HTTP Method: %s. Valid options are: GET, HEAD.", config.HTTP.Method)
+		}
+
+		if err != nil {
 			config.ErrorLog.Errorf("Could not connect to remote host %s: %s", fullURL, err.Error())
 			return err
-		} else {
-			grabData.HTTP.Response = resp
-
-			if str, err := util.ReadString(resp.Body, config.HTTP.MaxSize*1000); err != nil {
-				return err
-			} else {
-				grabData.HTTP.Response.BodyText = str
-				m := sha256.New()
-				m.Write([]byte(str))
-				grabData.HTTP.Response.BodySHA256 = m.Sum(nil)
-
-			}
-
-			resp.Body.Close()
 		}
+
+		grabData.HTTP.Response = resp
+
+		if str, err := util.ReadString(resp.Body, config.HTTP.MaxSize*1024); err != nil {
+			return err
+		} else {
+			grabData.HTTP.Response.BodyText = str
+			m := sha256.New()
+			m.Write([]byte(str))
+			grabData.HTTP.Response.BodySHA256 = m.Sum(nil)
+		}
+
+		resp.Body.Close()
 
 		return nil
 	}
@@ -531,7 +541,7 @@ func GrabBanner(config *Config, target *GrabTarget) *Grab {
 			rhost = net.JoinHostPort(target.Addr.String(), port)
 		}
 
-		err := httpGrabber(rhost, config.HTTP.Endpoint)
+		err := httpGrabber(rhost, config.HTTP.Endpoint, target.Domain)
 
 		return &Grab{
 			IP:     target.Addr,

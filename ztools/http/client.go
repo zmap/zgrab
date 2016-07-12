@@ -190,7 +190,11 @@ func Get(url string) (r *Response, err error) {
 //
 // Caller should close r.Body when done reading from it.
 func (c *Client) Get(url string) (r *Response, err error) {
-	req, err := NewRequest("GET", url, nil)
+	return c.GetWithHost(url, "")
+}
+
+func (c *Client) GetWithHost(url, host string) (r *Response, err error) {
+	req, err := NewRequestWithHost("GET", url, host, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +377,11 @@ func Head(url string) (r *Response, err error) {
 //    303 (See Other)
 //    307 (Temporary Redirect)
 func (c *Client) Head(url string) (r *Response, err error) {
-	req, err := NewRequest("HEAD", url, nil)
+	return c.HeadWithHost(url, "")
+}
+
+func (c *Client) HeadWithHost(url, host string) (r *Response, err error) {
+	req, err := NewRequestWithHost("HEAD", url, host, nil)
 	if err != nil {
 		return nil, err
 	}
