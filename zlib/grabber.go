@@ -209,7 +209,7 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 		client.UserAgent = config.HTTP.UserAgent
 		client.CheckRedirect = func(req *http.Request, res *http.Response, via []*http.Request) error {
 			grabData.HTTP.RedirectResponseChain = append(grabData.HTTP.RedirectResponseChain, res)
-			if str, err := util.ReadString(res.Body, config.HTTP.MaxSize*1000); err != nil {
+			if str, err := util.ReadString(res.Body, config.HTTP.MaxSize*1024); err != nil {
 				return err
 			} else {
 				res.BodyText = str
@@ -237,7 +237,6 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 		}
 
 		var resp *http.Response
-
 		switch config.HTTP.Method {
 		case "GET":
 			resp, err = client.GetWithHost(fullURL, httpHost)
@@ -254,7 +253,7 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 
 		grabData.HTTP.Response = resp
 
-		if str, err := util.ReadString(resp.Body, config.HTTP.MaxSize*1000); err != nil {
+		if str, err := util.ReadString(resp.Body, config.HTTP.MaxSize*1024); err != nil {
 			return err
 		} else {
 			grabData.HTTP.Response.BodyText = str
