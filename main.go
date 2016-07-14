@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"flag"
 	"io"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"strings"
@@ -30,7 +29,20 @@ import (
 	"github.com/zmap/zgrab/ztools/x509"
 	"github.com/zmap/zgrab/ztools/zlog"
 	"github.com/zmap/zgrab/ztools/ztls"
+	"io/ioutil"
 )
+
+type rootCAFiles []string
+
+// default flag value
+func (files *rootCAFiles) String() string {
+	return ""
+}
+
+func (files *rootCAFiles) Set(value string) error {
+	*files = append(*files, strings.Split(value, ",")...)
+	return nil
+}
 
 // Command-line flags
 var (
@@ -39,12 +51,11 @@ var (
 	logFileName, metadataFileName string
 	messageFileName               string
 	interfaceName                 string
-	ehlo                          string
 	portFlag                      uint
 	inputFile, metadataFile       *os.File
 	timeout                       uint
 	tlsVersion                    string
-	rootCAFileName                string
+	rootCAs                       rootCAFiles
 )
 
 // Module configurations
@@ -114,7 +125,7 @@ func init() {
 	flag.BoolVar(&config.ExtendedMasterSecret, "tls-extended-master-secret", false, "Offer RFC 7627 Extended Master Secret extension")
 	flag.BoolVar(&config.TLSVerbose, "tls-verbose", false, "Add extra TLS information to JSON output (client hello, client KEX, key material, etc)")
 
-	flag.StringVar(&rootCAFileName, "ca-file", "", "List of trusted root certificate authorities in PEM format")
+	flag.Var(&rootCAs, "ca-files", "Comman-separated list of files containing trusted root certificate authorities in PEM format. E.g. firefox.pem,chrome.pem")
 	flag.IntVar(&config.GOMAXPROCS, "gomaxprocs", 3, "Set GOMAXPROCS (default 3)")
 	flag.BoolVar(&config.FTP, "ftp", false, "Read FTP banners")
 	flag.BoolVar(&config.FTPAuthTLS, "ftp-authtls", false, "Collect FTPS certificates in addition to FTP banners")
@@ -270,20 +281,21 @@ func init() {
 	// Check the network interface
 	var err error
 
-	// Look at CA file
-	if rootCAFileName != "" {
-		var fd *os.File
-		if fd, err = os.Open(rootCAFileName); err != nil {
-			zlog.Fatal(err)
-		}
-		caBytes, readErr := ioutil.ReadAll(fd)
-		if readErr != nil {
-			zlog.Fatal(err)
-		}
-		config.RootCAPool = x509.NewCertPool()
-		ok := config.RootCAPool.AppendCertsFromPEM(caBytes)
-		if !ok {
-			zlog.Fatal("Could not read certificates from PEM file. Invalid PEM?")
+	if len(rootCAs) > 0 {
+		for i, poolFile := range rootCAs {
+			var fd *os.File
+			if fd, err = os.Open(poolFile); err != nil {
+				zlog.Fatal(err)
+			}
+			caBytes, readErr := ioutil.ReadAll(fd)
+			if readErr != nil {
+				zlog.Fatal(readErr)
+			}
+			config.RootCAPools = append(config.RootCAPools, x509.NewCertPool())
+			ok := config.RootCAPools[i].AppendCertsFromPEM(caBytes)
+			if !ok {
+				zlog.Fatal("Could not read certificates from PEM file %s", poolFile)
+			}
 		}
 	}
 
