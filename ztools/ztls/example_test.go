@@ -48,7 +48,7 @@ yuGnBXj8ytqU0CwIPX4WecigUCAkVDNx
 	}
 
 	conn, err := ztls.Dial("tcp", "mail.google.com:443", &ztls.Config{
-		RootCAs: roots,
+		RootCAPools: []*x509.CertPool{roots},
 	})
 	if err != nil {
 		panic("failed to connect: " + err.Error())

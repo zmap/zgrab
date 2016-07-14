@@ -109,7 +109,7 @@ type Config struct {
 	TLS                  bool
 	TLSVersion           uint16
 	Heartbleed           bool
-	RootCAPool           *x509.CertPool
+	RootCAPools          []*x509.CertPool
 	DHEOnly              bool
 	ECDHEOnly            bool
 	ExportsOnly          bool

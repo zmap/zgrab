@@ -255,7 +255,7 @@ type Config struct {
 	// RootCAs defines the set of root certificate authorities
 	// that clients use when verifying server certificates.
 	// If RootCAs is nil, TLS uses the host's root CA set.
-	RootCAs *x509.CertPool
+	RootCAPools []*x509.CertPool
 
 	// NextProtos is a list of supported, application level protocols.
 	NextProtos []string

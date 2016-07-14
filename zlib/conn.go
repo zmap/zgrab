@@ -62,7 +62,7 @@ type Conn struct {
 	readDeadline  time.Time
 	writeDeadline time.Time
 
-	caPool *x509.CertPool
+	caPools []*x509.CertPool
 
 	CipherSuites              []uint16
 	ForceSuites               bool
@@ -95,8 +95,8 @@ func (c *Conn) SetExtendedRandom() {
 	c.extendedRandom = true
 }
 
-func (c *Conn) SetCAPool(pool *x509.CertPool) {
-	c.caPool = pool
+func (c *Conn) SetCAPools(pools []*x509.CertPool) {
+	c.caPools = pools
 }
 
 func (c *Conn) SetDomain(domain string) {
@@ -288,7 +288,7 @@ func (c *Conn) TLSHandshake() error {
 	tlsConfig.InsecureSkipVerify = true
 	tlsConfig.MinVersion = ztls.VersionSSL30
 	tlsConfig.MaxVersion = c.maxTlsVersion
-	tlsConfig.RootCAs = c.caPool
+	tlsConfig.RootCAPools = c.caPools
 	tlsConfig.HeartbeatEnabled = true
 	tlsConfig.ClientDSAEnabled = true
 	tlsConfig.ForceSuites = c.ForceSuites

@@ -148,7 +148,7 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 			tlsConfig.InsecureSkipVerify = true
 			tlsConfig.MinVersion = ztls.VersionSSL30
 			tlsConfig.MaxVersion = config.TLSVersion
-			tlsConfig.RootCAs = config.RootCAPool
+			tlsConfig.RootCAPools = config.RootCAPools
 			tlsConfig.HeartbeatEnabled = true
 			tlsConfig.ClientDSAEnabled = true
 			if config.DHEOnly {
@@ -275,7 +275,7 @@ func makeGrabber(config *Config) func(*Conn) error {
 	g := func(c *Conn) error {
 		banner := make([]byte, 1024)
 		response := make([]byte, 65536)
-		c.SetCAPool(config.RootCAPool)
+		c.SetCAPools(config.RootCAPools)
 		if config.DHEOnly {
 			c.CipherSuites = ztls.DHECiphers
 		}
