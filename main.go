@@ -282,7 +282,7 @@ func init() {
 	var err error
 
 	if len(rootCAs) > 0 {
-		for i, poolFile := range rootCAs {
+		for _, poolFile := range rootCAs {
 			var fd *os.File
 			if fd, err = os.Open(poolFile); err != nil {
 				zlog.Fatal(err)
@@ -291,8 +291,13 @@ func init() {
 			if readErr != nil {
 				zlog.Fatal(readErr)
 			}
-			config.RootCAPools = append(config.RootCAPools, x509.NewCertPool())
-			ok := config.RootCAPools[i].AppendCertsFromPEM(caBytes)
+
+			if _, alreadyExists := config.RootCAPools[poolFile]; alreadyExists {
+				zlog.Fatalf("CA file %s already exists. Please use unique ca file names.", poolFile)
+			}
+
+			config.RootCAPools[poolFile] = x509.NewCertPool()
+			ok := config.RootCAPools[poolFile].AppendCertsFromPEM(caBytes)
 			if !ok {
 				zlog.Fatal("Could not read certificates from PEM file %s", poolFile)
 			}

@@ -317,7 +317,7 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 				opts.Intermediates.AddCert(cert)
 			}
 			var validation *x509.Validation
-			c.verifiedChains, validation, err = certs[0].ValidateWithStupidDetail(opts)
+			c.verifiedChains, validation = certs[0].ValidateWithStupidDetail(opts)
 			c.handshakeLog.ServerCertificates.addParsed(certs, validation)
 
 			// If actually verifying and invalid, reject

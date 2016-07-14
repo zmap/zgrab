@@ -62,7 +62,7 @@ type Conn struct {
 	readDeadline  time.Time
 	writeDeadline time.Time
 
-	caPools []*x509.CertPool
+	caPools map[string]*x509.CertPool
 
 	CipherSuites              []uint16
 	ForceSuites               bool
@@ -95,7 +95,7 @@ func (c *Conn) SetExtendedRandom() {
 	c.extendedRandom = true
 }
 
-func (c *Conn) SetCAPools(pools []*x509.CertPool) {
+func (c *Conn) SetCAPools(pools map[string]*x509.CertPool) {
 	c.caPools = pools
 }
 
