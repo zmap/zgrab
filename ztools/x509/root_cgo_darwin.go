@@ -63,7 +63,7 @@ int ZToolsFetchPEMRoots(CFDataRef *pemRoots) {
 import "C"
 import "unsafe"
 
-func initSystemRoots() {
+func loadSystemRoots() (*CertPool, error) {
 	roots := NewCertPool()
 
 	var data C.CFDataRef = nil
