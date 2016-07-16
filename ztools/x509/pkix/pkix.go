@@ -174,6 +174,17 @@ func (n *Name) String() string {
 	return joined
 }
 
+// oidInAttributeTypeAndValue returns whether a type with the given OID exists
+// in atv.
+func oidInAttributeTypeAndValue(oid asn1.ObjectIdentifier, atv []AttributeTypeAndValue) bool {
+	for _, a := range atv {
+		if a.Type.Equal(oid) {
+			return true
+		}
+	}
+	return false
+}
+
 // CertificateList represents the ASN.1 structure of the same name. See RFC
 // 5280, section 5.1. Use Certificate.CheckCRLSignature to verify the
 // signature.
