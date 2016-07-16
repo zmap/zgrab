@@ -595,6 +595,13 @@ type Certificate struct {
 // involves algorithms that are not currently implemented.
 var ErrUnsupportedAlgorithm = errors.New("x509: cannot verify signature: algorithm unimplemented")
 
+// An InsecureAlgorithmError
+type InsecureAlgorithmError SignatureAlgorithm
+
+func (e InsecureAlgorithmError) Error() string {
+	return fmt.Sprintf("x509: cannot verify signature: insecure algorithm %v", SignatureAlgorithm(e))
+}
+
 // ConstraintViolationError results when a requested usage is not permitted by
 // a certificate. For example: checking a signature when the public key isn't a
 // certificate signing key.
@@ -687,7 +694,13 @@ func (c *Certificate) CheckSignatureFrom(parent *Certificate) (err error) {
 
 // CheckSignature verifies that signature is a valid signature over signed from
 // c's public key.
-func (c *Certificate) CheckSignature(algo SignatureAlgorithm, signed, signature []byte) (err error) {
+func (c *Certificate) CheckSignature(algo SignatureAlgorithm, signed, signature []byte) error {
+	return checkSignature(algo, signed, signature, c.PublicKey)
+}
+
+// CheckSignature verifies that signature is a valid signature over signed from
+// a crypto.PublicKey.
+func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey crypto.PublicKey) (err error) {
 	var hashType crypto.Hash
 
 	switch algo {
@@ -699,6 +712,8 @@ func (c *Certificate) CheckSignature(algo SignatureAlgorithm, signed, signature 
 		hashType = crypto.SHA384
 	case SHA512WithRSA, ECDSAWithSHA512:
 		hashType = crypto.SHA512
+	case MD2WithRSA, MD5WithRSA:
+		return InsecureAlgorithmError(algo)
 	default:
 		return ErrUnsupportedAlgorithm
 	}
@@ -711,13 +726,15 @@ func (c *Certificate) CheckSignature(algo SignatureAlgorithm, signed, signature 
 	h.Write(signed)
 	digest := h.Sum(nil)
 
-	switch pub := c.PublicKey.(type) {
+	switch pub := publicKey.(type) {
 	case *rsa.PublicKey:
 		return rsa.VerifyPKCS1v15(pub, hashType, digest, signature)
 	case *dsa.PublicKey:
 		dsaSig := new(dsaSignature)
-		if _, err := asn1.Unmarshal(signature, dsaSig); err != nil {
+		if rest, err := asn1.Unmarshal(signature, dsaSig); err != nil {
 			return err
+		} else if len(rest) != 0 {
+			return errors.New("x509: trailing data after DSA signature")
 		}
 		if dsaSig.R.Sign() <= 0 || dsaSig.S.Sign() <= 0 {
 			return errors.New("x509: DSA signature contained zero or negative values")
@@ -728,8 +745,10 @@ func (c *Certificate) CheckSignature(algo SignatureAlgorithm, signed, signature 
 		return
 	case *ecdsa.PublicKey:
 		ecdsaSig := new(ecdsaSignature)
-		if _, err := asn1.Unmarshal(signature, ecdsaSig); err != nil {
+		if rest, err := asn1.Unmarshal(signature, ecdsaSig); err != nil {
 			return err
+		} else if len(rest) != 0 {
+			return errors.New("x509: trailing data after ECDSA signature")
 		}
 		if ecdsaSig.R.Sign() <= 0 || ecdsaSig.S.Sign() <= 0 {
 			return errors.New("x509: ECDSA signature contained zero or negative values")
@@ -1287,6 +1306,26 @@ func reverseBitsInAByte(in byte) byte {
 	b2 := b1>>2&0x33 | b1<<2&0xcc
 	b3 := b2>>1&0x55 | b2<<1&0xaa
 	return b3
+}
+
+// asn1BitLength returns the bit-length of bitString by considering the
+// most-significant bit in a byte to be the "first" bit. This convention
+// matches ASN.1, but differs from almost everything else.
+func asn1BitLength(bitString []byte) int {
+	bitLen := len(bitString) * 8
+
+	for i := range bitString {
+		b := bitString[len(bitString)-i-1]
+
+		for bit := uint(0); bit < 8; bit++ {
+			if (b>>bit)&1 == 1 {
+				return bitLen
+			}
+			bitLen--
+		}
+	}
+
+	return 0
 }
 
 var (
@@ -1861,8 +1900,73 @@ type certificateRequest struct {
 // extensions in a CSR.
 var oidExtensionRequest = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 14}
 
-// CreateCertificateRequest creates a new certificate based on a template. The
-// following members of template are used: Subject, Attributes,
+// newRawAttributes converts AttributeTypeAndValueSETs from a template
+// CertificateRequest's Attributes into tbsCertificateRequest RawAttributes.
+func newRawAttributes(attributes []pkix.AttributeTypeAndValueSET) ([]asn1.RawValue, error) {
+	var rawAttributes []asn1.RawValue
+	b, err := asn1.Marshal(attributes)
+	if err != nil {
+		return nil, err
+	}
+	rest, err := asn1.Unmarshal(b, &rawAttributes)
+	if err != nil {
+		return nil, err
+	}
+	if len(rest) != 0 {
+		return nil, errors.New("x509: failed to unmarshall raw CSR Attributes")
+	}
+	return rawAttributes, nil
+}
+
+// parseRawAttributes Unmarshals RawAttributes intos AttributeTypeAndValueSETs.
+func parseRawAttributes(rawAttributes []asn1.RawValue) []pkix.AttributeTypeAndValueSET {
+	var attributes []pkix.AttributeTypeAndValueSET
+	for _, rawAttr := range rawAttributes {
+		var attr pkix.AttributeTypeAndValueSET
+		rest, err := asn1.Unmarshal(rawAttr.FullBytes, &attr)
+		// Ignore attributes that don't parse into pkix.AttributeTypeAndValueSET
+		// (i.e.: challengePassword or unstructuredName).
+		if err == nil && len(rest) == 0 {
+			attributes = append(attributes, attr)
+		}
+	}
+	return attributes
+}
+
+// parseCSRExtensions parses the attributes from a CSR and extracts any
+// requested extensions.
+func parseCSRExtensions(rawAttributes []asn1.RawValue) ([]pkix.Extension, error) {
+	// pkcs10Attribute reflects the Attribute structure from section 4.1 of
+	// https://tools.ietf.org/html/rfc2986.
+	type pkcs10Attribute struct {
+		Id     asn1.ObjectIdentifier
+		Values []asn1.RawValue `asn1:"set"`
+	}
+
+	var ret []pkix.Extension
+	for _, rawAttr := range rawAttributes {
+		var attr pkcs10Attribute
+		if rest, err := asn1.Unmarshal(rawAttr.FullBytes, &attr); err != nil || len(rest) != 0 || len(attr.Values) == 0 {
+			// Ignore attributes that don't parse.
+			continue
+		}
+
+		if !attr.Id.Equal(oidExtensionRequest) {
+			continue
+		}
+
+		var extensions []pkix.Extension
+		if _, err := asn1.Unmarshal(attr.Values[0].FullBytes, &extensions); err != nil {
+			return nil, err
+		}
+		ret = append(ret, extensions...)
+	}
+
+	return ret, nil
+}
+
+// CreateCertificateRequest creates a new certificate request based on a template.
+// The following members of template are used: Subject, Attributes,
 // SignatureAlgorithm, Extensions, DNSNames, EmailAddresses, and IPAddresses.
 // The private key is the private key of the signer.
 //
@@ -2106,4 +2210,9 @@ func parseCertificateRequest(in *certificateRequest) (*CertificateRequest, error
 	}
 
 	return out, nil
+}
+
+// CheckSignature reports whether the signature on c is valid.
+func (c *CertificateRequest) CheckSignature() error {
+	return checkSignature(c.SignatureAlgorithm, c.RawTBSCertificateRequest, c.Signature, c.PublicKey)
 }
