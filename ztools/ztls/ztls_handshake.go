@@ -185,6 +185,22 @@ func (c *Conn) GetHandshakeLog() *ServerHandshake {
 	return c.handshakeLog
 }
 
+func (c *Conn) In() *halfConn {
+	return &c.in
+}
+
+func (c *Conn) Out() *halfConn {
+	return &c.out
+}
+
+func (hc *halfConn) Cipher() (cipher interface{}) {
+	return hc.cipher
+}
+
+func (hc *halfConn) Seq() []byte {
+	return hc.seq[:]
+}
+
 func (m *clientHelloMsg) MakeLog() *ClientHello {
 	ch := new(ClientHello)
 	ch.Random = make([]byte, len(m.random))
