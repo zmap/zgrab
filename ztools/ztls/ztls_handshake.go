@@ -185,20 +185,20 @@ func (c *Conn) GetHandshakeLog() *ServerHandshake {
 	return c.handshakeLog
 }
 
-func (c *Conn) In() *halfConn {
-	return &c.in
+func (c *Conn) InCipher() (cipher interface{}) {
+	return c.in.cipher
 }
 
-func (c *Conn) Out() *halfConn {
-	return &c.out
+func (c *Conn) InSeq() []byte {
+	return c.in.seq[:]
 }
 
-func (hc *halfConn) Cipher() (cipher interface{}) {
-	return hc.cipher
+func (c *Conn) OutCipher() (cipher interface{}) {
+	return c.out.cipher
 }
 
-func (hc *halfConn) Seq() []byte {
-	return hc.seq[:]
+func (c *Conn) OutSeq() []byte {
+	return c.out.seq[:]
 }
 
 func (m *clientHelloMsg) MakeLog() *ClientHello {
