@@ -151,6 +151,7 @@ zgrab_certificate = SubRecord({
     "raw":Binary(),
     "parsed":zgrab_parsed_certificate,
     "validation":SubRecord({
+        "system":zgrab_certificate_trust,
         "nss":zgrab_certificate_trust,
         "apple":zgrab_certificate_trust,
         "microsoft":zgrab_certificate_trust,
@@ -198,6 +199,7 @@ zgrab_tls = SubRecord({
         "validation":SubRecord({
             "matches_domain":Boolean(),
             "stores":SubRecord({
+                "system":zgrab_server_certificate_valid,
                 "nss":zgrab_server_certificate_valid,
                 "microsoft":zgrab_server_certificate_valid,
                 "apple":zgrab_server_certificate_valid,

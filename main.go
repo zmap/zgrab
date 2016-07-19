@@ -34,13 +34,17 @@ import (
 
 type rootCAFiles []string
 
-// default flag value
-func (files *rootCAFiles) String() string {
-	return ""
+func (files rootCAFiles) String() string {
+	return strings.Join(files[:], ",")
 }
 
-func (files *rootCAFiles) Set(value string) error {
-	*files = append(*files, strings.Split(value, ",")...)
+func (files rootCAFiles) Set(value string) error {
+	files = []string{}
+
+	if value != "" {
+		files = append(files, strings.Split(value, ",")...)
+	}
+
 	return nil
 }
 
@@ -125,7 +129,9 @@ func init() {
 	flag.BoolVar(&config.ExtendedMasterSecret, "tls-extended-master-secret", false, "Offer RFC 7627 Extended Master Secret extension")
 	flag.BoolVar(&config.TLSVerbose, "tls-verbose", false, "Add extra TLS information to JSON output (client hello, client KEX, key material, etc)")
 
-	flag.Var(&rootCAs, "ca-files", "Comman-separated list of files containing trusted root certificate authorities in PEM format. E.g. firefox.pem,chrome.pem")
+	//default value for rootCAs
+	rootCAs = []string{"system"}
+	flag.Var(&rootCAs, "ca-files", "Comma-separated list of files containing trusted root certificate authorities in PEM format. E.g. firefox.pem,chrome.pem. List 'system' to use native OS root store (this is the default behavior).")
 	flag.IntVar(&config.GOMAXPROCS, "gomaxprocs", 3, "Set GOMAXPROCS (default 3)")
 	flag.BoolVar(&config.FTP, "ftp", false, "Read FTP banners")
 	flag.BoolVar(&config.FTPAuthTLS, "ftp-authtls", false, "Collect FTPS certificates in addition to FTP banners")

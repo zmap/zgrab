@@ -651,7 +651,7 @@ func (hs *serverHandshakeState) processCertsFromClient(certificates [][]byte) (c
 			opts.Intermediates.AddCert(cert)
 		}
 
-		chains, err := certs[0].Verify(opts)
+		chains, _, err := certs[0].Verify(opts)
 		if err != nil {
 			c.sendAlert(alertBadCertificate)
 			return nil, errors.New("tls: failed to verify client's certificate: " + err.Error())

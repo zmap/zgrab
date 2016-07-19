@@ -7,6 +7,7 @@ package x509
 import (
 	"fmt"
 	"net"
+	"reflect"
 	"runtime"
 	"strings"
 	"time"
@@ -363,47 +364,96 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
 	return nil
 }
 
+// ValidationErrors is an error type which can hold a number of other errors.
+// It's used to collect a range of non-fatal errors which occur while validating
+// a certificate, that way we can still match on certs which technically are
+// invalid.
+type ValidationErrors struct {
+	Errors map[reflect.Type][]error
+}
+
+// Adds an error to the list of errors contained by ValidationErrors.
+func (e *ValidationErrors) AddError(err error) {
+	errType := reflect.TypeOf(err)
+
+	if _, exists := e.Errors[errType]; !exists {
+		e.Errors[errType] = []error{err}
+	} else {
+		e.Errors[errType] = append(e.Errors[errType], err)
+	}
+}
+
+// Returns a string consisting of the values of Error() from all of the errors
+// contained in |e|
+func (e ValidationErrors) Error() string {
+	r := "ValidationErrors: "
+	for _, errTypeArray := range e.Errors {
+		for _, err := range errTypeArray {
+			r += err.Error() + "; "
+		}
+	}
+	return r
+}
+
+// Returns true if |e| contains at least one error
+func (e *ValidationErrors) HasError() bool {
+	return len(e.Errors) > 0
+}
+
+// Returns true if |e| contains any errors of errType
+func (e *ValidationErrors) HasType(errType reflect.Type) bool {
+	if _, contains := e.Errors[errType]; contains {
+		return true
+	} else {
+		return false
+	}
+}
+
 // Verify attempts to verify c by building one or more chains from c to a
 // certificate in opts.Roots, using certificates in opts.Intermediates if
 // needed. If successful, it returns one or more chains where the first
 // element of the chain is c and the last element is from opts.Roots.
 //
 // If opts.Roots is nil and system roots are unavailable the returned error
-// will be of type SystemRootsError.
+// will be of type SystemRootsError. These are fatal errors that stop any
+// subsequent validation checking.
+//
+// All non-fatal validation errors are returned as ValidationErrors
 //
 // WARNING: this doesn't do any revocation checking.
-func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, err error) {
+func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, validationErrors *ValidationErrors, fatalError error) {
+	validationErrors = &ValidationErrors{}
+
 	// Use Windows's own verification and chain building.
 	if opts.Roots == nil && runtime.GOOS == "windows" {
-		return c.systemVerify(&opts)
-	}
-
-	if len(c.UnhandledCriticalExtensions) > 0 {
-		return nil, UnhandledCriticalExtension{nil, ""}
+		chains, fatalError = c.systemVerify(&opts)
+		return chains, nil, fatalError
 	}
 
 	if opts.Roots == nil {
 		opts.Roots = systemRootsPool()
 		if opts.Roots == nil {
-			return nil, SystemRootsError{}
+			return nil, nil, SystemRootsError{}
 		}
 	}
 
-	err = c.isValid(leafCertificate, nil, &opts)
-	if err != nil {
-		return
+	if len(c.UnhandledCriticalExtensions) > 0 {
+		validationErrors.AddError(UnhandledCriticalExtension{c.UnhandledCriticalExtensions[0], c.UnhandledCriticalExtensions[0].String()})
+	}
+
+	if validationErr := c.isValid(leafCertificate, nil, &opts); validationErr != nil {
+		validationErrors.AddError(validationErr)
 	}
 
 	if len(opts.DNSName) > 0 {
-		err = c.VerifyHostname(opts.DNSName)
-		if err != nil {
-			return
+		if validationErr := c.VerifyHostname(opts.DNSName); validationErr != nil {
+			validationErrors.AddError(validationErr)
 		}
 	}
 
-	candidateChains, err := c.buildChains(make(map[int][][]*Certificate), []*Certificate{c}, &opts)
-	if err != nil {
-		return
+	candidateChains, validationErr := c.buildChains(make(map[int][][]*Certificate), []*Certificate{c}, &opts)
+	if validationErr != nil {
+		validationErrors.AddError(validationErr)
 	}
 
 	keyUsages := opts.KeyUsages
@@ -426,7 +476,7 @@ func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, err e
 	}
 
 	if len(chains) == 0 {
-		err = CertificateInvalidError{c, IncompatibleUsage}
+		validationErrors.AddError(CertificateInvalidError{c, IncompatibleUsage})
 	}
 
 	return
@@ -505,7 +555,8 @@ func matchHostnames(pattern, host string) bool {
 	}
 
 	for i, patternPart := range patternParts {
-		if /*i == 0 &&*/ patternPart == "*" {
+		if /*i == 0 &&*/
+		patternPart == "*" {
 			continue
 		}
 		if patternPart != hostParts[i] {

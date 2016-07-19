@@ -301,7 +301,7 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		if !invalidCert {
 			//TODO fix this to iterate over RootCAPools
 			opts := x509.VerifyOptions{
-				Roots:         c.config.RootCAPools,
+				Roots:         c.config.RootCAPools["system"],
 				CurrentTime:   c.config.time(),
 				DNSName:       c.config.ServerName,
 				Intermediates: x509.NewCertPool(),
@@ -316,7 +316,7 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 				*/
 				opts.Intermediates.AddCert(cert)
 			}
-			var validation *x509.Validation
+			var validation *x509.ServerCertificateValidation
 			c.verifiedChains, validation = certs[0].ValidateWithStupidDetail(opts)
 			c.handshakeLog.ServerCertificates.addParsed(certs, validation)
 

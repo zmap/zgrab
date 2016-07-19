@@ -44,16 +44,17 @@ type ServerHello struct {
 
 // SimpleCertificate holds a *x509.Certificate and a []byte for the certificate
 type SimpleCertificate struct {
-	Raw    []byte            `json:"raw,omitempty"`
-	Parsed *x509.Certificate `json:"parsed,omitempty"`
+	Raw                 []byte                              `json:"raw,omitempty"`
+	Parsed              *x509.Certificate                   `json:"parsed,omitempty"`
+	RootStoreValidities map[string]x509.CertificateValidity `json:"validation"`
 }
 
 // Certificates represents a TLS certificates message in a format friendly to the golang JSON library.
 // ValidationError should be non-nil whenever Valid is false.
 type Certificates struct {
-	Certificate SimpleCertificate   `json:"certificate,omitempty"`
-	Chain       []SimpleCertificate `json:"chain,omitempty"`
-	Validation  *x509.Validation    `json:"validation,omitempty"`
+	Certificate SimpleCertificate                 `json:"certificate,omitempty"`
+	Chain       []SimpleCertificate               `json:"chain,omitempty"`
+	Validation  *x509.ServerCertificateValidation `json:"validation,omitempty"`
 }
 
 // ServerKeyExchange represents the raw key data sent by the server in TLS key exchange message
@@ -255,7 +256,7 @@ func (m *certificateMsg) MakeLog() *Certificates {
 
 // addParsed sets the parsed certificates and the validation. It assumes the
 // chain slice has already been allocated.
-func (c *Certificates) addParsed(certs []*x509.Certificate, validation *x509.Validation) {
+func (c *Certificates) addParsed(certs []*x509.Certificate, validation *x509.ServerCertificateValidation) {
 	if len(certs) >= 1 {
 		c.Certificate.Parsed = certs[0]
 	}

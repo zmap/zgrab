@@ -188,6 +188,16 @@ type fullValidity struct {
 	ValidityPeriod int
 }
 
+// JsonCertValidation holds validation format necessary for zgrab_schema
+type JsonCertValidation struct {
+	System    CertificateValidity `json:"system",omitempty`
+	Nss       CertificateValidity `json:"nss",omitempty`
+	Apple     CertificateValidity `json:"apple",omitempty`
+	Microsoft CertificateValidity `json:"microsoft",omitempty`
+	Android   CertificateValidity `json:"android",omitempty`
+	Java      CertificateValidity `json:"java",omitempty`
+}
+
 type jsonCertificate struct {
 	Version                   int                          `json:"version"`
 	SerialNumber              string                       `json:"serial_number"`

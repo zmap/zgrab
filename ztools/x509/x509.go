@@ -122,6 +122,7 @@ type certificate struct {
 	SignatureValue     asn1.BitString
 }
 
+// To-be-signed certificate
 type tbsCertificate struct {
 	Raw                asn1.RawContent
 	Version            int `asn1:"optional,explicit,default:1,tag:0"`
