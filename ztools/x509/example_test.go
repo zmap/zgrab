@@ -86,7 +86,7 @@ yE+vPxsiUkvQHdO2fojCkY8jg70jxM+gu59tPDNbw3Uh/2Ij310FgTHsnGQMyA==
 		Roots:   roots,
 	}
 
-	if _, err := cert.Verify(opts); err != nil {
+	if _, _, err := cert.Verify(opts); err != nil {
 		panic("failed to verify certificate: " + err.Error())
 	}
 }

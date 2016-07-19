@@ -44,9 +44,9 @@ type ServerHello struct {
 
 // SimpleCertificate holds a *x509.Certificate and a []byte for the certificate
 type SimpleCertificate struct {
-	Raw                 []byte                              `json:"raw,omitempty"`
-	Parsed              *x509.Certificate                   `json:"parsed,omitempty"`
-	RootStoreValidities map[string]x509.CertificateValidity `json:"validation"`
+	Raw                 []byte                               `json:"raw,omitempty"`
+	Parsed              *x509.Certificate                    `json:"parsed,omitempty"`
+	RootStoreValidities map[string]*x509.CertificateValidity `json:"validation"`
 }
 
 // Certificates represents a TLS certificates message in a format friendly to the golang JSON library.

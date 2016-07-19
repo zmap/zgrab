@@ -141,6 +141,24 @@ func (SystemRootsError) Error() string {
 	return "x509: failed to load system roots and no roots provided"
 }
 
+type MultiRootStoreVerifyOptions struct {
+	DNSName      string
+	EmailAddress string
+	IPAddress    net.IP
+
+	// map of intermediate cert pools, keyed by root store name
+	//IntermediatesCertPools map[string]*CertPool
+	Intermediates *CertPool
+	// map of root cert pools, keyed by root store name
+	RootsCertPools map[string]*CertPool
+	CurrentTime    time.Time // if zero, the current time is used
+	// KeyUsage specifies which Extended Key Usage values are acceptable.
+	// An empty list means ExtKeyUsageServerAuth. Key usage is considered a
+	// constraint down the chain which mirrors Windows CryptoAPI behaviour,
+	// but not the spec. To accept any key usage, include ExtKeyUsageAny.
+	KeyUsages []ExtKeyUsage
+}
+
 // VerifyOptions contains parameters for Certificate.Verify. It's a structure
 // because other PKIX verification APIs have ended up needing many options.
 type VerifyOptions struct {

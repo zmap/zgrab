@@ -28,19 +28,19 @@ type ServerCertificateValidity struct {
 	// is this certificate currently valid in this browser,
 	Valid bool
 	// error that caused potential invalidity
-	Error string
+	Errors string
 }
 
 type ServerCertificateValidation struct {
 	Domain              string
 	MatchesDomain       bool
-	RootStoreValidities map[string]ServerCertificateValidity
+	RootStoreValidities map[string]*ServerCertificateValidity
 }
 
 // ValidateWithStupidDetail fills out a Validation struct given a leaf
 // certificate and intermediates / roots. If opts.DNSName is set, then it will
 // also check if the domain matches.
-func (c *Certificate) ValidateWithStupidDetail(opts VerifyOptions) (chains [][]*Certificate, validation *ServerCertificateValidation) {
+func (c *Certificate) ValidateWithStupidDetail(opts MultiRootStoreVerifyOptions) (chains [][]*Certificate, validation *ServerCertificateValidation) {
 
 	// Manually set the time, so that all verifies we do get the same time
 	if opts.CurrentTime.IsZero() {
@@ -49,35 +49,58 @@ func (c *Certificate) ValidateWithStupidDetail(opts VerifyOptions) (chains [][]*
 
 	opts.KeyUsages = nil
 
-	out := new(ServerCertificateValidation)
-	out.Domain = opts.DNSName
-
-	var fatalErr error
-	var validationErrors *ValidationErrors
-	if chains, validationErrors, fatalErr = c.Verify(opts); fatalErr != nil {
-		out.MatchesDomain = false
-		//out.BrowserTrusted = false
-		//out.BrowserErrors = []string{fatalErr}
-	} else if validationErrors != nil && validationErrors.HasError() {
-		out.MatchesDomain = false
-		//out.BrowserTrusted = false
-
-		if !validationErrors.HasType(reflect.TypeOf(HostnameError{})) {
-			// No HostnameError
-			out.MatchesDomain = true
-		} else if len(validationErrors.Errors) == 1 {
-			// HostnameError is the only error
-			//out.BrowserTrusted = true
-		}
-		//TODO: set out.BrowserError(s) properly
-	} else {
-		//out.BrowserTrusted = true
-		if len(opts.DNSName) > 0 {
-			out.MatchesDomain = true
-		}
+	validation = &ServerCertificateValidation{
+		Domain:              opts.DNSName,
+		MatchesDomain:       false,
+		RootStoreValidities: make(map[string]*ServerCertificateValidity),
 	}
 
-	validation = out
+	for rootStore, certPool := range opts.RootsCertPools {
+		matchesDomain := false
+		serverCertValidity := new(ServerCertificateValidity)
+		validation.RootStoreValidities[rootStore] = serverCertValidity
+		verifyOptions := VerifyOptions{
+			Roots:         certPool,
+			CurrentTime:   opts.CurrentTime,
+			DNSName:       opts.DNSName,
+			Intermediates: opts.Intermediates,
+		}
+
+		var fatalErr error
+		var validationErrors *ValidationErrors
+		if chains, validationErrors, fatalErr = c.Verify(verifyOptions); fatalErr != nil {
+			serverCertValidity.Valid = false
+			serverCertValidity.Errors = fatalErr.Error()
+		} else if validationErrors != nil && validationErrors.HasError() {
+			serverCertValidity.Valid = false
+
+			if !validationErrors.HasType(reflect.TypeOf(HostnameError{})) {
+				// No HostnameError
+				matchesDomain = true
+			} else if len(validationErrors.Errors) == 1 {
+				// HostnameError is the only error
+				// TODO: verify that this is the correct logic
+				serverCertValidity.Valid = true
+			}
+
+			// set validation.BrowserError(s) properly
+			for _, errorList := range validationErrors.Errors {
+				for _, err := range errorList {
+					serverCertValidity.Errors += err.Error()
+				}
+			}
+
+		} else {
+			serverCertValidity.Valid = true
+			if len(opts.DNSName) > 0 {
+				matchesDomain = true
+			}
+		}
+
+		if matchesDomain {
+			validation.MatchesDomain = true
+		}
+	}
 
 	return
 }

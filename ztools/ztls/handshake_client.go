@@ -300,11 +300,11 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 
 		if !invalidCert {
 			//TODO fix this to iterate over RootCAPools
-			opts := x509.VerifyOptions{
-				Roots:         c.config.RootCAPools["system"],
-				CurrentTime:   c.config.time(),
-				DNSName:       c.config.ServerName,
-				Intermediates: x509.NewCertPool(),
+			opts := x509.MultiRootStoreVerifyOptions{
+				RootsCertPools: c.config.RootCAPools,
+				CurrentTime:    c.config.time(),
+				DNSName:        c.config.ServerName,
+				Intermediates:  x509.NewCertPool(),
 			}
 
 			// Always check validity of the certificates
