@@ -299,7 +299,6 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		c.handshakeLog.ServerCertificates = certMsg.MakeLog()
 
 		if !invalidCert {
-			//TODO fix this to iterate over RootCAPools
 			opts := x509.MultiRootStoreVerifyOptions{
 				RootsCertPools: c.config.RootCAPools,
 				CurrentTime:    c.config.time(),

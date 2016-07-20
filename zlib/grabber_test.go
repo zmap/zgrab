@@ -2,18 +2,18 @@ package zlib_test
 
 import (
 	"fmt"
+	"github.com/zmap/zgrab/zlib"
 	. "github.com/zmap/zgrab/ztools/http"
 	"github.com/zmap/zgrab/ztools/http/httptest"
-	"net"
-	"testing"
-	"net/url"
-	"strings"
-	"strconv"
-	"github.com/zmap/zgrab/zlib"
-	"github.com/zmap/zgrab/ztools/ztls"
 	"github.com/zmap/zgrab/ztools/zlog"
-	"time"
+	"github.com/zmap/zgrab/ztools/ztls"
+	"net"
+	"net/url"
 	"os"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
 )
 
 const TEST_SERVER_BODY = "Great Success!"
@@ -53,25 +53,25 @@ func TestHTTP(t *testing.T) {
 	}
 
 	config := &zlib.Config{
-		Port: port,
-		Timeout: time.Duration(3) * time.Second,
-		TLS: false,
-		TLSVersion: ztls.VersionTLS12,
-		Senders: 1,
+		Port:               port,
+		Timeout:            time.Duration(3) * time.Second,
+		TLS:                false,
+		TLSVersion:         ztls.VersionTLS12,
+		Senders:            1,
 		ConnectionsPerHost: 1,
 		HTTP: zlib.HTTPConfig{
-			Endpoint: "/",
-			Method: "GET",
-			UserAgent: "test UA",
-			MaxSize: 256,
+			Endpoint:     "/",
+			Method:       "GET",
+			UserAgent:    "test UA",
+			MaxSize:      256,
 			MaxRedirects: 0,
 		},
-		ErrorLog: zlog.New(os.Stderr, "banner-grab"),
+		ErrorLog:   zlog.New(os.Stderr, "banner-grab"),
 		GOMAXPROCS: 3,
 	}
 
 	target := &zlib.GrabTarget{
-		Addr: addr,
+		Addr:   addr,
 		Domain: "localhost",
 	}
 
@@ -84,5 +84,7 @@ func TestHTTP(t *testing.T) {
 		t.Errorf("Unexpected HTTP response body")
 	}
 }
+
+// TODO: add test for multiple root stores
 
 // TODO: add test for more complex HTTP behavior/options
