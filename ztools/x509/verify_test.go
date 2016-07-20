@@ -5,411 +5,425 @@
 package x509
 
 import (
-    "encoding/pem"
-    "errors"
-    "runtime"
-    "strings"
-    "testing"
-    "time"
+	"encoding/pem"
+	"errors"
+	"runtime"
+	"strings"
+	"testing"
+	"time"
 
-    "github.com/zmap/zgrab/ztools/x509/pkix"
+	"github.com/zmap/zgrab/ztools/x509/pkix"
+	"reflect"
 )
 
 type verifyTest struct {
-    leaf                 string
-    intermediates        []string
-    roots                []string
-    currentTime          int64
-    dnsName              string
-    systemSkip           bool
-    keyUsages            []ExtKeyUsage
-    testSystemRootsError bool
+	leaf                 string
+	intermediates        []string
+	roots                []string
+	currentTime          int64
+	dnsName              string
+	systemSkip           bool
+	keyUsages            []ExtKeyUsage
+	testSystemRootsError bool
 
-    errorCallback  func(*testing.T, int, error) bool
-    expectedChains [][]string
+	errorCallback  func(*testing.T, int, error, *ValidationErrors) bool
+	expectedChains [][]string
 }
 
 var verifyTests = []verifyTest{
-    {
-        leaf:                 googleLeaf,
-        intermediates:        []string{giag2Intermediate},
-        currentTime:          1395785200,
-        dnsName:              "www.google.com",
-        testSystemRootsError: true,
+	{
+		leaf:                 googleLeaf,
+		intermediates:        []string{giag2Intermediate},
+		currentTime:          1395785200,
+		dnsName:              "www.google.com",
+		testSystemRootsError: true,
 
-        // Without any roots specified we should get a system roots
-        // error.
-        errorCallback: expectSystemRootsError,
-    },
-    {
-        leaf:          googleLeaf,
-        intermediates: []string{giag2Intermediate},
-        roots:         []string{geoTrustRoot},
-        currentTime:   1395785200,
-        dnsName:       "www.google.com",
+		// Without any roots specified we should get a system roots
+		// error.
+		errorCallback: expectSystemRootsError,
+	},
+	{
+		leaf:          googleLeaf,
+		intermediates: []string{giag2Intermediate},
+		roots:         []string{geoTrustRoot},
+		currentTime:   1395785200,
+		dnsName:       "www.google.com",
 
-        expectedChains: [][]string{
-            {"Google", "Google Internet Authority", "GeoTrust"},
-        },
-    },
-    {
-        leaf:          googleLeaf,
-        intermediates: []string{giag2Intermediate},
-        roots:         []string{geoTrustRoot},
-        currentTime:   1395785200,
-        dnsName:       "WwW.GooGLE.coM",
+		expectedChains: [][]string{
+			{"Google", "Google Internet Authority", "GeoTrust"},
+		},
+	},
+	{
+		leaf:          googleLeaf,
+		intermediates: []string{giag2Intermediate},
+		roots:         []string{geoTrustRoot},
+		currentTime:   1395785200,
+		dnsName:       "WwW.GooGLE.coM",
 
-        expectedChains: [][]string{
-            {"Google", "Google Internet Authority", "GeoTrust"},
-        },
-    },
-    {
-        leaf:          googleLeaf,
-        intermediates: []string{giag2Intermediate},
-        roots:         []string{geoTrustRoot},
-        currentTime:   1395785200,
-        dnsName:       "www.example.com",
+		expectedChains: [][]string{
+			{"Google", "Google Internet Authority", "GeoTrust"},
+		},
+	},
+	{
+		leaf:          googleLeaf,
+		intermediates: []string{giag2Intermediate},
+		roots:         []string{geoTrustRoot},
+		currentTime:   1395785200,
+		dnsName:       "www.example.com",
+		expectedChains: [][]string{
+			{"Google", "Google Internet Authority", "GeoTrust"},
+		},
+		errorCallback: expectHostnameError,
+	},
+	{
+		leaf:          googleLeaf,
+		intermediates: []string{giag2Intermediate},
+		roots:         []string{geoTrustRoot},
+		currentTime:   1,
+		dnsName:       "www.example.com",
 
-        errorCallback: expectHostnameError,
-    },
-    {
-        leaf:          googleLeaf,
-        intermediates: []string{giag2Intermediate},
-        roots:         []string{geoTrustRoot},
-        currentTime:   1,
-        dnsName:       "www.example.com",
+		errorCallback: expectExpired,
+	},
+	{
+		leaf:        googleLeaf,
+		roots:       []string{geoTrustRoot},
+		currentTime: 1395785200,
+		dnsName:     "www.google.com",
 
-        errorCallback: expectExpired,
-    },
-    {
-        leaf:        googleLeaf,
-        roots:       []string{geoTrustRoot},
-        currentTime: 1395785200,
-        dnsName:     "www.google.com",
+		// Skip when using systemVerify, since Windows
+		// *will* find the missing intermediate cert.
+		systemSkip:    true,
+		errorCallback: expectAuthorityUnknown,
+	},
+	{
+		leaf:          googleLeaf,
+		intermediates: []string{geoTrustRoot, giag2Intermediate},
+		roots:         []string{geoTrustRoot},
+		currentTime:   1395785200,
+		dnsName:       "www.google.com",
 
-        // Skip when using systemVerify, since Windows
-        // *will* find the missing intermediate cert.
-        systemSkip:    true,
-        errorCallback: expectAuthorityUnknown,
-    },
-    {
-        leaf:          googleLeaf,
-        intermediates: []string{geoTrustRoot, giag2Intermediate},
-        roots:         []string{geoTrustRoot},
-        currentTime:   1395785200,
-        dnsName:       "www.google.com",
+		expectedChains: [][]string{
+			{"Google", "Google Internet Authority", "GeoTrust"},
+			// TODO(agl): this is ok, but it would be nice if the
+			//            chain building didn't visit the same SPKI
+			//            twice.
+			{"Google", "Google Internet Authority", "GeoTrust", "GeoTrust"},
+		},
+		// CAPI doesn't build the chain with the duplicated GeoTrust
+		// entry so the results don't match. Thus we skip this test
+		// until that's fixed.
+		systemSkip: true,
+	},
+	{
+		leaf:          dnssecExpLeaf,
+		intermediates: []string{startComIntermediate},
+		roots:         []string{startComRoot},
+		currentTime:   1302726541,
 
-        expectedChains: [][]string{
-            {"Google", "Google Internet Authority", "GeoTrust"},
-            // TODO(agl): this is ok, but it would be nice if the
-            //            chain building didn't visit the same SPKI
-            //            twice.
-            {"Google", "Google Internet Authority", "GeoTrust", "GeoTrust"},
-        },
-        // CAPI doesn't build the chain with the duplicated GeoTrust
-        // entry so the results don't match. Thus we skip this test
-        // until that's fixed.
-        systemSkip: true,
-    },
-    {
-        leaf:          dnssecExpLeaf,
-        intermediates: []string{startComIntermediate},
-        roots:         []string{startComRoot},
-        currentTime:   1302726541,
+		expectedChains: [][]string{
+			{"dnssec-exp", "StartCom Class 1", "StartCom Certification Authority"},
+		},
+	},
+	{
+		leaf:          dnssecExpLeaf,
+		intermediates: []string{startComIntermediate, startComRoot},
+		roots:         []string{startComRoot},
+		currentTime:   1302726541,
 
-        expectedChains: [][]string{
-            {"dnssec-exp", "StartCom Class 1", "StartCom Certification Authority"},
-        },
-    },
-    {
-        leaf:          dnssecExpLeaf,
-        intermediates: []string{startComIntermediate, startComRoot},
-        roots:         []string{startComRoot},
-        currentTime:   1302726541,
+		// Skip when using systemVerify, since Windows
+		// can only return a single chain to us (for now).
+		systemSkip: true,
+		expectedChains: [][]string{
+			{"dnssec-exp", "StartCom Class 1", "StartCom Certification Authority"},
+			{"dnssec-exp", "StartCom Class 1", "StartCom Certification Authority", "StartCom Certification Authority"},
+		},
+	},
+	{
+		leaf:          googleLeafWithInvalidHash,
+		intermediates: []string{giag2Intermediate},
+		roots:         []string{geoTrustRoot},
+		currentTime:   1395785200,
+		dnsName:       "www.google.com",
 
-        // Skip when using systemVerify, since Windows
-        // can only return a single chain to us (for now).
-        systemSkip: true,
-        expectedChains: [][]string{
-            {"dnssec-exp", "StartCom Class 1", "StartCom Certification Authority"},
-            {"dnssec-exp", "StartCom Class 1", "StartCom Certification Authority", "StartCom Certification Authority"},
-        },
-    },
-    {
-        leaf:          googleLeafWithInvalidHash,
-        intermediates: []string{giag2Intermediate},
-        roots:         []string{geoTrustRoot},
-        currentTime:   1395785200,
-        dnsName:       "www.google.com",
+		// The specific error message may not occur when using system
+		// verification.
+		systemSkip:    true,
+		errorCallback: expectHashError,
+	},
+	{
+		// The default configuration should reject an S/MIME chain.
+		leaf:        smimeLeaf,
+		roots:       []string{smimeIntermediate},
+		currentTime: 1339436154,
 
-        // The specific error message may not occur when using system
-        // verification.
-        systemSkip:    true,
-        errorCallback: expectHashError,
-    },
-    {
-        // The default configuration should reject an S/MIME chain.
-        leaf:        smimeLeaf,
-        roots:       []string{smimeIntermediate},
-        currentTime: 1339436154,
+		// Key usage not implemented for Windows yet.
+		systemSkip:    true,
+		errorCallback: expectUsageError,
+	},
+	{
+		leaf:        smimeLeaf,
+		roots:       []string{smimeIntermediate},
+		currentTime: 1339436154,
+		keyUsages:   []ExtKeyUsage{ExtKeyUsageServerAuth},
 
-        // Key usage not implemented for Windows yet.
-        systemSkip:    true,
-        errorCallback: expectUsageError,
-    },
-    {
-        leaf:        smimeLeaf,
-        roots:       []string{smimeIntermediate},
-        currentTime: 1339436154,
-        keyUsages:   []ExtKeyUsage{ExtKeyUsageServerAuth},
+		// Key usage not implemented for Windows yet.
+		systemSkip:    true,
+		errorCallback: expectUsageError,
+	},
+	{
+		leaf:        smimeLeaf,
+		roots:       []string{smimeIntermediate},
+		currentTime: 1339436154,
+		keyUsages:   []ExtKeyUsage{ExtKeyUsageEmailProtection},
 
-        // Key usage not implemented for Windows yet.
-        systemSkip:    true,
-        errorCallback: expectUsageError,
-    },
-    {
-        leaf:        smimeLeaf,
-        roots:       []string{smimeIntermediate},
-        currentTime: 1339436154,
-        keyUsages:   []ExtKeyUsage{ExtKeyUsageEmailProtection},
+		// Key usage not implemented for Windows yet.
+		systemSkip: true,
+		expectedChains: [][]string{
+			{"Ryan Hurst", "GlobalSign PersonalSign 2 CA - G2"},
+		},
+	},
+	{
+		leaf:          megaLeaf,
+		intermediates: []string{comodoIntermediate1},
+		roots:         []string{comodoRoot},
+		currentTime:   1360431182,
 
-        // Key usage not implemented for Windows yet.
-        systemSkip: true,
-        expectedChains: [][]string{
-            {"Ryan Hurst", "GlobalSign PersonalSign 2 CA - G2"},
-        },
-    },
-    {
-        leaf:          megaLeaf,
-        intermediates: []string{comodoIntermediate1},
-        roots:         []string{comodoRoot},
-        currentTime:   1360431182,
+		// CryptoAPI can find alternative validation paths so we don't
+		// perform this test with system validation.
+		systemSkip: true,
+		expectedChains: [][]string{
+			{"mega.co.nz", "EssentialSSL CA", "COMODO Certification Authority"},
+		},
+	},
+	{
+		// Check that a name constrained intermediate works even when
+		// it lists multiple constraints.
+		leaf:          nameConstraintsLeaf,
+		intermediates: []string{nameConstraintsIntermediate1, nameConstraintsIntermediate2},
+		roots:         []string{globalSignRoot},
+		currentTime:   1382387896,
+		dnsName:       "secure.iddl.vt.edu",
 
-        // CryptoAPI can find alternative validation paths so we don't
-        // perform this test with system validation.
-        systemSkip: true,
-        expectedChains: [][]string{
-            {"mega.co.nz", "EssentialSSL CA", "COMODO Certification Authority"},
-        },
-    },
-    {
-        // Check that a name constrained intermediate works even when
-        // it lists multiple constraints.
-        leaf:          nameConstraintsLeaf,
-        intermediates: []string{nameConstraintsIntermediate1, nameConstraintsIntermediate2},
-        roots:         []string{globalSignRoot},
-        currentTime:   1382387896,
-        dnsName:       "secure.iddl.vt.edu",
+		expectedChains: [][]string{
+			{
+				"Technology-enhanced Learning and Online Strategies",
+				"Virginia Tech Global Qualified Server CA",
+				"Trusted Root CA G2",
+				"GlobalSign Root CA",
+			},
+		},
+	},
+	{
+		// Check that SHA-384 intermediates (which are popping up)
+		// work.
+		leaf:          moipLeafCert,
+		intermediates: []string{comodoIntermediateSHA384, comodoRSAAuthority},
+		roots:         []string{addTrustRoot},
+		currentTime:   1397502195,
+		dnsName:       "api.moip.com.br",
 
-        expectedChains: [][]string{
-            {
-                "Technology-enhanced Learning and Online Strategies",
-                "Virginia Tech Global Qualified Server CA",
-                "Trusted Root CA G2",
-                "GlobalSign Root CA",
-            },
-        },
-    },
-    {
-        // Check that SHA-384 intermediates (which are popping up)
-        // work.
-        leaf:          moipLeafCert,
-        intermediates: []string{comodoIntermediateSHA384, comodoRSAAuthority},
-        roots:         []string{addTrustRoot},
-        currentTime:   1397502195,
-        dnsName:       "api.moip.com.br",
-
-        expectedChains: [][]string{
-            {
-                "api.moip.com.br",
-                "COMODO RSA Extended Validation Secure Server CA",
-                "COMODO RSA Certification Authority",
-                "AddTrust External CA Root",
-            },
-        },
-    },
+		expectedChains: [][]string{
+			{
+				"api.moip.com.br",
+				"COMODO RSA Extended Validation Secure Server CA",
+				"COMODO RSA Certification Authority",
+				"AddTrust External CA Root",
+			},
+		},
+	},
 }
 
-func expectHostnameError(t *testing.T, i int, err error) (ok bool) {
-    if _, ok := err.(HostnameError); !ok {
-        t.Errorf("#%d: error was not a HostnameError: %s", i, err)
-        return false
-    }
-    return true
+func expectHostnameError(t *testing.T, i int, fatalErr error, validationErrors *ValidationErrors) (ok bool) {
+	if !validationErrors.HasType(reflect.TypeOf(HostnameError{})) {
+		t.Errorf("#%d: error was not a HostnameError: %s", i, validationErrors)
+		return false
+	}
+	return true
 }
 
-func expectExpired(t *testing.T, i int, err error) (ok bool) {
-    if inval, ok := err.(CertificateInvalidError); !ok || inval.Reason != Expired {
-        t.Errorf("#%d: error was not Expired: %s", i, err)
-        return false
-    }
-    return true
+func expectExpired(t *testing.T, i int, fatalErr error, validationErrors *ValidationErrors) (ok bool) {
+	if errs, hasErr := validationErrors.ErrsOfType(reflect.TypeOf(CertificateInvalidError{})); !hasErr {
+		t.Errorf("#%d: No CertificateInvalidErrors: %s", i, validationErrors)
+		return false
+	} else if err, ok := errs[0].(CertificateInvalidError); ok && err.Reason != Expired {
+		t.Errorf("#%d: error was not Expired: %s", i, validationErrors)
+		return false
+	}
+	return true
 }
 
-func expectUsageError(t *testing.T, i int, err error) (ok bool) {
-    if inval, ok := err.(CertificateInvalidError); !ok || inval.Reason != IncompatibleUsage {
-        t.Errorf("#%d: error was not IncompatibleUsage: %s", i, err)
-        return false
-    }
-    return true
+func expectUsageError(t *testing.T, i int, fatalErr error, validationErrors *ValidationErrors) (ok bool) {
+	if errs, hasErr := validationErrors.ErrsOfType(reflect.TypeOf(CertificateInvalidError{})); !hasErr {
+		t.Errorf("#%d: No CertificateInvalidErrors: %s", i, validationErrors)
+		return false
+	} else if err, ok := errs[0].(CertificateInvalidError); ok && err.Reason != IncompatibleUsage {
+		t.Errorf("#%d: error was not IncompatibleUsage: %s", i, validationErrors)
+		return false
+	}
+	return true
 }
 
-func expectAuthorityUnknown(t *testing.T, i int, err error) (ok bool) {
-    if _, ok := err.(UnknownAuthorityError); !ok {
-        t.Errorf("#%d: error was not UnknownAuthorityError: %s", i, err)
-        return false
-    }
-    return true
+func expectAuthorityUnknown(t *testing.T, i int, fatalErr error, validationErrors *ValidationErrors) (ok bool) {
+	if !validationErrors.HasType(reflect.TypeOf(UnknownAuthorityError{})) {
+		t.Errorf("#%d: error was not UnknownAuthorityError: %s", i, validationErrors)
+		return false
+	}
+	return true
 }
 
-func expectSystemRootsError(t *testing.T, i int, err error) bool {
-    if _, ok := err.(SystemRootsError); !ok {
-        t.Errorf("#%d: error was not SystemRootsError: %s", i, err)
-        return false
-    }
-    return true
+func expectSystemRootsError(t *testing.T, i int, fatalErr error, validationErrors *ValidationErrors) bool {
+	if _, ok := fatalErr.(SystemRootsError); !ok {
+		t.Errorf("#%d: error was not SystemRootsError: %s", i, fatalErr)
+		return false
+	}
+	return true
 }
 
-func expectHashError(t *testing.T, i int, err error) bool {
-    if err == nil {
-        t.Errorf("#%d: no error resulted from invalid hash", i)
-        return false
-    }
-    if expected := "algorithm unimplemented"; !strings.Contains(err.Error(), expected) {
-        t.Errorf("#%d: error resulting from invalid hash didn't contain '%s', rather it was: %s", i, expected, err)
-        return false
-    }
-    return true
+func expectHashError(t *testing.T, i int, fatalErr error, validationErrors *ValidationErrors) bool {
+	if !validationErrors.HasError() {
+		t.Errorf("#%d: no error resulted from invalid hash", i)
+		return false
+	}
+	if expected := "algorithm unimplemented"; !strings.Contains(validationErrors.Error(), expected) {
+		t.Errorf("#%d: error resulting from invalid hash didn't contain '%s', rather it was: %s", i, expected, fatalErr)
+		return false
+	}
+	return true
 }
 
 func certificateFromPEM(pemBytes string) (*Certificate, error) {
-    block, _ := pem.Decode([]byte(pemBytes))
-    if block == nil {
-        return nil, errors.New("failed to decode PEM")
-    }
-    return ParseCertificate(block.Bytes)
+	block, _ := pem.Decode([]byte(pemBytes))
+	if block == nil {
+		return nil, errors.New("failed to decode PEM")
+	}
+	return ParseCertificate(block.Bytes)
 }
 
 func testVerify(t *testing.T, useSystemRoots bool) {
-    for i, test := range verifyTests {
-        if useSystemRoots && test.systemSkip {
-            continue
-        }
-        if runtime.GOOS == "windows" && test.testSystemRootsError {
-            continue
-        }
+	for i, test := range verifyTests {
+		if useSystemRoots && test.systemSkip {
+			continue
+		}
+		if runtime.GOOS == "windows" && test.testSystemRootsError {
+			continue
+		}
 
-        opts := VerifyOptions{
-            Intermediates: NewCertPool(),
-            DNSName:       test.dnsName,
-            CurrentTime:   time.Unix(test.currentTime, 0),
-            KeyUsages:     test.keyUsages,
-        }
+		opts := VerifyOptions{
+			Intermediates: NewCertPool(),
+			DNSName:       test.dnsName,
+			CurrentTime:   time.Unix(test.currentTime, 0),
+			KeyUsages:     test.keyUsages,
+		}
 
-        if !useSystemRoots {
-            opts.Roots = NewCertPool()
-            for j, root := range test.roots {
-                ok := opts.Roots.AppendCertsFromPEM([]byte(root))
-                if !ok {
-                    t.Errorf("#%d: failed to parse root #%d", i, j)
-                    return
-                }
-            }
-        }
+		if !useSystemRoots {
+			opts.Roots = NewCertPool()
+			for j, root := range test.roots {
+				ok := opts.Roots.AppendCertsFromPEM([]byte(root))
+				if !ok {
+					t.Errorf("#%d: failed to parse root #%d", i, j)
+					return
+				}
+			}
+		}
 
-        for j, intermediate := range test.intermediates {
-            ok := opts.Intermediates.AppendCertsFromPEM([]byte(intermediate))
-            if !ok {
-                t.Errorf("#%d: failed to parse intermediate #%d", i, j)
-                return
-            }
-        }
+		for j, intermediate := range test.intermediates {
+			ok := opts.Intermediates.AppendCertsFromPEM([]byte(intermediate))
+			if !ok {
+				t.Errorf("#%d: failed to parse intermediate #%d", i, j)
+				return
+			}
+		}
 
-        leaf, err := certificateFromPEM(test.leaf)
-        if err != nil {
-            t.Errorf("#%d: failed to parse leaf: %s", i, err)
-            return
-        }
+		leaf, err := certificateFromPEM(test.leaf)
+		if err != nil {
+			t.Errorf("#%d: failed to parse leaf: %s", i, err)
+			return
+		}
 
-        var oldSystemRoots *CertPool
-        if test.testSystemRootsError {
-            oldSystemRoots = systemRootsPool()
-            systemRoots = nil
-            opts.Roots = nil
-        }
+		var oldSystemRoots *CertPool
+		if test.testSystemRootsError {
+			oldSystemRoots = systemRootsPool()
+			systemRoots = nil
+			opts.Roots = nil
+		}
 
-        chains, err := leaf.Verify(opts)
+		chains, validationErrors, fatalError := leaf.Verify(opts)
 
-        if test.testSystemRootsError {
-            systemRoots = oldSystemRoots
-        }
+		if test.testSystemRootsError {
+			systemRoots = oldSystemRoots
+		}
 
-        if test.errorCallback == nil && err != nil {
-            t.Errorf("#%d: unexpected error: %s", i, err)
-        }
-        if test.errorCallback != nil {
-            if !test.errorCallback(t, i, err) {
-                return
-            }
-        }
+		if test.errorCallback == nil && fatalError != nil {
+			t.Errorf("#%d: unexpected fatal error: %s", i, fatalError)
+		}
 
-        if len(chains) != len(test.expectedChains) {
-            t.Errorf("#%d: wanted %d chains, got %d", i, len(test.expectedChains), len(chains))
-        }
+		if test.errorCallback == nil && validationErrors.HasError() {
+			t.Errorf("#%d: unexpected validation error: %s", i, validationErrors)
+		}
 
-        // We check that each returned chain matches a chain from
-        // expectedChains but an entry in expectedChains can't match
-        // two chains.
-        seenChains := make([]bool, len(chains))
-    NextOutputChain:
-        for _, chain := range chains {
-        TryNextExpected:
-            for j, expectedChain := range test.expectedChains {
-                if seenChains[j] {
-                    continue
-                }
-                if len(chain) != len(expectedChain) {
-                    continue
-                }
-                for k, cert := range chain {
-                    if strings.Index(nameToKey(&cert.Subject), expectedChain[k]) == -1 {
-                        continue TryNextExpected
-                    }
-                }
-                // we matched
-                seenChains[j] = true
-                continue NextOutputChain
-            }
-            t.Errorf("#%d: No expected chain matched %s", i, chainToDebugString(chain))
-        }
-    }
+		if test.errorCallback != nil && validationErrors.HasError() {
+			if !test.errorCallback(t, i, fatalError, validationErrors) {
+				return
+			}
+		}
+
+		if len(chains) != len(test.expectedChains) {
+			t.Errorf("#%d: wanted %d chains, got %d", i, len(test.expectedChains), len(chains))
+		}
+
+		// We check that each returned chain matches a chain from
+		// expectedChains but an entry in expectedChains can't match
+		// two chains.
+		seenChains := make([]bool, len(chains))
+	NextOutputChain:
+		for _, chain := range chains {
+		TryNextExpected:
+			for j, expectedChain := range test.expectedChains {
+				if seenChains[j] {
+					continue
+				}
+				if len(chain) != len(expectedChain) {
+					continue
+				}
+				for k, cert := range chain {
+					if strings.Index(nameToKey(&cert.Subject), expectedChain[k]) == -1 {
+						continue TryNextExpected
+					}
+				}
+				// we matched
+				seenChains[j] = true
+				continue NextOutputChain
+			}
+			t.Errorf("#%d: No expected chain matched %s", i, chainToDebugString(chain))
+		}
+	}
 }
 
 func TestGoVerify(t *testing.T) {
-    testVerify(t, false)
+	testVerify(t, false)
 }
 
 func TestSystemVerify(t *testing.T) {
-    if runtime.GOOS != "windows" {
-        t.Skipf("skipping verify test using system APIs on %q", runtime.GOOS)
-    }
+	if runtime.GOOS != "windows" {
+		t.Skipf("skipping verify test using system APIs on %q", runtime.GOOS)
+	}
 
-    testVerify(t, true)
+	testVerify(t, true)
 }
 
 func chainToDebugString(chain []*Certificate) string {
-    var chainStr string
-    for _, cert := range chain {
-        if len(chainStr) > 0 {
-            chainStr += " -> "
-        }
-        chainStr += nameToKey(&cert.Subject)
-    }
-    return chainStr
+	var chainStr string
+	for _, cert := range chain {
+		if len(chainStr) > 0 {
+			chainStr += " -> "
+		}
+		chainStr += nameToKey(&cert.Subject)
+	}
+	return chainStr
 }
 
 func nameToKey(name *pkix.Name) string {
-    return strings.Join(name.Country, ",") + "/" + strings.Join(name.Organization, ",") + "/" + strings.Join(name.OrganizationalUnit, ",") + "/" + name.CommonName
+	return strings.Join(name.Country, ",") + "/" + strings.Join(name.Organization, ",") + "/" + strings.Join(name.OrganizationalUnit, ",") + "/" + name.CommonName
 }
 
 const geoTrustRoot = `-----BEGIN CERTIFICATE-----

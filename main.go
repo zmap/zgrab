@@ -130,8 +130,8 @@ func init() {
 	flag.BoolVar(&config.TLSVerbose, "tls-verbose", false, "Add extra TLS information to JSON output (client hello, client KEX, key material, etc)")
 
 	//default value for rootCAs
-	rootCAs = []string{"system"}
-	flag.Var(&rootCAs, "ca-files", "Comma-separated list of files containing trusted root certificate authorities in PEM format. E.g. firefox.pem,chrome.pem. List 'system' to use native OS root store (this is the default behavior).")
+	rootCAs = []string{}
+	flag.Var(&rootCAs, "ca-files", "Comma-separated list of files containing trusted root certificate authorities in PEM format. E.g. firefox.pem,chrome.pem. If unspecified, the native system root store is used.")
 	flag.IntVar(&config.GOMAXPROCS, "gomaxprocs", 3, "Set GOMAXPROCS (default 3)")
 	flag.BoolVar(&config.FTP, "ftp", false, "Read FTP banners")
 	flag.BoolVar(&config.FTPAuthTLS, "ftp-authtls", false, "Collect FTPS certificates in addition to FTP banners")
@@ -287,8 +287,15 @@ func init() {
 	// Check the network interface
 	var err error
 
-	if len(rootCAs) > 0 {
+	config.RootCAPools = make(map[string]*x509.CertPool)
+	if len(rootCAs) == 0 {
+		config.RootCAPools["system"] = nil
+	} else {
 		for _, poolFile := range rootCAs {
+			if _, alreadyExists := config.RootCAPools[poolFile]; alreadyExists {
+				zlog.Fatalf("CA file %s already exists. Please use unique ca file names.", poolFile)
+			}
+
 			var fd *os.File
 			if fd, err = os.Open(poolFile); err != nil {
 				zlog.Fatal(err)
@@ -296,10 +303,6 @@ func init() {
 			caBytes, readErr := ioutil.ReadAll(fd)
 			if readErr != nil {
 				zlog.Fatal(readErr)
-			}
-
-			if _, alreadyExists := config.RootCAPools[poolFile]; alreadyExists {
-				zlog.Fatalf("CA file %s already exists. Please use unique ca file names.", poolFile)
 			}
 
 			config.RootCAPools[poolFile] = x509.NewCertPool()

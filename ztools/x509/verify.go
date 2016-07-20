@@ -420,11 +420,28 @@ func (e *ValidationErrors) HasError() bool {
 
 // Returns true if |e| contains any errors of errType
 func (e *ValidationErrors) HasType(errType reflect.Type) bool {
-	if _, contains := e.Errors[errType]; contains {
-		return true
+	_, hasType := e.ErrsOfType(errType)
+	return hasType
+}
+
+func (e *ValidationErrors) ErrsOfType(errType reflect.Type) ([]error, bool) {
+	if errs, contains := e.Errors[errType]; contains {
+		return errs, true
 	} else {
-		return false
+		return nil, false
 	}
+}
+
+// Prints string representation of all errors
+func (e *ValidationErrors) String() string {
+	errorStr := ""
+	for _, errorList := range e.Errors {
+		for _, err := range errorList {
+			errorStr += err.Error()
+		}
+	}
+
+	return errorStr
 }
 
 // Verify attempts to verify c by building one or more chains from c to a
@@ -440,18 +457,18 @@ func (e *ValidationErrors) HasType(errType reflect.Type) bool {
 //
 // WARNING: this doesn't do any revocation checking.
 func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, validationErrors *ValidationErrors, fatalError error) {
-	validationErrors = &ValidationErrors{}
+	validationErrors = &ValidationErrors{Errors: make(map[reflect.Type][]error)}
 
 	// Use Windows's own verification and chain building.
 	if opts.Roots == nil && runtime.GOOS == "windows" {
 		chains, fatalError = c.systemVerify(&opts)
-		return chains, nil, fatalError
+		return
 	}
 
 	if opts.Roots == nil {
 		opts.Roots = systemRootsPool()
 		if opts.Roots == nil {
-			return nil, nil, SystemRootsError{}
+			return nil, validationErrors, SystemRootsError{}
 		}
 	}
 

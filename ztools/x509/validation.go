@@ -58,6 +58,7 @@ func (c *Certificate) ValidateWithStupidDetail(opts MultiRootStoreVerifyOptions)
 	for rootStore, certPool := range opts.RootsCertPools {
 		matchesDomain := false
 		serverCertValidity := new(ServerCertificateValidity)
+		//TODO: set serverCertValidities.CompletePath
 		validation.RootStoreValidities[rootStore] = serverCertValidity
 		verifyOptions := VerifyOptions{
 			Roots:         certPool,
@@ -71,7 +72,7 @@ func (c *Certificate) ValidateWithStupidDetail(opts MultiRootStoreVerifyOptions)
 		if chains, validationErrors, fatalErr = c.Verify(verifyOptions); fatalErr != nil {
 			serverCertValidity.Valid = false
 			serverCertValidity.Errors = fatalErr.Error()
-		} else if validationErrors != nil && validationErrors.HasError() {
+		} else if validationErrors.HasError() {
 			serverCertValidity.Valid = false
 
 			if !validationErrors.HasType(reflect.TypeOf(HostnameError{})) {
@@ -83,13 +84,7 @@ func (c *Certificate) ValidateWithStupidDetail(opts MultiRootStoreVerifyOptions)
 				serverCertValidity.Valid = true
 			}
 
-			// set validation.BrowserError(s) properly
-			for _, errorList := range validationErrors.Errors {
-				for _, err := range errorList {
-					serverCertValidity.Errors += err.Error()
-				}
-			}
-
+			serverCertValidity.Errors += validationErrors.Error()
 		} else {
 			serverCertValidity.Valid = true
 			if len(opts.DNSName) > 0 {
