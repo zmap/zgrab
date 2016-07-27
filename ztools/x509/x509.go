@@ -535,6 +535,9 @@ type Certificate struct {
 	ValidityPeriod      int
 	KeyUsage            KeyUsage
 
+	IssuerUniqueId      asn1.BitString
+	SubjectUniqueId     asn1.BitString
+	
 	// Extensions contains raw X.509 extensions. When parsing certificates,
 	// this can be used to extract non-critical extensions that are not
 	// parsed by this package. When marshaling certificates, the Extensions
@@ -1017,6 +1020,9 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 	out.NotAfter = in.TBSCertificate.Validity.NotAfter
 
 	out.ValidityPeriod = int(out.NotAfter.Sub(out.NotBefore).Seconds())
+	
+	out.IssuerUniqueId  = in.TBSCertificate.UniqueId
+	out.SubjectUniqueId = in.TBSCertificate.SubjectUniqueId
 
 	for _, e := range in.TBSCertificate.Extensions {
 		out.Extensions = append(out.Extensions, e)
