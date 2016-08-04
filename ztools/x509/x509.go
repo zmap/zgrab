@@ -961,11 +961,10 @@ func parseSANExtension(value []byte) (otherNames []pkix.OtherName, dnsNames, ema
 		case 0:
 			var oName pkix.OtherName
 			_, err = asn1.UnmarshalWithParams(v.FullBytes, &oName, "tag:0")
-			if err == nil{
-				otherNames = append(otherNames, oName)
-			} else {
+			if err != nil{
 				return
 			}
+			otherNames = append(otherNames, oName)
 		case 1:
 			emailAddresses = append(emailAddresses, string(v.Bytes))
 		case 2:
@@ -973,21 +972,19 @@ func parseSANExtension(value []byte) (otherNames []pkix.OtherName, dnsNames, ema
 		case 4:
 			var rdn pkix.RDNSequence
 			_, err = asn1.Unmarshal(v.Bytes, &rdn)
-			if err == nil{
-				var dir pkix.Name
-				dir.FillFromRDNSequence(&rdn)
-				directoryNames = append(directoryNames, dir)
-			} else {
+			if err != nil{
 				return
 			}
+			var dir pkix.Name
+			dir.FillFromRDNSequence(&rdn)
+			directoryNames = append(directoryNames, dir)
 		case 5:
 			var ediName pkix.EDIPartyName
 			_, err = asn1.UnmarshalWithParams(v.FullBytes, &ediName, "tag:5")
-			if err == nil{
-				ediPartyNames = append(ediPartyNames, ediName)
-			} else {
+			if err != nil{
 				return
 			}
+			ediPartyNames = append(ediPartyNames, ediName)
 		case 6:
 			URIs = append(URIs, string(v.Bytes))
 		case 7:
@@ -1001,11 +998,10 @@ func parseSANExtension(value []byte) (otherNames []pkix.OtherName, dnsNames, ema
 		case 8:
 			var id asn1.ObjectIdentifier 
 			_, err = asn1.UnmarshalWithParams(v.FullBytes, &id, "tag:8")
-			if err == nil{
-				registeredIDs = append(registeredIDs, id)
-			} else {
+			if err != nil{
 				return
 			}
+			registeredIDs = append(registeredIDs, id)
 		}
 	}
 
