@@ -919,11 +919,6 @@ func parsePublicKey(algo PublicKeyAlgorithm, keyData *publicKeyInfo) (interface{
 	}
 }
 
-/* type OtherName struct{//temp, remove before pull request
-	Typeid     asn1.ObjectIdentifier
-	Value      asn1.RawValue
-} */
-
 func parseSANExtension(value []byte) (otherNames []pkix.OtherName, dnsNames, emailAddresses, URIs []string, directoryNames []pkix.Name, ediPartyNames []pkix.EDIPartyName, ipAddresses []net.IP, registeredIDs []asn1.ObjectIdentifier, err error) {
 	// RFC 5280, 4.2.1.6
 
