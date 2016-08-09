@@ -63,9 +63,14 @@ type BasicConstraints struct {
 }
 
 type SubjectAltName struct {
-	DNSNames       []string `json:"dns_names,omitempty"`
-	EmailAddresses []string `json:"email_addresses,omitempty"`
-	IPAddresses    []net.IP `json:"ip_addresses,omitempty"`
+	DirectoryNames []pkix.Name              `json:"directory_names,omitempty"`
+	DNSNames       []string                 `json:"dns_names,omitempty"`
+	EDIPartyNames  []pkix.EDIPartyName      `json:"edi_party_names,omitempty"`
+	EmailAddresses []string                 `json:"email_addresses,omitempty"`
+	IPAddresses    []net.IP                 `json:"ip_addresses,omitempty"`
+	OtherNames     []pkix.OtherName         `json:"other_names,omitempty"`
+	RegisteredIDs  []asn1.ObjectIdentifier  `json:"registered_ids,omitempty"`
+	URIs           []string                 `json:"uniform_resource_identifiers,omitempty"`
 }
 
 // TODO: Handle excluded names
@@ -349,9 +354,14 @@ func (c *Certificate) jsonifyExtensions() (*CertificateExtensions, UnknownCertif
 			}
 		} else if e.Id.Equal(oidExtSubjectAltName) {
 			exts.SubjectAltName = new(SubjectAltName)
+			exts.SubjectAltName.DirectoryNames = c.DirectoryNames
 			exts.SubjectAltName.DNSNames = c.DNSNames
+			exts.SubjectAltName.EDIPartyNames = c.EDIPartyNames
 			exts.SubjectAltName.EmailAddresses = c.EmailAddresses
 			exts.SubjectAltName.IPAddresses = c.IPAddresses
+			exts.SubjectAltName.OtherNames = c.OtherNames
+			exts.SubjectAltName.RegisteredIDs = c.RegisteredIDs
+			exts.SubjectAltName.URIs = c.URIs
 		} else if e.Id.Equal(oidExtNameConstraints) {
 			exts.NameConstraints = new(NameConstraints)
 			exts.NameConstraints.Critical = c.PermittedDNSDomainsCritical

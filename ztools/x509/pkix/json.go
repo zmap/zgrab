@@ -85,6 +85,19 @@ func (e *Extension) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ext)
 }
 
+type jsonOtherName struct{
+	Id      string `json:"id"`
+	Value   []byte `json:"value"`
+}
+
+func (o *OtherName) MarshalJSON() ([]byte, error) {
+	oName := jsonOtherName{
+		Id:       o.Typeid.String(),
+		Value:    o.Value.Bytes,
+	}
+	return json.Marshal(oName)
+}
+
 func (n *Name) MarshalJSON() ([]byte, error) {
 	var enc jsonName
 	attrs := n.ToRDNSequence()
