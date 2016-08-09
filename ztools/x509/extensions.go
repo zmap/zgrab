@@ -63,14 +63,42 @@ type BasicConstraints struct {
 }
 
 type SubjectAltName struct {
+	DirectoryNames []pkix.Name
+	DNSNames       []string
+	EDIPartyNames  []pkix.EDIPartyName
+	EmailAddresses []string
+	IPAddresses    []net.IP
+	OtherNames     []pkix.OtherName
+	RegisteredIDs  []asn1.ObjectIdentifier
+	URIs           []string
+}
+
+type jsonSubjectAltName struct {
 	DirectoryNames []pkix.Name              `json:"directory_names,omitempty"`
 	DNSNames       []string                 `json:"dns_names,omitempty"`
 	EDIPartyNames  []pkix.EDIPartyName      `json:"edi_party_names,omitempty"`
 	EmailAddresses []string                 `json:"email_addresses,omitempty"`
 	IPAddresses    []net.IP                 `json:"ip_addresses,omitempty"`
 	OtherNames     []pkix.OtherName         `json:"other_names,omitempty"`
-	RegisteredIDs  []asn1.ObjectIdentifier  `json:"registered_ids,omitempty"`
+	RegisteredIDs  []string                 `json:"registered_ids,omitempty"`
 	URIs           []string                 `json:"uniform_resource_identifiers,omitempty"`
+}
+
+func (san SubjectAltName) MarshalJSON() ([]byte, error) {
+	jsan := jsonSubjectAltName{
+		DirectoryNames: san.DirectoryNames,
+		DNSNames:       san.DNSNames,
+		EDIPartyNames:  san.EDIPartyNames,
+		EmailAddresses: san.EmailAddresses,
+		IPAddresses:    san.IPAddresses,
+		OtherNames:     san.OtherNames,
+		RegisteredIDs:  make([]string, 0, len(san.RegisteredIDs)),
+		URIs:           san.URIs,
+	}
+	for _, id := range san.RegisteredIDs{
+		jsan.RegisteredIDs = append(jsan.RegisteredIDs, id.String())
+	}
+	return json.Marshal(jsan)
 }
 
 // TODO: Handle excluded names
