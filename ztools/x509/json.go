@@ -207,7 +207,7 @@ type jsonCertificate struct {
 	SPKISubjectFingerprint    CertificateFingerprint       `json:"spki_subject_fingerprint"`
 	TBSCertificateFingerprint CertificateFingerprint       `json:"tbs_fingerprint"`
 	ValidationLevel           CertValidationLevel          `json:"validation_level"`
-	Names                     []string                     `json:"names"`
+	Names                     []string                     `json:"names,omitempty"`
 }
 
 func (c *Certificate) MarshalJSON() ([]byte, error) {
