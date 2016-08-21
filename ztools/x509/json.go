@@ -300,7 +300,7 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		keyMap["x"] = pub.X.Bytes()
 		keyMap["y"] = pub.Y.Bytes()
 
-		keyMap["asn1_oid"] = c.SignatureAlgorithmOID
+		//keyMap["asn1_oid"] = c.SignatureAlgorithmOID.String()
 
 		jc.SubjectKeyInfo.ECDSAPublicKey = keyMap
 	}
