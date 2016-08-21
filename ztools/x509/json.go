@@ -264,6 +264,7 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	// Pull out the key
 	keyMap := make(map[string]interface{})
 
+	jc.SubjectKeyInfo.SPKIFingerprint = c.SPKIFingerprint
 	switch key := c.PublicKey.(type) {
 	case *rsa.PublicKey:
 		rsaKey := new(keys.RSAPublicKey)
