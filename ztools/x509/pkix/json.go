@@ -4,7 +4,12 @@
 
 package pkix
 
-import "encoding/json"
+import (
+	"encoding/asn1"
+	"encoding/json"
+	"strconv"
+	"strings"
+)
 
 type jsonName struct {
 	CommonName         []string
@@ -85,17 +90,45 @@ func (e *Extension) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ext)
 }
 
-type jsonOtherName struct{
-	Id      string `json:"id"`
-	Value   []byte `json:"value"`
+type jsonOtherName struct {
+	Id    string `json:"id"`
+	Value []byte `json:"value"`
 }
 
 func (o *OtherName) MarshalJSON() ([]byte, error) {
 	oName := jsonOtherName{
-		Id:       o.Typeid.String(),
-		Value:    o.Value.Bytes,
+		Id:    o.Typeid.String(),
+		Value: o.Value.Bytes,
 	}
 	return json.Marshal(oName)
+}
+
+func (o *OtherName) UnmarshalJSON(b []byte) error {
+	var oName jsonOtherName
+
+	if err := json.Unmarshal(b, &oName); err != nil {
+		return err
+	}
+
+	arcs := strings.Split(oName.Id, ".")
+	oid := make(asn1.ObjectIdentifier, len(arcs))
+
+	for i, s := range arcs {
+		tmp, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return err
+		}
+		oid[i] = int(tmp)
+	}
+	o.Typeid = oid
+
+	o.Value = asn1.RawValue{
+		Tag:        0,
+		Class:      asn1.ClassContextSpecific,
+		IsCompound: true,
+		Bytes:      oName.Value,
+	}
+	return nil
 }
 
 func (n *Name) MarshalJSON() ([]byte, error) {

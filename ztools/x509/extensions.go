@@ -9,6 +9,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net"
+	"strconv"
+	"strings"
 
 	"github.com/zmap/zgrab/ztools/x509/pkix"
 	"github.com/zmap/zgrab/ztools/zct"
@@ -74,17 +76,17 @@ type SubjectAltName struct {
 }
 
 type jsonSubjectAltName struct {
-	DirectoryNames []pkix.Name              `json:"directory_names,omitempty"`
-	DNSNames       []string                 `json:"dns_names,omitempty"`
-	EDIPartyNames  []pkix.EDIPartyName      `json:"edi_party_names,omitempty"`
-	EmailAddresses []string                 `json:"email_addresses,omitempty"`
-	IPAddresses    []net.IP                 `json:"ip_addresses,omitempty"`
-	OtherNames     []pkix.OtherName         `json:"other_names,omitempty"`
-	RegisteredIDs  []string                 `json:"registered_ids,omitempty"`
-	URIs           []string                 `json:"uniform_resource_identifiers,omitempty"`
+	DirectoryNames []pkix.Name         `json:"directory_names,omitempty"`
+	DNSNames       []string            `json:"dns_names,omitempty"`
+	EDIPartyNames  []pkix.EDIPartyName `json:"edi_party_names,omitempty"`
+	EmailAddresses []string            `json:"email_addresses,omitempty"`
+	IPAddresses    []net.IP            `json:"ip_addresses,omitempty"`
+	OtherNames     []pkix.OtherName    `json:"other_names,omitempty"`
+	RegisteredIDs  []string            `json:"registered_ids,omitempty"`
+	URIs           []string            `json:"uniform_resource_identifiers,omitempty"`
 }
 
-func (san SubjectAltName) MarshalJSON() ([]byte, error) {
+func (san *SubjectAltName) MarshalJSON() ([]byte, error) {
 	jsan := jsonSubjectAltName{
 		DirectoryNames: san.DirectoryNames,
 		DNSNames:       san.DNSNames,
@@ -95,10 +97,42 @@ func (san SubjectAltName) MarshalJSON() ([]byte, error) {
 		RegisteredIDs:  make([]string, 0, len(san.RegisteredIDs)),
 		URIs:           san.URIs,
 	}
-	for _, id := range san.RegisteredIDs{
+	for _, id := range san.RegisteredIDs {
 		jsan.RegisteredIDs = append(jsan.RegisteredIDs, id.String())
 	}
 	return json.Marshal(jsan)
+}
+
+func (san *SubjectAltName) UnmarshalJSON(b []byte) error {
+	var jsan jsonSubjectAltName
+	err := json.Unmarshal(b, &jsan)
+	if err != nil {
+		return err
+	}
+
+	san.DirectoryNames = jsan.DirectoryNames
+	san.DNSNames = jsan.DNSNames
+	san.EDIPartyNames = jsan.EDIPartyNames
+	san.EmailAddresses = jsan.EmailAddresses
+	san.IPAddresses = jsan.IPAddresses
+	san.OtherNames = jsan.OtherNames
+	san.RegisteredIDs = make([]asn1.ObjectIdentifier, len(jsan.RegisteredIDs))
+	san.URIs = jsan.URIs
+
+	for i, rID := range jsan.RegisteredIDs {
+		arcs := strings.Split(rID, ".")
+		oid := make(asn1.ObjectIdentifier, len(arcs))
+
+		for j, s := range arcs {
+			tmp, err := strconv.ParseInt(s, 10, 32)
+			if err != nil {
+				return err
+			}
+			oid[j] = int(tmp)
+		}
+		san.RegisteredIDs[i] = oid
+	}
+	return nil
 }
 
 // TODO: Handle excluded names
