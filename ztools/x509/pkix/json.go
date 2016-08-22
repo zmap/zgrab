@@ -11,13 +11,6 @@ import (
 	"strings"
 )
 
-//TODO: remove once we are on golang >= 1.6.0
-const (
-	asn1ClassUniversal       = 0
-	asn1ClassApplication     = 1
-	asn1ClassContextSpecific = 2
-	asn1ClassPrivate         = 3
-)
 
 type jsonName struct {
 	CommonName         []string
@@ -132,7 +125,7 @@ func (o *OtherName) UnmarshalJSON(b []byte) error {
 
 	o.Value = asn1.RawValue{
 		Tag:        0,
-		Class:      asn1ClassContextSpecific,
+		Class:      asn1.ClassContextSpecific,
 		IsCompound: true,
 		Bytes:      oName.Value,
 	}
