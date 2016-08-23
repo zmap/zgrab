@@ -209,11 +209,11 @@ func (n *Name) UnmarshalJSON(b []byte) error {
 	// add first commonNames and serialNumbers to struct and Names
 	if len(jName.CommonName) > 0 {
 		n.CommonName = jName.CommonName[0]
-		n.Names = append(AttributeTypeAndValue{Type: oidCommonName, Value: jName.CommonName[0]})
+		n.Names = append(n.Names, AttributeTypeAndValue{Type: oidCommonName, Value: jName.CommonName[0]})
 	}
-	if len(jName.SerialNumber > 0) {
+	if len(jName.SerialNumber) > 0 {
 		n.SerialNumber = jName.SerialNumber[0]
-		n.Names = append(AttributeTypeAndValue{Type: oidSerialNumber, Value: jName.SerialNumber[0]})
+		n.Names = append(n.Names, AttributeTypeAndValue{Type: oidSerialNumber, Value: jName.SerialNumber[0]})
 	}
 
 	// add extra commonNames and serialNumbers to extraNames
@@ -223,7 +223,7 @@ func (n *Name) UnmarshalJSON(b []byte) error {
 		}
 	}
 
-	if len(jName.SerialNumber > 1) {
+	if len(jName.SerialNumber) > 1 {
 		for _, val := range jName.SerialNumber[1:] {
 			n.ExtraNames = append(n.ExtraNames, AttributeTypeAndValue{ Type: oidSerialNumber, Value: val})
 		}
