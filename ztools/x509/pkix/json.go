@@ -107,7 +107,11 @@ func (jn *jsonName) UnmarshalJSON(b []byte) error {
 			}
 
 			for _, oidString := range strings.Split(valStr, ".") {
-				attributeType = append(attributeType, strconv.Atoi(oidString))
+				oidInt, err := strconv.Atoi(oidString)
+				if err != nil {
+					return err
+				}
+				attributeType = append(attributeType, oidInt)
 			}
 
 			atv := AttributeTypeAndValue{
