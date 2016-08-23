@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
+	"fmt"
 )
 
 type jsonName struct {
@@ -71,30 +72,41 @@ func (jn *jsonName) UnmarshalJSON(b []byte) error {
 	}
 
 	for key, val := range nameMap {
+		valStrArray, okArray:= val.([]string)
+		valStr, okStr := val.(string)
+
+		if !okArray && !okStr {
+			return fmt.Errorf("Key %s has invalid value type: %T", key, val)
+		}
+
 		switch key {
 		case "common_name":
-			jn.CommonName = val
+			jn.CommonName = valStrArray
 		case "serial_number":
-			jn.SerialNumber = val
+			jn.SerialNumber = valStrArray
 		case "country":
-			jn.Country = val
+			jn.Country = valStrArray
 		case "locality":
-			jn.Locality = val
+			jn.Locality = valStrArray
 		case "province":
-			jn.Province = val
+			jn.Province = valStrArray
 		case "street_address":
-			jn.StreetAddress = val
+			jn.StreetAddress = valStrArray
 		case "organization":
-			jn.Organization = val
+			jn.Organization = valStrArray
 		case "organizational_unit":
-			jn.OrganizationalUnit = val
+			jn.OrganizationalUnit = valStrArray
 		case "postal_code":
-			jn.PostalCode = val
+			jn.PostalCode = valStrArray
 		case "domain_component":
-			jn.DomainComponent = val
+			jn.DomainComponent = valStrArray
 		default:
 			attributeType := asn1.ObjectIdentifier{}
-			for _, oidString := range strings.Split(val, ".") {
+			if !okStr {
+				return fmt.Errorf("Expected string value for field %s, got %T", key, val)
+			}
+
+			for _, oidString := range strings.Split(valStr, ".") {
 				attributeType = append(attributeType, strconv.Atoi(oidString))
 			}
 
@@ -106,41 +118,6 @@ func (jn *jsonName) UnmarshalJSON(b []byte) error {
 			jn.UnknownAttributes = append(jn.UnknownAttributes, atv)
 		}
 
-	}
-
-	if val, ok := nameMap["common_name"]; ok {
-		jn.CommonName = val
-	}
-	if val, ok := nameMap["serial_number"]; ok {
-		jn.SerialNumber = val
-	}
-	if val, ok := nameMap["country"]; ok {
-		jn.Country = val
-	}
-	if val, ok := nameMap["locality"]; ok {
-		jn.Locality = val
-	}
-	if val, ok := nameMap["province"]; ok {
-		jn.Province = val
-	}
-	if val, ok := nameMap["street_address"]; ok {
-		jn.StreetAddress = val
-	}
-	if val, ok := nameMap["organization"]; ok {
-		jn.Organization = val
-	}
-	if val, ok := nameMap["organizational_unit"]; ok {
-		jn.OrganizationalUnit = val
-	}
-	if val, ok := nameMap["postal_code"]; ok {
-		jn.PostalCode = val
-	}
-	if val, ok := nameMap["domain_component"]; ok {
-		jn.DomainComponent = val
-	}
-
-	for _, a := range jn.UnknownAttributes {
-		enc[a.Type.String()] = a.Value
 	}
 
 	return nil
