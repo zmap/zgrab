@@ -11,7 +11,6 @@ import (
 	"strings"
 )
 
-
 type jsonName struct {
 	CommonName         []string
 	SerialNumber       []string
@@ -62,6 +61,89 @@ func (jn *jsonName) MarshalJSON() ([]byte, error) {
 		enc[a.Type.String()] = a.Value
 	}
 	return json.Marshal(enc)
+}
+
+func (jn *jsonName) UnmarshalJSON(b []byte) error {
+	nameMap := make(map[string]interface{})
+
+	if err := json.Unmarshal(b, &nameMap); err != nil {
+		return err
+	}
+
+	for key, val := range nameMap {
+		switch key {
+		case "common_name":
+			jn.CommonName = val
+		case "serial_number":
+			jn.SerialNumber = val
+		case "country":
+			jn.Country = val
+		case "locality":
+			jn.Locality = val
+		case "province":
+			jn.Province = val
+		case "street_address":
+			jn.StreetAddress = val
+		case "organization":
+			jn.Organization = val
+		case "organizational_unit":
+			jn.OrganizationalUnit = val
+		case "postal_code":
+			jn.PostalCode = val
+		case "domain_component":
+			jn.DomainComponent = val
+		default:
+			attributeType := asn1.ObjectIdentifier{}
+			for _, oidString := range strings.Split(val, ".") {
+				attributeType = append(attributeType, strconv.Atoi(oidString))
+			}
+
+			atv := AttributeTypeAndValue{
+				Type: attributeType,
+				Value: val,
+			}
+
+			jn.UnknownAttributes = append(jn.UnknownAttributes, atv)
+		}
+
+	}
+
+	if val, ok := nameMap["common_name"]; ok {
+		jn.CommonName = val
+	}
+	if val, ok := nameMap["serial_number"]; ok {
+		jn.SerialNumber = val
+	}
+	if val, ok := nameMap["country"]; ok {
+		jn.Country = val
+	}
+	if val, ok := nameMap["locality"]; ok {
+		jn.Locality = val
+	}
+	if val, ok := nameMap["province"]; ok {
+		jn.Province = val
+	}
+	if val, ok := nameMap["street_address"]; ok {
+		jn.StreetAddress = val
+	}
+	if val, ok := nameMap["organization"]; ok {
+		jn.Organization = val
+	}
+	if val, ok := nameMap["organizational_unit"]; ok {
+		jn.OrganizationalUnit = val
+	}
+	if val, ok := nameMap["postal_code"]; ok {
+		jn.PostalCode = val
+	}
+	if val, ok := nameMap["domain_component"]; ok {
+		jn.DomainComponent = val
+	}
+
+	for _, a := range jn.UnknownAttributes {
+		enc[a.Type.String()] = a.Value
+	}
+
+	return nil
 }
 
 type jsonAttributeTypeAndValue struct {
@@ -172,7 +254,7 @@ func appendATV(names []AttributeTypeAndValue, fieldVals []string, asn1Id asn1.Ob
 	}
 
 	for _, val := range fieldVals {
-		atv := AttributeTypeAndValue{ Type: asn1Id, Value: val}
+		atv := AttributeTypeAndValue{Type: asn1Id, Value: val}
 		names = append(names, atv)
 	}
 
@@ -219,13 +301,13 @@ func (n *Name) UnmarshalJSON(b []byte) error {
 	// add extra commonNames and serialNumbers to extraNames
 	if len(jName.CommonName) > 1 {
 		for _, val := range jName.CommonName[1:] {
-			n.ExtraNames = append(n.ExtraNames, AttributeTypeAndValue{ Type: oidCommonName, Value: val})
+			n.ExtraNames = append(n.ExtraNames, AttributeTypeAndValue{Type: oidCommonName, Value: val})
 		}
 	}
 
 	if len(jName.SerialNumber) > 1 {
 		for _, val := range jName.SerialNumber[1:] {
-			n.ExtraNames = append(n.ExtraNames, AttributeTypeAndValue{ Type: oidSerialNumber, Value: val})
+			n.ExtraNames = append(n.ExtraNames, AttributeTypeAndValue{Type: oidSerialNumber, Value: val})
 		}
 	}
 
