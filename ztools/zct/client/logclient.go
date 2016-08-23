@@ -6,6 +6,7 @@ package client
 import (
 	"bytes"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -15,10 +16,9 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-	"crypto/tls"
 
-	"github.com/zmap/zgrab/ztools/zct"
 	"github.com/mreiferson/go-httpclient"
+	"github.com/zmap/zgrab/ztools/zct"
 	"golang.org/x/net/context"
 )
 
@@ -119,7 +119,7 @@ func New(uri string) *LogClient {
 		ResponseHeaderTimeout: 30 * time.Second,
 		MaxIdleConnsPerHost:   10,
 		DisableKeepAlives:     false,
-		TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
 	}
 	c.httpClient = &http.Client{Transport: transport}
 	return &c
@@ -136,6 +136,9 @@ func (c *LogClient) fetchAndParse(uri string, res interface{}) error {
 	resp, err := c.httpClient.Do(req)
 	var body []byte
 	if resp != nil {
+		if resp.StatusCode > 399 {
+			return errors.New("HTTP error: " + resp.Status)
+		}
 		body, err = ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
@@ -146,6 +149,7 @@ func (c *LogClient) fetchAndParse(uri string, res interface{}) error {
 		return err
 	}
 	if err = json.Unmarshal(body, &res); err != nil {
+		fmt.Println(string(body))
 		return err
 	}
 	return nil
