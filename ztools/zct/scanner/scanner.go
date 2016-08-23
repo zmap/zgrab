@@ -272,6 +272,9 @@ func (s *Scanner) fetcherJob(id int, ranges <-chan fetchRange, entries chan<- ma
 			logEntries, err := s.logClient.GetEntries(r.start, r.end)
 			if err != nil {
 				s.Log(fmt.Sprintf("Problem fetching from log: %s", err.Error()))
+				if err.Error() == "HTTP error: 500 Internal Server Error" {
+					time.Sleep(500 * time.Millisecond)
+				}
 				continue
 			}
 			for _, logEntry := range logEntries {
