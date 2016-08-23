@@ -22,7 +22,7 @@ type jsonName struct {
 	Organization       []string
 	OrganizationalUnit []string
 	PostalCode         []string
-	DomainComponent    []string //technically depricated, but yolo
+	DomainComponent    []string //technically deprecated, but yolo
 	UnknownAttributes  []AttributeTypeAndValue
 }
 
@@ -164,4 +164,70 @@ func (n *Name) MarshalJSON() ([]byte, error) {
 		}
 	}
 	return json.Marshal(&enc)
+}
+
+func appendATV(names []AttributeTypeAndValue, fieldVals []string, asn1Id asn1.ObjectIdentifier) []AttributeTypeAndValue {
+	if len(fieldVals) == 0 {
+		return names
+	}
+
+	for _, val := range fieldVals {
+		atv := AttributeTypeAndValue{ Type: asn1Id, Value: val}
+		names = append(names, atv)
+	}
+
+	return names
+}
+
+func (n *Name) UnmarshalJSON(b []byte) error {
+	var jName jsonName
+
+	if err := json.Unmarshal(b, &jName); err != nil {
+		return err
+	}
+
+	// add everything to names
+	n.Names = appendATV(n.Names, jName.Country, oidCountry)
+	n.Names = appendATV(n.Names, jName.Organization, oidOrganization)
+	n.Names = appendATV(n.Names, jName.OrganizationalUnit, oidOrganizationalUnit)
+	n.Names = appendATV(n.Names, jName.Locality, oidLocality)
+	n.Names = appendATV(n.Names, jName.Province, oidProvince)
+	n.Names = appendATV(n.Names, jName.StreetAddress, oidStreetAddress)
+	n.Names = appendATV(n.Names, jName.PostalCode, oidPostalCode)
+	n.Names = appendATV(n.Names, jName.DomainComponent, oidDomainComponent)
+
+	// populate specific fields
+	n.Country = jName.Country
+	n.Organization = jName.Organization
+	n.OrganizationalUnit = jName.OrganizationalUnit
+	n.Locality = jName.Locality
+	n.Province = jName.Province
+	n.StreetAddress = jName.StreetAddress
+	n.PostalCode = jName.PostalCode
+	n.DomainComponent = jName.DomainComponent
+
+	// add first commonNames and serialNumbers to struct and Names
+	if len(jName.CommonName) > 0 {
+		n.CommonName = jName.CommonName[0]
+		n.Names = append(AttributeTypeAndValue{Type: oidCommonName, Value: jName.CommonName[0]})
+	}
+	if len(jName.SerialNumber > 0) {
+		n.SerialNumber = jName.SerialNumber[0]
+		n.Names = append(AttributeTypeAndValue{Type: oidSerialNumber, Value: jName.SerialNumber[0]})
+	}
+
+	// add extra commonNames and serialNumbers to extraNames
+	if len(jName.CommonName) > 1 {
+		for _, val := range jName.CommonName[1:] {
+			n.ExtraNames = append(n.ExtraNames, AttributeTypeAndValue{ Type: oidCommonName, Value: val})
+		}
+	}
+
+	if len(jName.SerialNumber > 1) {
+		for _, val := range jName.SerialNumber[1:] {
+			n.ExtraNames = append(n.ExtraNames, AttributeTypeAndValue{ Type: oidSerialNumber, Value: val})
+		}
+	}
+
+	return nil
 }
