@@ -85,7 +85,7 @@ zgrab_parsed_certificate = SubRecord({
             "dns_names":ListOf(String()),
             "email_addresses":ListOf(String()),
             "ip_addresses":ListOf(String()),
-            "directory_names":LisfOf(zgrab_subj_issuer),
+            "directory_names":ListOf(zgrab_subj_issuer),
             "edi_party_names":ListOf(SubRecord({
                 "name_assigner":AnalyzedString(es_include_raw=True),
                 "party_name":AnalyzedString(es_include_raw=True),
