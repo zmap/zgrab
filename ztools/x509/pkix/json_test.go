@@ -33,6 +33,13 @@ func (s *JSONSuite) SetUpTest(c *C) {
 	s.name.Locality = []string{"Ann Arbor"}
 	s.name.Province = []string{"MI"}
 
+	s.name.Names = append(s.name.Names, AttributeTypeAndValue{Type: oidCommonName, Value: s.name.CommonName})
+	s.name.Names = append(s.name.Names, AttributeTypeAndValue{Type: oidSerialNumber, Value: s.name.SerialNumber})
+	//s.name.Names = append(s.name.Names, AttributeTypeAndValue{Type: oidCountry, Value: s.name.Country})
+	//s.name.Names = append(s.name.Names, AttributeTypeAndValue{Type: oidOrganization, Value: s.name.Organization})
+	//s.name.Names = append(s.name.Names, AttributeTypeAndValue{Type: oidLocality, Value: s.name.Locality})
+	//s.name.Names = append(s.name.Names, AttributeTypeAndValue{Type: oidProvince, Value: s.name.Province})
+
 	s.ext = new(Extension)
 	s.ext.Id = oidCommonName
 	s.ext.Critical = true
@@ -84,4 +91,28 @@ func (s *JSONSuite) TestInvalidOIDFailsNicely(c *C) {
 	b = []byte("\"1..3\"")
 	errDecMissing := json.Unmarshal(b, &aux)
 	c.Assert(errDecMissing, ErrorMatches, `Invalid OID integer \d*`)
+}
+
+func (s *JSONSuite) TestMarshalJSON(c *C) {
+	json, err := s.name.MarshalJSON()
+	c.Assert(err, IsNil)
+	c.Assert(string(json), Equals, "{\"common_name\":[\"davidadrian.org\"],\"country\":[\"US\"],\"locality\":[\"Ann Arbor\"],\"organization\":[\"University of Michigan\",\"Computer Science Department\"],\"province\":[\"MI\"],\"serial_number\":[\"12345678910\"]}")
+}
+
+func (s *JSONSuite) TestUnmarshalJSON(c *C) {
+	var newName Name
+	jsonStr := "{\"common_name\":[\"davidadrian.org\"],\"country\":[\"US\"],\"locality\":[\"Ann Arbor\"],\"organization\":[\"University of Michigan\",\"Computer Science Department\"],\"province\":[\"MI\"],\"serial_number\":[\"12345678910\"]}"
+	err := newName.UnmarshalJSON([]byte(jsonStr))
+	c.Assert(err, IsNil)
+	c.Assert(newName, DeepEquals, *s.name)
+}
+
+func (s *JSONSuite) TestMarshalUnmarshalJSON(c *C) {
+	json, err := s.name.MarshalJSON()
+	c.Assert(err, IsNil)
+	jsonStr := string(json)
+	var newName Name
+	err = newName.UnmarshalJSON([]byte(jsonStr))
+	c.Assert(err, IsNil)
+	c.Assert(newName, DeepEquals, *s.name)
 }

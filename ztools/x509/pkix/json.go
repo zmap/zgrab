@@ -7,9 +7,9 @@ package pkix
 import (
 	"encoding/asn1"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
-	"fmt"
 )
 
 type jsonName struct {
@@ -64,6 +64,20 @@ func (jn *jsonName) MarshalJSON() ([]byte, error) {
 	return json.Marshal(enc)
 }
 
+func convertToStrArray(i interface{}) []string {
+
+	var strArray []string
+
+	arr, _ := i.([]interface{})
+	for _, val := range arr {
+		if str, ok := val.(string); ok {
+			strArray = append(strArray, str)
+		}
+	}
+
+	return strArray
+}
+
 func (jn *jsonName) UnmarshalJSON(b []byte) error {
 	nameMap := make(map[string]interface{})
 
@@ -72,36 +86,30 @@ func (jn *jsonName) UnmarshalJSON(b []byte) error {
 	}
 
 	for key, val := range nameMap {
-		valStrArray, okArray:= val.([]string)
-		valStr, okStr := val.(string)
-
-		if !okArray && !okStr {
-			return fmt.Errorf("Key %s has invalid value type: %T", key, val)
-		}
-
 		switch key {
 		case "common_name":
-			jn.CommonName = valStrArray
+			jn.CommonName = convertToStrArray(val)
 		case "serial_number":
-			jn.SerialNumber = valStrArray
+			jn.SerialNumber = convertToStrArray(val)
 		case "country":
-			jn.Country = valStrArray
+			jn.Country = convertToStrArray(val)
 		case "locality":
-			jn.Locality = valStrArray
+			jn.Locality = convertToStrArray(val)
 		case "province":
-			jn.Province = valStrArray
+			jn.Province = convertToStrArray(val)
 		case "street_address":
-			jn.StreetAddress = valStrArray
+			jn.StreetAddress = convertToStrArray(val)
 		case "organization":
-			jn.Organization = valStrArray
+			jn.Organization = convertToStrArray(val)
 		case "organizational_unit":
-			jn.OrganizationalUnit = valStrArray
+			jn.OrganizationalUnit = convertToStrArray(val)
 		case "postal_code":
-			jn.PostalCode = valStrArray
+			jn.PostalCode = convertToStrArray(val)
 		case "domain_component":
-			jn.DomainComponent = valStrArray
+			jn.DomainComponent = convertToStrArray(val)
 		default:
 			attributeType := asn1.ObjectIdentifier{}
+			valStr, okStr := val.(string)
 			if !okStr {
 				return fmt.Errorf("Expected string value for field %s, got %T", key, val)
 			}
@@ -115,7 +123,7 @@ func (jn *jsonName) UnmarshalJSON(b []byte) error {
 			}
 
 			atv := AttributeTypeAndValue{
-				Type: attributeType,
+				Type:  attributeType,
 				Value: val,
 			}
 
@@ -235,8 +243,7 @@ func appendATV(names []AttributeTypeAndValue, fieldVals []string, asn1Id asn1.Ob
 	}
 
 	for _, val := range fieldVals {
-		atv := AttributeTypeAndValue{Type: asn1Id, Value: val}
-		names = append(names, atv)
+		names = append(names, AttributeTypeAndValue{Type: asn1Id, Value: val})
 	}
 
 	return names
@@ -245,20 +252,9 @@ func appendATV(names []AttributeTypeAndValue, fieldVals []string, asn1Id asn1.Ob
 func (n *Name) UnmarshalJSON(b []byte) error {
 	var jName jsonName
 
-	if err := json.Unmarshal(b, &jName); err != nil {
+	if err := jName.UnmarshalJSON(b); err != nil {
 		return err
 	}
-
-	// add everything to names
-	n.Names = appendATV(n.Names, jName.Country, oidCountry)
-	n.Names = appendATV(n.Names, jName.Organization, oidOrganization)
-	n.Names = appendATV(n.Names, jName.OrganizationalUnit, oidOrganizationalUnit)
-	n.Names = appendATV(n.Names, jName.Locality, oidLocality)
-	n.Names = appendATV(n.Names, jName.Province, oidProvince)
-	n.Names = appendATV(n.Names, jName.StreetAddress, oidStreetAddress)
-	n.Names = appendATV(n.Names, jName.PostalCode, oidPostalCode)
-	n.Names = appendATV(n.Names, jName.DomainComponent, oidDomainComponent)
-
 	// populate specific fields
 	n.Country = jName.Country
 	n.Organization = jName.Organization
