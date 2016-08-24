@@ -87,15 +87,15 @@ zgrab_parsed_certificate = SubRecord({
             "ip_addresses":ListOf(String()),
             "directory_names":LisfOf(zgrab_subj_issuer),
             "edi_party_names":ListOf(SubRecord({
-                "name_assigner":String(),
-                "party_name":String(),
+                "name_assigner":AnalyzedString(es_include_raw=True),
+                "party_name":AnalyzedString(es_include_raw=True),
             })),
             "other_names":ListOf(SubRecord({
                 "id":String(),
-                "value":String(),
+                "value":Binary(),
             })),
             "registered_ids":ListOf(String()),
-            "uniform_resource_identifiers":ListOf(String()),
+            "uniform_resource_identifiers":ListOf(AnalyzedString(es_include_raw=True)),
         }),
         "crl_distribution_points":ListOf(String()),
         "authority_key_id":Binary(), # is this actdually binary?
