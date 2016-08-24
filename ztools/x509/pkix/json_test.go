@@ -33,12 +33,13 @@ func (s *JSONSuite) SetUpTest(c *C) {
 	s.name.Locality = []string{"Ann Arbor"}
 	s.name.Province = []string{"MI"}
 
+	s.name.Names = append(s.name.Names, AttributeTypeAndValue{Type: oidCountry, Value: s.name.Country[0]})
+	s.name.Names = append(s.name.Names, AttributeTypeAndValue{Type: oidOrganization, Value: s.name.Organization[0]})
+	s.name.Names = append(s.name.Names, AttributeTypeAndValue{Type: oidOrganization, Value: s.name.Organization[1]})
+	s.name.Names = append(s.name.Names, AttributeTypeAndValue{Type: oidLocality, Value: s.name.Locality[0]})
+	s.name.Names = append(s.name.Names, AttributeTypeAndValue{Type: oidProvince, Value: s.name.Province[0]})
 	s.name.Names = append(s.name.Names, AttributeTypeAndValue{Type: oidCommonName, Value: s.name.CommonName})
 	s.name.Names = append(s.name.Names, AttributeTypeAndValue{Type: oidSerialNumber, Value: s.name.SerialNumber})
-	//s.name.Names = append(s.name.Names, AttributeTypeAndValue{Type: oidCountry, Value: s.name.Country})
-	//s.name.Names = append(s.name.Names, AttributeTypeAndValue{Type: oidOrganization, Value: s.name.Organization})
-	//s.name.Names = append(s.name.Names, AttributeTypeAndValue{Type: oidLocality, Value: s.name.Locality})
-	//s.name.Names = append(s.name.Names, AttributeTypeAndValue{Type: oidProvince, Value: s.name.Province})
 
 	s.ext = new(Extension)
 	s.ext.Id = oidCommonName

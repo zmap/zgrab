@@ -255,6 +255,18 @@ func (n *Name) UnmarshalJSON(b []byte) error {
 	if err := jName.UnmarshalJSON(b); err != nil {
 		return err
 	}
+
+	// add everything to names
+	n.Names = appendATV(n.Names, jName.Country, oidCountry)
+	n.Names = appendATV(n.Names, jName.Organization, oidOrganization)
+	n.Names = appendATV(n.Names, jName.OrganizationalUnit, oidOrganizationalUnit)
+	n.Names = appendATV(n.Names, jName.Locality, oidLocality)
+	n.Names = appendATV(n.Names, jName.Province, oidProvince)
+	n.Names = appendATV(n.Names, jName.StreetAddress, oidStreetAddress)
+	n.Names = appendATV(n.Names, jName.PostalCode, oidPostalCode)
+	n.Names = appendATV(n.Names, jName.DomainComponent, oidDomainComponent)
+
+
 	// populate specific fields
 	n.Country = jName.Country
 	n.Organization = jName.Organization
