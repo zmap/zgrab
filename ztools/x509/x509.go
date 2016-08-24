@@ -580,9 +580,14 @@ type Certificate struct {
 	IssuingCertificateURL []string
 
 	// Subject Alternate Name values
+	OtherNames     []pkix.OtherName
 	DNSNames       []string
 	EmailAddresses []string
+	DirectoryNames []pkix.Name
+	EDIPartyNames  []pkix.EDIPartyName
+	URIs           []string
 	IPAddresses    []net.IP
+	RegisteredIDs  []asn1.ObjectIdentifier
 
 	// Name constraints
 	NameConstraintsCritical     bool // if true then the name constraints are marked critical.
@@ -914,7 +919,7 @@ func parsePublicKey(algo PublicKeyAlgorithm, keyData *publicKeyInfo) (interface{
 	}
 }
 
-func parseSANExtension(value []byte) (dnsNames, emailAddresses []string, ipAddresses []net.IP, err error) {
+func parseSANExtension(value []byte) (otherNames []pkix.OtherName, dnsNames, emailAddresses, URIs []string, directoryNames []pkix.Name, ediPartyNames []pkix.EDIPartyName, ipAddresses []net.IP, registeredIDs []asn1.ObjectIdentifier, err error) {
 	// RFC 5280, 4.2.1.6
 
 	// SubjectAltName ::= GeneralNames
@@ -948,10 +953,35 @@ func parseSANExtension(value []byte) (dnsNames, emailAddresses []string, ipAddre
 			return
 		}
 		switch v.Tag {
+		case 0:
+			var oName pkix.OtherName
+			_, err = asn1.UnmarshalWithParams(v.FullBytes, &oName, "tag:0")
+			if err != nil{
+				return
+			}
+			otherNames = append(otherNames, oName)
 		case 1:
 			emailAddresses = append(emailAddresses, string(v.Bytes))
 		case 2:
 			dnsNames = append(dnsNames, string(v.Bytes))
+		case 4:
+			var rdn pkix.RDNSequence
+			_, err = asn1.Unmarshal(v.Bytes, &rdn)
+			if err != nil{
+				return
+			}
+			var dir pkix.Name
+			dir.FillFromRDNSequence(&rdn)
+			directoryNames = append(directoryNames, dir)
+		case 5:
+			var ediName pkix.EDIPartyName
+			_, err = asn1.UnmarshalWithParams(v.FullBytes, &ediName, "tag:5")
+			if err != nil{
+				return
+			}
+			ediPartyNames = append(ediPartyNames, ediName)
+		case 6:
+			URIs = append(URIs, string(v.Bytes))
 		case 7:
 			switch len(v.Bytes) {
 			case net.IPv4len, net.IPv6len:
@@ -960,6 +990,13 @@ func parseSANExtension(value []byte) (dnsNames, emailAddresses []string, ipAddre
 				err = errors.New("x509: certificate contained IP address of length " + strconv.Itoa(len(v.Bytes)))
 				return
 			}
+		case 8:
+			var id asn1.ObjectIdentifier 
+			_, err = asn1.UnmarshalWithParams(v.FullBytes, &id, "tag:8")
+			if err != nil{
+				return
+			}
+			registeredIDs = append(registeredIDs, id)
 		}
 	}
 
@@ -1057,7 +1094,7 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 					continue
 				}
 			case 17:
-				out.DNSNames, out.EmailAddresses, out.IPAddresses, err = parseSANExtension(e.Value)
+				out.OtherNames, out.DNSNames, out.EmailAddresses, out.URIs, out.DirectoryNames, out.EDIPartyNames, out.IPAddresses, out.RegisteredIDs, err = parseSANExtension(e.Value)
 				if err != nil {
 					return nil, err
 				}
@@ -2156,7 +2193,7 @@ func parseCertificateRequest(in *certificateRequest) (*CertificateRequest, error
 		if len(e.Type) == 4 && e.Type[0] == 2 && e.Type[1] == 5 && e.Type[2] == 29 {
 			switch e.Type[3] {
 			case 17:
-				out.DNSNames, out.EmailAddresses, out.IPAddresses, err = parseSANExtension(value)
+				_, out.DNSNames, out.EmailAddresses, _, _, _, out.IPAddresses, _, err = parseSANExtension(value)
 				if err != nil {
 					return nil, err
 				}

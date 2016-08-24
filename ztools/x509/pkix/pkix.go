@@ -208,3 +208,17 @@ type RevokedCertificate struct {
 	RevocationTime time.Time
 	Extensions     []Extension `asn1:"optional"`
 }
+
+// OtherName represents the ASN.1 structure of the same name. See RFC
+// 5280, section 4.2.1.6.
+type OtherName struct {
+	Typeid asn1.ObjectIdentifier
+	Value  asn1.RawValue
+}
+
+// EDIPartyName represents the ASN.1 structure of the same name. See RFC
+// 5280, section 4.2.1.6.
+type EDIPartyName struct {
+	NameAssigner string `asn1:"tag:0,optional,explicit" json:"name_assigner,omitempty"`
+	PartyName    string `asn1:"tag:1,explicit" json:"party_name"`
+}
