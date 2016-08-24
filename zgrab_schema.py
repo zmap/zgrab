@@ -21,6 +21,19 @@ unknown_extension = SubRecord({
     "value":Binary(),
 })
 
+pkix_name = SubRecord({
+    "common_name":ListOf(String()),
+    "serial_number":ListOf(String()),
+    "country":ListOf(String()),
+    "locality":ListOf(String()),
+    "province":ListOf(String()),
+    "street_address":ListOf(String()),
+    "organization":ListOf(String()),
+    "organizational_unit":ListOf(String()),
+    "postal_code":ListOf(String()),
+    "domain_component":ListOf(String()),
+})
+
 zgrab_parsed_certificate = SubRecord({
     "subject":zgrab_subj_issuer,
     "issuer":zgrab_subj_issuer,
@@ -85,6 +98,17 @@ zgrab_parsed_certificate = SubRecord({
             "dns_names":ListOf(String()),
             "email_addresses":ListOf(String()),
             "ip_addresses":ListOf(String()),
+            "directory_names":LisfOf(pkix_name),
+            "edi_party_names":ListOf(SubRecord({
+                "name_assigner":String(),
+                "party_name":String(),
+            })),
+            "other_names":ListOf(SubRecord({
+                "id":String(),
+                "value":String(),
+            })),
+            "registered_ids":ListOf(String()),
+            "uniform_resource_identifiers":ListOf(String()),
         }),
         "crl_distribution_points":ListOf(String()),
         "authority_key_id":Binary(), # is this actdually binary?
