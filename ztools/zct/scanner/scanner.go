@@ -437,6 +437,7 @@ func (s *Scanner) Scan(foundCert func(*ct.LogEntry, string),
 	fetcherWG.Wait()
 	close(jobs)
 	matcherWG.Wait()
+	ticker.Stop()
 
 	s.Log(fmt.Sprintf("Completed %d %s certs in %s", s.certsProcessed, s.opts.Name, humanTime(int(time.Since(startTime).Seconds()))))
 	s.Log(fmt.Sprintf("Saw %d precerts", s.precertsSeen))
