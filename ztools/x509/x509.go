@@ -589,6 +589,11 @@ type Certificate struct {
 	IPAddresses    []net.IP
 	RegisteredIDs  []asn1.ObjectIdentifier
 
+	// Certificate Policies values
+	NoticeRefUsed              bool
+	UnrecommendedQualifierUsed bool
+	ExplicitTexts              []asn1.RawValue
+
 	// Name constraints
 	NameConstraintsCritical     bool // if true then the name constraints are marked critical.
 	PermittedDNSDomainsCritical bool // deprecated, use NameConstraintsCritical
@@ -810,8 +815,23 @@ type basicConstraints struct {
 
 // RFC 5280 4.2.1.4
 type policyInformation struct {
-	Policy asn1.ObjectIdentifier
-	// policyQualifiers omitted
+	Policy 		 asn1.ObjectIdentifier
+	Qualifiers []policyQualifierInfo `asn1:"optional"`
+}
+
+type policyQualifierInfo struct {
+	PolicyQualifierId  asn1.ObjectIdentifier
+	Qualifier  asn1.RawValue
+}
+
+type userNotice struct {
+	NoticeRef noticeReference `asn1:"optional"`	
+	ExplicitText asn1.RawValue `asn1:"optional"`
+}
+
+type noticeReference struct {
+	Organization asn1.RawValue
+	NoticeNumbers []int
 }
 
 // RFC 5280, 4.2.1.10
@@ -1276,6 +1296,23 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				out.PolicyIdentifiers = make([]asn1.ObjectIdentifier, len(policies))
 				for i, policy := range policies {
 					out.PolicyIdentifiers[i] = policy.Policy
+					// parse optional Qualifier for zlint
+					for _, qualifier := range policy.Qualifiers {
+						if qualifier.PolicyQualifierId.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 2, 2}) {
+							var un userNotice
+							if _, err = asn1.Unmarshal(qualifier.Qualifier.FullBytes, &un); err != nil {
+								return nil, err
+							}
+							if (len(un.ExplicitText.Bytes) != 0) {
+								out.ExplicitTexts = append(out.ExplicitTexts, un.ExplicitText)
+							}
+							if (un.NoticeRef.Organization.Bytes != nil || un.NoticeRef.NoticeNumbers != nil) {
+								out.NoticeRefUsed = true
+							}
+						} else if !qualifier.PolicyQualifierId.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 2, 1}) {
+							out.UnrecommendedQualifierUsed = true
+						}
+					}
 				}
 				out.ValidationLevel = getMaxCertValidationLevel(out.PolicyIdentifiers)
 			}
