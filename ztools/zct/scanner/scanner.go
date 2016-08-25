@@ -280,6 +280,11 @@ func (s *Scanner) fetcherJob(id int, ranges <-chan fetchRange, entries chan<- ma
 				}
 				continue
 			}
+			if len(logEntries) == 0 {
+				s.Log(fmt.Sprintf("Log %s gave empty slice of certificates for range %d-%d", s.logClient.Uri, r.start, r.end))
+				time.Sleep(500 * time.Millisecond)
+				continue
+			}
 			for _, logEntry := range logEntries {
 				logEntry.Index = r.start
 				entries <- matcherJob{logEntry, r.start}

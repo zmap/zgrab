@@ -33,7 +33,7 @@ const (
 
 // LogClient represents a client for a given CT Log instance
 type LogClient struct {
-	uri        string       // the base URI of the log. e.g. http://ct.googleapis/pilot
+	Uri        string       // the base URI of the log. e.g. http://ct.googleapis/pilot
 	httpClient *http.Client // used to interact with the log via HTTP
 }
 
@@ -112,7 +112,7 @@ type getEntryAndProofResponse struct {
 // http://ct.googleapis.com/pilot
 func New(uri string) *LogClient {
 	var c LogClient
-	c.uri = uri
+	c.Uri = uri
 	transport := &httpclient.Transport{
 		ConnectTimeout:        10 * time.Second,
 		RequestTimeout:        30 * time.Second,
@@ -228,7 +228,7 @@ func (c *LogClient) addChainWithRetry(ctx context.Context, path string, chain []
 		if backoffSeconds > 0 {
 			backoffSeconds = 0
 		}
-		httpResp, errorBody, err := c.postAndParse(c.uri+path, &req, &resp)
+		httpResp, errorBody, err := c.postAndParse(c.Uri+path, &req, &resp)
 		if err != nil {
 			backoffSeconds = 10
 			continue
@@ -295,7 +295,7 @@ func (c *LogClient) AddJSON(data interface{}) (*ct.SignedCertificateTimestamp, e
 		Data: data,
 	}
 	var resp addChainResponse
-	_, _, err := c.postAndParse(c.uri+AddJSONPath, &req, &resp)
+	_, _, err := c.postAndParse(c.Uri+AddJSONPath, &req, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +325,7 @@ func (c *LogClient) AddJSON(data interface{}) (*ct.SignedCertificateTimestamp, e
 // Returns a populated SignedTreeHead, or a non-nil error.
 func (c *LogClient) GetSTH() (sth *ct.SignedTreeHead, err error) {
 	var resp getSTHResponse
-	if err = c.fetchAndParse(c.uri+GetSTHPath, &resp); err != nil {
+	if err = c.fetchAndParse(c.Uri+GetSTHPath, &resp); err != nil {
 		return
 	}
 	sth = &ct.SignedTreeHead{
@@ -366,7 +366,7 @@ func (c *LogClient) GetEntries(start, end int64) ([]ct.LogEntry, error) {
 		return nil, errors.New("start should be <= end")
 	}
 	var resp getEntriesResponse
-	err := c.fetchAndParse(fmt.Sprintf("%s%s?start=%d&end=%d", c.uri, GetEntriesPath, start, end), &resp)
+	err := c.fetchAndParse(fmt.Sprintf("%s%s?start=%d&end=%d", c.Uri, GetEntriesPath, start, end), &resp)
 	if err != nil {
 		return nil, err
 	}
