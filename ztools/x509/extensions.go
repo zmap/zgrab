@@ -9,6 +9,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net"
+	"strconv"
+	"strings"
 
 	"github.com/zmap/zgrab/ztools/x509/pkix"
 	"github.com/zmap/zgrab/ztools/zct"
@@ -63,9 +65,74 @@ type BasicConstraints struct {
 }
 
 type SubjectAltName struct {
-	DNSNames       []string `json:"dns_names,omitempty"`
-	EmailAddresses []string `json:"email_addresses,omitempty"`
-	IPAddresses    []net.IP `json:"ip_addresses,omitempty"`
+	DirectoryNames []pkix.Name
+	DNSNames       []string
+	EDIPartyNames  []pkix.EDIPartyName
+	EmailAddresses []string
+	IPAddresses    []net.IP
+	OtherNames     []pkix.OtherName
+	RegisteredIDs  []asn1.ObjectIdentifier
+	URIs           []string
+}
+
+type jsonSubjectAltName struct {
+	DirectoryNames []pkix.Name         `json:"directory_names,omitempty"`
+	DNSNames       []string            `json:"dns_names,omitempty"`
+	EDIPartyNames  []pkix.EDIPartyName `json:"edi_party_names,omitempty"`
+	EmailAddresses []string            `json:"email_addresses,omitempty"`
+	IPAddresses    []net.IP            `json:"ip_addresses,omitempty"`
+	OtherNames     []pkix.OtherName    `json:"other_names,omitempty"`
+	RegisteredIDs  []string            `json:"registered_ids,omitempty"`
+	URIs           []string            `json:"uniform_resource_identifiers,omitempty"`
+}
+
+func (san *SubjectAltName) MarshalJSON() ([]byte, error) {
+	jsan := jsonSubjectAltName{
+		DirectoryNames: san.DirectoryNames,
+		DNSNames:       san.DNSNames,
+		EDIPartyNames:  san.EDIPartyNames,
+		EmailAddresses: san.EmailAddresses,
+		IPAddresses:    san.IPAddresses,
+		OtherNames:     san.OtherNames,
+		RegisteredIDs:  make([]string, 0, len(san.RegisteredIDs)),
+		URIs:           san.URIs,
+	}
+	for _, id := range san.RegisteredIDs {
+		jsan.RegisteredIDs = append(jsan.RegisteredIDs, id.String())
+	}
+	return json.Marshal(jsan)
+}
+
+func (san *SubjectAltName) UnmarshalJSON(b []byte) error {
+	var jsan jsonSubjectAltName
+	err := json.Unmarshal(b, &jsan)
+	if err != nil {
+		return err
+	}
+
+	san.DirectoryNames = jsan.DirectoryNames
+	san.DNSNames = jsan.DNSNames
+	san.EDIPartyNames = jsan.EDIPartyNames
+	san.EmailAddresses = jsan.EmailAddresses
+	san.IPAddresses = jsan.IPAddresses
+	san.OtherNames = jsan.OtherNames
+	san.RegisteredIDs = make([]asn1.ObjectIdentifier, len(jsan.RegisteredIDs))
+	san.URIs = jsan.URIs
+
+	for i, rID := range jsan.RegisteredIDs {
+		arcs := strings.Split(rID, ".")
+		oid := make(asn1.ObjectIdentifier, len(arcs))
+
+		for j, s := range arcs {
+			tmp, err := strconv.ParseInt(s, 10, 32)
+			if err != nil {
+				return err
+			}
+			oid[j] = int(tmp)
+		}
+		san.RegisteredIDs[i] = oid
+	}
+	return nil
 }
 
 // TODO: Handle excluded names
@@ -349,9 +416,14 @@ func (c *Certificate) jsonifyExtensions() (*CertificateExtensions, UnknownCertif
 			}
 		} else if e.Id.Equal(oidExtSubjectAltName) {
 			exts.SubjectAltName = new(SubjectAltName)
+			exts.SubjectAltName.DirectoryNames = c.DirectoryNames
 			exts.SubjectAltName.DNSNames = c.DNSNames
+			exts.SubjectAltName.EDIPartyNames = c.EDIPartyNames
 			exts.SubjectAltName.EmailAddresses = c.EmailAddresses
 			exts.SubjectAltName.IPAddresses = c.IPAddresses
+			exts.SubjectAltName.OtherNames = c.OtherNames
+			exts.SubjectAltName.RegisteredIDs = c.RegisteredIDs
+			exts.SubjectAltName.URIs = c.URIs
 		} else if e.Id.Equal(oidExtNameConstraints) {
 			exts.NameConstraints = new(NameConstraints)
 			exts.NameConstraints.Critical = c.PermittedDNSDomainsCritical

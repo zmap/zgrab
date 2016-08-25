@@ -4,7 +4,13 @@
 
 package pkix
 
-import "encoding/json"
+import (
+	"encoding/asn1"
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
+)
 
 type jsonName struct {
 	CommonName         []string
@@ -16,7 +22,7 @@ type jsonName struct {
 	Organization       []string
 	OrganizationalUnit []string
 	PostalCode         []string
-	DomainComponent    []string //technically depricated, but yolo
+	DomainComponent    []string //technically deprecated, but yolo
 	UnknownAttributes  []AttributeTypeAndValue
 }
 
@@ -58,6 +64,77 @@ func (jn *jsonName) MarshalJSON() ([]byte, error) {
 	return json.Marshal(enc)
 }
 
+func convertToStrArray(i interface{}) []string {
+
+	var strArray []string
+
+	arr, _ := i.([]interface{})
+	for _, val := range arr {
+		if str, ok := val.(string); ok {
+			strArray = append(strArray, str)
+		}
+	}
+
+	return strArray
+}
+
+func (jn *jsonName) UnmarshalJSON(b []byte) error {
+	nameMap := make(map[string]interface{})
+
+	if err := json.Unmarshal(b, &nameMap); err != nil {
+		return err
+	}
+
+	for key, val := range nameMap {
+		switch key {
+		case "common_name":
+			jn.CommonName = convertToStrArray(val)
+		case "serial_number":
+			jn.SerialNumber = convertToStrArray(val)
+		case "country":
+			jn.Country = convertToStrArray(val)
+		case "locality":
+			jn.Locality = convertToStrArray(val)
+		case "province":
+			jn.Province = convertToStrArray(val)
+		case "street_address":
+			jn.StreetAddress = convertToStrArray(val)
+		case "organization":
+			jn.Organization = convertToStrArray(val)
+		case "organizational_unit":
+			jn.OrganizationalUnit = convertToStrArray(val)
+		case "postal_code":
+			jn.PostalCode = convertToStrArray(val)
+		case "domain_component":
+			jn.DomainComponent = convertToStrArray(val)
+		default:
+			attributeType := asn1.ObjectIdentifier{}
+			valStr, okStr := val.(string)
+			if !okStr {
+				return fmt.Errorf("Expected string value for field %s, got %T", key, val)
+			}
+
+			for _, oidString := range strings.Split(valStr, ".") {
+				oidInt, err := strconv.Atoi(oidString)
+				if err != nil {
+					return err
+				}
+				attributeType = append(attributeType, oidInt)
+			}
+
+			atv := AttributeTypeAndValue{
+				Type:  attributeType,
+				Value: val,
+			}
+
+			jn.UnknownAttributes = append(jn.UnknownAttributes, atv)
+		}
+
+	}
+
+	return nil
+}
+
 type jsonAttributeTypeAndValue struct {
 	Type  string      `json:"type"`
 	Value interface{} `json:"value"`
@@ -83,6 +160,47 @@ func (e *Extension) MarshalJSON() ([]byte, error) {
 		Value:    e.Value,
 	}
 	return json.Marshal(ext)
+}
+
+type jsonOtherName struct {
+	Id    string `json:"id"`
+	Value []byte `json:"value"`
+}
+
+func (o *OtherName) MarshalJSON() ([]byte, error) {
+	oName := jsonOtherName{
+		Id:    o.Typeid.String(),
+		Value: o.Value.Bytes,
+	}
+	return json.Marshal(oName)
+}
+
+func (o *OtherName) UnmarshalJSON(b []byte) error {
+	var oName jsonOtherName
+
+	if err := json.Unmarshal(b, &oName); err != nil {
+		return err
+	}
+
+	arcs := strings.Split(oName.Id, ".")
+	oid := make(asn1.ObjectIdentifier, len(arcs))
+
+	for i, s := range arcs {
+		tmp, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return err
+		}
+		oid[i] = int(tmp)
+	}
+	o.Typeid = oid
+
+	o.Value = asn1.RawValue{
+		Tag:        0,
+		Class:      asn1.ClassContextSpecific,
+		IsCompound: true,
+		Bytes:      oName.Value,
+	}
+	return nil
 }
 
 func (n *Name) MarshalJSON() ([]byte, error) {
@@ -117,4 +235,70 @@ func (n *Name) MarshalJSON() ([]byte, error) {
 		}
 	}
 	return json.Marshal(&enc)
+}
+
+func appendATV(names []AttributeTypeAndValue, fieldVals []string, asn1Id asn1.ObjectIdentifier) []AttributeTypeAndValue {
+	if len(fieldVals) == 0 {
+		return names
+	}
+
+	for _, val := range fieldVals {
+		names = append(names, AttributeTypeAndValue{Type: asn1Id, Value: val})
+	}
+
+	return names
+}
+
+func (n *Name) UnmarshalJSON(b []byte) error {
+	var jName jsonName
+
+	if err := jName.UnmarshalJSON(b); err != nil {
+		return err
+	}
+
+	// add everything to names
+	n.Names = appendATV(n.Names, jName.Country, oidCountry)
+	n.Names = appendATV(n.Names, jName.Organization, oidOrganization)
+	n.Names = appendATV(n.Names, jName.OrganizationalUnit, oidOrganizationalUnit)
+	n.Names = appendATV(n.Names, jName.Locality, oidLocality)
+	n.Names = appendATV(n.Names, jName.Province, oidProvince)
+	n.Names = appendATV(n.Names, jName.StreetAddress, oidStreetAddress)
+	n.Names = appendATV(n.Names, jName.PostalCode, oidPostalCode)
+	n.Names = appendATV(n.Names, jName.DomainComponent, oidDomainComponent)
+
+
+	// populate specific fields
+	n.Country = jName.Country
+	n.Organization = jName.Organization
+	n.OrganizationalUnit = jName.OrganizationalUnit
+	n.Locality = jName.Locality
+	n.Province = jName.Province
+	n.StreetAddress = jName.StreetAddress
+	n.PostalCode = jName.PostalCode
+	n.DomainComponent = jName.DomainComponent
+
+	// add first commonNames and serialNumbers to struct and Names
+	if len(jName.CommonName) > 0 {
+		n.CommonName = jName.CommonName[0]
+		n.Names = append(n.Names, AttributeTypeAndValue{Type: oidCommonName, Value: jName.CommonName[0]})
+	}
+	if len(jName.SerialNumber) > 0 {
+		n.SerialNumber = jName.SerialNumber[0]
+		n.Names = append(n.Names, AttributeTypeAndValue{Type: oidSerialNumber, Value: jName.SerialNumber[0]})
+	}
+
+	// add extra commonNames and serialNumbers to extraNames
+	if len(jName.CommonName) > 1 {
+		for _, val := range jName.CommonName[1:] {
+			n.ExtraNames = append(n.ExtraNames, AttributeTypeAndValue{Type: oidCommonName, Value: val})
+		}
+	}
+
+	if len(jName.SerialNumber) > 1 {
+		for _, val := range jName.SerialNumber[1:] {
+			n.ExtraNames = append(n.ExtraNames, AttributeTypeAndValue{Type: oidSerialNumber, Value: val})
+		}
+	}
+
+	return nil
 }
