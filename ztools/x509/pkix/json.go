@@ -186,7 +186,8 @@ func (o *OtherName) UnmarshalJSON(b []byte) (err error) {
 	oid := make(asn1.ObjectIdentifier, len(arcs))
 
 	for i, s := range arcs {
-		tmp, err := strconv.ParseInt(s, 10, 32)
+		var tmp int64
+		tmp, err = strconv.ParseInt(s, 10, 32)
 		if err != nil {
 			return
 		}
