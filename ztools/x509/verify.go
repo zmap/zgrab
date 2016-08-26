@@ -181,9 +181,9 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
 		if len(opts.DNSName) > 0 && len(c.PermittedDNSDomains) > 0 {
 			ok := false
 			for _, domain := range c.PermittedDNSDomains {
-				if opts.DNSName == domain ||
-					(strings.HasPrefix(domain, ".") && strings.HasSuffix(opts.DNSName, domain)) ||
-					(!strings.HasPrefix(domain, ".") && strings.HasSuffix(opts.DNSName, "."+domain)) {
+				if opts.DNSName == domain.Data ||
+					(strings.HasPrefix(domain.Data, ".") && strings.HasSuffix(opts.DNSName, domain.Data)) ||
+					(!strings.HasPrefix(domain.Data, ".") && strings.HasSuffix(opts.DNSName, "."+domain.Data)) {
 
 					ok = true
 					break
@@ -199,9 +199,9 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
 		if len(opts.DNSName) > 0 && len(c.ExcludedDNSDomains) > 0 {
 			ok := false
 			for _, domain := range c.ExcludedDNSDomains {
-				if opts.DNSName == domain ||
-					(strings.HasPrefix(domain, ".") && strings.HasSuffix(opts.DNSName, domain)) ||
-					(!strings.HasPrefix(domain, ".") && strings.HasSuffix(opts.DNSName, "."+domain)) {
+				if opts.DNSName == domain.Data ||
+					(strings.HasPrefix(domain.Data, ".") && strings.HasSuffix(opts.DNSName, domain.Data)) ||
+					(!strings.HasPrefix(domain.Data, ".") && strings.HasSuffix(opts.DNSName, "."+domain.Data)) {
 
 					ok = true
 					break
@@ -217,9 +217,9 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
 		if len(opts.EmailAddress) > 0 && len(c.PermittedEmailDomains) > 0 {
 			ok := false
 			for _, email := range c.PermittedEmailDomains {
-				if opts.EmailAddress == email ||
-					(strings.HasPrefix(email, ".") && strings.HasSuffix(opts.EmailAddress, email)) ||
-					(!strings.HasPrefix(email, ".") && strings.HasSuffix(opts.EmailAddress, "@"+email)) {
+				if opts.EmailAddress == email.Data ||
+					(strings.HasPrefix(email.Data, ".") && strings.HasSuffix(opts.EmailAddress, email.Data)) ||
+					(!strings.HasPrefix(email.Data, ".") && strings.HasSuffix(opts.EmailAddress, "@"+email.Data)) {
 
 					ok = true
 					break
@@ -236,9 +236,9 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
 		if len(opts.EmailAddress) > 0 && len(c.ExcludedEmailDomains) > 0 {
 			ok := true
 			for _, email := range c.PermittedEmailDomains {
-				if opts.EmailAddress == email ||
-					(strings.HasPrefix(email, ".") && strings.HasSuffix(opts.EmailAddress, email)) ||
-					(!strings.HasPrefix(email, ".") && strings.HasSuffix(opts.EmailAddress, "@"+email)) {
+				if opts.EmailAddress == email.Data ||
+					(strings.HasPrefix(email.Data, ".") && strings.HasSuffix(opts.EmailAddress, email.Data)) ||
+					(!strings.HasPrefix(email.Data, ".") && strings.HasSuffix(opts.EmailAddress, "@"+email.Data)) {
 
 					ok = false
 					break
@@ -254,7 +254,7 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
 		if len(opts.IPAddress) > 0 && len(c.PermittedIPAddresses) > 0 {
 			ok := false
 			for _, ip := range c.PermittedIPAddresses {
-				if ip.Contains(opts.IPAddress) {
+				if ip.Data.Contains(opts.IPAddress) {
 					ok = true
 					break
 				}
@@ -269,7 +269,7 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
 		if len(opts.IPAddress) > 0 && len(c.ExcludedIPAddresses) > 0 {
 			ok := true
 			for _, ip := range c.ExcludedIPAddresses {
-				if ip.Contains(opts.IPAddress) {
+				if ip.Data.Contains(opts.IPAddress) {
 					ok = false
 					break
 				}
@@ -289,7 +289,7 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
 				for _, name := range leaf.Subject.Names {
 					for _, dn := range c.PermittedDirectoryNames {
 						ok := true
-						for _, dnName := range dn.Names {
+						for _, dnName := range dn.Data.Names {
 							if name.Type.Equal(dnName.Type) {
 								ok = false
 								if fmt.Sprintf("%v", name.Value) == fmt.Sprintf("%v", dnName.Value) {
@@ -312,7 +312,7 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
 				for _, name := range leaf.Subject.Names {
 					for _, dn := range c.ExcludedDirectoryNames {
 						ok := true
-						for _, dnName := range dn.Names {
+						for _, dnName := range dn.Data.Names {
 							if name.Type.Equal(dnName.Type) {
 								ok = true
 								if fmt.Sprintf("%v", name.Value) == fmt.Sprintf("%v", dnName.Value) {

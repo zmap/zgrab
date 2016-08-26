@@ -140,15 +140,15 @@ func (san *SubjectAltName) UnmarshalJSON(b []byte) error {
 type NameConstraints struct {
 	Critical bool `json:"critical"`
 
-	PermittedDNSDomains     []string    `json:"permitted_names,omitempty"`
-	PermittedEmailDomains   []string    `json:"permitted_email_addresses,omitempty"`
-	PermittedIPAddresses    []net.IPNet `json:"permitted_ip_addresses,omitempty"`
-	PermittedDirectoryNames []pkix.Name `json:"permitted_directory_names,omitempty"`
+	PermittedDNSDomains     []generalSubtreeString    `json:"permitted_names,omitempty"`
+	PermittedEmailDomains   []generalSubtreeString    `json:"permitted_email_addresses,omitempty"`
+	PermittedIPAddresses    []generalSubtreeIP        `json:"permitted_ip_addresses,omitempty"`
+	PermittedDirectoryNames []generalSubtreeName      `json:"permitted_directory_names,omitempty"`
 
-	ExcludedEmailDomains   []string    `json:"excluded_names,omitempty"`
-	ExcludedDNSDomains     []string    `json:"excluded_email_addresses,omitempty"`
-	ExcludedIPAddresses    []net.IPNet `json:"excluded_ip_addresses,omitempty"`
-	ExcludedDirectoryNames []pkix.Name `json:"excluded_directory_names,omitempty"`
+	ExcludedEmailDomains   []generalSubtreeString    `json:"excluded_names,omitempty"`
+	ExcludedDNSDomains     []generalSubtreeString    `json:"excluded_email_addresses,omitempty"`
+	ExcludedIPAddresses    []generalSubtreeIP        `json:"excluded_ip_addresses,omitempty"`
+	ExcludedDirectoryNames []generalSubtreeName      `json:"excluded_directory_names,omitempty"`
 }
 
 type NameConstraintsJSON struct {
@@ -167,17 +167,28 @@ type NameConstraintsJSON struct {
 
 func (nc NameConstraints) MarshalJSON() ([]byte, error) {
 	var out NameConstraintsJSON
-	out.PermittedDNSDomains = nc.PermittedDNSDomains
-	out.PermittedEmailDomains = nc.PermittedEmailDomains
+	out.PermittedDNSDomains = make([]string, len(nc.PermittedDNSDomains))
+	for _, dns := range nc.PermittedDNSDomains {
+		out.PermittedDNSDomains = append(out.PermittedDNSDomains, dns.Data)
+	}
+	out.PermittedEmailDomains = make([]string, len(nc.PermittedEmailDomains))
+	for _, email := range nc.PermittedDNSDomains {
+		out.PermittedEmailDomains = append(out.PermittedEmailDomains, email.Data)
+	}
 	out.PermittedIPAddresses = make([]string, len(nc.PermittedIPAddresses))
 	for _, ip := range nc.PermittedIPAddresses {
-		out.PermittedIPAddresses = append(out.PermittedIPAddresses, ip.String())
+		out.PermittedIPAddresses = append(out.PermittedIPAddresses, ip.Data.String())
 	}
-	out.ExcludedDNSDomains = nc.ExcludedDNSDomains
-	out.ExcludedEmailDomains = nc.ExcludedEmailDomains
+	for _, dns := range nc.PermittedDNSDomains {
+		out.ExcludedDNSDomains = append(out.ExcludedDNSDomains, dns.Data)
+	}
+	out.ExcludedEmailDomains = make([]string, len(nc.ExcludedEmailDomains))
+	for _, email := range nc.PermittedDNSDomains {
+		out.ExcludedEmailDomains = append(out.ExcludedEmailDomains, email.Data)
+	}
 	out.ExcludedIPAddresses = make([]string, len(nc.ExcludedIPAddresses))
 	for _, ip := range nc.ExcludedIPAddresses {
-		out.ExcludedIPAddresses = append(out.ExcludedIPAddresses, ip.String())
+		out.ExcludedIPAddresses = append(out.ExcludedIPAddresses, ip.Data.String())
 	}
 	return json.Marshal(out)
 }
