@@ -179,7 +179,7 @@ func (o *OtherName) UnmarshalJSON(b []byte) (err error) {
 	var oName jsonOtherName
 
 	if err = json.Unmarshal(b, &oName); err != nil {
-		return err
+		return
 	}
 
 	arcs := strings.Split(oName.Id, ".")
@@ -188,7 +188,7 @@ func (o *OtherName) UnmarshalJSON(b []byte) (err error) {
 	for i, s := range arcs {
 		tmp, err := strconv.ParseInt(s, 10, 32)
 		if err != nil {
-			return err
+			return
 		}
 		oid[i] = int(tmp)
 	}
@@ -201,8 +201,8 @@ func (o *OtherName) UnmarshalJSON(b []byte) (err error) {
 		Bytes:      oName.Value,
 	}
 	o.Value.FullBytes, err = asn1.Marshal(o.Value)
-	if err != nil{
-		return err
+	if err != nil {
+		return
 	}
 	return nil
 }
@@ -269,7 +269,6 @@ func (n *Name) UnmarshalJSON(b []byte) error {
 	n.Names = appendATV(n.Names, jName.StreetAddress, oidStreetAddress)
 	n.Names = appendATV(n.Names, jName.PostalCode, oidPostalCode)
 	n.Names = appendATV(n.Names, jName.DomainComponent, oidDomainComponent)
-
 
 	// populate specific fields
 	n.Country = jName.Country
