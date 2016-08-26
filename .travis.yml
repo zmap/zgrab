@@ -15,7 +15,7 @@ before_script:
 - mkdir -p $GOPATH/src/github.com/zmap
 - ln -s $TRAVIS_BUILD_DIR $GOPATH/src/github.com/zmap/ || true
 script:
-- ./.test-cover.sh
+  - go test -v ./...
 notifications:
   email:
   - zmap-devel@umich.edu
