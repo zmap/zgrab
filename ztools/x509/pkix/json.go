@@ -175,10 +175,10 @@ func (o *OtherName) MarshalJSON() ([]byte, error) {
 	return json.Marshal(oName)
 }
 
-func (o *OtherName) UnmarshalJSON(b []byte) error {
+func (o *OtherName) UnmarshalJSON(b []byte) (err error) {
 	var oName jsonOtherName
 
-	if err := json.Unmarshal(b, &oName); err != nil {
+	if err = json.Unmarshal(b, &oName); err != nil {
 		return err
 	}
 
@@ -199,6 +199,10 @@ func (o *OtherName) UnmarshalJSON(b []byte) error {
 		Class:      asn1.ClassContextSpecific,
 		IsCompound: true,
 		Bytes:      oName.Value,
+	}
+	o.Value.FullBytes, err = asn1.Marshal(o.Value)
+	if err != nil{
+		return err
 	}
 	return nil
 }
