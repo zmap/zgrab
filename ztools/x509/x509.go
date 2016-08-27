@@ -1692,10 +1692,7 @@ func buildExtensions(template *Certificate) (ret []pkix.Extension, err error) {
 		}
 
 		var out nameConstraints
-		// edi, _ := asn1.Marshal(pkix.EDIPartyName{NameAssigner:"assigner", PartyName:"party"})
-		// out.Permitted = append(out.Permitted, generalSubtree{Value: asn1.RawValue{Tag: 5, Class: 2, Bytes: edi}})
-		// id, _ := asn1.Marshal(asn1.ObjectIdentifier{1,2,3,4,2,2,3,4})
-		// out.Permitted = append(out.Permitted, generalSubtree{Value: asn1.RawValue{Tag: 8, Class: 2, Bytes: id}})
+
 		for _, permitted := range template.PermittedEmailDomains {
 			out.Permitted = append(out.Permitted, generalSubtree{Value: asn1.RawValue{Tag: 1, Class: 2, Bytes: []byte(permitted.Data)}})
 		}
