@@ -33,6 +33,9 @@ func (s *ExtensionsSuite) SetUpTest(c *C) {
 	}
 
 	for _, test := range tests {
+		if test.Name()[0] == 46 {
+			continue
+		}
 		var err error
 		var parsedCert *Certificate
 		s.pemData, err = ioutil.ReadFile("testdata/" + test.Name())
@@ -76,5 +79,28 @@ func (s *ExtensionsSuite) TestEncodeDecodeSAN(c *C) {
 		c.Assert(jsonExtensions.SubjectAltName.OtherNames[0].Value.Tag, DeepEquals, san.OtherNames[0].Value.Tag)
 		c.Assert(jsonExtensions.SubjectAltName.OtherNames[0].Value.Class, DeepEquals, san.OtherNames[0].Value.Class)
 		c.Assert(jsonExtensions.SubjectAltName.OtherNames[0].Value.Bytes, DeepEquals, san.OtherNames[0].Value.Bytes)
+	}
+}
+
+func (s *ExtensionsSuite) TestEncodeDecodeNc(c *C) {
+	for _, cert := range s.parsedCerts {
+		if (cert.Issuer.CommonName != "Name constraint"){
+			continue
+		}
+		jsonExtensions, _ := cert.jsonifyExtensions()
+		b, err := json.Marshal(&jsonExtensions.NameConstraints)
+		c.Assert(err, IsNil)
+		c.Assert(string(b), Equals, `{"critical":false,"permitted_email_addresses":["email","LulMail"],"permitted_ip_addresses":["192.168.0.0/16"],"permitted_edi_party_names":[{"name_assigner":"assigner","party_name":"party"}],"permitted_registred_id":["1.2.3.4.2.2.3.4"],"excluded_names":["banned.com"],"excluded_directory_names":[{"common_name":["gov.us"],"country":["US"],"locality":["Tallahassee"],"organization":["Extreme Discord"],"organizational_unit":["Chaos"],"postal_code":["30062"],"province":["FL"],"street_address":["3210 Holly Mill Run"]}]}`)
+		nc := &NameConstraints{}
+		err = nc.UnmarshalJSON(b)
+		c.Assert(err, IsNil) 
+		c.Assert(jsonExtensions.NameConstraints.PermittedDirectoryNames, DeepEquals, nc.PermittedDirectoryNames)
+		c.Assert(jsonExtensions.NameConstraints.PermittedDNSDomains, DeepEquals, nc.PermittedDNSDomains)
+		c.Assert(jsonExtensions.NameConstraints.PermittedEdiPartyNames, DeepEquals, nc.PermittedEdiPartyNames)
+		c.Assert(jsonExtensions.NameConstraints.PermittedRegisteredIDs, DeepEquals, nc.PermittedRegisteredIDs)
+		c.Assert(jsonExtensions.NameConstraints.PermittedEmailDomains, DeepEquals, nc.PermittedEmailDomains)
+		c.Assert(jsonExtensions.NameConstraints.PermittedIPAddresses, HasLen, len(nc.PermittedIPAddresses))
+		c.Assert(jsonExtensions.NameConstraints.PermittedIPAddresses[0].Data.IP.String(), Equals, nc.PermittedIPAddresses[0].Data.IP.String())
+		c.Assert(jsonExtensions.NameConstraints.PermittedIPAddresses[0].Data.Mask.String(), Equals, nc.PermittedIPAddresses[0].Data.Mask.String())
 	}
 }

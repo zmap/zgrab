@@ -33,6 +33,9 @@ func (s *JSONSuite) SetUpTest(c *C) {
 	}
 
 	for _, test := range tests {
+		if test.Name()[0] == 46 {
+			continue
+		}
 		var err error
 		s.pemData, err = ioutil.ReadFile("testdata/" + test.Name())
 		c.Assert(err, IsNil)

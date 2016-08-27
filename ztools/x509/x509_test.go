@@ -353,7 +353,7 @@ func TestCreateSelfSignedCertificate(t *testing.T) {
 			IPAddresses:    []net.IP{net.IPv4(127, 0, 0, 1).To4(), net.ParseIP("2001:4860:0:2001::68")},
 
 			PolicyIdentifiers:   []asn1.ObjectIdentifier{[]int{1, 2, 3}, []int{2, 23, 140, 1, 1}},
-			PermittedDNSDomains: []string{".example.com", "example.com"},
+			PermittedDNSDomains: []GeneralSubtreeString{GeneralSubtreeString{Data:".example.com"}, GeneralSubtreeString{Data:"example.com"}},
 
 			CRLDistributionPoints: []string{"http://crl1.example.com/ca1.crl", "http://crl2.example.com/ca1.crl"},
 
@@ -387,7 +387,7 @@ func TestCreateSelfSignedCertificate(t *testing.T) {
 			t.Errorf("%s: failed to parse policy identifiers: got:%#v want:%#v", test.name, cert.PolicyIdentifiers, template.PolicyIdentifiers)
 		}
 
-		if len(cert.PermittedDNSDomains) != 2 || cert.PermittedDNSDomains[0] != ".example.com" || cert.PermittedDNSDomains[1] != "example.com" {
+		if len(cert.PermittedDNSDomains) != 2 || cert.PermittedDNSDomains[0].Data != ".example.com" || cert.PermittedDNSDomains[1].Data != "example.com" {
 			t.Errorf("%s: failed to parse name constraints: %#v", test.name, cert.PermittedDNSDomains)
 		}
 
