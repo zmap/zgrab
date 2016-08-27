@@ -102,5 +102,16 @@ func (s *ExtensionsSuite) TestEncodeDecodeNc(c *C) {
 		c.Assert(jsonExtensions.NameConstraints.PermittedIPAddresses, HasLen, len(nc.PermittedIPAddresses))
 		c.Assert(jsonExtensions.NameConstraints.PermittedIPAddresses[0].Data.IP.String(), Equals, nc.PermittedIPAddresses[0].Data.IP.String())
 		c.Assert(jsonExtensions.NameConstraints.PermittedIPAddresses[0].Data.Mask.String(), Equals, nc.PermittedIPAddresses[0].Data.Mask.String())
+
+		c.Assert(jsonExtensions.NameConstraints.ExcludedDirectoryNames, DeepEquals, nc.ExcludedDirectoryNames)
+		c.Assert(jsonExtensions.NameConstraints.ExcludedDNSDomains, DeepEquals, nc.ExcludedDNSDomains)
+		c.Assert(jsonExtensions.NameConstraints.ExcludedEdiPartyNames, DeepEquals, nc.ExcludedEdiPartyNames)
+		c.Assert(jsonExtensions.NameConstraints.ExcludedRegisteredIDs, DeepEquals, nc.ExcludedRegisteredIDs)
+		c.Assert(jsonExtensions.NameConstraints.ExcludedEmailDomains, DeepEquals, nc.ExcludedEmailDomains)
+		c.Assert(jsonExtensions.NameConstraints.ExcludedIPAddresses, HasLen, len(nc.ExcludedIPAddresses))
+		if (len(nc.ExcludedIPAddresses) > 0) {
+			c.Assert(jsonExtensions.NameConstraints.ExcludedIPAddresses[0].Data.IP.String(), Equals, nc.ExcludedIPAddresses[0].Data.IP.String())
+			c.Assert(jsonExtensions.NameConstraints.ExcludedIPAddresses[0].Data.Mask.String(), Equals, nc.ExcludedIPAddresses[0].Data.Mask.String())
+		}
 	}
 }
