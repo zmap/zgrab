@@ -202,10 +202,7 @@ func (o *OtherName) UnmarshalJSON(b []byte) (err error) {
 		Bytes:      oName.Value,
 	}
 	o.Value.FullBytes, err = asn1.Marshal(o.Value)
-	if err != nil {
-		return
-	}
-	return nil
+	return
 }
 
 func (n *Name) MarshalJSON() ([]byte, error) {
