@@ -182,20 +182,21 @@ const (
 	asn1ClassPrivate         = 3
 )
 
-func (o *OtherName) UnmarshalJSON(b []byte) error {
+func (o *OtherName) UnmarshalJSON(b []byte) (err error) {
 	var oName jsonOtherName
-	var err error
+
 	if err = json.Unmarshal(b, &oName); err != nil {
-		return err
+		return
 	}
 
 	arcs := strings.Split(oName.Id, ".")
 	oid := make(asn1.ObjectIdentifier, len(arcs))
 
 	for i, s := range arcs {
-		tmp, err := strconv.ParseInt(s, 10, 32)
+		var tmp int64
+		tmp, err = strconv.ParseInt(s, 10, 32)
 		if err != nil {
-			return err
+			return
 		}
 		oid[i] = int(tmp)
 	}
@@ -209,10 +210,7 @@ func (o *OtherName) UnmarshalJSON(b []byte) error {
 		Bytes:      oName.Value,
 	}
 	o.Value.FullBytes, err = asn1.Marshal(o.Value)
-	if err != nil {
-		return err
-	}
-	return nil
+	return
 }
 
 func (n *Name) MarshalJSON() ([]byte, error) {
