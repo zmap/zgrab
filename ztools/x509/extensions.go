@@ -146,7 +146,7 @@ type NameConstraints struct {
 	PermittedDirectoryNames []GeneralSubtreeName
 	PermittedEdiPartyNames  []GeneralSubtreeEdi
 	PermittedRegisteredIDs  []GeneralSubtreeOid
-	
+
 	ExcludedEmailDomains   []GeneralSubtreeString
 	ExcludedDNSDomains     []GeneralSubtreeString
 	ExcludedIPAddresses    []GeneralSubtreeIP
@@ -158,19 +158,19 @@ type NameConstraints struct {
 type NameConstraintsJSON struct {
 	Critical bool `json:"critical"`
 
-	PermittedDNSDomains     []string               `json:"permitted_names,omitempty"`
-	PermittedEmailDomains   []string               `json:"permitted_email_addresses,omitempty"`
-	PermittedIPAddresses    []string               `json:"permitted_ip_addresses,omitempty"`
-	PermittedDirectoryNames []pkix.Name            `json:"permitted_directory_names,omitempty"`
-	PermittedEdiPartyNames  []pkix.EDIPartyName		 `json:"permitted_edi_party_names,omitempty"`
-	PermittedRegisteredIDs  []string          		 `json:"permitted_registred_id,omitempty"`
+	PermittedDNSDomains     []string            `json:"permitted_names,omitempty"`
+	PermittedEmailDomains   []string            `json:"permitted_email_addresses,omitempty"`
+	PermittedIPAddresses    []string            `json:"permitted_ip_addresses,omitempty"`
+	PermittedDirectoryNames []pkix.Name         `json:"permitted_directory_names,omitempty"`
+	PermittedEdiPartyNames  []pkix.EDIPartyName `json:"permitted_edi_party_names,omitempty"`
+	PermittedRegisteredIDs  []string            `json:"permitted_registred_id,omitempty"`
 
-	ExcludedDNSDomains     []string                `json:"excluded_names,omitempty"`
-	ExcludedEmailDomains   []string                `json:"excluded_email_addresses,omitempty"`
-	ExcludedIPAddresses    []string                `json:"excluded_ip_addresses,omitempty"`
-	ExcludedDirectoryNames []pkix.Name             `json:"excluded_directory_names,omitempty"`
-	ExcludedEdiPartyNames  []pkix.EDIPartyName		 `json:"excluded_edi_party_names,omitempty"`
-	ExcludedRegisteredIDs  []string           		 `json:"excluded_registred_id,omitempty"`
+	ExcludedDNSDomains     []string            `json:"excluded_names,omitempty"`
+	ExcludedEmailDomains   []string            `json:"excluded_email_addresses,omitempty"`
+	ExcludedIPAddresses    []string            `json:"excluded_ip_addresses,omitempty"`
+	ExcludedDirectoryNames []pkix.Name         `json:"excluded_directory_names,omitempty"`
+	ExcludedEdiPartyNames  []pkix.EDIPartyName `json:"excluded_edi_party_names,omitempty"`
+	ExcludedRegisteredIDs  []string            `json:"excluded_registred_id,omitempty"`
 }
 
 func (nc *NameConstraints) UnmarshalJSON(b []byte) error {
@@ -180,24 +180,24 @@ func (nc *NameConstraints) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	for _, dns := range ncJson.PermittedDNSDomains {
-		nc.PermittedDNSDomains = append(nc.PermittedDNSDomains, GeneralSubtreeString{Data:dns})	
+		nc.PermittedDNSDomains = append(nc.PermittedDNSDomains, GeneralSubtreeString{Data: dns})
 	}
 	for _, email := range ncJson.PermittedEmailDomains {
-		nc.PermittedEmailDomains = append(nc.PermittedEmailDomains, GeneralSubtreeString{Data:email})	
+		nc.PermittedEmailDomains = append(nc.PermittedEmailDomains, GeneralSubtreeString{Data: email})
 	}
 	for _, ipNet := range ncJson.PermittedIPAddresses {
 		ip, ipnet, err := net.ParseCIDR(ipNet)
-    if err != nil {
-        return err
-    }
-    ipnet.IP = ip
-		nc.PermittedIPAddresses = append(nc.PermittedIPAddresses, GeneralSubtreeIP{Data:*ipnet})	
+		if err != nil {
+			return err
+		}
+		ipnet.IP = ip
+		nc.PermittedIPAddresses = append(nc.PermittedIPAddresses, GeneralSubtreeIP{Data: *ipnet})
 	}
 	for _, directory := range ncJson.PermittedDirectoryNames {
-		nc.PermittedDirectoryNames = append(nc.PermittedDirectoryNames, GeneralSubtreeName{Data:directory})	
+		nc.PermittedDirectoryNames = append(nc.PermittedDirectoryNames, GeneralSubtreeName{Data: directory})
 	}
 	for _, edi := range ncJson.PermittedEdiPartyNames {
-		nc.PermittedEdiPartyNames = append(nc.PermittedEdiPartyNames, GeneralSubtreeEdi{Data:edi})	
+		nc.PermittedEdiPartyNames = append(nc.PermittedEdiPartyNames, GeneralSubtreeEdi{Data: edi})
 	}
 	for _, id := range ncJson.PermittedRegisteredIDs {
 		arcs := strings.Split(id, ".")
@@ -210,28 +210,28 @@ func (nc *NameConstraints) UnmarshalJSON(b []byte) error {
 			}
 			oid[j] = int(tmp)
 		}
-		nc.PermittedRegisteredIDs = append(nc.PermittedRegisteredIDs, GeneralSubtreeOid{Data:oid})
+		nc.PermittedRegisteredIDs = append(nc.PermittedRegisteredIDs, GeneralSubtreeOid{Data: oid})
 	}
 
 	for _, dns := range ncJson.ExcludedDNSDomains {
-		nc.ExcludedDNSDomains = append(nc.ExcludedDNSDomains, GeneralSubtreeString{Data:dns})	
+		nc.ExcludedDNSDomains = append(nc.ExcludedDNSDomains, GeneralSubtreeString{Data: dns})
 	}
 	for _, email := range ncJson.ExcludedEmailDomains {
-		nc.ExcludedEmailDomains = append(nc.ExcludedEmailDomains, GeneralSubtreeString{Data:email})	
+		nc.ExcludedEmailDomains = append(nc.ExcludedEmailDomains, GeneralSubtreeString{Data: email})
 	}
 	for _, ipNet := range ncJson.ExcludedIPAddresses {
 		ip, ipnet, err := net.ParseCIDR(ipNet)
-    if err != nil {
-        return err
-    }
-    ipnet.IP = ip
-		nc.ExcludedIPAddresses = append(nc.ExcludedIPAddresses, GeneralSubtreeIP{Data:*ipnet})	
+		if err != nil {
+			return err
+		}
+		ipnet.IP = ip
+		nc.ExcludedIPAddresses = append(nc.ExcludedIPAddresses, GeneralSubtreeIP{Data: *ipnet})
 	}
 	for _, directory := range ncJson.ExcludedDirectoryNames {
-		nc.ExcludedDirectoryNames = append(nc.ExcludedDirectoryNames, GeneralSubtreeName{Data:directory})	
+		nc.ExcludedDirectoryNames = append(nc.ExcludedDirectoryNames, GeneralSubtreeName{Data: directory})
 	}
 	for _, edi := range ncJson.ExcludedEdiPartyNames {
-		nc.ExcludedEdiPartyNames = append(nc.ExcludedEdiPartyNames, GeneralSubtreeEdi{Data:edi})	
+		nc.ExcludedEdiPartyNames = append(nc.ExcludedEdiPartyNames, GeneralSubtreeEdi{Data: edi})
 	}
 	for _, id := range ncJson.ExcludedRegisteredIDs {
 		arcs := strings.Split(id, ".")
@@ -244,7 +244,7 @@ func (nc *NameConstraints) UnmarshalJSON(b []byte) error {
 			}
 			oid[j] = int(tmp)
 		}
-		nc.ExcludedRegisteredIDs = append(nc.ExcludedRegisteredIDs, GeneralSubtreeOid{Data:oid})
+		nc.ExcludedRegisteredIDs = append(nc.ExcludedRegisteredIDs, GeneralSubtreeOid{Data: oid})
 	}
 	return nil
 }

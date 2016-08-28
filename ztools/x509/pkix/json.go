@@ -209,7 +209,7 @@ func (o *OtherName) UnmarshalJSON(b []byte) error {
 		Bytes:      oName.Value,
 	}
 	o.Value.FullBytes, err = asn1.Marshal(o.Value)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	return nil

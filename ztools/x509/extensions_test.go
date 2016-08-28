@@ -17,8 +17,8 @@ import (
 func TestExtensions(t *testing.T) { TestingT(t) }
 
 type ExtensionsSuite struct {
-	pemData    []byte
-	rawCert    []byte
+	pemData     []byte
+	rawCert     []byte
 	parsedCerts []Certificate
 }
 
@@ -51,7 +51,7 @@ func (s *ExtensionsSuite) SetUpTest(c *C) {
 
 func (s *ExtensionsSuite) TestEncodeDecodeSAN(c *C) {
 	for _, cert := range s.parsedCerts {
-		if (cert.Issuer.CommonName != "SAN Test"){
+		if cert.Issuer.CommonName != "SAN Test" {
 			continue
 		}
 
@@ -84,7 +84,7 @@ func (s *ExtensionsSuite) TestEncodeDecodeSAN(c *C) {
 
 func (s *ExtensionsSuite) TestEncodeDecodeNc(c *C) {
 	for _, cert := range s.parsedCerts {
-		if (cert.Issuer.CommonName != "Name constraint"){
+		if cert.Issuer.CommonName != "Name constraint" {
 			continue
 		}
 		jsonExtensions, _ := cert.jsonifyExtensions()
@@ -93,7 +93,7 @@ func (s *ExtensionsSuite) TestEncodeDecodeNc(c *C) {
 		c.Assert(string(b), Equals, `{"critical":false,"permitted_email_addresses":["email","LulMail"],"permitted_ip_addresses":["192.168.0.0/16"],"permitted_edi_party_names":[{"name_assigner":"assigner","party_name":"party"}],"permitted_registred_id":["1.2.3.4.2.2.3.4"],"excluded_names":["banned.com"],"excluded_directory_names":[{"common_name":["gov.us"],"country":["US"],"locality":["Tallahassee"],"organization":["Extreme Discord"],"organizational_unit":["Chaos"],"postal_code":["30062"],"province":["FL"],"street_address":["3210 Holly Mill Run"]}]}`)
 		nc := &NameConstraints{}
 		err = nc.UnmarshalJSON(b)
-		c.Assert(err, IsNil) 
+		c.Assert(err, IsNil)
 		c.Assert(jsonExtensions.NameConstraints.PermittedDirectoryNames, DeepEquals, nc.PermittedDirectoryNames)
 		c.Assert(jsonExtensions.NameConstraints.PermittedDNSDomains, DeepEquals, nc.PermittedDNSDomains)
 		c.Assert(jsonExtensions.NameConstraints.PermittedEdiPartyNames, DeepEquals, nc.PermittedEdiPartyNames)
@@ -109,7 +109,7 @@ func (s *ExtensionsSuite) TestEncodeDecodeNc(c *C) {
 		c.Assert(jsonExtensions.NameConstraints.ExcludedRegisteredIDs, DeepEquals, nc.ExcludedRegisteredIDs)
 		c.Assert(jsonExtensions.NameConstraints.ExcludedEmailDomains, DeepEquals, nc.ExcludedEmailDomains)
 		c.Assert(jsonExtensions.NameConstraints.ExcludedIPAddresses, HasLen, len(nc.ExcludedIPAddresses))
-		if (len(nc.ExcludedIPAddresses) > 0) {
+		if len(nc.ExcludedIPAddresses) > 0 {
 			c.Assert(jsonExtensions.NameConstraints.ExcludedIPAddresses[0].Data.IP.String(), Equals, nc.ExcludedIPAddresses[0].Data.IP.String())
 			c.Assert(jsonExtensions.NameConstraints.ExcludedIPAddresses[0].Data.Mask.String(), Equals, nc.ExcludedIPAddresses[0].Data.Mask.String())
 		}

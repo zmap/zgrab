@@ -353,7 +353,7 @@ func TestCreateSelfSignedCertificate(t *testing.T) {
 			IPAddresses:    []net.IP{net.IPv4(127, 0, 0, 1).To4(), net.ParseIP("2001:4860:0:2001::68")},
 
 			PolicyIdentifiers:   []asn1.ObjectIdentifier{[]int{1, 2, 3}, []int{2, 23, 140, 1, 1}},
-			PermittedDNSDomains: []GeneralSubtreeString{GeneralSubtreeString{Data:".example.com"}, GeneralSubtreeString{Data:"example.com"}},
+			PermittedDNSDomains: []GeneralSubtreeString{GeneralSubtreeString{Data: ".example.com"}, GeneralSubtreeString{Data: "example.com"}},
 
 			CRLDistributionPoints: []string{"http://crl1.example.com/ca1.crl", "http://crl2.example.com/ca1.crl"},
 
@@ -1042,10 +1042,10 @@ const csrBase64 = "MIIC4zCCAcsCAQAwRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3Rhd
 
 const sanManyOtherName = "MEmgEAYIKwYBBAHZWy6gBAICAc2CCHRlc3QuZ292oA8GCCsGAQQB2VsuoAMCASqCB2dvdi5nb3agEQYIKwYBBAHZWy6gBQIDAXUA"
 
-func TestParseSANExtensionOtherName(t *testing.T){
+func TestParseSANExtensionOtherName(t *testing.T) {
 	sanMultipleOther := fromBase64(sanManyOtherName)
 	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseSANExtension(sanMultipleOther)
-	
+
 	if err != nil {
 		t.Errorf("parseSANExtension returned error %v", err)
 	}
@@ -1060,7 +1060,7 @@ func TestParseSANExtensionOtherName(t *testing.T){
 	}
 	var otherInts [3]int
 	var expectedInts [3]int = [3]int{461, 42, 95488}
-	for x := 0; x < 3; x++{
+	for x := 0; x < 3; x++ {
 		rest, err := asn1.Unmarshal(otherNames[x].Value.Bytes, &(otherInts[x]))
 		if err != nil {
 			t.Errorf("unexpected error in unmarshaling otherName %v", err)
@@ -1069,20 +1069,20 @@ func TestParseSANExtensionOtherName(t *testing.T){
 			t.Errorf("unexpected extra bytes in otherName")
 		}
 	}
-	for i, _ := range otherInts{
-		if otherInts[i] != expectedInts[i]{
+	for i, _ := range otherInts {
+		if otherInts[i] != expectedInts[i] {
 			t.Errorf("otherName contained unexpected value %v, expected %v", otherInts[i], expectedInts[i])
 		}
 	}
-	
+
 }
 
 const sanManyDirectoryName = "MIHtpBwwGjEYMBYGA1UEChMPRXh0cmVtZSBEaXNjb3JkgggqLmdvdi51c6SBnDCBmTELMAkGA1UEBhMCVVMxCzAJBgNVBAgTAkZMMRQwEgYDVQQHEwtUYWxsYWhhc3NlZTEcMBoGA1UECRMTMzIxMCBIb2xseSBNaWxsIFJ1bjEOMAwGA1UEERMFMzAwNjIxGDAWBgNVBAoTD0V4dHJlbWUgRGlzY29yZDEOMAwGA1UECxMFQ2hhb3MxDzANBgNVBAMTBmdvdi51c4IGZ292LnVzpBwwGjEYMBYGA1UEChMPRXh0cmVtZSBEaXNjb3Jk"
 
-func TestParseSANExtensionDirectoryName(t *testing.T){
+func TestParseSANExtensionDirectoryName(t *testing.T) {
 	sanMultipleDir := fromBase64(sanManyDirectoryName)
 	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseSANExtension(sanMultipleDir)
-	
+
 	if err != nil {
 		t.Errorf("parseSANExtension returned error %v", err)
 	}
@@ -1095,26 +1095,25 @@ func TestParseSANExtensionDirectoryName(t *testing.T){
 	if len(directoryNames) != 3 {
 		t.Errorf("parseSANExtension returned unexpected # of directoryName in sanManyDirectoryName: %v (expected 3)", len(directoryNames))
 	}
-	
+
 	shortName := pkix.Name{Organization: []string{"Extreme Discord"}}
-	orgName := pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2,5,4,10}}
+	orgName := pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2, 5, 4, 10}}
 	orgName.Value = "Extreme Discord"
 	shortName.Names = append(shortName.Names, orgName)
-	
+
 	massiveName := pkix.Name{Country: []string{"US"}, Organization: []string{"Extreme Discord"}, OrganizationalUnit: []string{"Chaos"}, Locality: []string{"Tallahassee"}, Province: []string{"FL"}, StreetAddress: []string{"3210 Holly Mill Run"}, PostalCode: []string{"30062"}, CommonName: "gov.us"}
-	massiveName.Names = append(massiveName.Names, pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2,5,4,6}, Value: "US"})//Country
-	massiveName.Names = append(massiveName.Names, pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2,5,4,8}, Value: "FL"})//Province
-	massiveName.Names = append(massiveName.Names, pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2,5,4,7}, Value: "Tallahassee"})//Locality
-	massiveName.Names = append(massiveName.Names, pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2,5,4,9}, Value: "3210 Holly Mill Run"})//StreetAddress
-	massiveName.Names = append(massiveName.Names, pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2,5,4,17}, Value: "30062"})//PostalCode
-	massiveName.Names = append(massiveName.Names, orgName)//Organization
-	massiveName.Names = append(massiveName.Names, pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2,5,4,11}, Value: "Chaos"})//OrganizationalUnit
-	massiveName.Names = append(massiveName.Names, pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2,5,4,3}, Value: "gov.us"})//CommonName
-	
-	
+	massiveName.Names = append(massiveName.Names, pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2, 5, 4, 6}, Value: "US"})                  //Country
+	massiveName.Names = append(massiveName.Names, pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2, 5, 4, 8}, Value: "FL"})                  //Province
+	massiveName.Names = append(massiveName.Names, pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2, 5, 4, 7}, Value: "Tallahassee"})         //Locality
+	massiveName.Names = append(massiveName.Names, pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2, 5, 4, 9}, Value: "3210 Holly Mill Run"}) //StreetAddress
+	massiveName.Names = append(massiveName.Names, pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2, 5, 4, 17}, Value: "30062"})              //PostalCode
+	massiveName.Names = append(massiveName.Names, orgName)                                                                                           //Organization
+	massiveName.Names = append(massiveName.Names, pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2, 5, 4, 11}, Value: "Chaos"})              //OrganizationalUnit
+	massiveName.Names = append(massiveName.Names, pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2, 5, 4, 3}, Value: "gov.us"})              //CommonName
+
 	var expectedNames [3]pkix.Name = [3]pkix.Name{shortName, massiveName, shortName}
-	for i, _ := range directoryNames{
-		if !reflect.DeepEqual(directoryNames[i], expectedNames[i]){
+	for i, _ := range directoryNames {
+		if !reflect.DeepEqual(directoryNames[i], expectedNames[i]) {
 			t.Errorf("directoryName contained unexpected value %v, expected %v", directoryNames[i], expectedNames[i])
 		}
 	}
@@ -1122,10 +1121,10 @@ func TestParseSANExtensionDirectoryName(t *testing.T){
 
 const sanManyURI = "MF6GGGh0dHA6Ly9nb3YudXMvaW5kZXguaHRtbIIIKi5nb3YudXOGE2h0dHA6Ly9nb3YudXMvaG9tZS+CBmdvdi51c4YbaHR0cDovL2dvdi51cy9ob21lL2NhcGl0b2wv"
 
-func TestParseSANExtensionUniformResourceIdentifier(t *testing.T){
+func TestParseSANExtensionUniformResourceIdentifier(t *testing.T) {
 	sanMultipleURI := fromBase64(sanManyURI)
 	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseSANExtension(sanMultipleURI)
-	
+
 	if err != nil {
 		t.Errorf("parseSANExtension returned error %v", err)
 	}
@@ -1138,10 +1137,10 @@ func TestParseSANExtensionUniformResourceIdentifier(t *testing.T){
 	if len(URIs) != 3 {
 		t.Errorf("parseSANExtension returned unexpected # of uniformResourceIdentifier in sanManyURI: %v (expected 3)", len(URIs))
 	}
-	
+
 	var expectedNames [3]string = [3]string{"http://gov.us/index.html", "http://gov.us/home/", "http://gov.us/home/capitol/"}
-	for i, _ := range URIs{
-		if URIs[i] != expectedNames[i]{
+	for i, _ := range URIs {
+		if URIs[i] != expectedNames[i] {
 			t.Errorf("uniformResourceIdentifier contained unexpected value %v, expected %v", URIs[i], expectedNames[i])
 		}
 	}
@@ -1149,10 +1148,10 @@ func TestParseSANExtensionUniformResourceIdentifier(t *testing.T){
 
 const sanManyRegisteredID = "MDGICCsGAQUFBw0Bggh0ZXN0LmdvdogIKwYBBAHZWyqCB2dvdi5nb3aICCsGAQUFBw0D"
 
-func TestParseSANExtensionRegisteredID(t *testing.T){
+func TestParseSANExtensionRegisteredID(t *testing.T) {
 	sanMultipleRID := fromBase64(sanManyRegisteredID)
 	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseSANExtension(sanMultipleRID)
-	
+
 	if err != nil {
 		t.Errorf("parseSANExtension returned error %v", err)
 	}
@@ -1165,10 +1164,10 @@ func TestParseSANExtensionRegisteredID(t *testing.T){
 	if len(registeredIDs) != 3 {
 		t.Errorf("parseSANExtension returned unexpected # of registeredIDs in sanManyRegisteredID: %v (expected 3)", len(registeredIDs))
 	}
-	
+
 	var expectedNames [3]asn1.ObjectIdentifier = [3]asn1.ObjectIdentifier{asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 13, 1}, asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11483, 42}, asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 13, 3}}
-	for i, _ := range registeredIDs{
-		if !registeredIDs[i].Equal(expectedNames[i]){
+	for i, _ := range registeredIDs {
+		if !registeredIDs[i].Equal(expectedNames[i]) {
 			t.Errorf("registeredID contained unexpected value %v, expected %v", registeredIDs[i], expectedNames[i])
 		}
 	}
@@ -1176,10 +1175,10 @@ func TestParseSANExtensionRegisteredID(t *testing.T){
 
 const sanManyEDI = "MIGjpRigBwwFRWFydGihDQwLVW5kZXJncm91bmSCCHRlc3QuZ292pQ6hDBMKZ292ZXJubWVudKUNoQsMCXNvdmVyZWlnboIHZ292LmdvdqUjoAoTCHVuaXZlcnNloRUME1N1cHJlbWUgTGVnaXNsYXR1cmWBDWFkbWluQGdvdi5nb3alIaAKEwh1bml2ZXJzZaETExFTdXByZW1lIEV4ZWN1dGl2ZQ=="
 
-func TestParseSANExtensionEDIPartyName(t *testing.T){
+func TestParseSANExtensionEDIPartyName(t *testing.T) {
 	sanMultipleEDI := fromBase64(sanManyEDI)
 	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseSANExtension(sanMultipleEDI)
-	
+
 	if err != nil {
 		t.Errorf("parseSANExtension returned error %v", err)
 	}
@@ -1195,16 +1194,16 @@ func TestParseSANExtensionEDIPartyName(t *testing.T){
 	if len(ediPartyNames) != 5 {
 		t.Errorf("parseSANExtension returned unexpected # of ediPartyNames in sanManyEDI: %v (expected 5)", len(ediPartyNames))
 	}
-	
+
 	var expectedNames [5]pkix.EDIPartyName
 	expectedNames[0] = pkix.EDIPartyName{NameAssigner: "Earth", PartyName: "Underground"}
 	expectedNames[1] = pkix.EDIPartyName{PartyName: "government"}
 	expectedNames[2] = pkix.EDIPartyName{PartyName: "sovereign"}
 	expectedNames[3] = pkix.EDIPartyName{NameAssigner: "universe", PartyName: "Supreme Legislature"}
 	expectedNames[4] = pkix.EDIPartyName{NameAssigner: "universe", PartyName: "Supreme Executive"}
-	
-	for i, _ := range ediPartyNames{
-		if !reflect.DeepEqual(ediPartyNames[i], expectedNames[i]){
+
+	for i, _ := range ediPartyNames {
+		if !reflect.DeepEqual(ediPartyNames[i], expectedNames[i]) {
 			t.Errorf("ediPartyName contained unexpected value %v, expected %v", ediPartyNames[i], expectedNames[i])
 		}
 	}
@@ -1212,10 +1211,10 @@ func TestParseSANExtensionEDIPartyName(t *testing.T){
 
 const sanAllSuported = "MIGXiAkrBgEEAdlbgzqkHDAaMRgwFgYDVQQKEw9FeHRyZW1lIERpc2NvcmSgEQYIKwYBBAHZWy6gBQIDCCoJpR6gDxMNTW90aGVyIE5hdHVyZaELEwlwYXJ0eU5hbWWCCCouZ292LnVzggZnb3YudXOBDGFkbWluQGdvdi51c4YTaHR0cHM6Ly9nb3YudXMvaG9tZYcEwMAAAQ=="
 
-func TestParseSANExtensionAll(t *testing.T){
+func TestParseSANExtensionAll(t *testing.T) {
 	sanAllNames := fromBase64(sanAllSuported)
 	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseSANExtension(sanAllNames)
-	
+
 	if err != nil {
 		t.Errorf("parseSANExtension returned error %v", err)
 	}
@@ -1225,7 +1224,7 @@ func TestParseSANExtensionAll(t *testing.T){
 	if len(emailAddresses) != 1 || emailAddresses[0] != "admin@gov.us" {
 		t.Errorf("parseSANExtension returned unexpected rfc822Names from sanAllSuported: %v", emailAddresses)
 	}
-	if len(ediPartyNames) != 1 || !reflect.DeepEqual(ediPartyNames[0], pkix.EDIPartyName{NameAssigner: "Mother Nature", PartyName: "partyName"}){
+	if len(ediPartyNames) != 1 || !reflect.DeepEqual(ediPartyNames[0], pkix.EDIPartyName{NameAssigner: "Mother Nature", PartyName: "partyName"}) {
 		t.Errorf("parseSANExtension returned unexpected ediPartyNames in sanAllSuported: %v", ediPartyNames)
 	}
 	if len(URIs) != 1 || URIs[0] != "https://gov.us/home" {
@@ -1237,15 +1236,15 @@ func TestParseSANExtensionAll(t *testing.T){
 	if len(registeredIDs) != 1 || !registeredIDs[0].Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11483, 442}) {
 		t.Errorf("parseSANExtension returned unexpected registeredIDs from sanAllSuported: %v", registeredIDs)
 	}
-	
+
 	shortName := pkix.Name{Organization: []string{"Extreme Discord"}}
-	orgName := pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2,5,4,10}}
+	orgName := pkix.AttributeTypeAndValue{Type: asn1.ObjectIdentifier{2, 5, 4, 10}}
 	orgName.Value = "Extreme Discord"
 	shortName.Names = append(shortName.Names, orgName)
 	if len(directoryNames) != 1 || !reflect.DeepEqual(directoryNames[0], shortName) {
 		t.Errorf("parseSANExtension returned unexpected directoryNames from sanAllSuported: %v", directoryNames)
 	}
-	
+
 	var oName int
 	rest, err := asn1.Unmarshal(otherNames[0].Value.Bytes, &oName)
 	if err != nil {

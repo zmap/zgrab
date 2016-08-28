@@ -638,38 +638,38 @@ type Certificate struct {
 
 type GeneralSubtreeString struct {
 	Data string
-	Max int
-	Min int
+	Max  int
+	Min  int
 }
 
 type GeneralSubtreeIP struct {
 	Data net.IPNet
-	Max int
-	Min int
+	Max  int
+	Min  int
 }
 
 type GeneralSubtreeName struct {
 	Data pkix.Name
-	Max int
-	Min int
+	Max  int
+	Min  int
 }
 
 type GeneralSubtreeEdi struct {
 	Data pkix.EDIPartyName
-	Max int
-	Min int
+	Max  int
+	Min  int
 }
 
 type GeneralSubtreeOid struct {
 	Data asn1.ObjectIdentifier
-	Max int
-	Min int
+	Max  int
+	Min  int
 }
 
 type GeneralSubtreeRaw struct {
 	Data asn1.RawValue
-	Max int
-	Min int
+	Max  int
+	Min  int
 }
 
 // ErrUnsupportedAlgorithm results from attempting to perform an operation that
@@ -857,22 +857,22 @@ type basicConstraints struct {
 
 // RFC 5280 4.2.1.4
 type policyInformation struct {
-	Policy 		 asn1.ObjectIdentifier
+	Policy     asn1.ObjectIdentifier
 	Qualifiers []policyQualifierInfo `asn1:"optional"`
 }
 
 type policyQualifierInfo struct {
-	PolicyQualifierId  asn1.ObjectIdentifier
-	Qualifier  asn1.RawValue
+	PolicyQualifierId asn1.ObjectIdentifier
+	Qualifier         asn1.RawValue
 }
 
 type userNotice struct {
-	NoticeRef noticeReference `asn1:"optional"`	
-	ExplicitText asn1.RawValue `asn1:"optional"`
+	NoticeRef    noticeReference `asn1:"optional"`
+	ExplicitText asn1.RawValue   `asn1:"optional"`
 }
 
 type noticeReference struct {
-	Organization asn1.RawValue
+	Organization  asn1.RawValue
 	NoticeNumbers []int
 }
 
@@ -884,8 +884,8 @@ type nameConstraints struct {
 
 type generalSubtree struct {
 	Value   asn1.RawValue `asn1:"optional"`
-	Minimum int `asn1:"tag:0,default:0,optional"`
-	Maximum int `asn1:"tag:1,optional"`
+	Minimum int           `asn1:"tag:0,default:0,optional"`
+	Maximum int           `asn1:"tag:1,optional"`
 }
 
 // RFC 5280, 4.2.2.1
@@ -1020,7 +1020,7 @@ func parseSANExtension(value []byte) (otherNames []pkix.OtherName, dnsNames, ema
 		case 0:
 			var oName pkix.OtherName
 			_, err = asn1.UnmarshalWithParams(v.FullBytes, &oName, "tag:0")
-			if err != nil{
+			if err != nil {
 				return
 			}
 			otherNames = append(otherNames, oName)
@@ -1031,7 +1031,7 @@ func parseSANExtension(value []byte) (otherNames []pkix.OtherName, dnsNames, ema
 		case 4:
 			var rdn pkix.RDNSequence
 			_, err = asn1.Unmarshal(v.Bytes, &rdn)
-			if err != nil{
+			if err != nil {
 				return
 			}
 			var dir pkix.Name
@@ -1040,7 +1040,7 @@ func parseSANExtension(value []byte) (otherNames []pkix.OtherName, dnsNames, ema
 		case 5:
 			var ediName pkix.EDIPartyName
 			_, err = asn1.UnmarshalWithParams(v.FullBytes, &ediName, "tag:5")
-			if err != nil{
+			if err != nil {
 				return
 			}
 			ediPartyNames = append(ediPartyNames, ediName)
@@ -1055,9 +1055,9 @@ func parseSANExtension(value []byte) (otherNames []pkix.OtherName, dnsNames, ema
 				return
 			}
 		case 8:
-			var id asn1.ObjectIdentifier 
+			var id asn1.ObjectIdentifier
 			_, err = asn1.UnmarshalWithParams(v.FullBytes, &id, "tag:8")
-			if err != nil{
+			if err != nil {
 				return
 			}
 			registeredIDs = append(registeredIDs, id)
@@ -1199,11 +1199,11 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				for _, subtree := range constraints.Permitted {
 					switch subtree.Value.Tag {
 					case 1:
-						out.PermittedEmailDomains = append(out.PermittedEmailDomains, GeneralSubtreeString{Data:string(subtree.Value.Bytes), Max:subtree.Maximum, Min:subtree.Minimum})
+						out.PermittedEmailDomains = append(out.PermittedEmailDomains, GeneralSubtreeString{Data: string(subtree.Value.Bytes), Max: subtree.Maximum, Min: subtree.Minimum})
 					case 2:
-						out.PermittedDNSDomains = append(out.PermittedDNSDomains, GeneralSubtreeString{Data:string(subtree.Value.Bytes), Max:subtree.Maximum, Min:subtree.Minimum})
+						out.PermittedDNSDomains = append(out.PermittedDNSDomains, GeneralSubtreeString{Data: string(subtree.Value.Bytes), Max: subtree.Maximum, Min: subtree.Minimum})
 					case 3:
-						out.PermittedX400Addresses = append(out.PermittedX400Addresses, GeneralSubtreeRaw{Data:subtree.Value, Max:subtree.Maximum, Min:subtree.Minimum})
+						out.PermittedX400Addresses = append(out.PermittedX400Addresses, GeneralSubtreeRaw{Data: subtree.Value, Max: subtree.Maximum, Min: subtree.Minimum})
 					case 4:
 						var rawdn pkix.RDNSequence
 						if _, err := asn1.Unmarshal(subtree.Value.Bytes, &rawdn); err != nil {
@@ -1211,42 +1211,42 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 						}
 						var dn pkix.Name
 						dn.FillFromRDNSequence(&rawdn)
-						out.PermittedDirectoryNames = append(out.PermittedDirectoryNames, GeneralSubtreeName{Data:dn, Max:subtree.Maximum, Min:subtree.Minimum})
+						out.PermittedDirectoryNames = append(out.PermittedDirectoryNames, GeneralSubtreeName{Data: dn, Max: subtree.Maximum, Min: subtree.Minimum})
 					case 5:
 						var ediName pkix.EDIPartyName
-			      _, err = asn1.Unmarshal(subtree.Value.Bytes, &ediName)
-			      if err != nil{
-			        return out, err
-			      }
-						out.PermittedEdiPartyNames = append(out.PermittedEdiPartyNames, GeneralSubtreeEdi{Data:ediName, Max:subtree.Maximum, Min:subtree.Minimum})
+						_, err = asn1.Unmarshal(subtree.Value.Bytes, &ediName)
+						if err != nil {
+							return out, err
+						}
+						out.PermittedEdiPartyNames = append(out.PermittedEdiPartyNames, GeneralSubtreeEdi{Data: ediName, Max: subtree.Maximum, Min: subtree.Minimum})
 					case 7:
 						switch len(subtree.Value.Bytes) {
 						case net.IPv4len * 2:
 							ip := net.IPNet{subtree.Value.Bytes[:net.IPv4len], subtree.Value.Bytes[net.IPv4len:]}
-							out.PermittedIPAddresses = append(out.PermittedIPAddresses, GeneralSubtreeIP{Data:ip, Max:subtree.Maximum, Min:subtree.Minimum})
+							out.PermittedIPAddresses = append(out.PermittedIPAddresses, GeneralSubtreeIP{Data: ip, Max: subtree.Maximum, Min: subtree.Minimum})
 						case net.IPv6len * 2:
 							ip := net.IPNet{subtree.Value.Bytes[:net.IPv6len], subtree.Value.Bytes[net.IPv6len:]}
-							out.PermittedIPAddresses = append(out.PermittedIPAddresses, GeneralSubtreeIP{Data:ip, Max:subtree.Maximum, Min:subtree.Minimum})
+							out.PermittedIPAddresses = append(out.PermittedIPAddresses, GeneralSubtreeIP{Data: ip, Max: subtree.Maximum, Min: subtree.Minimum})
 						default:
 							return out, errors.New("x509: certificate name constraint contained IP address range of length " + strconv.Itoa(len(subtree.Value.Bytes)))
 						}
 					case 8:
-						var id asn1.ObjectIdentifier 
-			      _, err = asn1.Unmarshal(subtree.Value.Bytes, &id)
-			      if err != nil{
-			        return out, err
-			      }
-			      out.PermittedRegisteredIDs = append(out.PermittedRegisteredIDs, GeneralSubtreeOid{Data:id, Max:subtree.Maximum, Min:subtree.Minimum})
+						var id asn1.ObjectIdentifier
+						_, err = asn1.Unmarshal(subtree.Value.Bytes, &id)
+						if err != nil {
+							return out, err
+						}
+						out.PermittedRegisteredIDs = append(out.PermittedRegisteredIDs, GeneralSubtreeOid{Data: id, Max: subtree.Maximum, Min: subtree.Minimum})
 					}
 				}
 				for _, subtree := range constraints.Excluded {
 					switch subtree.Value.Tag {
 					case 1:
-						out.ExcludedEmailDomains = append(out.ExcludedEmailDomains, GeneralSubtreeString{Data:string(subtree.Value.Bytes), Max:subtree.Maximum, Min:subtree.Minimum})
+						out.ExcludedEmailDomains = append(out.ExcludedEmailDomains, GeneralSubtreeString{Data: string(subtree.Value.Bytes), Max: subtree.Maximum, Min: subtree.Minimum})
 					case 2:
-						out.ExcludedDNSDomains = append(out.ExcludedDNSDomains, GeneralSubtreeString{Data:string(subtree.Value.Bytes), Max:subtree.Maximum, Min:subtree.Minimum})
+						out.ExcludedDNSDomains = append(out.ExcludedDNSDomains, GeneralSubtreeString{Data: string(subtree.Value.Bytes), Max: subtree.Maximum, Min: subtree.Minimum})
 					case 3:
-					out.ExcludedX400Addresses = append(out.ExcludedX400Addresses, GeneralSubtreeRaw{Data:subtree.Value, Max:subtree.Maximum, Min:subtree.Minimum})
+						out.ExcludedX400Addresses = append(out.ExcludedX400Addresses, GeneralSubtreeRaw{Data: subtree.Value, Max: subtree.Maximum, Min: subtree.Minimum})
 					case 4:
 						var rawdn pkix.RDNSequence
 						if _, err := asn1.Unmarshal(subtree.Value.Bytes, &rawdn); err != nil {
@@ -1254,32 +1254,32 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 						}
 						var dn pkix.Name
 						dn.FillFromRDNSequence(&rawdn)
-						out.ExcludedDirectoryNames = append(out.ExcludedDirectoryNames, GeneralSubtreeName{Data:dn, Max:subtree.Maximum, Min:subtree.Minimum})
+						out.ExcludedDirectoryNames = append(out.ExcludedDirectoryNames, GeneralSubtreeName{Data: dn, Max: subtree.Maximum, Min: subtree.Minimum})
 					case 5:
 						var ediName pkix.EDIPartyName
-			      _, err = asn1.Unmarshal(subtree.Value.Bytes, &ediName)
-			      if err != nil{
-			        return out, err
-			      }
-						out.ExcludedEdiPartyNames = append(out.ExcludedEdiPartyNames, GeneralSubtreeEdi{Data:ediName, Max:subtree.Maximum, Min:subtree.Minimum})
+						_, err = asn1.Unmarshal(subtree.Value.Bytes, &ediName)
+						if err != nil {
+							return out, err
+						}
+						out.ExcludedEdiPartyNames = append(out.ExcludedEdiPartyNames, GeneralSubtreeEdi{Data: ediName, Max: subtree.Maximum, Min: subtree.Minimum})
 					case 7:
 						switch len(subtree.Value.Bytes) {
 						case net.IPv4len * 2:
 							ip := net.IPNet{subtree.Value.Bytes[:net.IPv4len], subtree.Value.Bytes[net.IPv4len:]}
-							out.ExcludedIPAddresses = append(out.ExcludedIPAddresses, GeneralSubtreeIP{Data:ip, Max:subtree.Maximum, Min:subtree.Minimum})
+							out.ExcludedIPAddresses = append(out.ExcludedIPAddresses, GeneralSubtreeIP{Data: ip, Max: subtree.Maximum, Min: subtree.Minimum})
 						case net.IPv6len * 2:
 							ip := net.IPNet{subtree.Value.Bytes[:net.IPv6len], subtree.Value.Bytes[net.IPv6len:]}
-							out.ExcludedIPAddresses = append(out.ExcludedIPAddresses, GeneralSubtreeIP{Data:ip, Max:subtree.Maximum, Min:subtree.Minimum})
+							out.ExcludedIPAddresses = append(out.ExcludedIPAddresses, GeneralSubtreeIP{Data: ip, Max: subtree.Maximum, Min: subtree.Minimum})
 						default:
 							return out, errors.New("x509: certificate name constraint contained IP address range of length " + strconv.Itoa(len(subtree.Value.Bytes)))
 						}
 					case 8:
-						var id asn1.ObjectIdentifier 
-			      _, err = asn1.Unmarshal(subtree.Value.Bytes, &id)
-			      if err != nil{
-			        return out, err
-			      }
-			      out.ExcludedRegisteredIDs = append(out.ExcludedRegisteredIDs, GeneralSubtreeOid{Data:id, Max:subtree.Maximum, Min:subtree.Minimum})
+						var id asn1.ObjectIdentifier
+						_, err = asn1.Unmarshal(subtree.Value.Bytes, &id)
+						if err != nil {
+							return out, err
+						}
+						out.ExcludedRegisteredIDs = append(out.ExcludedRegisteredIDs, GeneralSubtreeOid{Data: id, Max: subtree.Maximum, Min: subtree.Minimum})
 					}
 				}
 				continue
@@ -1383,10 +1383,10 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 							if _, err = asn1.Unmarshal(qualifier.Qualifier.FullBytes, &un); err != nil {
 								return nil, err
 							}
-							if (len(un.ExplicitText.Bytes) != 0) {
+							if len(un.ExplicitText.Bytes) != 0 {
 								out.ExplicitTexts = append(out.ExplicitTexts, un.ExplicitText)
 							}
-							if (un.NoticeRef.Organization.Bytes != nil || un.NoticeRef.NoticeNumbers != nil) {
+							if un.NoticeRef.Organization.Bytes != nil || un.NoticeRef.NoticeNumbers != nil {
 								out.NoticeRefUsed = true
 							}
 						} else if !qualifier.PolicyQualifierId.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 2, 1}) {
