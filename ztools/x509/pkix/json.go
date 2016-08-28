@@ -175,6 +175,13 @@ func (o *OtherName) MarshalJSON() ([]byte, error) {
 	return json.Marshal(oName)
 }
 
+const (
+	asn1ClassUniversal       = 0
+	asn1ClassApplication     = 1
+	asn1ClassContextSpecific = 2
+	asn1ClassPrivate         = 3
+)
+
 func (o *OtherName) UnmarshalJSON(b []byte) (err error) {
 	var oName jsonOtherName
 
@@ -196,8 +203,9 @@ func (o *OtherName) UnmarshalJSON(b []byte) (err error) {
 	o.Typeid = oid
 
 	o.Value = asn1.RawValue{
-		Tag:        0,
-		Class:      asn1.ClassContextSpecific,
+		Tag: 0,
+		//TODO: change to asn1.ClassContextSpecific for next major release (i.e. 1.6)
+		Class:      asn1ClassContextSpecific,
 		IsCompound: true,
 		Bytes:      oName.Value,
 	}
