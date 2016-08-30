@@ -590,9 +590,10 @@ type Certificate struct {
 	RegisteredIDs  []asn1.ObjectIdentifier
 
 	// Certificate Policies values
-	NoticeRefUsed              bool
-	UnrecommendedQualifierUsed bool
-	ExplicitTexts              []asn1.RawValue
+	QualifierId                [][]asn1.ObjectIdentifier
+	ExplicitTexts              [][]asn1.RawValue
+	NoticeRefOrgnization       [][]asn1.RawValue
+	NoticeRefNumbers					 [][]NoticeNumber
 
 	// Name constraints
 	NameConstraintsCritical     bool // if true then the name constraints are marked critical.
@@ -635,6 +636,8 @@ type Certificate struct {
 	// CT
 	SignedCertificateTimestampList []*ct.SignedCertificateTimestamp
 }
+
+type NoticeNumber []int
 
 type GeneralSubtreeString struct {
 	Data string
@@ -1374,23 +1377,27 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 					return nil, err
 				}
 				out.PolicyIdentifiers = make([]asn1.ObjectIdentifier, len(policies))
+				out.QualifierId = make([][]asn1.ObjectIdentifier, len(policies))
+				out.ExplicitTexts = make([][]asn1.RawValue, len(policies))
+				out.NoticeRefOrgnization = make([][]asn1.RawValue, len(policies))
+				out.NoticeRefNumbers = make([][]NoticeNumber, len(policies))
 				for i, policy := range policies {
 					out.PolicyIdentifiers[i] = policy.Policy
 					// parse optional Qualifier for zlint
 					for _, qualifier := range policy.Qualifiers {
+						out.QualifierId[i] = append(out.QualifierId[i], qualifier.PolicyQualifierId)
 						if qualifier.PolicyQualifierId.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 2, 2}) {
 							var un userNotice
 							if _, err = asn1.Unmarshal(qualifier.Qualifier.FullBytes, &un); err != nil {
 								return nil, err
 							}
 							if len(un.ExplicitText.Bytes) != 0 {
-								out.ExplicitTexts = append(out.ExplicitTexts, un.ExplicitText)
+								out.ExplicitTexts[i] = append(out.ExplicitTexts[i], un.ExplicitText)
 							}
 							if un.NoticeRef.Organization.Bytes != nil || un.NoticeRef.NoticeNumbers != nil {
-								out.NoticeRefUsed = true
+								out.NoticeRefOrgnization[i] = append(out.NoticeRefOrgnization[i], un.NoticeRef.Organization)
+								out.NoticeRefNumbers[i] = append(out.NoticeRefNumbers[i], un.NoticeRef.NoticeNumbers)
 							}
-						} else if !qualifier.PolicyQualifierId.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 2, 1}) {
-							out.UnrecommendedQualifierUsed = true
 						}
 					}
 				}
