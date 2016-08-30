@@ -33,7 +33,7 @@ func (s *JSONSuite) SetUpTest(c *C) {
 	}
 
 	for _, test := range tests {
-		if test.Name()[0] == 46 {
+		if test.Name()[len(test.Name())-5:] != ".cert" {
 			continue
 		}
 		var err error
