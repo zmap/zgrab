@@ -139,61 +139,66 @@ func makeNetDialer(c *Config) func(string, string) (net.Conn, error) {
 	}
 }
 
+func makeTLSConfig(config *Config, urlHost string) *ztls.Config {
+	tlsConfig := new(ztls.Config)
+	tlsConfig.InsecureSkipVerify = true
+	tlsConfig.MinVersion = ztls.VersionSSL30
+	tlsConfig.MaxVersion = config.TLSVersion
+	tlsConfig.RootCAs = config.RootCAPool
+	tlsConfig.HeartbeatEnabled = true
+	tlsConfig.ClientDSAEnabled = true
+	if config.DHEOnly {
+		tlsConfig.CipherSuites = ztls.DHECiphers
+	}
+	if config.ECDHEOnly {
+		tlsConfig.CipherSuites = ztls.ECDHECiphers
+	}
+	if config.ExportsOnly {
+		tlsConfig.CipherSuites = ztls.RSA512ExportCiphers
+	}
+	if config.ExportsDHOnly {
+		tlsConfig.CipherSuites = ztls.DHEExportCiphers
+	}
+	if config.ChromeOnly {
+		tlsConfig.CipherSuites = ztls.ChromeCiphers
+	}
+	if config.ChromeNoDHE {
+		tlsConfig.CipherSuites = ztls.ChromeNoDHECiphers
+	}
+	if config.FirefoxOnly {
+		tlsConfig.CipherSuites = ztls.FirefoxCiphers
+	}
+	if config.FirefoxNoDHE {
+		tlsConfig.CipherSuites = ztls.FirefoxNoDHECiphers
+	}
+
+	if config.SafariOnly {
+		tlsConfig.CipherSuites = ztls.SafariCiphers
+		tlsConfig.ForceSuites = true
+	}
+	if config.SafariNoDHE {
+		tlsConfig.CipherSuites = ztls.SafariNoDHECiphers
+		tlsConfig.ForceSuites = true
+	}
+	if config.TLSExtendedRandom {
+		tlsConfig.ExtendedRandom = true
+	}
+	if config.GatherSessionTicket {
+		tlsConfig.ForceSessionTicketExt = true
+	}
+	if !config.NoSNI && urlHost != "" {
+		tlsConfig.ServerName = urlHost
+	}
+
+	return tlsConfig
+}
+
 func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, string) error {
 	g := func(urlHost, endpoint, httpHost string) (err error) {
 
 		var tlsConfig *ztls.Config
-		if config.TLS || config.HTTP.MaxRedirects > 0 {
-			tlsConfig = new(ztls.Config)
-			tlsConfig.InsecureSkipVerify = true
-			tlsConfig.MinVersion = ztls.VersionSSL30
-			tlsConfig.MaxVersion = config.TLSVersion
-			tlsConfig.RootCAs = config.RootCAPool
-			tlsConfig.HeartbeatEnabled = true
-			tlsConfig.ClientDSAEnabled = true
-			if config.DHEOnly {
-				tlsConfig.CipherSuites = ztls.DHECiphers
-			}
-			if config.ECDHEOnly {
-				tlsConfig.CipherSuites = ztls.ECDHECiphers
-			}
-			if config.ExportsOnly {
-				tlsConfig.CipherSuites = ztls.RSA512ExportCiphers
-			}
-			if config.ExportsDHOnly {
-				tlsConfig.CipherSuites = ztls.DHEExportCiphers
-			}
-			if config.ChromeOnly {
-				tlsConfig.CipherSuites = ztls.ChromeCiphers
-			}
-			if config.ChromeNoDHE {
-				tlsConfig.CipherSuites = ztls.ChromeNoDHECiphers
-			}
-			if config.FirefoxOnly {
-				tlsConfig.CipherSuites = ztls.FirefoxCiphers
-			}
-			if config.FirefoxNoDHE {
-				tlsConfig.CipherSuites = ztls.FirefoxNoDHECiphers
-			}
-
-			if config.SafariOnly {
-				tlsConfig.CipherSuites = ztls.SafariCiphers
-				tlsConfig.ForceSuites = true
-			}
-			if config.SafariNoDHE {
-				tlsConfig.CipherSuites = ztls.SafariNoDHECiphers
-				tlsConfig.ForceSuites = true
-			}
-			if config.TLSExtendedRandom {
-				tlsConfig.ExtendedRandom = true
-			}
-			if config.GatherSessionTicket {
-				tlsConfig.ForceSessionTicketExt = true
-			}
-			if !config.NoSNI && urlHost != "" {
-				tlsConfig.ServerName = urlHost
-			}
-
+		if config.TLS {
+			tlsConfig = makeTLSConfig(config, urlHost)
 		}
 
 		transport := &http.Transport{
@@ -221,6 +226,10 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 
 			if len(via) > config.HTTP.MaxRedirects {
 				return errors.New(fmt.Sprintf("stopped after %d redirects", config.HTTP.MaxRedirects))
+			}
+
+			if req.URL.Scheme == "https" && transport.TLSClientConfig == nil {
+				transport.TLSClientConfig = makeTLSConfig(config, req.URL.Host)
 			}
 
 			return nil
