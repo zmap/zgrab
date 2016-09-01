@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"testing"
+	"strings"
 
 	. "gopkg.in/check.v1"
 )
@@ -33,7 +34,7 @@ func (s *JSONSuite) SetUpTest(c *C) {
 	}
 
 	for _, test := range tests {
-		if test.Name()[len(test.Name())-5:] != ".cert" {
+		if !strings.HasSuffix(test.Name(), ".cert") {
 			continue
 		}
 		var err error
