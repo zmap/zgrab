@@ -1031,38 +1031,29 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 	for i, extension := range in.TBSCertificate.Extensions {
 		if extension.Id.Equal(oidExtensionCTPrecertificatePoison) == true {
 			extensions = append(extensions[:i], extensions[i+1:]...)
-
 			if flag {
 				break
 			}
-
 			flag = true
 		}
 		if extension.Id.Equal(oidExtensionSignedCertificateTimestampList) {
 			extensions = append(extensions[:i], extensions[i+1:]...)
-
 			if flag {
 				break
 			}
-
 			flag = true
-
 		}
 	}
 
 	tbs.Extensions = extensions
 
-	var err error
 	tbsbytes, err := asn1.Marshal(tbs)
-
 	if err != nil {
 		return nil, err
 	}
-
 	if tbsbytes == nil {
 		return nil, asn1.SyntaxError{Msg: "Trailing data"}
 	}
-
 	out.FingerprintNoCT = SHA256Fingerprint(tbsbytes[:])
 
 	// Hash both SPKI and Subject to create a fingerprint that we can use to describe a CA
