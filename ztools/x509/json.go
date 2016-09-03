@@ -204,6 +204,7 @@ type jsonCertificate struct {
 	FingerprintMD5            CertificateFingerprint       `json:"fingerprint_md5"`
 	FingerprintSHA1           CertificateFingerprint       `json:"fingerprint_sha1"`
 	FingerprintSHA256         CertificateFingerprint       `json:"fingerprint_sha256"`
+	FingerprintNoPoison       CertificateFingerprint       `json:"fingerpring_nopoison"`
 	SPKISubjectFingerprint    CertificateFingerprint       `json:"spki_subject_fingerprint"`
 	TBSCertificateFingerprint CertificateFingerprint       `json:"tbs_fingerprint"`
 	ValidationLevel           CertValidationLevel          `json:"validation_level"`
@@ -260,20 +261,20 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 			jc.Names = append(jc.Names, name)
 		}
 	}
-	
+
 	for _, name := range c.URIs {
 		if govalidator.IsURL(name) {
 			jc.Names = append(jc.Names, name)
 		}
 	}
-	
+
 	for _, name := range c.IPAddresses {
 		str := name.String()
 		if govalidator.IsURL(str) {
 			jc.Names = append(jc.Names, str)
 		}
 	}
-	
+
 	jc.Names = purgeNameDuplicates(jc.Names)
 
 	// Pull out the key
@@ -332,6 +333,7 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.FingerprintMD5 = c.FingerprintMD5
 	jc.FingerprintSHA1 = c.FingerprintSHA1
 	jc.FingerprintSHA256 = c.FingerprintSHA256
+	jc.FingerprintNoPoison = c.FingerprintNoPoison
 	jc.SPKISubjectFingerprint = c.SPKISubjectFingerprint
 	jc.TBSCertificateFingerprint = c.TBSCertificateFingerprint
 	jc.ValidationLevel = c.ValidationLevel
@@ -339,16 +341,16 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(jc)
 }
 
-func purgeNameDuplicates(names []string) (out []string){
+func purgeNameDuplicates(names []string) (out []string) {
 	hashset := make(map[string]bool, len(names))
-	for _, name := range names{
-		if _, inc := hashset[name]; !inc{
+	for _, name := range names {
+		if _, inc := hashset[name]; !inc {
 			hashset[name] = true
 		}
 	}
-	
+
 	out = make([]string, 0, len(hashset))
-	for key, _ := range hashset{
+	for key, _ := range hashset {
 		out = append(out, key)
 	}
 	return
