@@ -204,7 +204,7 @@ type jsonCertificate struct {
 	FingerprintMD5            CertificateFingerprint       `json:"fingerprint_md5"`
 	FingerprintSHA1           CertificateFingerprint       `json:"fingerprint_sha1"`
 	FingerprintSHA256         CertificateFingerprint       `json:"fingerprint_sha256"`
-	FingerprintNoPoison       CertificateFingerprint       `json:"fingerpring_nopoison"`
+	FingerprintNoPoison       CertificateFingerprint       `json:"fingerprint_nopoison"`
 	SPKISubjectFingerprint    CertificateFingerprint       `json:"spki_subject_fingerprint"`
 	TBSCertificateFingerprint CertificateFingerprint       `json:"tbs_fingerprint"`
 	ValidationLevel           CertValidationLevel          `json:"validation_level"`
