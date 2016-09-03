@@ -220,7 +220,6 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.Issuer = c.Issuer
 	jc.IssuerDN = c.Issuer.String()
 
-	is
 	jc.Validity.NotBefore = c.NotBefore
 	jc.Validity.NotAfter = c.NotAfter
 	jc.Validity.ValidityPeriod = c.ValidityPeriod
