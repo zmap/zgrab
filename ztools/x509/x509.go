@@ -608,10 +608,10 @@ type Certificate struct {
 	ValidationLevel   CertValidationLevel
 
 	// Fingerprints
-	FingerprintMD5      CertificateFingerprint
-	FingerprintSHA1     CertificateFingerprint
-	FingerprintSHA256   CertificateFingerprint
-	FingerprintNoPoison CertificateFingerprint
+	FingerprintMD5    CertificateFingerprint
+	FingerprintSHA1   CertificateFingerprint
+	FingerprintSHA256 CertificateFingerprint
+	FingerprintNoCT   CertificateFingerprint
 
 	// SPKI
 	SPKIFingerprint           CertificateFingerprint
@@ -1023,11 +1023,27 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 	tbs := in.TBSCertificate
 	extensions := in.TBSCertificate.Extensions
 
+	// remove the CT extensions
+	flag := false
 	for i, extension := range in.TBSCertificate.Extensions {
-		if extension.Id.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11129, 2, 4, 3}) == true {
-			// remove the poison extension
+		if extension.Id.Equal(oidExtensionCTPrecertificatePoison) == true {
 			extensions = append(extensions[:i], extensions[i+1:]...)
-			break
+
+			if flag {
+				break
+			}
+
+			flag = true
+		}
+		if extension.Id.Equal(oidExtensionSignedCertificateTimestampList) {
+			extensions = append(extensions[:i], extensions[i+1:]...)
+
+			if flag {
+				break
+			}
+
+			flag = true
+
 		}
 	}
 
@@ -1044,7 +1060,7 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 		return nil, asn1.SyntaxError{Msg: "Trailing data"}
 	}
 
-	out.FingerprintNoPoison = SHA256Fingerprint(tbsbytes[:])
+	out.FingerprintNoCT = SHA256Fingerprint(tbsbytes[:])
 
 	// Hash both SPKI and Subject to create a fingerprint that we can use to describe a CA
 	hasher := sha256.New()
