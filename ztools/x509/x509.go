@@ -1023,6 +1023,9 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 	tbs := in.TBSCertificate
 	extensions := in.TBSCertificate.Extensions
 
+	// Blow away the raw data since it also includes CT data
+	tbs.Raw = nil
+
 	// remove the CT extensions
 	flag := false
 	for i, extension := range in.TBSCertificate.Extensions {
