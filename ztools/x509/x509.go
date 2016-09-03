@@ -608,9 +608,11 @@ type Certificate struct {
 	ValidationLevel   CertValidationLevel
 
 	// Fingerprints
-	FingerprintMD5    CertificateFingerprint
-	FingerprintSHA1   CertificateFingerprint
-	FingerprintSHA256 CertificateFingerprint
+	FingerprintMD5      CertificateFingerprint
+	FingerprintSHA1     CertificateFingerprint
+	FingerprintSHA256   CertificateFingerprint
+	FingerprintNoPoison CertificateFingerprint
+
 	// SPKI
 	SPKIFingerprint           CertificateFingerprint
 	SPKISubjectFingerprint    CertificateFingerprint
@@ -956,7 +958,7 @@ func parseSANExtension(value []byte) (otherNames []pkix.OtherName, dnsNames, ema
 		case 0:
 			var oName pkix.OtherName
 			_, err = asn1.UnmarshalWithParams(v.FullBytes, &oName, "tag:0")
-			if err != nil{
+			if err != nil {
 				return
 			}
 			otherNames = append(otherNames, oName)
@@ -967,7 +969,7 @@ func parseSANExtension(value []byte) (otherNames []pkix.OtherName, dnsNames, ema
 		case 4:
 			var rdn pkix.RDNSequence
 			_, err = asn1.Unmarshal(v.Bytes, &rdn)
-			if err != nil{
+			if err != nil {
 				return
 			}
 			var dir pkix.Name
@@ -976,7 +978,7 @@ func parseSANExtension(value []byte) (otherNames []pkix.OtherName, dnsNames, ema
 		case 5:
 			var ediName pkix.EDIPartyName
 			_, err = asn1.UnmarshalWithParams(v.FullBytes, &ediName, "tag:5")
-			if err != nil{
+			if err != nil {
 				return
 			}
 			ediPartyNames = append(ediPartyNames, ediName)
@@ -991,9 +993,9 @@ func parseSANExtension(value []byte) (otherNames []pkix.OtherName, dnsNames, ema
 				return
 			}
 		case 8:
-			var id asn1.ObjectIdentifier 
+			var id asn1.ObjectIdentifier
 			_, err = asn1.UnmarshalWithParams(v.FullBytes, &id, "tag:8")
-			if err != nil{
+			if err != nil {
 				return
 			}
 			registeredIDs = append(registeredIDs, id)
@@ -1017,6 +1019,33 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 	out.FingerprintSHA256 = SHA256Fingerprint(in.Raw)
 	out.SPKIFingerprint = SHA256Fingerprint(in.TBSCertificate.PublicKey.Raw)
 	out.TBSCertificateFingerprint = SHA256Fingerprint(in.TBSCertificate.Raw)
+
+	tbs := in.TBSCertificate
+	extensions := in.TBSCertificate.Extensions
+
+	for i, extension := range in.TBSCertificate.Extensions {
+		if extension.Id.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11129, 2, 4, 3}) == true {
+			// remove the poison extension
+			extensions = append(extensions[:i], extensions[i+1:]...)
+			break
+		}
+	}
+
+	tbs.Extensions = extensions
+
+	var err error
+	tbsbytes, err := asn1.Marshal(tbs)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if tbsbytes == nil {
+		return nil, asn1.SyntaxError{Msg: "Trailing data"}
+	}
+
+	out.FingerprintNoPoison = SHA256Fingerprint(tbsbytes[:])
+
 	// Hash both SPKI and Subject to create a fingerprint that we can use to describe a CA
 	hasher := sha256.New()
 	hasher.Write(in.TBSCertificate.PublicKey.Raw)
@@ -1031,7 +1060,6 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 
 	out.PublicKeyAlgorithm =
 		getPublicKeyAlgorithmFromOID(in.TBSCertificate.PublicKey.Algorithm.Algorithm)
-	var err error
 	out.PublicKey, err = parsePublicKey(out.PublicKeyAlgorithm, &in.TBSCertificate.PublicKey)
 	if err != nil {
 		return nil, err
