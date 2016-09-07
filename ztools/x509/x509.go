@@ -589,6 +589,16 @@ type Certificate struct {
 	IPAddresses    []net.IP
 	RegisteredIDs  []asn1.ObjectIdentifier
 
+	// Issuer Alternative Name values
+	IANOtherNames     []pkix.OtherName
+	IANDNSNames       []string
+	IANEmailAddresses []string
+	IANDirectoryNames []pkix.Name
+	IANEDIPartyNames  []pkix.EDIPartyName
+	IANURIs           []string
+	IANIPAddresses    []net.IP
+	IANRegisteredIDs  []asn1.ObjectIdentifier
+
 	// Certificate Policies values
 	QualifierId          [][]asn1.ObjectIdentifier
 	ExplicitTexts        [][]asn1.RawValue
@@ -986,7 +996,7 @@ func parsePublicKey(algo PublicKeyAlgorithm, keyData *publicKeyInfo) (interface{
 	}
 }
 
-func parseSANExtension(value []byte) (otherNames []pkix.OtherName, dnsNames, emailAddresses, URIs []string, directoryNames []pkix.Name, ediPartyNames []pkix.EDIPartyName, ipAddresses []net.IP, registeredIDs []asn1.ObjectIdentifier, err error) {
+func parseGeneralNames(value []byte) (otherNames []pkix.OtherName, dnsNames, emailAddresses, URIs []string, directoryNames []pkix.Name, ediPartyNames []pkix.EDIPartyName, ipAddresses []net.IP, registeredIDs []asn1.ObjectIdentifier, err error) {
 	// RFC 5280, 4.2.1.6
 
 	// SubjectAltName ::= GeneralNames
@@ -1161,7 +1171,7 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 					continue
 				}
 			case 17:
-				out.OtherNames, out.DNSNames, out.EmailAddresses, out.URIs, out.DirectoryNames, out.EDIPartyNames, out.IPAddresses, out.RegisteredIDs, err = parseSANExtension(e.Value)
+				out.OtherNames, out.DNSNames, out.EmailAddresses, out.URIs, out.DirectoryNames, out.EDIPartyNames, out.IPAddresses, out.RegisteredIDs, err = parseGeneralNames(e.Value)
 				if err != nil {
 					return nil, err
 				}
@@ -1171,6 +1181,15 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				}
 				// If we didn't parse any of the names then we
 				// fall through to the critical check below.
+			case 18:
+				out.IANOtherNames, out.IANDNSNames, out.IANEmailAddresses, out.IANURIs, out.IANDirectoryNames, out.IANEDIPartyNames, out.IANIPAddresses, out.IANRegisteredIDs, err = parseGeneralNames(e.Value)
+				if err != nil {
+					return nil, err
+				}
+
+				if len(out.IANDNSNames) > 0 || len(out.IANEmailAddresses) > 0 || len(out.IANIPAddresses) > 0 {
+					continue
+				}
 			case 30:
 				// RFC 5280, 4.2.1.10
 
@@ -1516,6 +1535,7 @@ var (
 	oidExtensionAuthorityKeyId                 = []int{2, 5, 29, 35}
 	oidExtensionBasicConstraints               = []int{2, 5, 29, 19}
 	oidExtensionSubjectAltName                 = []int{2, 5, 29, 17}
+	oidExtensionIssuerAltName                  = []int{2, 5, 29, 18}
 	oidExtensionCertificatePolicies            = []int{2, 5, 29, 32}
 	oidExtensionNameConstraints                = []int{2, 5, 29, 30}
 	oidExtensionCRLDistributionPoints          = []int{2, 5, 29, 31}
@@ -2318,7 +2338,7 @@ func parseCertificateRequest(in *certificateRequest) (*CertificateRequest, error
 		if len(e.Type) == 4 && e.Type[0] == 2 && e.Type[1] == 5 && e.Type[2] == 29 {
 			switch e.Type[3] {
 			case 17:
-				_, out.DNSNames, out.EmailAddresses, _, _, _, out.IPAddresses, _, err = parseSANExtension(value)
+				_, out.DNSNames, out.EmailAddresses, _, _, _, out.IPAddresses, _, err = parseGeneralNames(value)
 				if err != nil {
 					return nil, err
 				}

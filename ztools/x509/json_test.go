@@ -9,8 +9,8 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"testing"
 	"strings"
+	"testing"
 
 	. "gopkg.in/check.v1"
 )
