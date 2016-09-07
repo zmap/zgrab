@@ -1042,21 +1042,21 @@ const csrBase64 = "MIIC4zCCAcsCAQAwRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3Rhd
 
 const sanManyOtherName = "MEmgEAYIKwYBBAHZWy6gBAICAc2CCHRlc3QuZ292oA8GCCsGAQQB2VsuoAMCASqCB2dvdi5nb3agEQYIKwYBBAHZWy6gBQIDAXUA"
 
-func TestParseSANExtensionOtherName(t *testing.T) {
+func TestParseGeneralNamesOtherName(t *testing.T) {
 	sanMultipleOther := fromBase64(sanManyOtherName)
-	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseSANExtension(sanMultipleOther)
+	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseGeneralNames(sanMultipleOther)
 
 	if err != nil {
-		t.Errorf("parseSANExtension returned error %v", err)
+		t.Errorf("parseGeneralNames returned error %v", err)
 	}
 	if emailAddresses != nil || directoryNames != nil || URIs != nil || ediPartyNames != nil || ipAddresses != nil || registeredIDs != nil {
-		t.Errorf("parseSANExtension returned unexpected name type from sanManyOtherName")
+		t.Errorf("parseGeneralNames returned unexpected name type from sanManyOtherName")
 	}
 	if len(dnsNames) != 2 || dnsNames[0] != "test.gov" || dnsNames[1] != "gov.gov" {
-		t.Errorf("parseSANExtension returned unexpected dnsNames from sanManyOtherName: %v", dnsNames)
+		t.Errorf("parseGeneralNames returned unexpected dnsNames from sanManyOtherName: %v", dnsNames)
 	}
 	if len(otherNames) != 3 {
-		t.Errorf("parseSANExtension returned unexpected # of otherName in sanManyOtherName: %v (expected 3)", len(otherNames))
+		t.Errorf("parseGeneralNames returned unexpected # of otherName in sanManyOtherName: %v (expected 3)", len(otherNames))
 	}
 	var otherInts [3]int
 	var expectedInts [3]int = [3]int{461, 42, 95488}
@@ -1079,21 +1079,21 @@ func TestParseSANExtensionOtherName(t *testing.T) {
 
 const sanManyDirectoryName = "MIHtpBwwGjEYMBYGA1UEChMPRXh0cmVtZSBEaXNjb3JkgggqLmdvdi51c6SBnDCBmTELMAkGA1UEBhMCVVMxCzAJBgNVBAgTAkZMMRQwEgYDVQQHEwtUYWxsYWhhc3NlZTEcMBoGA1UECRMTMzIxMCBIb2xseSBNaWxsIFJ1bjEOMAwGA1UEERMFMzAwNjIxGDAWBgNVBAoTD0V4dHJlbWUgRGlzY29yZDEOMAwGA1UECxMFQ2hhb3MxDzANBgNVBAMTBmdvdi51c4IGZ292LnVzpBwwGjEYMBYGA1UEChMPRXh0cmVtZSBEaXNjb3Jk"
 
-func TestParseSANExtensionDirectoryName(t *testing.T) {
+func TestParseGeneralNamesDirectoryName(t *testing.T) {
 	sanMultipleDir := fromBase64(sanManyDirectoryName)
-	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseSANExtension(sanMultipleDir)
+	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseGeneralNames(sanMultipleDir)
 
 	if err != nil {
-		t.Errorf("parseSANExtension returned error %v", err)
+		t.Errorf("parseGeneralNames returned error %v", err)
 	}
 	if emailAddresses != nil || otherNames != nil || URIs != nil || ediPartyNames != nil || ipAddresses != nil || registeredIDs != nil {
-		t.Errorf("parseSANExtension returned unexpected name type from sanManyDirectoryName")
+		t.Errorf("parseGeneralNames returned unexpected name type from sanManyDirectoryName")
 	}
 	if len(dnsNames) != 2 || dnsNames[0] != "*.gov.us" || dnsNames[1] != "gov.us" {
-		t.Errorf("parseSANExtension returned unexpected dnsNames from sanManyDirectoryName: %v", dnsNames)
+		t.Errorf("parseGeneralNames returned unexpected dnsNames from sanManyDirectoryName: %v", dnsNames)
 	}
 	if len(directoryNames) != 3 {
-		t.Errorf("parseSANExtension returned unexpected # of directoryName in sanManyDirectoryName: %v (expected 3)", len(directoryNames))
+		t.Errorf("parseGeneralNames returned unexpected # of directoryName in sanManyDirectoryName: %v (expected 3)", len(directoryNames))
 	}
 
 	shortName := pkix.Name{Organization: []string{"Extreme Discord"}}
@@ -1121,21 +1121,21 @@ func TestParseSANExtensionDirectoryName(t *testing.T) {
 
 const sanManyURI = "MF6GGGh0dHA6Ly9nb3YudXMvaW5kZXguaHRtbIIIKi5nb3YudXOGE2h0dHA6Ly9nb3YudXMvaG9tZS+CBmdvdi51c4YbaHR0cDovL2dvdi51cy9ob21lL2NhcGl0b2wv"
 
-func TestParseSANExtensionUniformResourceIdentifier(t *testing.T) {
+func TestParseGeneralNamesUniformResourceIdentifier(t *testing.T) {
 	sanMultipleURI := fromBase64(sanManyURI)
-	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseSANExtension(sanMultipleURI)
+	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseGeneralNames(sanMultipleURI)
 
 	if err != nil {
-		t.Errorf("parseSANExtension returned error %v", err)
+		t.Errorf("parseGeneralNames returned error %v", err)
 	}
 	if emailAddresses != nil || otherNames != nil || directoryNames != nil || ediPartyNames != nil || ipAddresses != nil || registeredIDs != nil {
-		t.Errorf("parseSANExtension returned unexpected name type from sanManyURI")
+		t.Errorf("parseGeneralNames returned unexpected name type from sanManyURI")
 	}
 	if len(dnsNames) != 2 || dnsNames[0] != "*.gov.us" || dnsNames[1] != "gov.us" {
-		t.Errorf("parseSANExtension returned unexpected dnsNames from sanManyURI: %v", dnsNames)
+		t.Errorf("parseGeneralNames returned unexpected dnsNames from sanManyURI: %v", dnsNames)
 	}
 	if len(URIs) != 3 {
-		t.Errorf("parseSANExtension returned unexpected # of uniformResourceIdentifier in sanManyURI: %v (expected 3)", len(URIs))
+		t.Errorf("parseGeneralNames returned unexpected # of uniformResourceIdentifier in sanManyURI: %v (expected 3)", len(URIs))
 	}
 
 	var expectedNames [3]string = [3]string{"http://gov.us/index.html", "http://gov.us/home/", "http://gov.us/home/capitol/"}
@@ -1148,21 +1148,21 @@ func TestParseSANExtensionUniformResourceIdentifier(t *testing.T) {
 
 const sanManyRegisteredID = "MDGICCsGAQUFBw0Bggh0ZXN0LmdvdogIKwYBBAHZWyqCB2dvdi5nb3aICCsGAQUFBw0D"
 
-func TestParseSANExtensionRegisteredID(t *testing.T) {
+func TestParseGeneralNamesRegisteredID(t *testing.T) {
 	sanMultipleRID := fromBase64(sanManyRegisteredID)
-	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseSANExtension(sanMultipleRID)
+	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseGeneralNames(sanMultipleRID)
 
 	if err != nil {
-		t.Errorf("parseSANExtension returned error %v", err)
+		t.Errorf("parseGeneralNames returned error %v", err)
 	}
 	if emailAddresses != nil || otherNames != nil || directoryNames != nil || ediPartyNames != nil || ipAddresses != nil || URIs != nil {
-		t.Errorf("parseSANExtension returned unexpected name type from sanManyRegisteredID")
+		t.Errorf("parseGeneralNames returned unexpected name type from sanManyRegisteredID")
 	}
 	if len(dnsNames) != 2 || dnsNames[0] != "test.gov" || dnsNames[1] != "gov.gov" {
-		t.Errorf("parseSANExtension returned unexpected dnsNames from sanManyRegisteredID: %v", dnsNames)
+		t.Errorf("parseGeneralNames returned unexpected dnsNames from sanManyRegisteredID: %v", dnsNames)
 	}
 	if len(registeredIDs) != 3 {
-		t.Errorf("parseSANExtension returned unexpected # of registeredIDs in sanManyRegisteredID: %v (expected 3)", len(registeredIDs))
+		t.Errorf("parseGeneralNames returned unexpected # of registeredIDs in sanManyRegisteredID: %v (expected 3)", len(registeredIDs))
 	}
 
 	var expectedNames [3]asn1.ObjectIdentifier = [3]asn1.ObjectIdentifier{asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 13, 1}, asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11483, 42}, asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 13, 3}}
@@ -1175,24 +1175,24 @@ func TestParseSANExtensionRegisteredID(t *testing.T) {
 
 const sanManyEDI = "MIGjpRigBwwFRWFydGihDQwLVW5kZXJncm91bmSCCHRlc3QuZ292pQ6hDBMKZ292ZXJubWVudKUNoQsMCXNvdmVyZWlnboIHZ292LmdvdqUjoAoTCHVuaXZlcnNloRUME1N1cHJlbWUgTGVnaXNsYXR1cmWBDWFkbWluQGdvdi5nb3alIaAKEwh1bml2ZXJzZaETExFTdXByZW1lIEV4ZWN1dGl2ZQ=="
 
-func TestParseSANExtensionEDIPartyName(t *testing.T) {
+func TestParseGeneralNamesEDIPartyName(t *testing.T) {
 	sanMultipleEDI := fromBase64(sanManyEDI)
-	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseSANExtension(sanMultipleEDI)
+	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseGeneralNames(sanMultipleEDI)
 
 	if err != nil {
-		t.Errorf("parseSANExtension returned error %v", err)
+		t.Errorf("parseGeneralNames returned error %v", err)
 	}
 	if registeredIDs != nil || otherNames != nil || directoryNames != nil || ipAddresses != nil || URIs != nil {
-		t.Errorf("parseSANExtension returned unexpected name type from sanManyEDI")
+		t.Errorf("parseGeneralNames returned unexpected name type from sanManyEDI")
 	}
 	if len(dnsNames) != 2 || dnsNames[0] != "test.gov" || dnsNames[1] != "gov.gov" {
-		t.Errorf("parseSANExtension returned unexpected dnsNames from sanManyEDI: %v (expected 2)", dnsNames)
+		t.Errorf("parseGeneralNames returned unexpected dnsNames from sanManyEDI: %v (expected 2)", dnsNames)
 	}
 	if len(emailAddresses) != 1 || emailAddresses[0] != "admin@gov.gov" {
-		t.Errorf("parseSANExtension returned unexpected rfc822Names from sanManyEDI: %v", emailAddresses)
+		t.Errorf("parseGeneralNames returned unexpected rfc822Names from sanManyEDI: %v", emailAddresses)
 	}
 	if len(ediPartyNames) != 5 {
-		t.Errorf("parseSANExtension returned unexpected # of ediPartyNames in sanManyEDI: %v (expected 5)", len(ediPartyNames))
+		t.Errorf("parseGeneralNames returned unexpected # of ediPartyNames in sanManyEDI: %v (expected 5)", len(ediPartyNames))
 	}
 
 	var expectedNames [5]pkix.EDIPartyName
@@ -1211,30 +1211,30 @@ func TestParseSANExtensionEDIPartyName(t *testing.T) {
 
 const sanAllSuported = "MIGXiAkrBgEEAdlbgzqkHDAaMRgwFgYDVQQKEw9FeHRyZW1lIERpc2NvcmSgEQYIKwYBBAHZWy6gBQIDCCoJpR6gDxMNTW90aGVyIE5hdHVyZaELEwlwYXJ0eU5hbWWCCCouZ292LnVzggZnb3YudXOBDGFkbWluQGdvdi51c4YTaHR0cHM6Ly9nb3YudXMvaG9tZYcEwMAAAQ=="
 
-func TestParseSANExtensionAll(t *testing.T) {
+func TestParseGeneralNamesAll(t *testing.T) {
 	sanAllNames := fromBase64(sanAllSuported)
-	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseSANExtension(sanAllNames)
+	otherNames, dnsNames, emailAddresses, URIs, directoryNames, ediPartyNames, ipAddresses, registeredIDs, err := parseGeneralNames(sanAllNames)
 
 	if err != nil {
-		t.Errorf("parseSANExtension returned error %v", err)
+		t.Errorf("parseGeneralNames returned error %v", err)
 	}
 	if len(dnsNames) != 2 || dnsNames[0] != "*.gov.us" || dnsNames[1] != "gov.us" {
-		t.Errorf("parseSANExtension returned unexpected dnsNames from sanAllSuported: %v (expected 2)", dnsNames)
+		t.Errorf("parseGeneralNames returned unexpected dnsNames from sanAllSuported: %v (expected 2)", dnsNames)
 	}
 	if len(emailAddresses) != 1 || emailAddresses[0] != "admin@gov.us" {
-		t.Errorf("parseSANExtension returned unexpected rfc822Names from sanAllSuported: %v", emailAddresses)
+		t.Errorf("parseGeneralNames returned unexpected rfc822Names from sanAllSuported: %v", emailAddresses)
 	}
 	if len(ediPartyNames) != 1 || !reflect.DeepEqual(ediPartyNames[0], pkix.EDIPartyName{NameAssigner: "Mother Nature", PartyName: "partyName"}) {
-		t.Errorf("parseSANExtension returned unexpected ediPartyNames in sanAllSuported: %v", ediPartyNames)
+		t.Errorf("parseGeneralNames returned unexpected ediPartyNames in sanAllSuported: %v", ediPartyNames)
 	}
 	if len(URIs) != 1 || URIs[0] != "https://gov.us/home" {
-		t.Errorf("parseSANExtension returned unexpected uniformResourceIdentifiers from sanAllSuported: %v", URIs)
+		t.Errorf("parseGeneralNames returned unexpected uniformResourceIdentifiers from sanAllSuported: %v", URIs)
 	}
 	if len(ipAddresses) != 1 || !ipAddresses[0].Equal(net.IPv4(byte(192), byte(192), byte(0), byte(1))) {
-		t.Errorf("parseSANExtension returned unexpected ipAddresses from sanAllSuported: %v", ipAddresses)
+		t.Errorf("parseGeneralNames returned unexpected ipAddresses from sanAllSuported: %v", ipAddresses)
 	}
 	if len(registeredIDs) != 1 || !registeredIDs[0].Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11483, 442}) {
-		t.Errorf("parseSANExtension returned unexpected registeredIDs from sanAllSuported: %v", registeredIDs)
+		t.Errorf("parseGeneralNames returned unexpected registeredIDs from sanAllSuported: %v", registeredIDs)
 	}
 
 	shortName := pkix.Name{Organization: []string{"Extreme Discord"}}
@@ -1242,7 +1242,7 @@ func TestParseSANExtensionAll(t *testing.T) {
 	orgName.Value = "Extreme Discord"
 	shortName.Names = append(shortName.Names, orgName)
 	if len(directoryNames) != 1 || !reflect.DeepEqual(directoryNames[0], shortName) {
-		t.Errorf("parseSANExtension returned unexpected directoryNames from sanAllSuported: %v", directoryNames)
+		t.Errorf("parseGeneralNames returned unexpected directoryNames from sanAllSuported: %v", directoryNames)
 	}
 
 	var oName int
@@ -1254,6 +1254,6 @@ func TestParseSANExtensionAll(t *testing.T) {
 		t.Errorf("unexpected extra bytes in otherName %v", rest)
 	}
 	if len(otherNames) != 1 || oName != 535049 {
-		t.Errorf("parseSANExtension returned unexpected otherNames from sanAllSuported: %v", otherNames)
+		t.Errorf("parseGeneralNames returned unexpected otherNames from sanAllSuported: %v", otherNames)
 	}
 }

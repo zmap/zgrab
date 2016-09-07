@@ -20,6 +20,7 @@ var (
 	oidExtKeyUsage           = asn1.ObjectIdentifier{2, 5, 29, 15}
 	oidExtBasicConstraints   = asn1.ObjectIdentifier{2, 5, 29, 19}
 	oidExtSubjectAltName     = asn1.ObjectIdentifier{2, 5, 29, 17}
+	oidExtIssuerAltName      = asn1.ObjectIdentifier{2, 5, 29, 18}
 	oidExtNameConstraints    = asn1.ObjectIdentifier{2, 5, 29, 30}
 	oidCRLDistributionPoints = asn1.ObjectIdentifier{2, 5, 29, 31}
 	oidExtAuthKeyId          = asn1.ObjectIdentifier{2, 5, 29, 35}
@@ -37,7 +38,8 @@ type encodedUnknownExtensions []encodedUnknownExtension
 type CertificateExtensions struct {
 	KeyUsage                       KeyUsage                         `json:"key_usage,omitempty"`
 	BasicConstraints               *BasicConstraints                `json:"basic_constraints,omitempty"`
-	SubjectAltName                 *SubjectAltName                  `json:"subject_alt_name,omitempty"`
+	SubjectAltName                 *GeneralNames                    `json:"subject_alt_name,omitempty"`
+	IssuerAltName                  *GeneralNames                    `json:"issuer_alt_name,omitempty"`
 	NameConstraints                *NameConstraints                 `json:"name_constraints,omitempty"`
 	CRLDistributionPoints          CRLDistributionPoints            `json:"crl_distribution_points,omitempty"`
 	AuthKeyID                      SubjAuthKeyId                    `json:"authority_key_id,omitempty"`
@@ -64,7 +66,7 @@ type BasicConstraints struct {
 	MaxPathLen *int `json:"max_path_len,omitempty"`
 }
 
-type SubjectAltName struct {
+type GeneralNames struct {
 	DirectoryNames []pkix.Name
 	DNSNames       []string
 	EDIPartyNames  []pkix.EDIPartyName
@@ -75,7 +77,7 @@ type SubjectAltName struct {
 	URIs           []string
 }
 
-type jsonSubjectAltName struct {
+type jsonGeneralNames struct {
 	DirectoryNames []pkix.Name         `json:"directory_names,omitempty"`
 	DNSNames       []string            `json:"dns_names,omitempty"`
 	EDIPartyNames  []pkix.EDIPartyName `json:"edi_party_names,omitempty"`
@@ -86,38 +88,38 @@ type jsonSubjectAltName struct {
 	URIs           []string            `json:"uniform_resource_identifiers,omitempty"`
 }
 
-func (san *SubjectAltName) MarshalJSON() ([]byte, error) {
-	jsan := jsonSubjectAltName{
-		DirectoryNames: san.DirectoryNames,
-		DNSNames:       san.DNSNames,
-		EDIPartyNames:  san.EDIPartyNames,
-		EmailAddresses: san.EmailAddresses,
-		IPAddresses:    san.IPAddresses,
-		OtherNames:     san.OtherNames,
-		RegisteredIDs:  make([]string, 0, len(san.RegisteredIDs)),
-		URIs:           san.URIs,
+func (gn *GeneralNames) MarshalJSON() ([]byte, error) {
+	jsan := jsonGeneralNames{
+		DirectoryNames: gn.DirectoryNames,
+		DNSNames:       gn.DNSNames,
+		EDIPartyNames:  gn.EDIPartyNames,
+		EmailAddresses: gn.EmailAddresses,
+		IPAddresses:    gn.IPAddresses,
+		OtherNames:     gn.OtherNames,
+		RegisteredIDs:  make([]string, 0, len(gn.RegisteredIDs)),
+		URIs:           gn.URIs,
 	}
-	for _, id := range san.RegisteredIDs {
+	for _, id := range gn.RegisteredIDs {
 		jsan.RegisteredIDs = append(jsan.RegisteredIDs, id.String())
 	}
 	return json.Marshal(jsan)
 }
 
-func (san *SubjectAltName) UnmarshalJSON(b []byte) error {
-	var jsan jsonSubjectAltName
+func (gn *GeneralNames) UnmarshalJSON(b []byte) error {
+	var jsan jsonGeneralNames
 	err := json.Unmarshal(b, &jsan)
 	if err != nil {
 		return err
 	}
 
-	san.DirectoryNames = jsan.DirectoryNames
-	san.DNSNames = jsan.DNSNames
-	san.EDIPartyNames = jsan.EDIPartyNames
-	san.EmailAddresses = jsan.EmailAddresses
-	san.IPAddresses = jsan.IPAddresses
-	san.OtherNames = jsan.OtherNames
-	san.RegisteredIDs = make([]asn1.ObjectIdentifier, len(jsan.RegisteredIDs))
-	san.URIs = jsan.URIs
+	gn.DirectoryNames = jsan.DirectoryNames
+	gn.DNSNames = jsan.DNSNames
+	gn.EDIPartyNames = jsan.EDIPartyNames
+	gn.EmailAddresses = jsan.EmailAddresses
+	gn.IPAddresses = jsan.IPAddresses
+	gn.OtherNames = jsan.OtherNames
+	gn.RegisteredIDs = make([]asn1.ObjectIdentifier, len(jsan.RegisteredIDs))
+	gn.URIs = jsan.URIs
 
 	for i, rID := range jsan.RegisteredIDs {
 		arcs := strings.Split(rID, ".")
@@ -130,7 +132,7 @@ func (san *SubjectAltName) UnmarshalJSON(b []byte) error {
 			}
 			oid[j] = int(tmp)
 		}
-		san.RegisteredIDs[i] = oid
+		gn.RegisteredIDs[i] = oid
 	}
 	return nil
 }
@@ -524,7 +526,7 @@ func (c *Certificate) jsonifyExtensions() (*CertificateExtensions, UnknownCertif
 				*exts.BasicConstraints.MaxPathLen = c.MaxPathLen
 			}
 		} else if e.Id.Equal(oidExtSubjectAltName) {
-			exts.SubjectAltName = new(SubjectAltName)
+			exts.SubjectAltName = new(GeneralNames)
 			exts.SubjectAltName.DirectoryNames = c.DirectoryNames
 			exts.SubjectAltName.DNSNames = c.DNSNames
 			exts.SubjectAltName.EDIPartyNames = c.EDIPartyNames
@@ -533,6 +535,16 @@ func (c *Certificate) jsonifyExtensions() (*CertificateExtensions, UnknownCertif
 			exts.SubjectAltName.OtherNames = c.OtherNames
 			exts.SubjectAltName.RegisteredIDs = c.RegisteredIDs
 			exts.SubjectAltName.URIs = c.URIs
+		} else if e.Id.Equal(oidExtIssuerAltName){
+			exts.IssuerAltName = new(GeneralNames)
+			exts.IssuerAltName.DirectoryNames = c.IANDirectoryNames
+			exts.IssuerAltName.DNSNames = c.IANDNSNames
+			exts.IssuerAltName.EDIPartyNames = c.IANEDIPartyNames
+			exts.IssuerAltName.EmailAddresses = c.IANEmailAddresses
+			exts.IssuerAltName.IPAddresses = c.IANIPAddresses
+			exts.IssuerAltName.OtherNames = c.IANOtherNames
+			exts.IssuerAltName.RegisteredIDs = c.IANRegisteredIDs
+			exts.IssuerAltName.URIs = c.IANURIs
 		} else if e.Id.Equal(oidExtNameConstraints) {
 			exts.NameConstraints = new(NameConstraints)
 			exts.NameConstraints.Critical = c.PermittedDNSDomainsCritical
