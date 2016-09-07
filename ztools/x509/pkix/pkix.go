@@ -213,7 +213,7 @@ type RevokedCertificate struct {
 // 5280, section 4.2.1.6.
 type OtherName struct {
 	Typeid asn1.ObjectIdentifier
-	Value  asn1.RawValue
+	Value  asn1.RawValue `asn1:"explicit"`
 }
 
 // EDIPartyName represents the ASN.1 structure of the same name. See RFC

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"testing"
+	"strings"
 
 	. "gopkg.in/check.v1"
 )
@@ -33,6 +34,9 @@ func (s *JSONSuite) SetUpTest(c *C) {
 	}
 
 	for _, test := range tests {
+		if !strings.HasSuffix(test.Name(), ".cert") {
+			continue
+		}
 		var err error
 		s.pemData, err = ioutil.ReadFile("testdata/" + test.Name())
 		c.Assert(err, IsNil)

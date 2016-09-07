@@ -140,44 +140,153 @@ func (san *SubjectAltName) UnmarshalJSON(b []byte) error {
 type NameConstraints struct {
 	Critical bool `json:"critical"`
 
-	PermittedDNSDomains     []string    `json:"permitted_names,omitempty"`
-	PermittedEmailDomains   []string    `json:"permitted_email_addresses,omitempty"`
-	PermittedIPAddresses    []net.IPNet `json:"permitted_ip_addresses,omitempty"`
-	PermittedDirectoryNames []pkix.Name `json:"permitted_directory_names,omitempty"`
+	PermittedDNSDomains     []GeneralSubtreeString
+	PermittedEmailDomains   []GeneralSubtreeString
+	PermittedIPAddresses    []GeneralSubtreeIP
+	PermittedDirectoryNames []GeneralSubtreeName
+	PermittedEdiPartyNames  []GeneralSubtreeEdi
+	PermittedRegisteredIDs  []GeneralSubtreeOid
 
-	ExcludedEmailDomains   []string    `json:"excluded_names,omitempty"`
-	ExcludedDNSDomains     []string    `json:"excluded_email_addresses,omitempty"`
-	ExcludedIPAddresses    []net.IPNet `json:"excluded_ip_addresses,omitempty"`
-	ExcludedDirectoryNames []pkix.Name `json:"excluded_directory_names,omitempty"`
+	ExcludedEmailDomains   []GeneralSubtreeString
+	ExcludedDNSDomains     []GeneralSubtreeString
+	ExcludedIPAddresses    []GeneralSubtreeIP
+	ExcludedDirectoryNames []GeneralSubtreeName
+	ExcludedEdiPartyNames  []GeneralSubtreeEdi
+	ExcludedRegisteredIDs  []GeneralSubtreeOid
 }
 
 type NameConstraintsJSON struct {
 	Critical bool `json:"critical"`
 
-	PermittedDNSDomains     []string    `json:"permitted_names,omitempty"`
-	PermittedEmailDomains   []string    `json:"permitted_email_addresses,omitempty"`
-	PermittedIPAddresses    []string    `json:"permitted_ip_addresses,omitempty"`
-	PermittedDirectoryNames []pkix.Name `json:"permitted_directory_names,omitempty"`
+	PermittedDNSDomains     []string            `json:"permitted_names,omitempty"`
+	PermittedEmailDomains   []string            `json:"permitted_email_addresses,omitempty"`
+	PermittedIPAddresses    []string            `json:"permitted_ip_addresses,omitempty"`
+	PermittedDirectoryNames []pkix.Name         `json:"permitted_directory_names,omitempty"`
+	PermittedEdiPartyNames  []pkix.EDIPartyName `json:"permitted_edi_party_names,omitempty"`
+	PermittedRegisteredIDs  []string            `json:"permitted_registred_id,omitempty"`
 
-	ExcludedEmailDomains   []string    `json:"excluded_names,omitempty"`
-	ExcludedDNSDomains     []string    `json:"excluded_email_addresses,omitempty"`
-	ExcludedIPAddresses    []string    `json:"excluded_ip_addresses,omitempty"`
-	ExcludedDirectoryNames []pkix.Name `json:"excluded_directory_names,omitempty"`
+	ExcludedDNSDomains     []string            `json:"excluded_names,omitempty"`
+	ExcludedEmailDomains   []string            `json:"excluded_email_addresses,omitempty"`
+	ExcludedIPAddresses    []string            `json:"excluded_ip_addresses,omitempty"`
+	ExcludedDirectoryNames []pkix.Name         `json:"excluded_directory_names,omitempty"`
+	ExcludedEdiPartyNames  []pkix.EDIPartyName `json:"excluded_edi_party_names,omitempty"`
+	ExcludedRegisteredIDs  []string            `json:"excluded_registred_id,omitempty"`
+}
+
+func (nc *NameConstraints) UnmarshalJSON(b []byte) error {
+	var ncJson NameConstraintsJSON
+	err := json.Unmarshal(b, &ncJson)
+	if err != nil {
+		return err
+	}
+	for _, dns := range ncJson.PermittedDNSDomains {
+		nc.PermittedDNSDomains = append(nc.PermittedDNSDomains, GeneralSubtreeString{Data: dns})
+	}
+	for _, email := range ncJson.PermittedEmailDomains {
+		nc.PermittedEmailDomains = append(nc.PermittedEmailDomains, GeneralSubtreeString{Data: email})
+	}
+	for _, ipNet := range ncJson.PermittedIPAddresses {
+		ip, ipnet, err := net.ParseCIDR(ipNet)
+		if err != nil {
+			return err
+		}
+		ipnet.IP = ip
+		nc.PermittedIPAddresses = append(nc.PermittedIPAddresses, GeneralSubtreeIP{Data: *ipnet})
+	}
+	for _, directory := range ncJson.PermittedDirectoryNames {
+		nc.PermittedDirectoryNames = append(nc.PermittedDirectoryNames, GeneralSubtreeName{Data: directory})
+	}
+	for _, edi := range ncJson.PermittedEdiPartyNames {
+		nc.PermittedEdiPartyNames = append(nc.PermittedEdiPartyNames, GeneralSubtreeEdi{Data: edi})
+	}
+	for _, id := range ncJson.PermittedRegisteredIDs {
+		arcs := strings.Split(id, ".")
+		oid := make(asn1.ObjectIdentifier, len(arcs))
+
+		for j, s := range arcs {
+			tmp, err := strconv.ParseInt(s, 10, 32)
+			if err != nil {
+				return err
+			}
+			oid[j] = int(tmp)
+		}
+		nc.PermittedRegisteredIDs = append(nc.PermittedRegisteredIDs, GeneralSubtreeOid{Data: oid})
+	}
+
+	for _, dns := range ncJson.ExcludedDNSDomains {
+		nc.ExcludedDNSDomains = append(nc.ExcludedDNSDomains, GeneralSubtreeString{Data: dns})
+	}
+	for _, email := range ncJson.ExcludedEmailDomains {
+		nc.ExcludedEmailDomains = append(nc.ExcludedEmailDomains, GeneralSubtreeString{Data: email})
+	}
+	for _, ipNet := range ncJson.ExcludedIPAddresses {
+		ip, ipnet, err := net.ParseCIDR(ipNet)
+		if err != nil {
+			return err
+		}
+		ipnet.IP = ip
+		nc.ExcludedIPAddresses = append(nc.ExcludedIPAddresses, GeneralSubtreeIP{Data: *ipnet})
+	}
+	for _, directory := range ncJson.ExcludedDirectoryNames {
+		nc.ExcludedDirectoryNames = append(nc.ExcludedDirectoryNames, GeneralSubtreeName{Data: directory})
+	}
+	for _, edi := range ncJson.ExcludedEdiPartyNames {
+		nc.ExcludedEdiPartyNames = append(nc.ExcludedEdiPartyNames, GeneralSubtreeEdi{Data: edi})
+	}
+	for _, id := range ncJson.ExcludedRegisteredIDs {
+		arcs := strings.Split(id, ".")
+		oid := make(asn1.ObjectIdentifier, len(arcs))
+
+		for j, s := range arcs {
+			tmp, err := strconv.ParseInt(s, 10, 32)
+			if err != nil {
+				return err
+			}
+			oid[j] = int(tmp)
+		}
+		nc.ExcludedRegisteredIDs = append(nc.ExcludedRegisteredIDs, GeneralSubtreeOid{Data: oid})
+	}
+	return nil
 }
 
 func (nc NameConstraints) MarshalJSON() ([]byte, error) {
 	var out NameConstraintsJSON
-	out.PermittedDNSDomains = nc.PermittedDNSDomains
-	out.PermittedEmailDomains = nc.PermittedEmailDomains
-	out.PermittedIPAddresses = make([]string, len(nc.PermittedIPAddresses))
-	for _, ip := range nc.PermittedIPAddresses {
-		out.PermittedIPAddresses = append(out.PermittedIPAddresses, ip.String())
+	for _, dns := range nc.PermittedDNSDomains {
+		out.PermittedDNSDomains = append(out.PermittedDNSDomains, dns.Data)
 	}
-	out.ExcludedDNSDomains = nc.ExcludedDNSDomains
-	out.ExcludedEmailDomains = nc.ExcludedEmailDomains
-	out.ExcludedIPAddresses = make([]string, len(nc.ExcludedIPAddresses))
+	for _, email := range nc.PermittedEmailDomains {
+		out.PermittedEmailDomains = append(out.PermittedEmailDomains, email.Data)
+	}
+	for _, ip := range nc.PermittedIPAddresses {
+		out.PermittedIPAddresses = append(out.PermittedIPAddresses, ip.Data.String())
+	}
+	for _, directory := range nc.PermittedDirectoryNames {
+		out.PermittedDirectoryNames = append(out.PermittedDirectoryNames, directory.Data)
+	}
+	for _, edi := range nc.PermittedEdiPartyNames {
+		out.PermittedEdiPartyNames = append(out.PermittedEdiPartyNames, edi.Data)
+	}
+	for _, id := range nc.PermittedRegisteredIDs {
+		out.PermittedRegisteredIDs = append(out.PermittedRegisteredIDs, id.Data.String())
+	}
+
+	for _, dns := range nc.ExcludedDNSDomains {
+		out.ExcludedDNSDomains = append(out.ExcludedDNSDomains, dns.Data)
+	}
+	for _, email := range nc.ExcludedEmailDomains {
+		out.ExcludedEmailDomains = append(out.ExcludedEmailDomains, email.Data)
+	}
 	for _, ip := range nc.ExcludedIPAddresses {
-		out.ExcludedIPAddresses = append(out.ExcludedIPAddresses, ip.String())
+		out.ExcludedIPAddresses = append(out.ExcludedIPAddresses, ip.Data.String())
+	}
+	for _, directory := range nc.ExcludedDirectoryNames {
+		out.ExcludedDirectoryNames = append(out.ExcludedDirectoryNames, directory.Data)
+	}
+	for _, edi := range nc.ExcludedEdiPartyNames {
+		out.ExcludedEdiPartyNames = append(out.ExcludedEdiPartyNames, edi.Data)
+	}
+	for _, id := range nc.ExcludedRegisteredIDs {
+		out.ExcludedRegisteredIDs = append(out.ExcludedRegisteredIDs, id.Data.String())
 	}
 	return json.Marshal(out)
 }
@@ -432,11 +541,15 @@ func (c *Certificate) jsonifyExtensions() (*CertificateExtensions, UnknownCertif
 			exts.NameConstraints.PermittedEmailDomains = c.PermittedEmailDomains
 			exts.NameConstraints.PermittedIPAddresses = c.PermittedIPAddresses
 			exts.NameConstraints.PermittedDirectoryNames = c.PermittedDirectoryNames
+			exts.NameConstraints.PermittedEdiPartyNames = c.PermittedEdiPartyNames
+			exts.NameConstraints.PermittedRegisteredIDs = c.PermittedRegisteredIDs
 
 			exts.NameConstraints.ExcludedEmailDomains = c.ExcludedEmailDomains
 			exts.NameConstraints.ExcludedDNSDomains = c.ExcludedDNSDomains
 			exts.NameConstraints.ExcludedIPAddresses = c.ExcludedIPAddresses
 			exts.NameConstraints.ExcludedDirectoryNames = c.ExcludedDirectoryNames
+			exts.NameConstraints.ExcludedEdiPartyNames = c.ExcludedEdiPartyNames
+			exts.NameConstraints.ExcludedRegisteredIDs = c.ExcludedRegisteredIDs
 		} else if e.Id.Equal(oidCRLDistributionPoints) {
 			exts.CRLDistributionPoints = c.CRLDistributionPoints
 		} else if e.Id.Equal(oidExtAuthKeyId) {

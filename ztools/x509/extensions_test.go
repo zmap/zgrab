@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"testing"
 
 	. "gopkg.in/check.v1"
@@ -17,8 +18,8 @@ import (
 func TestExtensions(t *testing.T) { TestingT(t) }
 
 type ExtensionsSuite struct {
-	pemData    []byte
-	rawCert    []byte
+	pemData     []byte
+	rawCert     []byte
 	parsedCerts []Certificate
 }
 
@@ -33,6 +34,9 @@ func (s *ExtensionsSuite) SetUpTest(c *C) {
 	}
 
 	for _, test := range tests {
+		if !strings.HasSuffix(test.Name(), ".cert") {
+			continue
+		}
 		var err error
 		var parsedCert *Certificate
 		s.pemData, err = ioutil.ReadFile("testdata/" + test.Name())
@@ -48,7 +52,7 @@ func (s *ExtensionsSuite) SetUpTest(c *C) {
 
 func (s *ExtensionsSuite) TestEncodeDecodeSAN(c *C) {
 	for _, cert := range s.parsedCerts {
-		if (cert.Issuer.CommonName != "SAN Test"){
+		if cert.Issuer.CommonName != "SAN Test" {
 			continue
 		}
 
@@ -76,5 +80,39 @@ func (s *ExtensionsSuite) TestEncodeDecodeSAN(c *C) {
 		c.Assert(jsonExtensions.SubjectAltName.OtherNames[0].Value.Tag, DeepEquals, san.OtherNames[0].Value.Tag)
 		c.Assert(jsonExtensions.SubjectAltName.OtherNames[0].Value.Class, DeepEquals, san.OtherNames[0].Value.Class)
 		c.Assert(jsonExtensions.SubjectAltName.OtherNames[0].Value.Bytes, DeepEquals, san.OtherNames[0].Value.Bytes)
+	}
+}
+
+func (s *ExtensionsSuite) TestEncodeDecodeNc(c *C) {
+	for _, cert := range s.parsedCerts {
+		if cert.Issuer.CommonName != "Name constraint" {
+			continue
+		}
+		jsonExtensions, _ := cert.jsonifyExtensions()
+		b, err := json.Marshal(&jsonExtensions.NameConstraints)
+		c.Assert(err, IsNil)
+		c.Assert(string(b), Equals, `{"critical":false,"permitted_email_addresses":["email","LulMail"],"permitted_directory_names":[{"common_name":["uiuc.net"],"country":["US"],"locality":["Champaign"],"organization":["UIUC"],"organizational_unit":["ECE"],"postal_code":["61820"],"province":["IL"],"street_address":["601 Wright St"]}],"permitted_registred_id":["1.2.3.4"],"excluded_names":["banned.com"],"excluded_ip_addresses":["192.168.1.1/16"]}`)
+		nc := &NameConstraints{}
+		err = nc.UnmarshalJSON(b)
+		c.Assert(err, IsNil)
+		c.Assert(jsonExtensions.NameConstraints.PermittedDirectoryNames, DeepEquals, nc.PermittedDirectoryNames)
+		c.Assert(jsonExtensions.NameConstraints.PermittedDNSDomains, DeepEquals, nc.PermittedDNSDomains)
+		c.Assert(jsonExtensions.NameConstraints.PermittedEdiPartyNames, DeepEquals, nc.PermittedEdiPartyNames)
+		c.Assert(jsonExtensions.NameConstraints.PermittedRegisteredIDs, DeepEquals, nc.PermittedRegisteredIDs)
+		c.Assert(jsonExtensions.NameConstraints.PermittedEmailDomains, DeepEquals, nc.PermittedEmailDomains)
+		c.Assert(jsonExtensions.NameConstraints.PermittedIPAddresses, HasLen, len(nc.PermittedIPAddresses))
+
+		c.Assert(jsonExtensions.NameConstraints.ExcludedDirectoryNames, DeepEquals, nc.ExcludedDirectoryNames)
+		c.Assert(jsonExtensions.NameConstraints.ExcludedDNSDomains, DeepEquals, nc.ExcludedDNSDomains)
+		c.Assert(jsonExtensions.NameConstraints.ExcludedEdiPartyNames, DeepEquals, nc.ExcludedEdiPartyNames)
+		c.Assert(jsonExtensions.NameConstraints.ExcludedRegisteredIDs, DeepEquals, nc.ExcludedRegisteredIDs)
+		c.Assert(jsonExtensions.NameConstraints.ExcludedEmailDomains, DeepEquals, nc.ExcludedEmailDomains)
+		c.Assert(jsonExtensions.NameConstraints.ExcludedIPAddresses[0].Data.IP.String(), Equals, nc.ExcludedIPAddresses[0].Data.IP.String())
+		c.Assert(jsonExtensions.NameConstraints.ExcludedIPAddresses[0].Data.Mask.String(), Equals, nc.ExcludedIPAddresses[0].Data.Mask.String())
+
+		if len(nc.ExcludedIPAddresses) > 0 {
+			c.Assert(jsonExtensions.NameConstraints.ExcludedIPAddresses[0].Data.IP.String(), Equals, nc.ExcludedIPAddresses[0].Data.IP.String())
+			c.Assert(jsonExtensions.NameConstraints.ExcludedIPAddresses[0].Data.Mask.String(), Equals, nc.ExcludedIPAddresses[0].Data.Mask.String())
+		}
 	}
 }
