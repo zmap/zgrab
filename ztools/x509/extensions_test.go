@@ -82,7 +82,7 @@ func (s *ExtensionsSuite) TestEncodeDecodeIAN(c *C){
 }
 
 
-func (s *ExtensionsSuite) TestEncodeDecodeSAN(c *C) {
+func (s *ExtensionsSuite) TestEnco	deDecodeSAN(c *C) {
 	for _, cert := range s.parsedCerts {
 		if cert.Issuer.CommonName != "SAN Test" {
 			continue
