@@ -50,6 +50,37 @@ func (s *ExtensionsSuite) SetUpTest(c *C) {
 	}
 }
 
+func (s *ExtensionsSuite) TestEncodeDecodeIAN(c *C) {
+	for _, cert := range s.parsedCerts {
+		if cert.Issuer.CommonName != "IAN Test" {
+			continue
+		}
+		jsonExtensions, _ := cert.jsonifyExtensions()
+
+		b, err := json.Marshal(&jsonExtensions.IssuerAltName)
+		c.Assert(err, IsNil)
+		c.Assert(string(b), Equals, `{"dns_names":["example.1.com","example.2.com"],"email_addresses":["test@iantest.com","test2@iantest2.com"],"ip_addresses":["1.2.3.4"],"other_names":[{"id":"1.2.3.4","value":"DCBEQlZ6YjIxbElHOTBhR1Z5SUdsa1pXNTBhV1pwWlhJPQ=="}],"registered_ids":["1.2.3.4"],"uniform_resource_identifiers":["http://www.insecure.com"]}`)
+
+		ian := &GeneralNames{}
+		err = ian.UnmarshalJSON(b)
+		c.Assert(err, IsNil)
+		c.Assert(jsonExtensions.IssuerAltName.DirectoryNames, DeepEquals, ian.DirectoryNames)
+		c.Assert(jsonExtensions.IssuerAltName.DNSNames, DeepEquals, ian.DNSNames)
+		c.Assert(jsonExtensions.IssuerAltName.EDIPartyNames, DeepEquals, ian.EDIPartyNames)
+		c.Assert(jsonExtensions.IssuerAltName.EmailAddresses, DeepEquals, ian.EmailAddresses)
+		c.Assert(jsonExtensions.IssuerAltName.RegisteredIDs, DeepEquals, ian.RegisteredIDs)
+		c.Assert(jsonExtensions.IssuerAltName.URIs, DeepEquals, ian.URIs)
+		c.Assert(jsonExtensions.IssuerAltName.IPAddresses, HasLen, len(ian.IPAddresses))
+		c.Assert(jsonExtensions.IssuerAltName.IPAddresses[0].String(), Equals, ian.IPAddresses[0].String())
+
+		c.Assert(jsonExtensions.IssuerAltName.OtherNames, HasLen, len(ian.OtherNames))
+		c.Assert(jsonExtensions.IssuerAltName.OtherNames[0].Typeid, DeepEquals, ian.OtherNames[0].Typeid)
+		c.Assert(jsonExtensions.IssuerAltName.OtherNames[0].Value.Tag, DeepEquals, ian.OtherNames[0].Value.Tag)
+		c.Assert(jsonExtensions.IssuerAltName.OtherNames[0].Value.Class, DeepEquals, ian.OtherNames[0].Value.Class)
+		c.Assert(jsonExtensions.IssuerAltName.OtherNames[0].Value.Bytes, DeepEquals, ian.OtherNames[0].Value.Bytes)
+	}
+}
+
 func (s *ExtensionsSuite) TestEncodeDecodeSAN(c *C) {
 	for _, cert := range s.parsedCerts {
 		if cert.Issuer.CommonName != "SAN Test" {
@@ -62,7 +93,7 @@ func (s *ExtensionsSuite) TestEncodeDecodeSAN(c *C) {
 		c.Assert(err, IsNil)
 		c.Assert(string(b), Equals, `{"directory_names":[{"common_name":["My Name"],"country":["US"],"organization":["My Organization"],"organizational_unit":["My Unit"]}],"dns_names":["dns1.test.com","dns2.test.com"],"email_addresses":["email@testsan.com"],"ip_addresses":["1.2.3.4"],"other_names":[{"id":"1.2.3.4","value":"DBVzb21lIG90aGVyIGlkZW50aWZpZXI="}],"registered_ids":["1.2.3.4"],"uniform_resource_identifiers":["http://watchit.com/"]}`)
 
-		san := &SubjectAltName{}
+		san := &GeneralNames{}
 		err = san.UnmarshalJSON(b)
 		c.Assert(err, IsNil)
 		c.Assert(jsonExtensions.SubjectAltName.DirectoryNames, DeepEquals, san.DirectoryNames)
