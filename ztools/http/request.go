@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/golang/go/src/pkg/net"
 	"github.com/zmap/zgrab/ztools/ztls"
 	"io"
 	"io/ioutil"
@@ -449,7 +450,11 @@ func NewRequestWithHost(method, urlStr, host string, body io.Reader) (*Request, 
 	}
 
 	if host == "" {
-		host = u.Host
+		if hostWithoutPort, _, err := net.SplitHostPort(u.Host); err != nil {
+			return nil, err
+		} else {
+			host = hostWithoutPort
+		}
 	}
 
 	rc, ok := body.(io.ReadCloser)
