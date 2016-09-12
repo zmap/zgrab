@@ -120,12 +120,20 @@ func TestHTTPToHTTPSRedirect(t *testing.T) {
 	tlsServerAddr, tlsServerPort := getAddrAndPortForServer(tlsServer)
 
 	tlsServerHostString = tlsServerAddr.String() + ":" + strconv.Itoa(int(tlsServerPort))
+
+	var redirectServerAddr net.IP
+	var redirectServerPort uint16
+
 	redirectServer := httptest.NewServer(HandlerFunc(func(w ResponseWriter, r *Request) {
+		redirectServerString := redirectServerAddr.String() + ":" + strconv.Itoa(int(redirectServerPort))
+		if r.Host != redirectServerString {
+			t.Errorf("Wrong HTTP Host - expected: %s, got: %s", redirectServerString, r.Host)
+		}
 		Redirect(w, r, "https://"+tlsServerHostString+"/", StatusMovedPermanently)
 	}))
 	defer redirectServer.Close()
 
-	redirectServerAddr, redirectServerPort := getAddrAndPortForServer(redirectServer)
+	redirectServerAddr, redirectServerPort = getAddrAndPortForServer(redirectServer)
 
 	config := &zlib.Config{
 		Port:               redirectServerPort,
@@ -147,7 +155,7 @@ func TestHTTPToHTTPSRedirect(t *testing.T) {
 
 	target := &zlib.GrabTarget{
 		Addr:   redirectServerAddr,
-		Domain: "localhost",
+		Domain: "",
 	}
 
 	grab := zlib.GrabBanner(config, target)

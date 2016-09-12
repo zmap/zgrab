@@ -35,6 +35,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -194,8 +195,14 @@ func makeTLSConfig(config *Config, urlHost string) *ztls.Config {
 	return tlsConfig
 }
 
-func hasDefaultPort(scheme string, port uint16) bool {
+func usingDefaultPort(scheme string, port uint16) bool {
 	return (scheme == "https" && port == 443) || (scheme == "http" && port == 80)
+}
+
+// Given a string of the form "host", "host:port", or "[ipv6::address]:port",
+// return true if the string includes a port, does not validate port
+func containsPort(host string) bool {
+	return strings.LastIndex(host, ":") > strings.LastIndex(host, "]")
 }
 
 func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, string) error {
@@ -261,8 +268,8 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 			httpHost = u.Host
 		}
 
-		//Set host port if non-default port
-		if hasDefaultPort(u.Scheme, config.Port) {
+		//Remove host port if using default port
+		if containsPort(httpHost) && usingDefaultPort(u.Scheme, config.Port) {
 			hostWithoutPort, _, err := net.SplitHostPort(httpHost)
 			if err != nil {
 				return err
