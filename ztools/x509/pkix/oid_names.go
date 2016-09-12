@@ -1005,4 +1005,9 @@ func init() {
 	oidDotNotationToNames["1.3.6.1.4.1.311.2.1.22"] = OIDName{ShortName: "MS_SPC_COMMERCIAL_SP_KEY_PURPOSE_OBJID", LongName: "MS_SPC_COMMERCIAL_SP_KEY_PURPOSE_OBJID"}
 	oidDotNotationToNames["1.3.6.1.4.1.311.10.7"] = OIDName{ShortName: "MS_MICROSOFT_RDN_PREFIX", LongName: "MS_MICROSOFT_RDN_PREFIX"}
 	oidDotNotationToNames["1.3.6.1.4.1.311.2.1.28"] = OIDName{ShortName: "MS_SPC_LINK_OBJID", LongName: "MS_SPC_LINK_OBJID"}
+	// EV Certificates
+	oidDotNotationToNames["1.3.6.1.4.1.311.60.2.1.1"] = OIDName{ShortName: "jurisdictionLocality", LongName: "jurisdictionLocalityName"}
+	oidDotNotationToNames["1.3.6.1.4.1.311.60.2.1.2"] = OIDName{ShortName: "jurisdictionStateOrProvince", LongName: "jurisdictionStateOrProvinceName"}
+	oidDotNotationToNames["1.3.6.1.4.1.311.60.2.1.3"] = OIDName{ShortName: "jurisdictionCountry", LongName: "jurisdictionCountryName"}
+
 }
