@@ -33,6 +33,7 @@ import (
 	"github.com/zmap/zgrab/ztools/ztls"
 	"io"
 	"net"
+	"net/url"
 	"strconv"
 	"time"
 )
@@ -193,6 +194,10 @@ func makeTLSConfig(config *Config, urlHost string) *ztls.Config {
 	return tlsConfig
 }
 
+func hasDefaultPort(scheme string, port uint16) bool {
+	return (scheme == "https" && port == 443) || (scheme == "http" && port == 80)
+}
+
 func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, string) error {
 	g := func(urlHost, endpoint, httpHost string) (err error) {
 
@@ -246,6 +251,25 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 		}
 
 		var resp *http.Response
+
+		u, err := url.Parse(fullURL)
+		if err != nil {
+			return err
+		}
+
+		if httpHost == "" {
+			httpHost = u.Host
+		}
+
+		//Set host port if non-default port
+		if hasDefaultPort(u.Scheme, config.Port) {
+			hostWithoutPort, _, err := net.SplitHostPort(httpHost)
+			if err != nil {
+				return err
+			}
+			httpHost = hostWithoutPort
+		}
+
 		switch config.HTTP.Method {
 		case "GET":
 			resp, err = client.GetWithHost(fullURL, httpHost)

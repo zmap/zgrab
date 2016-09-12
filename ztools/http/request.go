@@ -19,7 +19,6 @@ import (
 	"io/ioutil"
 	"mime"
 	"mime/multipart"
-	"net"
 	"net/textproto"
 	"net/url"
 	"strings"
@@ -442,7 +441,7 @@ func NewRequest(method, urlStr string, body io.Reader) (*Request, error) {
 	return NewRequestWithHost(method, urlStr, "", body)
 }
 
-// NewRequest returns a new Request given a method, URL, and optional body.
+// NewRequest returns a new Request given a method, URL, and optional host/body.
 func NewRequestWithHost(method, urlStr, host string, body io.Reader) (*Request, error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {
@@ -450,11 +449,7 @@ func NewRequestWithHost(method, urlStr, host string, body io.Reader) (*Request, 
 	}
 
 	if host == "" {
-		if hostWithoutPort, _, err := net.SplitHostPort(u.Host); err != nil {
-			return nil, err
-		} else {
-			host = hostWithoutPort
-		}
+		host = u.Host
 	}
 
 	rc, ok := body.(io.ReadCloser)
