@@ -33,7 +33,9 @@ import (
 	"github.com/zmap/zgrab/ztools/ztls"
 	"io"
 	"net"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -193,6 +195,16 @@ func makeTLSConfig(config *Config, urlHost string) *ztls.Config {
 	return tlsConfig
 }
 
+func usingDefaultPort(scheme string, port uint16) bool {
+	return (scheme == "https" && port == 443) || (scheme == "http" && port == 80)
+}
+
+// Given a string of the form "host", "host:port", or "[ipv6::address]:port",
+// return true if the string includes a port, does not validate port
+func containsPort(host string) bool {
+	return strings.LastIndex(host, ":") > strings.LastIndex(host, "]")
+}
+
 func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, string) error {
 	g := func(urlHost, endpoint, httpHost string) (err error) {
 
@@ -246,6 +258,25 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 		}
 
 		var resp *http.Response
+
+		u, err := url.Parse(fullURL)
+		if err != nil {
+			return err
+		}
+
+		if httpHost == "" {
+			httpHost = u.Host
+		}
+
+		//Remove host port if using default port
+		if containsPort(httpHost) && usingDefaultPort(u.Scheme, config.Port) {
+			hostWithoutPort, _, err := net.SplitHostPort(httpHost)
+			if err != nil {
+				return err
+			}
+			httpHost = hostWithoutPort
+		}
+
 		switch config.HTTP.Method {
 		case "GET":
 			resp, err = client.GetWithHost(fullURL, httpHost)
