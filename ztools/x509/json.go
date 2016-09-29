@@ -238,19 +238,13 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 
 			if len(name) > 2 && name[0] == '*' {
 				isValid = govalidator.IsURL(name[2:])
+			} else if len(name) > 2 && name[0] == '?' {
+				isValid = isValid || govalidator.IsURL(name[2:])
+			} else if !strings.Contains(name, ".") {
+				// If this is just a TLD cert, it's valid
+				isValid = true
 			} else {
 				isValid = govalidator.IsURL(name)
-			}
-
-			// If this is just a TLD cert, it's valid
-			if !strings.Contains(name, ".") {
-				isValid = true
-			}
-
-			if name[0] == '?' {
-				isValid = isValid && govalidator.IsURL(name[2:])
-			} else {
-				isValid = isValid && govalidator.IsURL(name)
 			}
 
 			// Check that this is actually a url and not something else
@@ -266,22 +260,15 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 
 		if len(name) > 2 && name[0] == '*' {
 			isValid = govalidator.IsURL(name[2:])
+		} else if len(name) > 2 && name[0] == '?' {
+			isValid = isValid || govalidator.IsURL(name[2:])
+		} else if !strings.Contains(name, ".") {
+			// If this is just a TLD cert, it's valid
+			isValid = true
 		} else {
 			isValid = govalidator.IsURL(name)
 		}
 
-		// If this is just a TLD cert, it's valid
-		if !strings.Contains(name, ".") {
-			isValid = true
-		}
-
-		if name[0] == '?' {
-			isValid = isValid && govalidator.IsURL(name[2:])
-		} else {
-			isValid = isValid && govalidator.IsURL(name)
-		}
-
-		// Check that this is actually a url and not something else
 		if isValid {
 			jc.Names = append(jc.Names, name)
 		}
