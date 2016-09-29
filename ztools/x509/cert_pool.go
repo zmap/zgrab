@@ -77,23 +77,6 @@ func (s *CertPool) AddCert(cert *Certificate) {
 	s.byName[name] = append(s.byName[name], n)
 }
 
-// AddCert adds a certificate to a pool, assuming it's unique
-func (s *CertPool) AddCertUnique(cert *Certificate) {
-	if cert == nil {
-		panic("adding nil Certificate to CertPool")
-	}
-
-	n := len(s.certs)
-	s.certs = append(s.certs, cert)
-
-	if len(cert.SubjectKeyId) > 0 {
-		keyId := string(cert.SubjectKeyId)
-		s.bySubjectKeyId[keyId] = append(s.bySubjectKeyId[keyId], n)
-	}
-	name := string(cert.RawSubject)
-	s.byName[name] = append(s.byName[name], n)
-}
-
 // AppendCertsFromPEM attempts to parse a series of PEM encoded certificates.
 // It appends any certificates found to s and returns true if ALL certificates
 // were successfully parsed.
