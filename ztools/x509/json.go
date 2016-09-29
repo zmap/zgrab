@@ -11,6 +11,7 @@ import (
 	"encoding/asn1"
 	"encoding/json"
 
+	"strings"
 	"time"
 
 	"github.com/asaskevich/govalidator"
@@ -233,16 +234,27 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		switch name := obj.Value.(type) {
 		case string:
 
-			flag := false
+			isValid := false
 
 			if len(name) > 2 && name[0] == '*' {
-				flag = govalidator.IsURL(name[2:])
+				isValid = govalidator.IsURL(name[2:])
 			} else {
-				flag = govalidator.IsURL(name)
+				isValid = govalidator.IsURL(name)
+			}
+
+			// If this is just a TLD cert, it's valid
+			if !strings.Contains(name, ".") {
+				isValid = true
+			}
+
+			if name[0] == '?' {
+				isValid = isValid && govalidator.IsURL(name[2:])
+			} else {
+				isValid = isValid && govalidator.IsURL(name)
 			}
 
 			// Check that this is actually a url and not something else
-			if flag {
+			if isValid {
 				jc.Names = append(jc.Names, name)
 			}
 		}
@@ -250,15 +262,27 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 
 	for _, name := range c.DNSNames {
 
-		flag := false
+		isValid := false
 
 		if len(name) > 2 && name[0] == '*' {
-			flag = govalidator.IsURL(name[2:])
+			isValid = govalidator.IsURL(name[2:])
 		} else {
-			flag = govalidator.IsURL(name)
+			isValid = govalidator.IsURL(name)
 		}
 
-		if flag {
+		// If this is just a TLD cert, it's valid
+		if !strings.Contains(name, ".") {
+			isValid = true
+		}
+
+		if name[0] == '?' {
+			isValid = isValid && govalidator.IsURL(name[2:])
+		} else {
+			isValid = isValid && govalidator.IsURL(name)
+		}
+
+		// Check that this is actually a url and not something else
+		if isValid {
 			jc.Names = append(jc.Names, name)
 		}
 	}
