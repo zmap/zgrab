@@ -232,13 +232,11 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	name := c.Subject.CommonName
 	isValid := false
 
-	if len(name) > 2 && name[0] == '*' {
+	// Check for wildcards and redacts, ignore malformed urls
+	if len(name) > 2 && name[0] == '*' && name[1] == '.' {
 		isValid = govalidator.IsURL(name[2:])
-	} else if len(name) > 2 && name[0] == '?' {
+	} else if len(name) > 2 && name[0] == '?' && name[1] == '.' {
 		isValid = isValid || govalidator.IsURL(name[2:])
-	} else if !strings.Contains(name, ".") {
-		// If this is just a TLD cert, it's valid
-		isValid = true
 	} else {
 		isValid = govalidator.IsURL(name)
 	}
@@ -252,9 +250,10 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 
 		isValid := false
 
-		if len(name) > 2 && name[0] == '*' {
+		// Check wildcards, redacts, malformed, and tlds
+		if len(name) > 2 && name[0] == '*' && name[1] == '.' {
 			isValid = govalidator.IsURL(name[2:])
-		} else if len(name) > 2 && name[0] == '?' {
+		} else if len(name) > 2 && name[0] == '?' && name[1] == '.' {
 			isValid = isValid || govalidator.IsURL(name[2:])
 		} else if !strings.Contains(name, ".") {
 			// If this is just a TLD cert, it's valid
