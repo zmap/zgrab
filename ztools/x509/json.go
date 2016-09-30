@@ -338,9 +338,7 @@ func purgeNameDuplicates(names []string) (out []string) {
 func isValid(name string) (ret bool) {
 
 	// Check for wildcards and redacts, ignore malformed urls
-	if len(name) > 2 && name[0] == '*' && name[1] == '.' {
-		ret = govalidator.IsURL(name[2:])
-	} else if len(name) > 2 && name[0] == '?' && name[1] == '.' {
+	if strings.HasPrefix(name, "?.") || strings.HasPrefix(name, "*.") {
 		ret = govalidator.IsURL(name[2:])
 	} else {
 		ret = govalidator.IsURL(name)
