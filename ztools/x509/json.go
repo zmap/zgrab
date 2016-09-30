@@ -228,12 +228,12 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.SubjectDN = c.Subject.String()
 	jc.SubjectKeyInfo.KeyAlgorithm = c.PublicKeyAlgorithm
 
-	if isValid(c.Subject.CommonName) {
+	if isValidName(c.Subject.CommonName) {
 		jc.Names = append(jc.Names, c.Subject.CommonName)
 	}
 
 	for _, name := range c.DNSNames {
-		if isValid(name) {
+		if isValidName(name) {
 			jc.Names = append(jc.Names, name)
 		} else if !strings.Contains(name, ".") { //just a TLD
 			jc.Names = append(jc.Names, name)
@@ -335,7 +335,7 @@ func purgeNameDuplicates(names []string) (out []string) {
 	return
 }
 
-func isValid(name string) (ret bool) {
+func isValidName(name string) (ret bool) {
 
 	// Check for wildcards and redacts, ignore malformed urls
 	if strings.HasPrefix(name, "?.") || strings.HasPrefix(name, "*.") {
