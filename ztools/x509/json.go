@@ -11,6 +11,7 @@ import (
 	"encoding/asn1"
 	"encoding/json"
 
+	"strings"
 	"time"
 
 	"github.com/asaskevich/govalidator"
@@ -227,40 +228,17 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.SubjectDN = c.Subject.String()
 	jc.SubjectKeyInfo.KeyAlgorithm = c.PublicKeyAlgorithm
 
-	// Include all subject names, DNS names there are
-	for _, obj := range c.Subject.Names {
-
-		switch name := obj.Value.(type) {
-		case string:
-
-			flag := false
-
-			if len(name) > 2 && name[0] == '*' {
-				flag = govalidator.IsURL(name[2:])
-			} else {
-				flag = govalidator.IsURL(name)
-			}
-
-			// Check that this is actually a url and not something else
-			if flag {
-				jc.Names = append(jc.Names, name)
-			}
-		}
+	if isValidName(c.Subject.CommonName) {
+		jc.Names = append(jc.Names, c.Subject.CommonName)
 	}
 
 	for _, name := range c.DNSNames {
-
-		flag := false
-
-		if len(name) > 2 && name[0] == '*' {
-			flag = govalidator.IsURL(name[2:])
-		} else {
-			flag = govalidator.IsURL(name)
-		}
-
-		if flag {
+		if isValidName(name) {
+			jc.Names = append(jc.Names, name)
+		} else if !strings.Contains(name, ".") { //just a TLD
 			jc.Names = append(jc.Names, name)
 		}
+
 	}
 
 	for _, name := range c.URIs {
@@ -354,5 +332,17 @@ func purgeNameDuplicates(names []string) (out []string) {
 	for key, _ := range hashset {
 		out = append(out, key)
 	}
+	return
+}
+
+func isValidName(name string) (ret bool) {
+
+	// Check for wildcards and redacts, ignore malformed urls
+	if strings.HasPrefix(name, "?.") || strings.HasPrefix(name, "*.") {
+		ret = govalidator.IsURL(name[2:])
+	} else {
+		ret = govalidator.IsURL(name)
+	}
+
 	return
 }
