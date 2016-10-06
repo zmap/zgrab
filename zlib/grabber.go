@@ -286,12 +286,12 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 			zlog.Fatalf("Bad HTTP Method: %s. Valid options are: GET, HEAD.", config.HTTP.Method)
 		}
 
+		grabData.HTTP.Response = resp
+
 		if err != nil {
 			config.ErrorLog.Errorf("Could not connect to remote host %s: %s", fullURL, err.Error())
 			return err
 		}
-
-		grabData.HTTP.Response = resp
 
 		if str, err := util.ReadString(resp.Body, config.HTTP.MaxSize*1024); err != nil {
 			return err
