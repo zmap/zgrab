@@ -167,11 +167,11 @@ func ReadResponse(r *bufio.Reader, req *Request) (resp *Response, err error) {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
-		return nil, err
+		return resp, err
 	}
 	f := strings.SplitN(line, " ", 3)
 	if len(f) < 2 {
-		return nil, &badStringError{"malformed HTTP response", line}
+		return resp, &badStringError{"malformed HTTP response", line}
 	}
 	reasonPhrase := ""
 	if len(f) > 2 {
@@ -180,20 +180,20 @@ func ReadResponse(r *bufio.Reader, req *Request) (resp *Response, err error) {
 	resp.Status = f[1] + " " + reasonPhrase
 	resp.StatusCode, err = strconv.Atoi(f[1])
 	if err != nil {
-		return nil, &badStringError{"malformed HTTP status code", f[1]}
+		return resp, &badStringError{"malformed HTTP status code", f[1]}
 	}
 
 	resp.Protocol = *(new(Protocol))
 	resp.Protocol.Name = f[0]
 	var ok bool
 	if resp.Protocol.Major, resp.Protocol.Minor, ok = ParseHTTPVersion(resp.Protocol.Name); !ok {
-		return nil, &badStringError{"malformed HTTP version", resp.Protocol.Name}
+		return resp, &badStringError{"malformed HTTP version", resp.Protocol.Name}
 	}
 
 	// Parse the response headers.
 	mimeHeader, err := tp.ReadMIMEHeader()
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
 
 	resp.Headers = Header(mimeHeader)
@@ -205,7 +205,7 @@ func ReadResponse(r *bufio.Reader, req *Request) (resp *Response, err error) {
 
 	err = readTransfer(resp, r)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
 
 	return resp, nil
