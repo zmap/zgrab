@@ -9,6 +9,7 @@ package pkix
 import (
 	// START CT CHANGES
 	"github.com/zmap/zgrab/ztools/zct/asn1"
+	"strings"
 	// END CT CHANGES
 	"math/big"
 	"time"
@@ -135,6 +136,32 @@ func (n Name) ToRDNSequence() (ret RDNSequence) {
 	}
 
 	return ret
+}
+
+func (n *Name) String() string {
+	parts := make([]string, 0, 8)
+	for _, name := range n.Names {
+		oidString := name.Type.String()
+		attrParts := make([]string, 0, 2)
+		oidName, ok := oidDotNotationToNames[oidString]
+		if ok {
+			attrParts = append(attrParts, oidName.ShortName)
+		} else {
+			attrParts = append(attrParts, oidString)
+		}
+		switch value := name.Value.(type) {
+		case string:
+			attrParts = append(attrParts, value)
+		case []byte:
+			attrParts = append(attrParts, string(value))
+		default:
+			continue
+		}
+		attrString := strings.Join(attrParts, "=")
+		parts = append(parts, attrString)
+	}
+	joined := strings.Join(parts, ", ")
+	return joined
 }
 
 // CertificateList represents the ASN.1 structure of the same name. See RFC

@@ -778,6 +778,10 @@ func (c *Certificate) CheckSignatureFrom(parent *Certificate) (err error) {
 
 	// TODO(agl): don't ignore the path length constraint.
 
+	if parent.Subject.String() != c.Issuer.String() {
+		return errors.New("Mis-match issuer/subject")
+	}
+
 	return parent.CheckSignature(c.SignatureAlgorithm, c.RawTBSCertificate, c.Signature)
 }
 

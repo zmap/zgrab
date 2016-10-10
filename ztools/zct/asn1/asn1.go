@@ -30,6 +30,7 @@ import (
 	// START CT CHANGES
 	"errors"
 	"fmt"
+	"strconv"
 	// END CT CHANGES
 	"math/big"
 	"reflect"
@@ -208,6 +209,16 @@ func (oi ObjectIdentifier) Equal(other ObjectIdentifier) bool {
 	}
 
 	return true
+}
+func (oi ObjectIdentifier) String() string {
+	var s string
+	for i, v := range oi {
+		if i > 0 {
+			s += "."
+		}
+		s += strconv.Itoa(v)
+	}
+	return s
 }
 
 // parseObjectIdentifier parses an OBJECT IDENTIFIER from the given bytes and
