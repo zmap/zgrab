@@ -208,13 +208,14 @@ func backoffForRetry(ctx context.Context, d time.Duration) error {
 // Attempts to add |chain| to the log, using the api end-point specified by
 // |path|. If provided context expires before submission is complete an
 // error will be returned.
-func (c *LogClient) addChainWithRetry(ctx context.Context, path string, chain []ct.ASN1Cert) (*ct.SignedCertificateTimestamp, error) {
+func (c *LogClient) addChainWithRetry(ctx context.Context, path string, chain []ct.ASN1Cert) (*ct.SignedCertificateTimestamp, error, int) {
 	var resp addChainResponse
 	var req addChainRequest
 	for _, link := range chain {
 		req.Chain = append(req.Chain, base64.StdEncoding.EncodeToString(link))
 	}
 	httpStatus := "Unknown"
+	httpCode := 0
 	backoffSeconds := 0
 	done := false
 	for !done {
@@ -223,7 +224,7 @@ func (c *LogClient) addChainWithRetry(ctx context.Context, path string, chain []
 		}
 		err := backoffForRetry(ctx, time.Second*time.Duration(backoffSeconds))
 		if err != nil {
-			return nil, err
+			return nil, err, 0
 		}
 		if backoffSeconds > 0 {
 			backoffSeconds = 0
@@ -247,22 +248,23 @@ func (c *LogClient) addChainWithRetry(ctx context.Context, path string, chain []
 				}
 			}
 		default:
-			return nil, fmt.Errorf("got HTTP Status %s: %s", httpResp.Status, errorBody)
+			return nil, fmt.Errorf("got HTTP Status %s: %s", httpResp.Status, errorBody), httpResp.StatusCode
 		}
 		httpStatus = httpResp.Status
+		httpCode = httpResp.StatusCode
 	}
 
 	rawLogID, err := base64.StdEncoding.DecodeString(resp.ID)
 	if err != nil {
-		return nil, err
+		return nil, err, httpCode
 	}
 	rawSignature, err := base64.StdEncoding.DecodeString(resp.Signature)
 	if err != nil {
-		return nil, err
+		return nil, err, httpCode
 	}
 	ds, err := ct.UnmarshalDigitallySigned(bytes.NewReader(rawSignature))
 	if err != nil {
-		return nil, err
+		return nil, err, httpCode
 	}
 	var logID ct.SHA256Hash
 	copy(logID[:], rawLogID)
@@ -271,22 +273,22 @@ func (c *LogClient) addChainWithRetry(ctx context.Context, path string, chain []
 		LogID:      logID,
 		Timestamp:  resp.Timestamp,
 		Extensions: ct.CTExtensions(resp.Extensions),
-		Signature:  *ds}, nil
+		Signature:  *ds}, nil, httpCode
 }
 
 // AddChain adds the (DER represented) X509 |chain| to the log.
-func (c *LogClient) AddChain(chain []ct.ASN1Cert) (*ct.SignedCertificateTimestamp, error) {
+func (c *LogClient) AddChain(chain []ct.ASN1Cert) (*ct.SignedCertificateTimestamp, error, int) {
 	return c.addChainWithRetry(nil, AddChainPath, chain)
 }
 
 // AddPreChain adds the (DER represented) Precertificate |chain| to the log.
-func (c *LogClient) AddPreChain(chain []ct.ASN1Cert) (*ct.SignedCertificateTimestamp, error) {
+func (c *LogClient) AddPreChain(chain []ct.ASN1Cert) (*ct.SignedCertificateTimestamp, error, int) {
 	return c.addChainWithRetry(nil, AddPreChainPath, chain)
 }
 
 // AddChainWithContext adds the (DER represented) X509 |chain| to the log and
 // fails if the provided context expires before the chain is submitted.
-func (c *LogClient) AddChainWithContext(ctx context.Context, chain []ct.ASN1Cert) (*ct.SignedCertificateTimestamp, error) {
+func (c *LogClient) AddChainWithContext(ctx context.Context, chain []ct.ASN1Cert) (*ct.SignedCertificateTimestamp, error, int) {
 	return c.addChainWithRetry(ctx, AddChainPath, chain)
 }
 
