@@ -346,6 +346,9 @@ type Config struct {
 
 	// Enable use of the Extended Master Secret extension
 	ExtendedMasterSecret bool
+
+	// Explicitly set Client random
+	ClientRandom []byte
 }
 
 func (c *Config) serverInit() {

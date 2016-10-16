@@ -90,10 +90,14 @@ func (c *Conn) clientHandshake() error {
 		}
 	}
 
-	_, err := io.ReadFull(c.config.rand(), hello.random)
-	if err != nil {
-		c.sendAlert(alertInternalError)
-		return errors.New("tls: short read from Rand: " + err.Error())
+	if len(c.config.ClientRandom) == 32 {
+		hello.random = c.config.ClientRandom
+	} else {
+		_, err := io.ReadFull(c.config.rand(), hello.random)
+		if err != nil {
+			c.sendAlert(alertInternalError)
+			return errors.New("tls: short read from Rand: " + err.Error())
+		}
 	}
 
 	if c.config.ExtendedRandom {
