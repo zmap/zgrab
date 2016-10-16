@@ -91,7 +91,7 @@ func (c *Conn) clientHandshake() error {
 	}
 
 	if len(c.config.ClientRandom) == 32 {
-		hello.random = c.config.ClientRandom
+		copy(hello.random, c.config.ClientRandom)
 	} else {
 		_, err := io.ReadFull(c.config.rand(), hello.random)
 		if err != nil {
