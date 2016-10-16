@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-    "github.com/zmap/zgrab/ztools/zct"
+	"github.com/zmap/zgrab/ztools/zct"
 	"golang.org/x/net/context"
 )
 
@@ -168,7 +168,7 @@ func TestAddChainWithContext(t *testing.T) {
 		currentFailures = 0
 
 		started := time.Now()
-		sct, err := c.AddChainWithContext(deadline, chain)
+		sct, err, _ := c.AddChainWithContext(deadline, chain)
 		took := time.Since(started)
 		if math.Abs(float64(took-tc.expected)) > float64(leeway) {
 			t.Fatalf("Submission took an unexpected length of time: %s, expected ~%s", took, tc.expected)
