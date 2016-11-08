@@ -54,7 +54,7 @@ func GetOPCUAData(logStruct *OPCUALog, connection net.Conn) error {
 			SecChanId,logStruct.SecurityPolicyUri,logStruct.ServerNonce,logStruct.ServerProtocolVersion = Parse_oscr(hex.EncodeToString(readBuffer))
 			
 
-			
+			/*
 			FsrqueryBytes, err := BuildFsr(SecChanId)
 			Checkerr(err)
 			bytesWritten, err := connection.Write(FsrqueryBytes)
@@ -75,7 +75,7 @@ func GetOPCUAData(logStruct *OPCUALog, connection net.Conn) error {
 			logStruct.GatewayServerUri = cache[4]
 			logStruct.DiscoveryProileUri = cache[5]
 			logStruct.DiscoveryUrl = cache[6]
-		
+			*/
 		}else{
 			// answer does not equal OPNF -> Server does not support MessageSecurityMode None
 			logStruct.SecurityPolicyUri = "Message Security Mode None not supported"
