@@ -1,5 +1,7 @@
 /*
- * ZGrab Copyright 2015 Regents of the University of Michigan
+ * ZGrab
+ *   Copyright 2015 Regents of the University of Michigan
+ *   Copyright 2016 Akamai Technologies Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
@@ -20,6 +22,7 @@ import (
 	"flag"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"runtime"
 	"strings"
@@ -45,6 +48,7 @@ var (
 	timeout                       uint
 	tlsVersion                    string
 	rootCAFileName                string
+	sourceIP                      string
 )
 
 // Module configurations
@@ -68,6 +72,7 @@ func init() {
 	flag.BoolVar(&config.LookupDomain, "lookup-domain", false, "Input contains only domain names")
 	flag.StringVar(&interfaceName, "interface", "", "Network interface to send on")
 	flag.UintVar(&portFlag, "port", 80, "Port to grab on")
+	flag.StringVar(&sourceIP, "source", "", "Set the source IP address for traffic")
 	flag.UintVar(&timeout, "timeout", 10, "Set connection timeout in seconds")
 	flag.BoolVar(&config.TLS, "tls", false, "Grab over TLS")
 	flag.StringVar(&tlsVersion, "tls-version", "", "Max TLS version to use (implies --tls)")
@@ -138,6 +143,36 @@ func init() {
 	// Stop the lowliest idiot from using this to DoS people
 	if config.ConnectionsPerHost > 50 || config.ConnectionsPerHost < 1 {
 		zlog.Fatalf("--connections-per-host must be in the range [0,50]")
+	}
+
+	// If a source IP is specified, verify that the host is advertising the IP
+	// and has a chance to receive the responses.
+	if sourceIP != "" {
+		config.LocalAddressSet = false
+		providedAddr := net.ParseIP(sourceIP)
+		localInterfaces, localInterfacesErr := net.Interfaces()
+		if localInterfacesErr != nil {
+			zlog.Fatalf("Error getting Local interfaces: %s", localInterfacesErr.Error())
+		}
+		for idx, i := range localInterfaces {
+			addresses, adddressesErr := i.Addrs()
+			if adddressesErr != nil {
+				zlog.Fatalf("Error getting Local addresses for interface %d: %s", idx, adddressesErr.Error())
+			}
+			for _, address := range addresses {
+				castAddress := address.(*net.IPNet)
+				if castAddress.Contains(providedAddr) {
+					tcpAddr := &net.TCPAddr{
+						IP: address.(*net.IPNet).IP,
+					}
+					config.LocalAddress = tcpAddr
+					config.LocalAddressSet = true
+				}
+			}
+		}
+		if !config.LocalAddressSet {
+			zlog.Fatalf("Source IP (%s) was set but not found in the list of machine IPs", sourceIP)
+		}
 	}
 
 	// Validate SSH related flags
