@@ -150,6 +150,9 @@ func init() {
 	if sourceIP != "" {
 		config.LocalAddressSet = false
 		providedAddr := net.ParseIP(sourceIP)
+		if providedAddr == nil {
+			zlog.Fatalf("Error parsing provided IP: %s", sourceIP)
+		}
 		localInterfaces, localInterfacesErr := net.Interfaces()
 		if localInterfacesErr != nil {
 			zlog.Fatalf("Error getting Local interfaces: %s", localInterfacesErr.Error())
@@ -163,7 +166,7 @@ func init() {
 				castAddress := address.(*net.IPNet)
 				if castAddress.Contains(providedAddr) {
 					tcpAddr := &net.TCPAddr{
-						IP: address.(*net.IPNet).IP,
+						IP: castAddress.IP,
 					}
 					config.LocalAddress = tcpAddr
 					config.LocalAddressSet = true
