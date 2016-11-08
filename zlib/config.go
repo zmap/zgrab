@@ -161,6 +161,9 @@ type Config struct {
 	// Niagara Fox
 	Fox bool
 
+	// Opcua
+	OPCUA bool
+
 	// DNP3
 	DNP3 bool
 
