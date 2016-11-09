@@ -9,8 +9,8 @@ import (
 
 var HELqueryBytes []byte
 var OSCRqueryBytes []byte
-var	FSRqueryBytes []byte
-var cache []string
+/*var FSRqueryBytes []byte
+var cache []string*/
 var SecChanId string
 
 // main function , currently only sends HEL and Open Secure Channel Request with Security Mode "None", Find Servers and Get Endpoints Request are not fully implemented yet and commented out atm
