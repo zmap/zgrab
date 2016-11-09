@@ -63,7 +63,7 @@ type GrabData struct {
 	FTP          *ftp.FTPLog           `json:"ftp,omitempty"`
 	BACNet       *bacnet.Log           `json:"bacnet,omitempty"`
 	Fox          *fox.FoxLog           `json:"fox,omitempty"`
-	OPCUA		 *opcua.OPCUALog	   `json:"opcua,omitempty"`
+	OPCUA	     *opcua.OPCUALog	   `json:"opcua,omitempty"` 
 	DNP3         *dnp3.DNP3Log         `json:"dnp3,omitempty"`
 	S7           *siemens.S7Log        `json:"s7,omitempty"`
 	Telnet       *telnet.TelnetLog     `json:"telnet,omitempty"`
