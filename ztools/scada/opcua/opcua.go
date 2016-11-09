@@ -39,16 +39,16 @@ func GetOPCUAData(logStruct *OPCUALog, connection net.Conn) error {
 	if (string(readBuffer[0:3]) == "ACK") {
 		logStruct.IsOPCUA = true
 		bytesWritten, err := connection.Write(OSCRqueryBytes)
-		
+		Checkerr(err)
 		if bytesWritten != len(OSCRqueryBytes) {
 	       return errors.New("Unable to write OPC UA Open Secure Channel Request...")
  	    }
-		Checkerr(err)
+
 
 		readBuffer := make([]byte, 512)
 		length, err := connection.Read(readBuffer)
 		readBuffer = readBuffer[:length]
-		
+		Checkerr(err)
 		// server answer equals OPNF -> Server accepts Open Secure Channel Request with Security Mode None
 		if (string(readBuffer[0:4]) == "OPNF"){
 			SecChanId,logStruct.SecurityPolicyUri,logStruct.ServerNonce,logStruct.ServerProtocolVersion = Parse_oscr(hex.EncodeToString(readBuffer))
