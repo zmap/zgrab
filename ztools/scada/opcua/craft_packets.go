@@ -32,7 +32,7 @@ var hexoscr string = "4f504e" + 			// Message Type = OPN
 		     "03000000" +			// Request ID
 		     "0100be01" +			// Enc mask = Open Secure Channel Request
 		     "0000" + 				// Authentikation Token
-		     "08cb34bced0cd201" +		// Timestamp (only for diagnostic purpose)
+		     "0000000000000000" +		// Timestamp (only for diagnostic purpose)
 		     "00000000"	+			// Request Handle
 		     "00000000" +			// Return Diagnostics
 		     "ffffffff" +			// Audit Entry ID
@@ -60,7 +60,7 @@ var  hexfsr string = "4d5347" + 			// Message Type = MSG
 		     "00000000" +			// Security Sequence Number = 0
 		     "01000000" +			// Security Request ID
 		     "0100a601" +			// Expand Node ID
-		     "000008cb34bced0cd2010000000000000000ffffffff10270000000000" + // Request Header w timestamp & stuff
+		     "000000000000000000000000000000000000ffffffff10270000000000" + // Request Header w timestamp & stuff
 		     //"1e0000006f70632e7463703a2f2f3139322e3136382e3235352e34383a3438303230" + // Length.ULInt32|Endpoint URL
 		     "00000000000000000000000000000000000000000000000000000000000000000000" +  // Endpoint URL OPCUA Empty String
 		     "0000000000000000"
@@ -80,7 +80,7 @@ var hexger string = "4d5347"  +				// Message Type = MSG
 		    "34000000" +			// Security Sequence Number = 0
 		    "02000000" +			// Security Request ID
 		    "0100ac01" +			// Expand Node ID
-		    "000008cb34bced0cd2010100000000000000ffffffff10270000000000" + // Request Header w timestamp & stuff
+		    "000000000000000000000100000000000000ffffffff10270000000000" + // Request Header w timestamp & stuff
 		   //"1e0000006f70632e7463703a2f2f3139322e3136382e3235352e34383a3438303230" +  // Length.ULInt32|Endpoint URL
 		    "00000000" +  // Endpoint URL OPCUA Empty String
 		    "0000000000000000"
