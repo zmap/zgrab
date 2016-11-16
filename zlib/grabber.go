@@ -226,7 +226,6 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 		client := http.MakeNewClient()
 		client.UserAgent = config.HTTP.UserAgent
 		client.CheckRedirect = func(req *http.Request, res *http.Response, via []*http.Request) error {
-			defer res.Body.Close()
 			grabData.HTTP.RedirectResponseChain = append(grabData.HTTP.RedirectResponseChain, res)
 			if str, err := util.ReadString(res.Body, config.HTTP.MaxSize*1024); err != nil {
 				return err
@@ -286,7 +285,10 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 		default:
 			zlog.Fatalf("Bad HTTP Method: %s. Valid options are: GET, HEAD.", config.HTTP.Method)
 		}
-		defer resp.Body.Close()
+		if resp != nil && resp.Body != nil {
+			defer resp.Body.Close()
+		}
+		defer transport.CloseIdleConnections()
 		grabData.HTTP.Response = resp
 
 		if err != nil {
