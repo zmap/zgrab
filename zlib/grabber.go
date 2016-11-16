@@ -21,6 +21,13 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
+	"io"
+	"net"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/http"
 	"github.com/zmap/zgrab/ztools/processing"
@@ -31,12 +38,6 @@ import (
 	"github.com/zmap/zgrab/ztools/util"
 	"github.com/zmap/zgrab/ztools/zlog"
 	"github.com/zmap/zgrab/ztools/ztls"
-	"io"
-	"net"
-	"net/url"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type GrabTarget struct {
@@ -225,6 +226,7 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 		client := http.MakeNewClient()
 		client.UserAgent = config.HTTP.UserAgent
 		client.CheckRedirect = func(req *http.Request, res *http.Response, via []*http.Request) error {
+			defer res.Body.Close()
 			grabData.HTTP.RedirectResponseChain = append(grabData.HTTP.RedirectResponseChain, res)
 			if str, err := util.ReadString(res.Body, config.HTTP.MaxSize*1024); err != nil {
 				return err
@@ -234,7 +236,6 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 				m.Write([]byte(str))
 				res.BodySHA256 = m.Sum(nil)
 			}
-			res.Body.Close()
 
 			if len(via) > config.HTTP.MaxRedirects {
 				return errors.New(fmt.Sprintf("stopped after %d redirects", config.HTTP.MaxRedirects))
@@ -285,7 +286,7 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 		default:
 			zlog.Fatalf("Bad HTTP Method: %s. Valid options are: GET, HEAD.", config.HTTP.Method)
 		}
-
+		defer resp.Body.Close()
 		grabData.HTTP.Response = resp
 
 		if err != nil {
@@ -301,8 +302,6 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 			m.Write([]byte(str))
 			grabData.HTTP.Response.BodySHA256 = m.Sum(nil)
 		}
-
-		resp.Body.Close()
 
 		return nil
 	}
