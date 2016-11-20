@@ -227,12 +227,13 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 		client.UserAgent = config.HTTP.UserAgent
 		client.CheckRedirect = func(req *http.Request, res *http.Response, via []*http.Request) error {
 			grabData.HTTP.RedirectResponseChain = append(grabData.HTTP.RedirectResponseChain, res)
-			if str, err := util.ReadString(res.Body, config.HTTP.MaxSize*1024); err != nil {
+			b := new(bytes.Buffer)
+			if _, err := io.CopyN(b, res.Body, int64(config.HTTP.MaxSize)*1024); err != nil {
 				return err
 			} else {
-				res.BodyText = str
+				res.BodyText = b.String()
 				m := sha256.New()
-				m.Write([]byte(str))
+				m.Write(b.Bytes())
 				res.BodySHA256 = m.Sum(nil)
 			}
 
@@ -288,7 +289,6 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 		if resp != nil && resp.Body != nil {
 			defer resp.Body.Close()
 		}
-		defer transport.CloseIdleConnections()
 		grabData.HTTP.Response = resp
 
 		if err != nil {
