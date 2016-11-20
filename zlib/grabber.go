@@ -228,10 +228,14 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 		client.CheckRedirect = func(req *http.Request, res *http.Response, via []*http.Request) error {
 			grabData.HTTP.RedirectResponseChain = append(grabData.HTTP.RedirectResponseChain, res)
 			b := new(bytes.Buffer)
-			if _, err := io.CopyN(b, res.Body, int64(config.HTTP.MaxSize)*1024); err != nil {
-				return err
-			} else {
-				res.BodyText = b.String()
+			maxReadLen := int64(config.HTTP.MaxSize) * 1024
+			readLen := maxReadLen
+			if res.ContentLength >= 0 && res.ContentLength < maxReadLen {
+				readLen = res.ContentLength
+			}
+			io.CopyN(b, res.Body, readLen)
+			res.BodyText = b.String()
+			if len(res.BodyText) > 0 {
 				m := sha256.New()
 				m.Write(b.Bytes())
 				res.BodySHA256 = m.Sum(nil)

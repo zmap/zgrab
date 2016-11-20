@@ -270,7 +270,9 @@ func (c *Client) doFollowingRedirects(ireq *Request) (r *Response, err error) {
 		}
 
 		if shouldRedirect(r.StatusCode) {
-			currentResponse.Body.Close()
+			if currentResponse != nil && currentResponse.Body != nil {
+				currentResponse.Body.Close()
+			}
 			currentResponse = r
 			if urlStr = r.Headers.Get("Location"); urlStr == "" {
 				err = errors.New(fmt.Sprintf("%d response missing Location header", r.StatusCode))
