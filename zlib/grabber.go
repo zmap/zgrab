@@ -35,7 +35,6 @@ import (
 	"github.com/zmap/zgrab/ztools/scada/fox"
 	"github.com/zmap/zgrab/ztools/scada/siemens"
 	"github.com/zmap/zgrab/ztools/telnet"
-	"github.com/zmap/zgrab/ztools/util"
 	"github.com/zmap/zgrab/ztools/zlog"
 	"github.com/zmap/zgrab/ztools/ztls"
 )
@@ -300,12 +299,17 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 			return err
 		}
 
-		if str, err := util.ReadString(resp.Body, config.HTTP.MaxSize*1024); err != nil {
-			return err
-		} else {
-			grabData.HTTP.Response.BodyText = str
+		b := new(bytes.Buffer)
+		maxReadLen := int64(config.HTTP.MaxSize) * 1024
+		readLen := maxReadLen
+		if resp.ContentLength >= 0 && resp.ContentLength < maxReadLen {
+			readLen = resp.ContentLength
+		}
+		io.CopyN(b, resp.Body, readLen)
+		grabData.HTTP.Response.BodyText = b.String()
+		if len(grabData.HTTP.Response.BodyText) > 0 {
 			m := sha256.New()
-			m.Write([]byte(str))
+			m.Write(b.Bytes())
 			grabData.HTTP.Response.BodySHA256 = m.Sum(nil)
 		}
 
