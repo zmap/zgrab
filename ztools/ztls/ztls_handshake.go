@@ -30,9 +30,9 @@ type ClientHello struct {
 	SessionID      []byte `json:"session_id,omitempty"`
 }
 
-type parsedAndRawSCT struct {
-	Raw    []byte                         `json:"raw"`
-	Parsed *ct.SignedCertificateTimestamp `json:"parsed"`
+type ParsedAndRawSCT struct {
+	Raw    []byte                         `json:"raw,omitempty"`
+	Parsed *ct.SignedCertificateTimestamp `json:"parsed,omitempty"`
 }
 
 type ServerHello struct {
@@ -47,7 +47,7 @@ type ServerHello struct {
 	HeartbeatSupported          bool              `json:"heartbeat"`
 	ExtendedRandom              []byte            `json:"extended_random,omitempty"`
 	ExtendedMasterSecret        bool              `json:"extended_master_secret"`
-	SignedCertificateTimestamps []parsedAndRawSCT `json:"scts,omitempty"`
+	SignedCertificateTimestamps []ParsedAndRawSCT `json:"scts,omitempty"`
 }
 
 // SimpleCertificate holds a *x509.Certificate and a []byte for the certificate
@@ -241,7 +241,8 @@ func (m *serverHelloMsg) MakeLog() *ServerHello {
 	}
 	if len(m.scts) > 0 {
 		for _, rawSCT := range m.scts {
-			var out parsedAndRawSCT
+			var out ParsedAndRawSCT
+			out.Raw = make([]byte, len(rawSCT))
 			copy(out.Raw, rawSCT)
 			sct, err := ct.DeserializeSCT(bytes.NewReader(rawSCT))
 			if err == nil {
