@@ -366,6 +366,9 @@ func makeGrabber(config *Config) func(*Conn) error {
 		if config.TLSExtendedRandom {
 			c.SetExtendedRandom()
 		}
+		if config.GatherSessionTicket {
+			c.SetGatherSessionTicket()
+		}
 		if config.SignedCertificateTimestampExt {
 			c.SetSignedCertificateTimestampExt()
 		}
