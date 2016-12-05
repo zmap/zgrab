@@ -263,6 +263,9 @@ func (c *Client) doFollowingRedirects(ireq *Request) (r *Response, err error) {
 		req.Headers.Set("User-Agent", c.UserAgent)
 
 		if r, err = send(req, c.Transport); err != nil {
+			if currentResponse != nil && currentResponse.Body != nil {
+				currentResponse.Body.Close()
+			}
 			break
 		}
 		if c := r.Cookies(); len(c) > 0 {
