@@ -205,7 +205,7 @@ func containsPort(host string) bool {
 	return strings.LastIndex(host, ":") > strings.LastIndex(host, "]")
 }
 
-func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, string) error {
+func makeHTTPGrabber(config *Config, grabData *GrabData) func(string, string, string) error {
 	g := func(urlHost, endpoint, httpHost string) (err error) {
 
 		var tlsConfig *ztls.Config
@@ -218,7 +218,7 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 			Dial:                makeNetDialer(config),
 			DisableKeepAlives:   false,
 			DisableCompression:  false,
-			MaxIdleConnsPerHost: -1,
+			MaxIdleConnsPerHost: config.HTTP.MaxRedirects,
 			TLSClientConfig:     tlsConfig,
 		}
 
@@ -272,7 +272,7 @@ func makeHTTPGrabber(config *Config, grabData GrabData) func(string, string, str
 			httpHost = u.Host
 		}
 
-		//Remove host port if using default port
+		// Remove host port if using default port
 		if containsPort(httpHost) && usingDefaultPort(u.Scheme, config.Port) {
 			hostWithoutPort, _, err := net.SplitHostPort(httpHost)
 			if err != nil {
@@ -580,7 +580,7 @@ func GrabBanner(config *Config, target *GrabTarget) *Grab {
 		}
 	} else {
 		grabData := GrabData{HTTP: new(HTTP)}
-		httpGrabber := makeHTTPGrabber(config, grabData)
+		httpGrabber := makeHTTPGrabber(config, &grabData)
 		port := strconv.FormatUint(uint64(config.Port), 10)
 		t := time.Now()
 		var rhost string
