@@ -16,6 +16,7 @@ type clientHelloMsg struct {
 	nextProtoNeg          bool
 	serverName            string
 	ocspStapling          bool
+	scts                  bool
 	supportedCurves       []CurveID
 	supportedPoints       []uint8
 	ticketSupported       bool
@@ -27,6 +28,7 @@ type clientHelloMsg struct {
 	extendedRandomEnabled bool
 	extendedRandom        []byte
 	extendedMasterSecret  bool
+	sctEnabled            bool
 }
 
 func (m *clientHelloMsg) equal(i interface{}) bool {
@@ -44,6 +46,7 @@ func (m *clientHelloMsg) equal(i interface{}) bool {
 		m.nextProtoNeg == m1.nextProtoNeg &&
 		m.serverName == m1.serverName &&
 		m.ocspStapling == m1.ocspStapling &&
+		m.scts == m1.scts &&
 		eqCurveIDs(m.supportedCurves, m1.supportedCurves) &&
 		bytes.Equal(m.supportedPoints, m1.supportedPoints) &&
 		m.ticketSupported == m1.ticketSupported &&
@@ -105,6 +108,9 @@ func (m *clientHelloMsg) marshal() []byte {
 		numExtensions++
 	}
 	if m.extendedMasterSecret {
+		numExtensions++
+	}
+	if m.sctEnabled {
 		numExtensions++
 	}
 	if numExtensions > 0 {
@@ -286,6 +292,14 @@ func (m *clientHelloMsg) marshal() []byte {
 		z[1] = byte(extensionExtendedMasterSecret & 0xff)
 		z = z[4:]
 	}
+	if m.sctEnabled {
+		// https://tools.ietf.org/html/rfc6962#section-3.3.1
+		z[0] = byte(extensionSCT >> 8)
+		z[1] = byte(extensionSCT)
+		// zero uint16 for the zero-length extension_data
+		z = z[4:]
+	}
+
 	m.raw = x
 
 	return x
@@ -341,6 +355,7 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 	m.signatureAndHashes = nil
 	m.heartbeatEnabled = false
 	m.extendedMasterSecret = false
+	m.scts = false
 
 	if len(data) == 0 {
 		// ClientHello is optionally followed by extension data
@@ -481,6 +496,11 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 				return false
 			}
 			m.extendedMasterSecret = true
+		case extensionSCT:
+			m.scts = true
+			if length != 0 {
+				return false
+			}
 		}
 		data = data[length:]
 	}
@@ -498,6 +518,7 @@ type serverHelloMsg struct {
 	nextProtoNeg          bool
 	nextProtos            []string
 	ocspStapling          bool
+	scts                  [][]byte
 	ticketSupported       bool
 	secureRenegotiation   bool
 	heartbeatEnabled      bool
@@ -564,6 +585,14 @@ func (m *serverHelloMsg) marshal() []byte {
 		numExtensions++
 	}
 	if m.extendedMasterSecret {
+		numExtensions++
+	}
+	sctLen := 0
+	if len(m.scts) > 0 {
+		for _, sct := range m.scts {
+			sctLen += len(sct) + 2
+		}
+		extensionsLength += 2 + sctLen
 		numExtensions++
 	}
 	if numExtensions > 0 {
@@ -652,9 +681,24 @@ func (m *serverHelloMsg) marshal() []byte {
 		z[1] = byte(extensionExtendedMasterSecret & 0xff)
 		z = z[4:]
 	}
+	if sctLen > 0 {
+		z[0] = byte(extensionSCT >> 8)
+		z[1] = byte(extensionSCT)
+		l := sctLen + 2
+		z[2] = byte(l >> 8)
+		z[3] = byte(l)
+		z[4] = byte(sctLen >> 8)
+		z[5] = byte(sctLen)
 
+		z = z[6:]
+		for _, sct := range m.scts {
+			z[0] = byte(len(sct) >> 8)
+			z[1] = byte(len(sct))
+			copy(z[2:], sct)
+			z = z[len(sct)+2:]
+		}
+	}
 	m.raw = x
-
 	return x
 }
 
@@ -680,6 +724,7 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 
 	m.nextProtoNeg = false
 	m.nextProtos = nil
+	m.scts = nil
 	m.ocspStapling = false
 	m.ticketSupported = false
 	m.heartbeatEnabled = false
@@ -762,6 +807,30 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 				return false
 			}
 			m.extendedMasterSecret = true
+
+		case extensionSCT:
+			d := data[:length]
+			if len(d) < 2 {
+				return false
+			}
+			l := int(d[0])<<8 | int(d[1])
+			d = d[2:]
+			if len(d) != l || l == 0 {
+				return false
+			}
+			m.scts = make([][]byte, 0, 3)
+			for len(d) != 0 {
+				if len(d) < 2 {
+					return false
+				}
+				sctLen := int(d[0])<<8 | int(d[1])
+				d = d[2:]
+				if sctLen == 0 || len(d) < sctLen {
+					return false
+				}
+				m.scts = append(m.scts, d[:sctLen])
+				d = d[sctLen:]
+			}
 		}
 		data = data[length:]
 	}

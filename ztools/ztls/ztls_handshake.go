@@ -5,6 +5,7 @@
 package ztls
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/zmap/zgrab/ztools/keys"
 	"github.com/zmap/zgrab/ztools/x509"
+	"github.com/zmap/zgrab/ztools/zct"
 )
 
 var ErrUnimplementedCipher error = errors.New("unimplemented cipher suite")
@@ -28,18 +30,24 @@ type ClientHello struct {
 	SessionID      []byte `json:"session_id,omitempty"`
 }
 
+type parsedAndRawSCT struct {
+	Raw    []byte                         `json:"raw"`
+	Parsed *ct.SignedCertificateTimestamp `json:"parsed"`
+}
+
 type ServerHello struct {
-	Version              TLSVersion  `json:"version"`
-	Random               []byte      `json:"random"`
-	SessionID            []byte      `json:"session_id"`
-	CipherSuite          CipherSuite `json:"cipher_suite"`
-	CompressionMethod    uint8       `json:"compression_method"`
-	OcspStapling         bool        `json:"ocsp_stapling"`
-	TicketSupported      bool        `json:"ticket"`
-	SecureRenegotiation  bool        `json:"secure_renegotiation"`
-	HeartbeatSupported   bool        `json:"heartbeat"`
-	ExtendedRandom       []byte      `json:"extended_random,omitempty"`
-	ExtendedMasterSecret bool        `json:"extended_master_secret"`
+	Version                     TLSVersion        `json:"version"`
+	Random                      []byte            `json:"random"`
+	SessionID                   []byte            `json:"session_id"`
+	CipherSuite                 CipherSuite       `json:"cipher_suite"`
+	CompressionMethod           uint8             `json:"compression_method"`
+	OcspStapling                bool              `json:"ocsp_stapling"`
+	TicketSupported             bool              `json:"ticket"`
+	SecureRenegotiation         bool              `json:"secure_renegotiation"`
+	HeartbeatSupported          bool              `json:"heartbeat"`
+	ExtendedRandom              []byte            `json:"extended_random,omitempty"`
+	ExtendedMasterSecret        bool              `json:"extended_master_secret"`
+	SignedCertificateTimestamps []parsedAndRawSCT `json:"scts,omitempty"`
 }
 
 // SimpleCertificate holds a *x509.Certificate and a []byte for the certificate
@@ -230,6 +238,17 @@ func (m *serverHelloMsg) MakeLog() *ServerHello {
 	if len(m.extendedRandom) > 0 {
 		sh.ExtendedRandom = make([]byte, len(m.extendedRandom))
 		copy(sh.ExtendedRandom, m.extendedRandom)
+	}
+	if len(m.scts) > 0 {
+		for _, rawSCT := range m.scts {
+			var out parsedAndRawSCT
+			copy(out.Raw, rawSCT)
+			sct, err := ct.DeserializeSCT(bytes.NewReader(rawSCT))
+			if err == nil {
+				out.Parsed = sct
+			}
+			sh.SignedCertificateTimestamps = append(sh.SignedCertificateTimestamps, out)
+		}
 	}
 	sh.ExtendedMasterSecret = m.extendedMasterSecret
 	return sh

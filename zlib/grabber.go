@@ -185,6 +185,9 @@ func makeTLSConfig(config *Config, urlHost string) *ztls.Config {
 	if config.TLSExtendedRandom {
 		tlsConfig.ExtendedRandom = true
 	}
+	if config.SignedCertificateTimestampExt {
+		tlsConfig.SignedCertificateTimestampExt = true
+	}
 	if config.GatherSessionTicket {
 		tlsConfig.ForceSessionTicketExt = true
 	}
@@ -363,8 +366,8 @@ func makeGrabber(config *Config) func(*Conn) error {
 		if config.TLSExtendedRandom {
 			c.SetExtendedRandom()
 		}
-		if config.GatherSessionTicket {
-			c.SetGatherSessionTicket()
+		if config.SignedCertificateTimestampExt {
+			c.SetSignedCertificateTimestampExt()
 		}
 		if config.ExtendedMasterSecret {
 			c.SetOfferExtendedMasterSecret()

@@ -60,6 +60,9 @@ func (c *Conn) clientHandshake() error {
 	if c.config.ForceSessionTicketExt {
 		hello.ticketSupported = true
 	}
+	if c.config.SignedCertificateTimestampExt {
+		hello.sctEnabled = true
+	}
 
 	if c.config.HeartbeatEnabled && !c.config.ExtendedRandom {
 		hello.heartbeatEnabled = true

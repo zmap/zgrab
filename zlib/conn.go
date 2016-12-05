@@ -64,13 +64,14 @@ type Conn struct {
 
 	caPool *x509.CertPool
 
-	CipherSuites              []uint16
-	ForceSuites               bool
-	noSNI                     bool
-	extendedRandom            bool
-	gatherSessionTicket       bool
-	offerExtendedMasterSecret bool
-	tlsVerbose                bool
+	CipherSuites                  []uint16
+	ForceSuites                   bool
+	noSNI                         bool
+	extendedRandom                bool
+	gatherSessionTicket           bool
+	offerExtendedMasterSecret     bool
+	tlsVerbose                    bool
+	SignedCertificateTimestampExt bool
 
 	domain string
 
@@ -113,6 +114,10 @@ func (c *Conn) SetGatherSessionTicket() {
 
 func (c *Conn) SetOfferExtendedMasterSecret() {
 	c.offerExtendedMasterSecret = true
+}
+
+func (c *Conn) SetSignedCertificateTimestampExt() {
+	c.SignedCertificateTimestampExt = true
 }
 
 func (c *Conn) SetTLSVerbose() {
@@ -298,6 +303,9 @@ func (c *Conn) TLSHandshake() error {
 	}
 	if c.extendedRandom {
 		tlsConfig.ExtendedRandom = true
+	}
+	if c.SignedCertificateTimestampExt {
+		tlsConfig.SignedCertificateTimestampExt = true
 	}
 	if c.gatherSessionTicket {
 		tlsConfig.ForceSessionTicketExt = true
