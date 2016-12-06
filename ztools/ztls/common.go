@@ -83,6 +83,7 @@ const (
 	extensionNextProtoNeg         uint16 = 13172 // not IANA assigned
 	extensionRenegotiationInfo    uint16 = 0xff01
 	extensionExtendedRandom       uint16 = 0x0028 // not IANA assigned
+	extensionSCT                  uint16 = 18
 )
 
 // TLS signaling cipher suite values
@@ -346,6 +347,8 @@ type Config struct {
 
 	// Enable use of the Extended Master Secret extension
 	ExtendedMasterSecret bool
+
+	SignedCertificateTimestampExt bool
 
 	// Explicitly set Client random
 	ClientRandom []byte
