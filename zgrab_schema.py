@@ -205,6 +205,15 @@ zgrab_tls = SubRecord({
         "heartbeat":Boolean(),
         "extended_random":Binary(),
         "extended_master_secret": Boolean(),
+        "scts":ListOf(SubRecord({
+                "parsed":SubRecord({
+                    "version":Unsigned16BitInteger(),
+                    "log_id":IndexedBinary(),
+                    "timestamp":Signed64BitInteger(),
+                    "signature":Binary(),
+                 }),
+                "raw":Binary()
+            })),
     }),
     "server_certificates":SubRecord({
         "certificate":zgrab_certificate,
