@@ -23,6 +23,7 @@ import (
 	"os"
 
 	"github.com/zmap/zgrab/ztools/x509"
+	"github.com/zmap/zlint/lints"
 	"github.com/zmap/zlint/zlint"
 )
 
@@ -52,6 +53,7 @@ func main() {
 	if err != nil {
 		exitErr("Unable to parse certificate: ", err)
 	}
+
 	out, err := json.Marshal(x509Cert)
 	if err != nil {
 		exitErr("Unable to convert certificate to JSON: ", err)
@@ -62,15 +64,30 @@ func main() {
 	if err != nil {
 		exitErr("Unable to run zlint: ", err)
 	}
-	fmt.Println(string(zlintReport))
+
+	type intermediateCert x509.Certificate
+
+	zlintAppendedToCert, err := json.Marshal(struct {
+		intermediateCert
+		Lints map[string]lints.ResultStruct
+	}{
+		intermediateCert: intermediateCert(*x509Cert),
+		Lints:            zlintReport,
+	})
+
+	if err != nil {
+		exitErr("Unable to Marshal JSON: ", err)
+	}
+
+	fmt.Println(string(zlintAppendedToCert))
+
 }
 
-func runZlint(x509Cert *x509.Certificate) ([]byte, error) {
+func runZlint(x509Cert *x509.Certificate) (map[string]lints.ResultStruct, error) {
 	m := make(map[string]int)
 	zlintReport, err := zlint.ParsedTestHandler(x509Cert, m)
 	if err != nil {
 		return nil, err
 	}
-
-	return json.Marshal(zlintReport)
+	return zlintReport, nil
 }
