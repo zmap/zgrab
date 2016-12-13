@@ -11,6 +11,7 @@ before_install:
 - go get golang.org/x/net/context
 - go get github.com/op/go-logging
 - go get github.com/asaskevich/govalidator
+- go get github.com/zmap/zlint
 before_script:
 - mkdir -p $GOPATH/src/github.com/zmap
 - ln -s $TRAVIS_BUILD_DIR $GOPATH/src/github.com/zmap/ || true
