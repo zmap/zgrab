@@ -15,20 +15,21 @@
 package main
 
 import (
-	"encoding/json"
-	"io"
-	"os"
 	"bytes"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/zmap/zgrab/ztools/x509"
+	"github.com/zmap/zlint/zlint"
 )
 
 func exitErr(a ...interface{}) {
 	fmt.Fprint(os.Stderr, "FATAL: ")
-    fmt.Fprintln(os.Stderr, a...)
-    os.Exit(1)
+	fmt.Fprintln(os.Stderr, a...)
+	os.Exit(1)
 }
 
 func main() {
@@ -51,10 +52,25 @@ func main() {
 	if err != nil {
 		exitErr("Unable to parse certificate: ", err)
 	}
-
 	out, err := json.Marshal(x509Cert)
 	if err != nil {
 		exitErr("Unable to convert certificate to JSON: ", err)
 	}
 	fmt.Println(string(out))
+
+	zlintReport, err := runZlint(x509Cert)
+	if err != nil {
+		exitErr("Unable to run zlint: ", err)
+	}
+	fmt.Println(string(zlintReport))
+}
+
+func runZlint(x509Cert *x509.Certificate) ([]byte, error) {
+	m := make(map[string]int)
+	zlintReport, err := zlint.ParsedTestHandler(x509Cert, m)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(zlintReport)
 }
