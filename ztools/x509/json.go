@@ -210,6 +210,7 @@ type jsonCertificate struct {
 	TBSCertificateFingerprint CertificateFingerprint       `json:"tbs_fingerprint"`
 	ValidationLevel           CertValidationLevel          `json:"validation_level"`
 	Names                     []string                     `json:"names,omitempty"`
+	Redacted                  bool                         `json:"redacted"`
 }
 
 func (c *Certificate) MarshalJSON() ([]byte, error) {
@@ -255,6 +256,12 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	}
 
 	jc.Names = purgeNameDuplicates(jc.Names)
+	jc.Redacted = false
+	for _, name := range jc.Names {
+		if strings.HasPrefix(name, "?") {
+			jc.Redacted = true
+		}
+	}
 
 	// Pull out the key
 	keyMap := make(map[string]interface{})
@@ -342,10 +349,9 @@ func isValidName(name string) (ret bool) {
 
 	// Check for wildcards and redacts, ignore malformed urls
 	if strings.HasPrefix(name, "?.") || strings.HasPrefix(name, "*.") {
-		ret = govalidator.IsURL(name[2:])
+		ret = isValidName(name[2:])
 	} else {
 		ret = govalidator.IsURL(name)
 	}
-
 	return
 }
