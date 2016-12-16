@@ -78,6 +78,8 @@ zgrab_parsed_certificate = SubRecord({
             "p":Binary(),
             "x":Binary(),
             "y":Binary(),
+            "curve":String(),
+            "length":Unsigned16BitInteger(),
             "asn1_oid":String()
         })
     }),

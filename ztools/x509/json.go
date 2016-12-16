@@ -280,6 +280,9 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		keyMap["gy"] = params.Gy.Bytes()
 		keyMap["x"] = key.X.Bytes()
 		keyMap["y"] = key.Y.Bytes()
+		keyMap["curve"] = key.Curve.Params().Name
+		keyMap["length"] = key.Curve.Params().BitSize
+
 		jc.SubjectKeyInfo.ECDSAPublicKey = keyMap
 	case *AugmentedECDSA:
 		pub := key.Pub
@@ -294,6 +297,8 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		keyMap["gy"] = params.Gy.Bytes()
 		keyMap["x"] = pub.X.Bytes()
 		keyMap["y"] = pub.Y.Bytes()
+		keyMap["curve"] = pub.Curve.Params().Name
+		keyMap["length"] = pub.Curve.Params().BitSize
 
 		//keyMap["asn1_oid"] = c.SignatureAlgorithmOID.String()
 
