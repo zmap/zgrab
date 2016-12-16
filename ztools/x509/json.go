@@ -118,7 +118,7 @@ func (s *SignatureAlgorithm) UnmarshalJSON(b []byte) error {
 
 type auxPublicKeyAlgorithm struct {
 	Name string      `json:"name,omitempty"`
-	OID  pkix.AuxOID `json:"oid"`
+	OID  pkix.AuxOID `json:"oid,omitempty"`
 }
 
 // MarshalJSON implements the json.Marshaler interface
@@ -286,9 +286,7 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		jc.SubjectKeyInfo.ECDSAPublicKey = keyMap
 	case *AugmentedECDSA:
 		pub := key.Pub
-
 		keyMap["pub"] = key.Raw.Bytes
-
 		params := pub.Params()
 		keyMap["p"] = params.P.Bytes()
 		keyMap["n"] = params.N.Bytes()
