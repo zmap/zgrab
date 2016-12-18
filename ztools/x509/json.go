@@ -118,7 +118,7 @@ func (s *SignatureAlgorithm) UnmarshalJSON(b []byte) error {
 
 type auxPublicKeyAlgorithm struct {
 	Name string      `json:"name,omitempty"`
-	OID  pkix.AuxOID `json:"oid"`
+	OID  pkix.AuxOID `json:"oid,omitempty"`
 }
 
 // MarshalJSON implements the json.Marshaler interface
@@ -210,6 +210,7 @@ type jsonCertificate struct {
 	TBSCertificateFingerprint CertificateFingerprint       `json:"tbs_fingerprint"`
 	ValidationLevel           CertValidationLevel          `json:"validation_level"`
 	Names                     []string                     `json:"names,omitempty"`
+	Redacted                  bool                         `json:"redacted"`
 }
 
 func (c *Certificate) MarshalJSON() ([]byte, error) {
@@ -255,6 +256,12 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	}
 
 	jc.Names = purgeNameDuplicates(jc.Names)
+	jc.Redacted = false
+	for _, name := range jc.Names {
+		if strings.HasPrefix(name, "?") {
+			jc.Redacted = true
+		}
+	}
 
 	// Pull out the key
 	keyMap := make(map[string]interface{})
@@ -280,12 +287,13 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		keyMap["gy"] = params.Gy.Bytes()
 		keyMap["x"] = key.X.Bytes()
 		keyMap["y"] = key.Y.Bytes()
+		keyMap["curve"] = key.Curve.Params().Name
+		keyMap["length"] = key.Curve.Params().BitSize
+
 		jc.SubjectKeyInfo.ECDSAPublicKey = keyMap
 	case *AugmentedECDSA:
 		pub := key.Pub
-
 		keyMap["pub"] = key.Raw.Bytes
-
 		params := pub.Params()
 		keyMap["p"] = params.P.Bytes()
 		keyMap["n"] = params.N.Bytes()
@@ -294,6 +302,8 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		keyMap["gy"] = params.Gy.Bytes()
 		keyMap["x"] = pub.X.Bytes()
 		keyMap["y"] = pub.Y.Bytes()
+		keyMap["curve"] = pub.Curve.Params().Name
+		keyMap["length"] = pub.Curve.Params().BitSize
 
 		//keyMap["asn1_oid"] = c.SignatureAlgorithmOID.String()
 
@@ -339,10 +349,9 @@ func isValidName(name string) (ret bool) {
 
 	// Check for wildcards and redacts, ignore malformed urls
 	if strings.HasPrefix(name, "?.") || strings.HasPrefix(name, "*.") {
-		ret = govalidator.IsURL(name[2:])
+		ret = isValidName(name[2:])
 	} else {
 		ret = govalidator.IsURL(name)
 	}
-
 	return
 }

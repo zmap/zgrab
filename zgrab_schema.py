@@ -56,7 +56,6 @@ zgrab_parsed_certificate = SubRecord({
         "fingerprint_sha256":Binary(),
         "key_algorithm":SubRecord({
             "name":String(doc="Name of public key type, e.g., RSA or ECDSA. More information is available the named SubRecord (e.g., rsa_public_key)."),
-            "oid":String(doc="OID of the public key on the certificate. This is helpful when an unknown type is present. This field is reserved and not current populated.")
          }),
         "rsa_public_key":SubRecord({
             "exponent":Long(),
@@ -78,6 +77,8 @@ zgrab_parsed_certificate = SubRecord({
             "p":Binary(),
             "x":Binary(),
             "y":Binary(),
+            "curve":String(),
+            "length":Unsigned16BitInteger(),
             "asn1_oid":String()
         })
     }),
@@ -145,6 +146,7 @@ zgrab_parsed_certificate = SubRecord({
     "spki_subject_fingerprint":Binary(),
     "tbs_fingerprint":Binary(),
     "validation_level": String(),
+    "redacted": Boolean(),
     "names":ListOf(String()),
 })
 
