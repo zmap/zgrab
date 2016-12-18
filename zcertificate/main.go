@@ -54,17 +54,16 @@ func main() {
 	}
 
 	zlintReport, err := runZlint(x509Cert)
-
 	if err != nil {
 		exitErr("Unable to run zlint: ", err)
 	}
 
-	x509Cert.CertificateLints = zlintReport
-	out, err := json.Marshal(x509Cert)
+	finalJson, err := appendZlintToCertificate(x509Cert, zlintReport)
+
 	if err != nil {
-		exitErr("Unable to convert certificate to JSON: ", err)
+		exitErr("Unable to append Zlint to Certificate: ", err)
 	}
-	fmt.Println(string(out))
+	fmt.Println(string(finalJson))
 }
 
 func runZlint(x509Cert *x509.Certificate) (map[string]string, error) {
@@ -74,4 +73,17 @@ func runZlint(x509Cert *x509.Certificate) (map[string]string, error) {
 		return nil, err
 	}
 	return zlintReport, nil
+}
+
+func appendZlintToCertificate(x509Cert *x509.Certificate, lintResult map[string]string) ([]byte, error) {
+	return json.Marshal(struct {
+		Raw []byte			`json:"raw"`
+		CertData *x509.Certificate	`json:"parsed"`
+		Zlint map[string]string 	`json:"zlint"`
+
+	}{
+		Raw: 		x509Cert.Raw,
+		CertData: 	x509Cert,
+		Zlint:          lintResult,
+	})
 }

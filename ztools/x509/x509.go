@@ -647,9 +647,6 @@ type Certificate struct {
 
 	// CT
 	SignedCertificateTimestampList []*ct.SignedCertificateTimestamp
-
-	// Zlint
-	CertificateLints	map[string]string
 }
 
 type NoticeNumber []int

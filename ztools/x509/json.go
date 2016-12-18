@@ -210,7 +210,6 @@ type jsonCertificate struct {
 	TBSCertificateFingerprint CertificateFingerprint       `json:"tbs_fingerprint"`
 	ValidationLevel           CertValidationLevel          `json:"validation_level"`
 	Names                     []string                     `json:"names,omitempty"`
-	Zlint			  map[string]string	       `json:"zlint,omitempty"`
 }
 
 func (c *Certificate) MarshalJSON() ([]byte, error) {
@@ -228,8 +227,6 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	jc.Subject = c.Subject
 	jc.SubjectDN = c.Subject.String()
 	jc.SubjectKeyInfo.KeyAlgorithm = c.PublicKeyAlgorithm
-
-	jc.Zlint = c.CertificateLints
 
 	if isValidName(c.Subject.CommonName) {
 		jc.Names = append(jc.Names, c.Subject.CommonName)
