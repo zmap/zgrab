@@ -15,20 +15,21 @@
 package main
 
 import (
-	"encoding/json"
-	"io"
-	"os"
 	"bytes"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/zmap/zgrab/ztools/x509"
+	"github.com/zmap/zlint/zlint"
 )
 
 func exitErr(a ...interface{}) {
 	fmt.Fprint(os.Stderr, "FATAL: ")
-    fmt.Fprintln(os.Stderr, a...)
-    os.Exit(1)
+	fmt.Fprintln(os.Stderr, a...)
+	os.Exit(1)
 }
 
 func main() {
@@ -52,9 +53,37 @@ func main() {
 		exitErr("Unable to parse certificate: ", err)
 	}
 
-	out, err := json.Marshal(x509Cert)
+	zlintReport, err := runZlint(x509Cert)
 	if err != nil {
-		exitErr("Unable to convert certificate to JSON: ", err)
+		exitErr("Unable to run zlint: ", err)
 	}
-	fmt.Println(string(out))
+
+	finalJson, err := appendZlintToCertificate(x509Cert, zlintReport)
+
+	if err != nil {
+		exitErr("Unable to append Zlint to Certificate: ", err)
+	}
+	fmt.Println(string(finalJson))
+}
+
+func runZlint(x509Cert *x509.Certificate) (map[string]string, error) {
+	m := make(map[string]int)
+	zlintReport, err := zlint.ParsedTestHandler(x509Cert, m)
+	if err != nil {
+		return nil, err
+	}
+	return zlintReport, nil
+}
+
+func appendZlintToCertificate(x509Cert *x509.Certificate, lintResult map[string]string) ([]byte, error) {
+	return json.Marshal(struct {
+		Raw []byte			`json:"raw"`
+		CertData *x509.Certificate	`json:"parsed"`
+		Zlint map[string]string 	`json:"zlint"`
+
+	}{
+		Raw: 		x509Cert.Raw,
+		CertData: 	x509Cert,
+		Zlint:          lintResult,
+	})
 }
