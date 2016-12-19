@@ -94,6 +94,7 @@ func init() {
 	flag.BoolVar(&config.BACNet, "bacnet", false, "Send some BACNet data")
 	flag.BoolVar(&config.Fox, "fox", false, "Send some Niagara Fox Tunneling data")
 	flag.BoolVar(&config.S7, "s7", false, "Send some Siemens S7 data")
+	flag.BoolVar(&config.OPCUA, "opcua", false, "Send OPC UA Data")
 	flag.BoolVar(&config.NoSNI, "no-sni", false, "Do not send domain name in TLS handshake regardless of whether known")
 
 	flag.BoolVar(&config.ExportsOnly, "export-ciphers", false, "Send only export ciphers")
@@ -128,7 +129,7 @@ func init() {
 	flag.BoolVar(&config.SSH.NegativeOne, "ssh-negative-one", false, "Set SSH DH kex value to -1 in the selected group")
 	flag.BoolVar(&config.Telnet, "telnet", false, "Read telnet banners")
 	flag.IntVar(&config.TelnetMaxSize, "telnet-max-size", 65536, "Max bytes to read for telnet banner")
-
+	
 	flag.Parse()
 
 	// Validate Go Runtime config
