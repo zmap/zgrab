@@ -1,5 +1,7 @@
 /*
- * ZGrab Copyright 2015 Regents of the University of Michigan
+ * ZGrab
+ *   Copyright 2015 Regents of the University of Michigan
+ *   Copyright 2016 Akamai Technologies Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
@@ -115,6 +117,9 @@ func makeDialer(c *Config) func(string) (*Conn, error) {
 		d := Dialer{
 			Deadline: deadline,
 		}
+		if c.LocalAddressSet {
+			d.LocalAddr = c.LocalAddress
+		}
 		conn, err := d.Dial(proto, addr)
 		conn.maxTlsVersion = c.TLSVersion
 		if err == nil {
@@ -131,6 +136,9 @@ func makeNetDialer(c *Config) func(string, string) (net.Conn, error) {
 		deadline := time.Now().Add(timeout)
 		d := Dialer{
 			Deadline: deadline,
+		}
+		if c.LocalAddressSet {
+			d.LocalAddr = c.LocalAddress
 		}
 		conn, err := d.Dial(proto, addr)
 		conn.maxTlsVersion = c.TLSVersion
