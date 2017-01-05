@@ -40,7 +40,9 @@ func (c *connection) clientAuthenticate(config *ClientConfig) error {
 			return nil
 		}
 
-		c.transport.config.ConnLog.UserAuth = methods
+		if c.transport.config.ConnLog != nil {
+			c.transport.config.ConnLog.UserAuth = methods
+		}
 		if config.DontAuthenticate {
 			return nil
 		}

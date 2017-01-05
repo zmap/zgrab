@@ -12,6 +12,8 @@ before_install:
 - go get github.com/op/go-logging
 - go get github.com/asaskevich/govalidator
 - go get github.com/zmap/zlint
+- go get golang.org/x/crypto/curve25519
+- go get golang.org/x/crypto/ed25519
 before_script:
 - mkdir -p $GOPATH/src/github.com/zmap
 - ln -s $TRAVIS_BUILD_DIR $GOPATH/src/github.com/zmap/ || true

@@ -344,14 +344,18 @@ func (t *handshakeTransport) enterKeyExchangeLocked(otherInitPacket []byte) erro
 	}
 
 	if pkgConfig.Verbose {
-		t.config.ConnLog.ClientKex = myInit
+		if t.config.ConnLog != nil {
+			t.config.ConnLog.ClientKex = myInit
+		}
 	}
 
 	otherInit := &kexInitMsg{}
 	if err := Unmarshal(otherInitPacket, otherInit); err != nil {
 		return err
 	}
-	t.config.ConnLog.ServerKex = otherInit
+	if t.config.ConnLog != nil {
+		t.config.ConnLog.ServerKex = otherInit
+	}
 
 	magics := handshakeMagics{
 		clientVersion: t.clientVersion,
@@ -374,7 +378,9 @@ func (t *handshakeTransport) enterKeyExchangeLocked(otherInitPacket []byte) erro
 	if err != nil {
 		return err
 	}
-	t.config.ConnLog.AlgorithmSelection = algs
+	if t.config.ConnLog != nil {
+		t.config.ConnLog.AlgorithmSelection = algs
+	}
 
 	// We don't send FirstKexFollows, but we handle receiving it.
 	//
@@ -399,7 +405,9 @@ func (t *handshakeTransport) enterKeyExchangeLocked(otherInitPacket []byte) erro
 		return fmt.Errorf("ssh: unexpected key exchange algorithm %v", algs.kex)
 	}
 
-	t.config.ConnLog.DHKeyExchange = kex
+	if t.config.ConnLog != nil {
+		t.config.ConnLog.DHKeyExchange = kex
+	}
 
 	var result *kexResult
 	if len(t.hostKeys) > 0 {
@@ -408,7 +416,9 @@ func (t *handshakeTransport) enterKeyExchangeLocked(otherInitPacket []byte) erro
 		result, err = t.client(kex, algs, &magics)
 	}
 	if pkgConfig.Verbose {
-		t.config.ConnLog.Crypto = result
+		if t.config.ConnLog != nil {
+			t.config.ConnLog.Crypto = result
+		}
 	}
 	if err != nil {
 		return err

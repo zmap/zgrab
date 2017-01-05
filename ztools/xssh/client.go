@@ -94,9 +94,13 @@ func (c *connection) clientHandshake(dialAddress string, config *ClientConfig) e
 		return err
 	}
 
-	config.ConnLog.ServerIDString = string(c.serverVersion)
+	if config.ConnLog != nil {
+		config.ConnLog.ServerIDString = string(c.serverVersion)
+	}
 	if pkgConfig.Verbose {
-		config.ConnLog.ClientIDString = string(c.clientVersion)
+		if config.ConnLog != nil {
+			config.ConnLog.ClientIDString = string(c.clientVersion)
+		}
 	}
 
 	c.transport = newClientTransport(
