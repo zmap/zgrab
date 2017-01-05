@@ -129,6 +129,9 @@ func init() {
 	flag.BoolVar(&config.Telnet, "telnet", false, "Read telnet banners")
 	flag.IntVar(&config.TelnetMaxSize, "telnet-max-size", 65536, "Max bytes to read for telnet banner")
 
+	// Flags for XSSH scanner
+	flag.BoolVar(&config.XSSH.XSSH, "xssh", false, "Use the x/crypto SSH scanner")
+
 	flag.Parse()
 
 	// Validate Go Runtime config

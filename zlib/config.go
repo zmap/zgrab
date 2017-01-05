@@ -45,6 +45,10 @@ type SSHScanConfig struct {
 	NegativeOne       bool
 }
 
+type XSSHScanConfig struct {
+	XSSH bool
+}
+
 func (sc *SSHScanConfig) GetClientImplementation() (*ssh.ClientImplementation, bool) {
 	if sc.Client == "" {
 		return &ssh.OpenSSH_6_6p1, true
@@ -176,4 +180,7 @@ type Config struct {
 
 	// Go Runtime Config
 	GOMAXPROCS int
+
+	// x/crypto SSH
+	XSSH XSSHScanConfig
 }

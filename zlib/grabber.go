@@ -35,6 +35,7 @@ import (
 	"github.com/zmap/zgrab/ztools/scada/fox"
 	"github.com/zmap/zgrab/ztools/scada/siemens"
 	"github.com/zmap/zgrab/ztools/telnet"
+	"github.com/zmap/zgrab/ztools/xssh"
 	"github.com/zmap/zgrab/ztools/zlog"
 	"github.com/zmap/zgrab/ztools/ztls"
 )
@@ -550,9 +551,40 @@ func makeGrabber(config *Config) func(*Conn) error {
 	}
 }
 
-func GrabBanner(config *Config, target *GrabTarget) *Grab {
+func makeXSSHGrabber(gblConfig *Config, grabData GrabData) func(string) error {
+	return func(netAddr string) error {
 
-	if len(config.HTTP.Endpoint) == 0 {
+		xsshConfig := xssh.MakeXSSHConfig()
+		xsshConfig.Timeout = gblConfig.Timeout
+		xsshConfig.ConnLog = grabData.XSSH
+		_, err := xssh.Dial("tcp", netAddr, xsshConfig)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+}
+
+func GrabBanner(config *Config, target *GrabTarget) *Grab {
+	if config.XSSH.XSSH {
+		t := time.Now()
+
+		grabData := GrabData{XSSH: new(xssh.HandshakeLog)}
+		xsshGrabber := makeXSSHGrabber(config, grabData)
+
+		port := strconv.FormatUint(uint64(config.Port), 10)
+		rhost := net.JoinHostPort(target.Addr.String(), port)
+
+		err := xsshGrabber(rhost)
+
+		return &Grab{
+			IP:    target.Addr,
+			Time:  t,
+			Data:  grabData,
+			Error: err,
+		}
+	} else if len(config.HTTP.Endpoint) == 0 {
 		dial := makeDialer(config)
 		grabber := makeGrabber(config)
 		port := strconv.FormatUint(uint64(config.Port), 10)
