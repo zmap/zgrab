@@ -21,17 +21,17 @@ func ExampleClientAgent() {
 		log.Fatalf("net.Dial: %v", err)
 	}
 	agentClient := agent.NewClient(conn)
-	config := &ssh.ClientConfig{
+	config := &xssh.ClientConfig{
 		User: "username",
-		Auth: []ssh.AuthMethod{
+		Auth: []xssh.AuthMethod{
 			// Use a callback rather than PublicKeys
 			// so we only consult the agent once the remote server
 			// wants it.
-			ssh.PublicKeysCallback(agentClient.Signers),
+			xssh.PublicKeysCallback(agentClient.Signers),
 		},
 	}
 
-	sshc, err := ssh.Dial("tcp", "localhost:22", config)
+	sshc, err := xssh.Dial("tcp", "localhost:22", config)
 	if err != nil {
 		log.Fatalf("Dial: %v", err)
 	}

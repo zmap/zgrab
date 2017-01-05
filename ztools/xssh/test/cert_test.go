@@ -20,25 +20,25 @@ func TestCertLogin(t *testing.T) {
 	// Use a key different from the default.
 	clientKey := testSigners["dsa"]
 	caAuthKey := testSigners["ecdsa"]
-	cert := &ssh.Certificate{
+	cert := &xssh.Certificate{
 		Key:             clientKey.PublicKey(),
 		ValidPrincipals: []string{username()},
-		CertType:        ssh.UserCert,
-		ValidBefore:     ssh.CertTimeInfinity,
+		CertType:        xssh.UserCert,
+		ValidBefore:     xssh.CertTimeInfinity,
 	}
 	if err := cert.SignCert(rand.Reader, caAuthKey); err != nil {
 		t.Fatalf("SetSignature: %v", err)
 	}
 
-	certSigner, err := ssh.NewCertSigner(cert, clientKey)
+	certSigner, err := xssh.NewCertSigner(cert, clientKey)
 	if err != nil {
 		t.Fatalf("NewCertSigner: %v", err)
 	}
 
-	conf := &ssh.ClientConfig{
+	conf := &xssh.ClientConfig{
 		User: username(),
 	}
-	conf.Auth = append(conf.Auth, ssh.PublicKeys(certSigner))
+	conf.Auth = append(conf.Auth, xssh.PublicKeys(certSigner))
 	client, err := s.TryDial(conf)
 	if err != nil {
 		t.Fatalf("TryDial: %v", err)

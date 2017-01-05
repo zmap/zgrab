@@ -44,9 +44,9 @@ func TestHostKeyCheck(t *testing.T) {
 	conf.HostKeyCallback = hostDB.Check
 
 	// change the keys.
-	hostDB.keys[ssh.KeyAlgoRSA][25]++
-	hostDB.keys[ssh.KeyAlgoDSA][25]++
-	hostDB.keys[ssh.KeyAlgoECDSA256][25]++
+	hostDB.keys[xssh.KeyAlgoRSA][25]++
+	hostDB.keys[xssh.KeyAlgoDSA][25]++
+	hostDB.keys[xssh.KeyAlgoECDSA256][25]++
 
 	conn, err := server.TryDial(conf)
 	if err == nil {
@@ -227,7 +227,7 @@ func TestInvalidTerminalMode(t *testing.T) {
 	}
 	defer session.Close()
 
-	if err = session.RequestPty("vt100", 80, 40, ssh.TerminalModes{255: 1984}); err == nil {
+	if err = session.RequestPty("vt100", 80, 40, xssh.TerminalModes{255: 1984}); err == nil {
 		t.Fatalf("req-pty failed: successful request with invalid mode")
 	}
 }
@@ -254,7 +254,7 @@ func TestValidTerminalMode(t *testing.T) {
 		t.Fatalf("unable to acquire stdin pipe: %s", err)
 	}
 
-	tm := ssh.TerminalModes{ssh.ECHO: 0}
+	tm := xssh.TerminalModes{xssh.ECHO: 0}
 	if err = session.RequestPty("xterm", 80, 40, tm); err != nil {
 		t.Fatalf("req-pty failed: %s", err)
 	}
@@ -277,7 +277,7 @@ func TestValidTerminalMode(t *testing.T) {
 }
 
 func TestCiphers(t *testing.T) {
-	var config ssh.Config
+	var config xssh.Config
 	config.SetDefaults()
 	cipherOrder := config.Ciphers
 	// These ciphers will not be tested when commented out in cipher.go it will
@@ -301,7 +301,7 @@ func TestCiphers(t *testing.T) {
 }
 
 func TestMACs(t *testing.T) {
-	var config ssh.Config
+	var config xssh.Config
 	config.SetDefaults()
 	macOrder := config.MACs
 
@@ -321,7 +321,7 @@ func TestMACs(t *testing.T) {
 }
 
 func TestKeyExchanges(t *testing.T) {
-	var config ssh.Config
+	var config xssh.Config
 	config.SetDefaults()
 	kexOrder := config.KeyExchanges
 	for _, kex := range kexOrder {
@@ -349,8 +349,8 @@ func TestClientAuthAlgorithms(t *testing.T) {
 		server := newServer(t)
 		conf := clientConfig()
 		conf.SetDefaults()
-		conf.Auth = []ssh.AuthMethod{
-			ssh.PublicKeys(testSigners[key]),
+		conf.Auth = []xssh.AuthMethod{
+			xssh.PublicKeys(testSigners[key]),
 		}
 
 		conn, err := server.TryDial(conf)

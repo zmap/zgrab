@@ -17,7 +17,7 @@ import (
 )
 
 type privKey struct {
-	signer  ssh.Signer
+	signer  xssh.Signer
 	comment string
 	expire  *time.Time
 }
@@ -72,7 +72,7 @@ func (r *keyring) removeLocked(want []byte) error {
 }
 
 // Remove removes all identities with the given public key.
-func (r *keyring) Remove(key ssh.PublicKey) error {
+func (r *keyring) Remove(key xssh.PublicKey) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.locked {
@@ -152,14 +152,14 @@ func (r *keyring) Add(key AddedKey) error {
 	if r.locked {
 		return errLocked
 	}
-	signer, err := ssh.NewSignerFromKey(key.PrivateKey)
+	signer, err := xssh.NewSignerFromKey(key.PrivateKey)
 
 	if err != nil {
 		return err
 	}
 
 	if cert := key.Certificate; cert != nil {
-		signer, err = ssh.NewCertSigner(cert, signer)
+		signer, err = xssh.NewCertSigner(cert, signer)
 		if err != nil {
 			return err
 		}
@@ -181,7 +181,7 @@ func (r *keyring) Add(key AddedKey) error {
 }
 
 // Sign returns a signature for the data.
-func (r *keyring) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, error) {
+func (r *keyring) Sign(key xssh.PublicKey, data []byte) (*xssh.Signature, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.locked {
@@ -199,7 +199,7 @@ func (r *keyring) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, error) {
 }
 
 // Signers returns signers for all the known keys.
-func (r *keyring) Signers() ([]ssh.Signer, error) {
+func (r *keyring) Signers() ([]xssh.Signer, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.locked {
@@ -207,7 +207,7 @@ func (r *keyring) Signers() ([]ssh.Signer, error) {
 	}
 
 	r.expireKeysLocked()
-	s := make([]ssh.Signer, 0, len(r.keys))
+	s := make([]xssh.Signer, 0, len(r.keys))
 	for _, k := range r.keys {
 		s = append(s, k.signer)
 	}

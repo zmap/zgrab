@@ -43,25 +43,25 @@ func TestSetupForwardAgent(t *testing.T) {
 	_, socket, cleanup := startAgent(t)
 	defer cleanup()
 
-	serverConf := ssh.ServerConfig{
+	serverConf := xssh.ServerConfig{
 		NoClientAuth: true,
 	}
 	serverConf.AddHostKey(testSigners["rsa"])
-	incoming := make(chan *ssh.ServerConn, 1)
+	incoming := make(chan *xssh.ServerConn, 1)
 	go func() {
-		conn, _, _, err := ssh.NewServerConn(a, &serverConf)
+		conn, _, _, err := xssh.NewServerConn(a, &serverConf)
 		if err != nil {
 			t.Fatalf("Server: %v", err)
 		}
 		incoming <- conn
 	}()
 
-	conf := ssh.ClientConfig{}
-	conn, chans, reqs, err := ssh.NewClientConn(b, "", &conf)
+	conf := xssh.ClientConfig{}
+	conn, chans, reqs, err := xssh.NewClientConn(b, "", &conf)
 	if err != nil {
 		t.Fatalf("NewClientConn: %v", err)
 	}
-	client := ssh.NewClient(conn, chans, reqs)
+	client := xssh.NewClient(conn, chans, reqs)
 
 	if err := ForwardToRemote(client, socket); err != nil {
 		t.Fatalf("SetupForwardAgent: %v", err)
@@ -72,7 +72,7 @@ func TestSetupForwardAgent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenChannel(%q): %v", channelType, err)
 	}
-	go ssh.DiscardRequests(reqs)
+	go xssh.DiscardRequests(reqs)
 
 	agentClient := NewClient(ch)
 	testAgentInterface(t, agentClient, testPrivateKeys["rsa"], nil, 0)
@@ -156,7 +156,7 @@ func TestKeyTypes(t *testing.T) {
 	}
 }
 
-func addCertToAgentSock(key crypto.PrivateKey, cert *ssh.Certificate) error {
+func addCertToAgentSock(key crypto.PrivateKey, cert *xssh.Certificate) error {
 	a, b, err := netPipe()
 	if err != nil {
 		return err
@@ -171,7 +171,7 @@ func addCertToAgentSock(key crypto.PrivateKey, cert *ssh.Certificate) error {
 	return verifyKey(agentClient)
 }
 
-func addCertToAgent(key crypto.PrivateKey, cert *ssh.Certificate) error {
+func addCertToAgent(key crypto.PrivateKey, cert *xssh.Certificate) error {
 	sshAgent := NewKeyring()
 	if err := sshAgent.Add(AddedKey{PrivateKey: key, Certificate: cert}); err != nil {
 		return fmt.Errorf("add: %v", err)
@@ -181,15 +181,15 @@ func addCertToAgent(key crypto.PrivateKey, cert *ssh.Certificate) error {
 
 func TestCertTypes(t *testing.T) {
 	for keyType, key := range testPublicKeys {
-		cert := &ssh.Certificate{
+		cert := &xssh.Certificate{
 			ValidPrincipals: []string{"gopher1"},
 			ValidAfter:      0,
-			ValidBefore:     ssh.CertTimeInfinity,
+			ValidBefore:     xssh.CertTimeInfinity,
 			Key:             key,
 			Serial:          1,
-			CertType:        ssh.UserCert,
+			CertType:        xssh.UserCert,
 			SignatureKey:    testPublicKeys["rsa"],
-			Permissions: ssh.Permissions{
+			Permissions: xssh.Permissions{
 				CriticalOptions: map[string]string{},
 				Extensions:      map[string]string{},
 			},
