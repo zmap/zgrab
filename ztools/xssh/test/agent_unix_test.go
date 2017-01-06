@@ -14,7 +14,7 @@ import (
 	"github.com/zmap/zgrab/ztools/xssh/agent"
 )
 
-func TestAgentForward(t *testing.T) {
+func DISABLED_TestAgentForward(t *testing.T) {
 	server := newServer(t)
 	defer server.Shutdown()
 	conn := server.Dial(clientConfig())

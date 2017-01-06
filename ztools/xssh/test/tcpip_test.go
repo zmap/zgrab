@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-func TestDial(t *testing.T) {
+func DISABLED_TestDial(t *testing.T) {
 	server := newServer(t)
 	defer server.Shutdown()
 	sshConn := server.Dial(clientConfig())

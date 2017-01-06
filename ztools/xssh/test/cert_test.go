@@ -13,7 +13,7 @@ import (
 	"github.com/zmap/zgrab/ztools/xssh"
 )
 
-func TestCertLogin(t *testing.T) {
+func DISABLED_TestCertLogin(t *testing.T) {
 	s := newServer(t)
 	defer s.Shutdown()
 

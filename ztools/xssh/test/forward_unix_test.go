@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func TestPortForward(t *testing.T) {
+func DISABLED_TestPortForward(t *testing.T) {
 	server := newServer(t)
 	defer server.Shutdown()
 	conn := server.Dial(clientConfig())
@@ -93,7 +93,7 @@ func TestPortForward(t *testing.T) {
 	}
 }
 
-func TestAcceptClose(t *testing.T) {
+func DISABLED_TestAcceptClose(t *testing.T) {
 	server := newServer(t)
 	defer server.Shutdown()
 	conn := server.Dial(clientConfig())
@@ -125,7 +125,7 @@ func TestAcceptClose(t *testing.T) {
 }
 
 // Check that listeners exit if the underlying client transport dies.
-func TestPortForwardConnectionClose(t *testing.T) {
+func DISABLED_TestPortForwardConnectionClose(t *testing.T) {
 	server := newServer(t)
 	defer server.Shutdown()
 	conn := server.Dial(clientConfig())
