@@ -101,7 +101,7 @@ func findCommon(what string, client []string, server []string) (common string, e
 
 type directionAlgorithms struct {
 	Cipher      string `json:"cipher"`
-	MAC         string `json:"MAC"`
+	MAC         string `json:"mac"`
 	Compression string `json:"compression"`
 }
 
