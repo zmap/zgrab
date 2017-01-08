@@ -157,7 +157,7 @@ func testAgentInterface(t *testing.T, agent Agent, key interface{}, cert *xssh.C
 
 }
 
-func TestAgent(t *testing.T) {
+func DISABLED_TestAgent(t *testing.T) {
 	for _, keyType := range []string{"rsa", "dsa", "ecdsa", "ed25519"} {
 		testAgent(t, testPrivateKeys[keyType], nil, 0)
 		testKeyring(t, testPrivateKeys[keyType], nil, 1)
