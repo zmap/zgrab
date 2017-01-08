@@ -114,8 +114,8 @@ type algorithms struct {
 
 func (alg *algorithms) MarshalJSON() ([]byte, error) {
 	aux := struct {
-		Kex     string              `json:"kex"`
-		HostKey string              `json:"host_key"`
+		Kex     string              `json:"dh_kex_algorithm"`
+		HostKey string              `json:"host_key_algorithm"`
 		W       directionAlgorithms `json:"client_to_server_alg_group"`
 		R       directionAlgorithms `json:"server_to_client_alg_group"`
 	}{
