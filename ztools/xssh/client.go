@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 )
@@ -95,11 +96,51 @@ func (c *connection) clientHandshake(dialAddress string, config *ClientConfig) e
 	}
 
 	if config.ConnLog != nil {
-		config.ConnLog.ServerIDString = string(c.serverVersion)
+		config.ConnLog.ServerID = new(EndpointId)
+		config.ConnLog.ServerID.Complete = string(c.serverVersion)
+
+		serverSplitId := strings.SplitN(string(c.serverVersion), " ", 2)
+		if len(serverSplitId) == 2 {
+			config.ConnLog.ServerID.Comment = serverSplitId[1]
+		}
+
+		serverSplitGroup := strings.SplitN(serverSplitId[0], "-", 3)
+		if serverSplitGroup[0] == "SSH" {
+			// If ID doesn't start with "SSH", don't attempt to parse.
+			if len(serverSplitGroup) > 1 {
+				config.ConnLog.ServerID.ProtoVersion = serverSplitGroup[1]
+			}
+
+			if len(serverSplitGroup) == 3 {
+				config.ConnLog.ServerID.SoftwareVersion = serverSplitGroup[2]
+			}
+		}
 	}
 	if pkgConfig.Verbose {
 		if config.ConnLog != nil {
-			config.ConnLog.ClientIDString = string(c.clientVersion)
+			//config.ConnLog.ClientIDString = string(c.clientVersion)
+		}
+
+		if config.ConnLog != nil {
+			config.ConnLog.ClientID = new(EndpointId)
+			config.ConnLog.ClientID.Complete = string(c.clientVersion)
+
+			clientSplitId := strings.SplitN(string(c.clientVersion), " ", 2)
+			if len(clientSplitId) == 2 {
+				config.ConnLog.ClientID.Comment = clientSplitId[1]
+			}
+
+			clientSplitGroup := strings.SplitN(clientSplitId[0], "-", 3)
+			if clientSplitGroup[0] == "SSH" {
+				// If ID doesn't start with "SSH", don't attempt to parse.
+				if len(clientSplitGroup) > 1 {
+					config.ConnLog.ClientID.ProtoVersion = clientSplitGroup[1]
+				}
+
+				if len(clientSplitGroup) == 3 {
+					config.ConnLog.ClientID.SoftwareVersion = clientSplitGroup[2]
+				}
+			}
 		}
 	}
 
