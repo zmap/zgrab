@@ -7,6 +7,7 @@ package xssh
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -55,7 +56,23 @@ func (d *disconnectMsg) Error() string {
 const msgKexInit = 20
 
 type kexInitMsg struct {
-	Cookie                  [16]byte `sshtype:"20" json:"cookie"`
+	Cookie                  [16]byte `sshtype:"20"`
+	KexAlgos                []string
+	ServerHostKeyAlgos      []string
+	CiphersClientServer     []string
+	CiphersServerClient     []string
+	MACsClientServer        []string
+	MACsServerClient        []string
+	CompressionClientServer []string
+	CompressionServerClient []string
+	LanguagesClientServer   []string
+	LanguagesServerClient   []string
+	FirstKexFollows         bool
+	Reserved                uint32
+}
+
+type JsonKexInitMsg struct {
+	Cookie                  []byte   `json:"cookie"`
 	KexAlgos                []string `json:"kex_algorithms"`
 	ServerHostKeyAlgos      []string `json:"host_key_algorithms"`
 	CiphersClientServer     []string `json:"client_to_server_ciphers"`
@@ -68,6 +85,25 @@ type kexInitMsg struct {
 	LanguagesServerClient   []string `json:"server_to_client_languages"`
 	FirstKexFollows         bool     `json:"first_kex_follows"`
 	Reserved                uint32   `json:"reserved"`
+}
+
+func (kex *kexInitMsg) MarshalJSON() ([]byte, error) {
+	temp := JsonKexInitMsg{
+		Cookie:                  kex.Cookie[:],
+		KexAlgos:                kex.KexAlgos,
+		ServerHostKeyAlgos:      kex.ServerHostKeyAlgos,
+		CiphersClientServer:     kex.CiphersClientServer,
+		CiphersServerClient:     kex.CiphersServerClient,
+		MACsClientServer:        kex.MACsClientServer,
+		MACsServerClient:        kex.MACsServerClient,
+		CompressionClientServer: kex.CompressionClientServer,
+		CompressionServerClient: kex.CompressionServerClient,
+		LanguagesClientServer:   kex.LanguagesClientServer,
+		LanguagesServerClient:   kex.LanguagesServerClient,
+		FirstKexFollows:         kex.FirstKexFollows,
+		Reserved:                kex.Reserved,
+	}
+	return json.Marshal(temp)
 }
 
 // See RFC 4253, section 8.
