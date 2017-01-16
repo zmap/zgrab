@@ -438,15 +438,15 @@ func (c *Conn) ComparisonDHE() error {
 	// first perform a handshake with typical firefox ciphers
 	tlsConfig := new(ztls.Config)
 	tlsConfig.InsecureSkipVerify = true
-	tlsConfig.MinVersion = ztls.VersionSSL30
-	tlsConfig.MaxVersion = c.maxTlsVersion
+	tlsConfig.MinVersion = ztls.VersionTLS12
+	tlsConfig.MinVersion = ztls.VersionTLS12
 	tlsConfig.RootCAs = c.caPool
-	tlsConfig.HeartbeatEnabled = true
-	tlsConfig.ClientDSAEnabled = true
+	tlsConfig.HeartbeatEnabled = false
+	tlsConfig.ClientDSAEnabled = false
 	if !c.noSNI && c.domain != "" {
 		tlsConfig.ServerName = c.domain
 	}
-	tlsConfig.CipherSuites = ztls.FirefoxCiphers
+	tlsConfig.CipherSuites = ztls.ChromeCiphers
 
 	c.tlsConn = ztls.Client(c.conn, tlsConfig)
 	c.tlsConn.SetReadDeadline(c.readDeadline)
@@ -465,7 +465,7 @@ func (c *Conn) ComparisonDHE() error {
 		return err
 	}
 	// alright. let's do this again, but without DHE
-	tlsConfig.CipherSuites = ztls.FirefoxNoDHECiphers
+	tlsConfig.MaxVersion = ztls.VersionTLS11
 
 	dial := makeDialer(c.timeout, "tcp", c.tlsVersion)
 	c2, dialErr := dial(c.rhost)
