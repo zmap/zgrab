@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,6 +33,25 @@ import (
 	"github.com/zmap/zgrab/ztools/ztls"
 )
 
+type port struct {
+	value uint16
+	set   bool
+}
+
+func (pf *port) Set(x string) error {
+	value, err := strconv.Atoi(x)
+	if err != nil {
+		zlog.Fatal("Port", x, "is invalid")
+	}
+	pf.value = uint16(value)
+	pf.set = true
+	return nil
+}
+
+func (pf *port) String() string {
+	return strconv.Itoa(int(pf.value))
+}
+
 // Command-line flags
 var (
 	encoding                      string
@@ -40,7 +60,7 @@ var (
 	messageFileName               string
 	interfaceName                 string
 	ehlo                          string
-	portFlag                      uint
+	portFlag                      port
 	inputFile, metadataFile       *os.File
 	timeout                       uint
 	tlsVersion                    string
@@ -60,6 +80,8 @@ var (
 // Pre-main bind flags to variables
 func init() {
 
+	//portFlag = {80, false};
+
 	flag.StringVar(&config.Encoding, "encoding", "string", "Encode banner as string|hex|base64")
 	flag.StringVar(&outputFileName, "output-file", "-", "Output filename, use - for stdout")
 	flag.StringVar(&inputFileName, "input-file", "-", "Input filename, use - for stdin")
@@ -67,7 +89,7 @@ func init() {
 	flag.StringVar(&logFileName, "log-file", "-", "File to log to, use - for stderr")
 	flag.BoolVar(&config.LookupDomain, "lookup-domain", false, "Input contains only domain names")
 	flag.StringVar(&interfaceName, "interface", "", "Network interface to send on")
-	flag.UintVar(&portFlag, "port", 80, "Port to grab on")
+	flag.Var(&portFlag, "port", "Port to grab on (defaults to 80, or 443 if TLS)")
 	flag.UintVar(&timeout, "timeout", 10, "Set connection timeout in seconds")
 	flag.BoolVar(&config.TLS, "tls", false, "Grab over TLS")
 	flag.StringVar(&tlsVersion, "tls-version", "", "Max TLS version to use (implies --tls)")
@@ -255,10 +277,15 @@ func init() {
 	config.Encoding = encoding
 
 	// Validate port
-	if portFlag > 65535 {
-		zlog.Fatal("Port", portFlag, "out of range")
+	if portFlag.value > 65535 {
+		zlog.Fatal("Port", portFlag.value, "out of range")
 	}
-	config.Port = uint16(portFlag)
+
+	// default to port 443 if we are using TLS
+	if !portFlag.set && config.TLS {
+		portFlag.Set("443")
+	}
+	config.Port = portFlag.value
 
 	// Validate timeout
 	config.Timeout = time.Duration(timeout) * time.Second
