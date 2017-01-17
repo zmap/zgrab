@@ -284,6 +284,8 @@ func init() {
 	// default to port 443 if we are using TLS
 	if !portFlag.set && config.TLS {
 		portFlag.Set("443")
+	} else if !portFlag.set {
+		portFlag.Set("80")
 	}
 	config.Port = portFlag.value
 
