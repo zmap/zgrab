@@ -31,10 +31,10 @@ const (
 // kexResult captures the outcome of a key exchange.
 type kexResult struct {
 	// Session hash. See also RFC 4253, section 8.
-	H []byte `json:"H"`
+	H []byte `json:"H,omitempty"`
 
 	// Shared secret. See also RFC 4253, section 8.
-	K []byte `json:"K"`
+	K []byte `json:"K,omitempty"`
 
 	// Host key as hashed into H.
 	HostKey []byte `json:"-"`
@@ -49,7 +49,7 @@ type kexResult struct {
 
 	// The session ID, which is the first H computed. This is used
 	// to derive key material inside the transport.
-	SessionID []byte `json:"session_id"`
+	SessionID []byte `json:"session_id,omitempty"`
 }
 
 // handshakeMagics contains data that is always included in the
@@ -86,9 +86,9 @@ type dhGroup struct {
 	JsonLog       dhGroupJsonLog
 }
 type dhGroupJsonLog struct {
-	Parameters      *ztoolsKeys.DHParams `json:"parameters"`
-	ServerSignature []byte               `json:"server_signature"`
-	ServerHostKey   []byte               `json:"server_host_key"`
+	Parameters      *ztoolsKeys.DHParams `json:"parameters,omitempty"`
+	ServerSignature []byte               `json:"server_signature,omitempty"`
+	ServerHostKey   []byte               `json:"server_host_key,omitempty"`
 }
 
 func (group *dhGroup) MarshalJSON() ([]byte, error) {
@@ -239,9 +239,9 @@ type ecdh struct {
 }
 
 type ecdhJsonLog struct {
-	Parameters      *ztoolsKeys.ECDHParams `json:"parameters"`
-	ServerSignature []byte                 `json:"server_signature"`
-	ServerHostKey   []byte                 `json:"server_host_key"`
+	Parameters      *ztoolsKeys.ECDHParams `json:"parameters,omitempty"`
+	ServerSignature []byte                 `json:"server_signature,omitempty"`
+	ServerHostKey   []byte                 `json:"server_host_key,omitempty"`
 }
 
 func (kex *ecdh) MarshalJSON() ([]byte, error) {
@@ -462,14 +462,14 @@ type curve25519sha256 struct {
 
 type curve25519sha256JsonLog struct {
 	Parameters      curve25519sha256JsonLogParameters `json:"parameters"`
-	ServerSignature []byte                            `json:"server_signature"`
-	ServerHostKey   []byte                            `json:"server_host_key"`
+	ServerSignature []byte                            `json:"server_signature,omitempty"`
+	ServerHostKey   []byte                            `json:"server_host_key,omitempty"`
 }
 
 type curve25519sha256JsonLogParameters struct {
-	ClientPublic  []byte `json:"client_public"`
-	ClientPrivate []byte `json:"client_private"`
-	ServerPublic  []byte `json:"server_public"`
+	ClientPublic  []byte `json:"client_public,omitempty"`
+	ClientPrivate []byte `json:"client_private,omitempty"`
+	ServerPublic  []byte `json:"server_public,omitempty"`
 }
 
 func (kex *curve25519sha256) MarshalJSON() ([]byte, error) {
