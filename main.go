@@ -68,7 +68,7 @@ func init() {
 	flag.StringVar(&inputFileName, "input-file", "-", "Input filename, use - for stdin")
 	flag.StringVar(&metadataFileName, "metadata-file", "-", "File to record banner-grab metadata, use - for stdout")
 	flag.StringVar(&logFileName, "log-file", "-", "File to log to, use - for stderr")
-	flag.StringVar(&prometheusAddress, "prometheus", "", "Address to use for prometheus server, value less than zero disables")
+	flag.StringVar(&prometheusAddress, "prometheus", "", "Address to use for Prometheus server (e.g. localhost:8080). If empty, Prometheus is disabled.")
 	flag.BoolVar(&config.LookupDomain, "lookup-domain", false, "Input contains only domain names")
 	flag.StringVar(&interfaceName, "interface", "", "Network interface to send on")
 	flag.UintVar(&portFlag, "port", 80, "Port to grab on")
