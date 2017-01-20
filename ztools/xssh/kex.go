@@ -121,7 +121,11 @@ func (group *dhGroup) Client(c packetConn, randSource io.Reader, magics *handsha
 	group.JsonLog.Parameters.ClientPrivate = x
 
 	X := new(big.Int).Exp(group.g, x, group.p)
-	group.JsonLog.Parameters.ClientPublic = X
+
+	if pkgConfig.Verbose {
+		group.JsonLog.Parameters.ClientPublic = X
+	}
+
 	kexDHInit := kexDHInitMsg{
 		X: X,
 	}
@@ -251,18 +255,22 @@ func (kex *ecdh) MarshalJSON() ([]byte, error) {
 func (kex *ecdh) Client(c packetConn, rand io.Reader, magics *handshakeMagics) (*kexResult, error) {
 	kex.JsonLog.Parameters = new(ztoolsKeys.ECDHParams)
 	kex.JsonLog.Parameters.ServerPublic = new(ztoolsKeys.ECPoint)
-	kex.JsonLog.Parameters.ClientPublic = new(ztoolsKeys.ECPoint)
-	kex.JsonLog.Parameters.ClientPrivate = new(ztoolsKeys.ECDHPrivateParams)
+	if pkgConfig.Verbose {
+		kex.JsonLog.Parameters.ClientPublic = new(ztoolsKeys.ECPoint)
+		kex.JsonLog.Parameters.ClientPrivate = new(ztoolsKeys.ECDHPrivateParams)
+	}
 
 	ephKey, err := ecdsa.GenerateKey(kex.curve, rand)
 	if err != nil {
 		return nil, err
 	}
 
-	kex.JsonLog.Parameters.ClientPublic.X = ephKey.PublicKey.X
-	kex.JsonLog.Parameters.ClientPublic.Y = ephKey.PublicKey.Y
-	kex.JsonLog.Parameters.ClientPrivate.Value = ephKey.D.Bytes()
-	kex.JsonLog.Parameters.ClientPrivate.Length = ephKey.D.BitLen()
+	if pkgConfig.Verbose {
+		kex.JsonLog.Parameters.ClientPublic.X = ephKey.PublicKey.X
+		kex.JsonLog.Parameters.ClientPublic.Y = ephKey.PublicKey.Y
+		kex.JsonLog.Parameters.ClientPrivate.Value = ephKey.D.Bytes()
+		kex.JsonLog.Parameters.ClientPrivate.Length = ephKey.D.BitLen()
+	}
 
 	kexInit := kexECDHInitMsg{
 		ClientPubKey: elliptic.Marshal(kex.curve, ephKey.PublicKey.X, ephKey.PublicKey.Y),
@@ -500,8 +508,10 @@ func (kex *curve25519sha256) Client(c packetConn, rand io.Reader, magics *handsh
 		return nil, err
 	}
 
-	kex.JsonLog.Parameters.ClientPublic = kp.pub[:]
-	kex.JsonLog.Parameters.ClientPrivate = kp.priv[:]
+	if pkgConfig.Verbose {
+		kex.JsonLog.Parameters.ClientPublic = kp.pub[:]
+		kex.JsonLog.Parameters.ClientPrivate = kp.priv[:]
+	}
 
 	if err := c.writePacket(Marshal(&kexECDHInitMsg{kp.pub[:]})); err != nil {
 		return nil, err
