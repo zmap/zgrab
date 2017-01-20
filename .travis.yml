@@ -1,20 +1,9 @@
 language: go
 go:
-- 1.6.2
-before_install:
-- go get gopkg.in/check.v1
-- go get github.com/zmap/rc2
-- go get github.com/axw/gocov/gocov
-- go get github.com/mattn/goveralls
-- go get golang.org/x/tools/cmd/cover
-- go get github.com/mreiferson/go-httpclient
-- go get golang.org/x/net/context
-- go get github.com/op/go-logging
-- go get github.com/asaskevich/govalidator
-- go get github.com/zmap/zlint
-before_script:
-- mkdir -p $GOPATH/src/github.com/zmap
-- ln -s $TRAVIS_BUILD_DIR $GOPATH/src/github.com/zmap/ || true
+- 1.7.4
+install:
+- go get ./...
+- go get -t ./...
 script:
   - go test -v ./...
 notifications:

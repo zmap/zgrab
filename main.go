@@ -20,11 +20,13 @@ import (
 	"flag"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"runtime"
 	"strings"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/zmap/zgrab/zlib"
 	"github.com/zmap/zgrab/ztools/processing"
 	"github.com/zmap/zgrab/ztools/x509"
@@ -45,6 +47,7 @@ var (
 	timeout                       uint
 	tlsVersion                    string
 	rootCAFileName                string
+	prometheusAddress             string
 )
 
 // Module configurations
@@ -65,6 +68,7 @@ func init() {
 	flag.StringVar(&inputFileName, "input-file", "-", "Input filename, use - for stdin")
 	flag.StringVar(&metadataFileName, "metadata-file", "-", "File to record banner-grab metadata, use - for stdout")
 	flag.StringVar(&logFileName, "log-file", "-", "File to log to, use - for stderr")
+	flag.StringVar(&prometheusAddress, "prometheus", "", "Address to use for prometheus server, value less than zero disables")
 	flag.BoolVar(&config.LookupDomain, "lookup-domain", false, "Input contains only domain names")
 	flag.StringVar(&interfaceName, "interface", "", "Network interface to send on")
 	flag.UintVar(&portFlag, "port", 80, "Port to grab on")
@@ -347,6 +351,15 @@ func init() {
 
 func main() {
 	runtime.GOMAXPROCS(config.GOMAXPROCS)
+	if prometheusAddress != "" {
+		go func() {
+			http.Handle("/metrics", promhttp.Handler())
+			if err := http.ListenAndServe(prometheusAddress, nil); err != nil {
+				zlog.Fatalf("could not run prometheus server: %s", err.Error())
+			}
+		}()
+	}
+
 	decoder := zlib.NewGrabTargetDecoder(inputFile, config.LookupDomain)
 	marshaler := zlib.NewGrabMarshaler()
 	worker := zlib.NewGrabWorker(&config)
