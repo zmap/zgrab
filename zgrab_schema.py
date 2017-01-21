@@ -780,6 +780,7 @@ zgrab_xssh = Record({
                 "server_host_key":SubRecord({
                     "raw":Binary(),
                     "type":String(),
+                    "fingerprint_sha256":Binary(),
                     "parsed":SubRecord({
                         "exponent":Integer(),
                         "modulus":Binary(),

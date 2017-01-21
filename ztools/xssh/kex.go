@@ -11,6 +11,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
@@ -77,11 +78,14 @@ type ServerHostKeyJsonLog struct {
 	ParseError   string      `json:"parse_error,omitempty"`
 	TrailingData []byte      `json:"trailing_data,omitempty"`
 	Parsed       interface{} `json:"parsed,omitempty"`
+	Fingerprint  []byte      `json:"fingerprint_sha256,omitempty"`
 }
 
 func LogServerHostKey(sshRawKey []byte) *ServerHostKeyJsonLog {
 	ret := new(ServerHostKeyJsonLog)
 	ret.Raw = sshRawKey
+	tempHash := sha256.Sum256(sshRawKey)
+	ret.Fingerprint = tempHash[:]
 
 	keyType, keyBytes, ok := parseString(sshRawKey)
 	if !ok {
