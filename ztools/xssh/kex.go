@@ -19,7 +19,9 @@ import (
 
 	ztoolsKeys "github.com/zmap/zgrab/ztools/keys"
 	ztoolsX509 "github.com/zmap/zgrab/ztools/x509"
+
 	"golang.org/x/crypto/curve25519"
+	"golang.org/x/crypto/ed25519"
 )
 
 const (
@@ -95,6 +97,7 @@ func LogServerHostKey(sshRawKey []byte) *ServerHostKeyJsonLog {
 		return ret
 	}
 
+	// Multiple type casts required to get to the type that allows access to the data needed
 	switch baseKey := keyObj.(type) {
 	case *rsaPublicKey:
 		temp := new(ztoolsKeys.RSAPublicKey)
@@ -116,6 +119,20 @@ func LogServerHostKey(sshRawKey []byte) *ServerHostKeyJsonLog {
 		temp := make(map[string]interface{})
 		ztoolsX509.AddDSAPublicKeyToKeyMap(temp, (*dsa.PublicKey)(baseKey))
 		ret.Parsed = temp
+
+		ret.TrailingData = rest
+		break
+
+	case ed25519PublicKey:
+		edPubKey := (ed25519.PublicKey)(baseKey)
+		bytes := ([]byte)(edPubKey)
+
+		temp := make(map[string]interface{})
+		temp["public_bytes"] = bytes
+		ret.Parsed = temp
+
+		ret.TrailingData = rest
+		break
 
 	default:
 		ret.ParseError = "Cannot parse to JSON"
