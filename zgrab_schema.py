@@ -731,4 +731,77 @@ zgrab_ssh = Record({
     }),
 }, extends=zgrab_base)
 
+zgrab_xssh = Record({
+    "data":SubRecord({
+        "xssh":SubRecord({
+            "server_id":SubRecord({
+                "raw":Analyzedstring(),
+                "version":String(),
+                "software":AnalyzedString(),
+                "comment":AnalyzedString(),
+            }),
+            "server_key_exchange":SubRecord({
+                "cookie": Binary(),
+                "kex_algorithms":ListOf(String()),
+                "host_key_algorithms":ListOf(String()),
+                "client_to_server_ciphers":ListOf(String()),
+                "server_to_client_ciphers":ListOf(String()),
+                "client_to_server_macs":ListOf(String()),
+                "server_to_client_macs":ListOf(String()),
+                "client_to_server_compression":ListOf(String()),
+                "server_to_client_compression":ListOf(String()),
+                "client_to_server_languages":ListOf(String()),
+                "server_to_client_languages":ListOf(String()),
+                "first_kex_follows":Boolean(),
+                "reserved":Short(),
+            }),
+            "userauth":ListOf(String()),
+            "algorithm_selection":SubRecord({
+                "dh_kex_algorithm":String(),
+                "host_key_algorithm":String(),
+                "client_to_server_alg_group": SubRecord({
+                    "cipher":String(),
+                    "mac":String(),
+                    "compression":String(),
+                }),
+                "server_to_client_alg_group": SubRecord({
+                    "cipher":String(),
+                    "mac":String(),
+                    "compression":String(),
+                }),
+            }),
+            "dh_key_exchange": SubRecord({
+                "parameters": SubRecord({
+                    "client_public":Binary(),
+                    "client_private":Binary(),
+                    "server_public":Binary()
+                }),
+                "server_signature":Binary(),
+                "server_host_key":SubRecord({
+                    "raw":Binary(),
+                    "type":String(),
+                    "parsed":SubRecord({
+                        "exponent":Integer(),
+                        "modulus":Binary(),
+                        "length":Short(), # RSA, ECDSA
+                        "g":Binary(), # DSA
+                        "p":Binary(), # DSA
+                        "q":Binary(), # DSA
+                        "y":Binary(), # DSA
+                        "curve":String(), # ECDSA
+                        "b" :Binary(), # ECDSA
+                        "gx":Binary(), # ECDSA
+                        "gy":Binary(), # ECDSA
+                        "n" :Binary(), # ECDSA
+                        "p" :Binary(), # ECDSA
+                        "x" :Binary(), # ECDSA
+                        "y" :Binary(), # ECDSA
+                        "public_bytes":Binary()
+                    })
+                }),
+            }),
+        }),
+    }),
+}, extends=zgrab_base)
+
 zschema.registry.register_schema("zgrab-ssh", zgrab_ssh)
