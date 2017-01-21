@@ -97,7 +97,7 @@ func (c *connection) clientHandshake(dialAddress string, config *ClientConfig) e
 
 	if config.ConnLog != nil {
 		config.ConnLog.ServerID = new(EndpointId)
-		config.ConnLog.ServerID.Complete = string(c.serverVersion)
+		config.ConnLog.ServerID.Raw = string(c.serverVersion)
 
 		serverSplitId := strings.SplitN(string(c.serverVersion), " ", 2)
 		if len(serverSplitId) == 2 {
@@ -123,7 +123,7 @@ func (c *connection) clientHandshake(dialAddress string, config *ClientConfig) e
 
 		if config.ConnLog != nil {
 			config.ConnLog.ClientID = new(EndpointId)
-			config.ConnLog.ClientID.Complete = string(c.clientVersion)
+			config.ConnLog.ClientID.Raw = string(c.clientVersion)
 
 			clientSplitId := strings.SplitN(string(c.clientVersion), " ", 2)
 			if len(clientSplitId) == 2 {
