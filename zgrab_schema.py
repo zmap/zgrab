@@ -802,6 +802,8 @@ zgrab_xssh = Record({
                             "ecdsa_public_key":ecdsa_public_key,
                             "ed25519_public_key":ed25519_public_key,
                         }),
+                        "key_raw":Binary(),
+                        "key_fingerprint_256":Binary(),
                         "serial":String(),
                         "cert_type":Integer(),
                         "cert_type_string":String(),
@@ -819,6 +821,8 @@ zgrab_xssh = Record({
                             "ecdsa_public_key":ecdsa_public_key,
                             "ed25519_public_key":ed25519_public_key,
                         }),
+                        "signature_key_raw":Binary(),
+                        "signature_key_fingerprint_256":Binary(),
                         "signature":SubRecord({
                             "format":String(),
                             "blob":Binary(),

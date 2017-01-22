@@ -6,6 +6,7 @@ package xssh
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -69,20 +70,24 @@ type JsonValidity struct {
 }
 
 type JsonCertificate struct {
-	Nonce           []byte               `json:"nonce,omitempty"`
-	Key             *PublicKeyJsonLog    `json:"key,omitempty"`
-	Serial          string               `json:"serial"`
-	CertType        uint32               `json:"cert_type"`
-	CertTypeString  string               `json:"cert_type_string"`
-	KeyId           string               `json:"key_id,omitempty"`
-	ValidPrincipals []string             `json:"valid_principals,omitempty"`
-	Validity        *JsonValidity        `json:"validity,omitempty"`
-	Reserved        []byte               `json:"reserved,omitempty"`
-	SignatureKey    *PublicKeyJsonLog    `json:"signature_key"`
-	Signature       *Signature           `json:"signature,omitempty"`
-	ParseError      string               `json:"parse_error,omitempty"`
-	Extensions      *JsonExtensions      `json:"extensions,omitempty"`
-	CriticalOptions *JsonCriticalOptions `json:"critical_options,omitempty"`
+	Nonce                   []byte               `json:"nonce,omitempty"`
+	Key                     *PublicKeyJsonLog    `json:"key,omitempty"`
+	KeyRaw                  []byte               `json:key_raw"`
+	KeyFingerprint          []byte               `json:"key_fingerprint_sha256"`
+	Serial                  string               `json:"serial"`
+	CertType                uint32               `json:"cert_type"`
+	CertTypeString          string               `json:"cert_type_string"`
+	KeyId                   string               `json:"key_id,omitempty"`
+	ValidPrincipals         []string             `json:"valid_principals,omitempty"`
+	Validity                *JsonValidity        `json:"validity,omitempty"`
+	Reserved                []byte               `json:"reserved,omitempty"`
+	SignatureKey            *PublicKeyJsonLog    `json:"signature_key"`
+	SignatureKeyRaw         []byte               `json:"signature_key_raw"`
+	SignatureKeyFingerprint []byte               `json:"signature_key_fingerprint_256"`
+	Signature               *Signature           `json:"signature,omitempty"`
+	ParseError              string               `json:"parse_error,omitempty"`
+	Extensions              *JsonExtensions      `json:"extensions,omitempty"`
+	CriticalOptions         *JsonCriticalOptions `json:"critical_options,omitempty"`
 }
 
 func (c *Certificate) MarshalJSON() ([]byte, error) {
@@ -102,6 +107,10 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	if !ok {
 		temp.ParseError = "Cannot parse key to JSON"
 	}
+
+	temp.KeyRaw = c.Key.Marshal()
+	tempHash := sha256.Sum256(temp.KeyRaw)
+	temp.KeyFingerprint = tempHash[:]
 
 	switch c.CertType {
 	case 1:
@@ -128,6 +137,10 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	if !ok {
 		temp.ParseError = "Cannot parse signature key to JSON"
 	}
+
+	temp.SignatureKeyRaw = c.SignatureKey.Marshal()
+	tempHash = sha256.Sum256(temp.SignatureKeyRaw)
+	temp.SignatureKeyFingerprint = tempHash[:]
 
 	if len(c.CriticalOptions) != 0 {
 		temp.CriticalOptions = new(JsonCriticalOptions)
