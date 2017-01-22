@@ -72,7 +72,7 @@ type JsonValidity struct {
 type JsonCertificate struct {
 	Nonce                   []byte               `json:"nonce,omitempty"`
 	Key                     *PublicKeyJsonLog    `json:"key,omitempty"`
-	KeyRaw                  []byte               `json:key_raw"`
+	KeyRaw                  []byte               `json:"key_raw"`
 	KeyFingerprint          []byte               `json:"key_fingerprint_sha256"`
 	Serial                  string               `json:"serial"`
 	CertType                uint32               `json:"cert_type"`
