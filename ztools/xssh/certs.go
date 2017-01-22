@@ -79,6 +79,7 @@ type JsonPubKeyWrapper struct {
 	PublicKeyJsonLog
 	Raw         []byte `json:"raw,omitempty"`
 	Fingerprint string `json:"fingerprint_sha256"`
+	Algorithm   string `json:"algorithm"`
 }
 
 type JsonCertificate struct {
@@ -117,6 +118,7 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	temp.Key.Raw = c.Key.Marshal()
 	tempHash := sha256.Sum256(temp.Key.Raw)
 	temp.Key.Fingerprint = hex.EncodeToString(tempHash[:])
+	temp.Key.Algorithm = c.Key.Type()
 
 	temp.CertType = new(JsonCertType)
 	temp.CertType.Id = c.CertType
@@ -149,6 +151,7 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	temp.SignatureKey.Raw = c.SignatureKey.Marshal()
 	tempHash = sha256.Sum256(temp.SignatureKey.Raw)
 	temp.SignatureKey.Fingerprint = hex.EncodeToString(tempHash[:])
+	temp.SignatureKey.Algorithm = c.SignatureKey.Type()
 
 	if len(c.CriticalOptions) != 0 {
 		temp.CriticalOptions = new(JsonCriticalOptions)

@@ -799,6 +799,7 @@ zgrab_xssh = Record({
                         "key":SubRecord({
                             "raw":Binary(),
                             "fingerprint_sha256":String(),
+                            "algorithm":String(),
                             "rsa_public_key":rsa_public_key,
                             "dsa_public_key":dsa_public_key,
                             "ecdsa_public_key":ecdsa_public_key,
@@ -820,6 +821,7 @@ zgrab_xssh = Record({
                         "signature_key":SubRecord({
                             "raw":Binary(),
                             "fingerprint_sha256":String(),
+                            "algorithm":String(),
                             "rsa_public_key":rsa_public_key,
                             "dsa_public_key":dsa_public_key,
                             "ecdsa_public_key":ecdsa_public_key,
