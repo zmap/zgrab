@@ -29,7 +29,7 @@ type HandshakeLog struct {
 
 type EndpointId struct {
 	Raw             string `json:"raw"`
-	ProtoVersion    string `json:"proto_version"`
-	SoftwareVersion string `json:"software_version"`
+	ProtoVersion    string `json:"version"`
+	SoftwareVersion string `json:"software"`
 	Comment         string `json:"comment"`
 }
