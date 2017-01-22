@@ -159,6 +159,10 @@ type Key struct {
 	Comment string
 }
 
+func (k *Key) MarshalJSON() ([]byte, error) {
+	panic("unimplemented")
+}
+
 func clientErr(err error) error {
 	return fmt.Errorf("agent: client error: %v", err)
 }

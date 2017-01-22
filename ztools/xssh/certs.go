@@ -60,6 +60,10 @@ type Certificate struct {
 	Signature    *Signature
 }
 
+func (c *Certificate) MarshalJSON() ([]byte, error) {
+	panic("unimplemented")
+}
+
 // genericCertData holds the key-independent part of the certificate data.
 // Overall, certificates contain an nonce, public key fields and
 // key-independent fields.

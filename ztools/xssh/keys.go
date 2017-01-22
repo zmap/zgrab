@@ -17,6 +17,7 @@ import (
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -25,6 +26,9 @@ import (
 	"strings"
 
 	"golang.org/x/crypto/ed25519"
+
+	ztoolsKeys "github.com/zmap/zgrab/ztools/keys"
+	ztoolsX509 "github.com/zmap/zgrab/ztools/x509"
 )
 
 // These constants represent the algorithm names for key types supported by this
@@ -282,6 +286,9 @@ type PublicKey interface {
 	// Verify that sig is a signature on the given data using this
 	// key. This function will hash the data appropriately first.
 	Verify(data []byte, sig *Signature) error
+
+	// Create the JSON representation for ZGrab
+	MarshalJSON() ([]byte, error)
 }
 
 // CryptoPublicKey, if implemented by a PublicKey,
@@ -304,6 +311,12 @@ type rsaPublicKey rsa.PublicKey
 
 func (r *rsaPublicKey) Type() string {
 	return "ssh-rsa"
+}
+
+func (r *rsaPublicKey) MarshalJSON() ([]byte, error) {
+	ret := new(ztoolsKeys.RSAPublicKey)
+	ret.PublicKey = (*rsa.PublicKey)(r)
+	return json.Marshal(ret)
 }
 
 // parseRSA parses an RSA key according to RFC 4253, section 6.6.
@@ -365,6 +378,12 @@ type dsaPublicKey dsa.PublicKey
 
 func (r *dsaPublicKey) Type() string {
 	return "ssh-dss"
+}
+
+func (r *dsaPublicKey) MarshalJSON() ([]byte, error) {
+	temp := make(map[string]interface{})
+	ztoolsX509.AddDSAPublicKeyToKeyMap(temp, (*dsa.PublicKey)(r))
+	return json.Marshal(temp)
 }
 
 // parseDSA parses an DSA key according to RFC 4253, section 6.6.
@@ -469,6 +488,12 @@ func (key *ecdsaPublicKey) Type() string {
 	return "ecdsa-sha2-" + key.nistID()
 }
 
+func (key *ecdsaPublicKey) MarshalJSON() ([]byte, error) {
+	temp := make(map[string]interface{})
+	ztoolsX509.AddECDSAPublicKeyToKeyMap(temp, (*ecdsa.PublicKey)(key))
+	return json.Marshal(temp)
+}
+
 func (key *ecdsaPublicKey) nistID() string {
 	switch key.Params().BitSize {
 	case 256:
@@ -485,6 +510,13 @@ type ed25519PublicKey ed25519.PublicKey
 
 func (key ed25519PublicKey) Type() string {
 	return KeyAlgoED25519
+}
+
+func (key ed25519PublicKey) MarshalJSON() ([]byte, error) {
+	temp := make(map[string]interface{})
+	baseKey := (ed25519.PublicKey)(key)
+	temp["public_bytes"] = ([]byte)(baseKey)
+	return json.Marshal(temp)
 }
 
 func parseED25519(in []byte) (out PublicKey, rest []byte, err error) {

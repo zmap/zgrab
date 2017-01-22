@@ -6,11 +6,9 @@ package xssh
 
 import (
 	"crypto"
-	"crypto/dsa"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/json"
@@ -19,10 +17,8 @@ import (
 	"math/big"
 
 	ztoolsKeys "github.com/zmap/zgrab/ztools/keys"
-	ztoolsX509 "github.com/zmap/zgrab/ztools/x509"
 
 	"golang.org/x/crypto/curve25519"
-	"golang.org/x/crypto/ed25519"
 )
 
 const (
@@ -73,12 +69,15 @@ func (m *handshakeMagics) write(w io.Writer) {
 }
 
 type ServerHostKeyJsonLog struct {
-	Raw          []byte      `json:"raw"`
-	Type         string      `json:"type"`
-	ParseError   string      `json:"parse_error,omitempty"`
-	TrailingData []byte      `json:"trailing_data,omitempty"`
-	Parsed       interface{} `json:"parsed,omitempty"`
-	Fingerprint  []byte      `json:"fingerprint_sha256,omitempty"`
+	Raw            []byte     `json:"raw"`
+	Algorithm      string     `json:"algorithm"`
+	Fingerprint    []byte     `json:"fingerprint_sha256,omitempty"`
+	TrailingData   []byte     `json:"trailing_data,omitempty"`
+	ParseError     string     `json:"parse_error,omitempty"`
+	RSAHostKey     *PublicKey `json:"rsa_public_key,omitempty"`
+	DSAHostKey     *PublicKey `json:"dsa_public_key,omitempty"`
+	ECDSAHostKey   *PublicKey `json:"ecdsa_public_key,omitempty"`
+	Ed25519HostKey *PublicKey `json:"ed25519_public_key,omitempty"`
 }
 
 func LogServerHostKey(sshRawKey []byte) *ServerHostKeyJsonLog {
@@ -87,56 +86,39 @@ func LogServerHostKey(sshRawKey []byte) *ServerHostKeyJsonLog {
 	tempHash := sha256.Sum256(sshRawKey)
 	ret.Fingerprint = tempHash[:]
 
-	keyType, keyBytes, ok := parseString(sshRawKey)
+	keyAlgorithm, keyBytes, ok := parseString(sshRawKey)
 	if !ok {
-		ret.Type = "unknown"
+		ret.Algorithm = "unknown"
 		return ret
 	}
+	ret.Algorithm = string(keyAlgorithm)
 
-	ret.Type = string(keyType)
-
-	keyObj, rest, err := parsePubKey(keyBytes, ret.Type)
+	keyObj, rest, err := parsePubKey(keyBytes, ret.Algorithm)
 	if err != nil {
 		ret.ParseError = err.Error()
 		return ret
 	}
 
-	// Multiple type casts required to get to the type that allows access to the data needed
-	switch baseKey := keyObj.(type) {
-	case *rsaPublicKey:
-		temp := new(ztoolsKeys.RSAPublicKey)
-		temp.PublicKey = (*rsa.PublicKey)(baseKey)
-		ret.Parsed = temp
+	ret.TrailingData = rest
 
-		ret.TrailingData = rest
+	switch keyObj.Type() {
+	case KeyAlgoRSA:
+		ret.RSAHostKey = &keyObj
 		break
 
-	case *ecdsaPublicKey:
-		temp := make(map[string]interface{})
-		ztoolsX509.AddECDSAPublicKeyToKeyMap(temp, (*ecdsa.PublicKey)(baseKey))
-		ret.Parsed = temp
-
-		ret.TrailingData = rest
+	case KeyAlgoDSA:
+		ret.DSAHostKey = &keyObj
 		break
 
-	case *dsaPublicKey:
-		temp := make(map[string]interface{})
-		ztoolsX509.AddDSAPublicKeyToKeyMap(temp, (*dsa.PublicKey)(baseKey))
-		ret.Parsed = temp
-
-		ret.TrailingData = rest
+	case KeyAlgoECDSA256, KeyAlgoECDSA384, KeyAlgoECDSA521:
+		ret.ECDSAHostKey = &keyObj
 		break
 
-	case ed25519PublicKey:
-		edPubKey := (ed25519.PublicKey)(baseKey)
-		bytes := ([]byte)(edPubKey)
-
-		temp := make(map[string]interface{})
-		temp["public_bytes"] = bytes
-		ret.Parsed = temp
-
-		ret.TrailingData = rest
+	case KeyAlgoED25519:
+		ret.Ed25519HostKey = &keyObj
 		break
+
+	// TODO: Add case for cert-key
 
 	default:
 		ret.ParseError = "Cannot parse to JSON"

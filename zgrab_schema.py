@@ -38,6 +38,32 @@ alternate_name = SubRecord({
     "uniform_resource_identifiers":ListOf(AnalyzedString(es_include_raw=True)),
 })
 
+rsa_public_key = SubRecord({
+    "exponent":Long(),
+    "modulus":Binary(),
+    "length":Integer(doc="Bit-length of modulus."),
+}),
+
+dsa_public_key:SubRecord({
+    "p":Binary(),
+    "q":Binary(),
+    "g":Binary(),
+    "y":Binary(),
+})
+ecdsa_public_key:SubRecord({
+    "pub":Binary(),
+    "b":Binary(),
+    "gx":Binary(),
+    "gy":Binary(),
+    "n":Binary(),
+    "p":Binary(),
+    "x":Binary(),
+    "y":Binary(),
+    "curve":String(),
+    "length":Unsigned16BitInteger(),
+    "asn1_oid":String(),
+})
+
 zgrab_parsed_certificate = SubRecord({
     "subject":zgrab_subj_issuer,
     "issuer":zgrab_subj_issuer,
@@ -57,30 +83,9 @@ zgrab_parsed_certificate = SubRecord({
         "key_algorithm":SubRecord({
             "name":String(doc="Name of public key type, e.g., RSA or ECDSA. More information is available the named SubRecord (e.g., rsa_public_key)."),
          }),
-        "rsa_public_key":SubRecord({
-            "exponent":Long(),
-            "modulus":Binary(),
-            "length":Integer(doc="Bit-length of modulus.")
-         }),
-        "dsa_public_key":SubRecord({
-            "p":Binary(),
-            "q":Binary(),
-            "g":Binary(),
-            "y":Binary(),
-        }),
-        "ecdsa_public_key":SubRecord({
-            "pub":Binary(),
-            "b":Binary(),
-            "gx":Binary(),
-            "gy":Binary(),
-            "n":Binary(),
-            "p":Binary(),
-            "x":Binary(),
-            "y":Binary(),
-            "curve":String(),
-            "length":Unsigned16BitInteger(),
-            "asn1_oid":String()
-        })
+        "rsa_public_key":rsa_public_key,
+        "dsa_public_key":dsa_public_key,
+        "ecdsa_public_key":ecdsa_public_key,
     }),
     "extensions":SubRecord({
         "key_usage":SubRecord({
@@ -731,6 +736,10 @@ zgrab_ssh = Record({
     }),
 }, extends=zgrab_base)
 
+ed25519_public_key:SubRecord({
+    "public_bytes":Binary(),
+})
+
 zgrab_xssh = Record({
     "data":SubRecord({
         "xssh":SubRecord({
@@ -779,26 +788,12 @@ zgrab_xssh = Record({
                 "server_signature":Binary(),
                 "server_host_key":SubRecord({
                     "raw":Binary(),
-                    "type":String(),
+                    "algorithm":String(),
                     "fingerprint_sha256":Binary(),
-                    "parsed":SubRecord({
-                        "exponent":Integer(),
-                        "modulus":Binary(),
-                        "length":Short(), # RSA, ECDSA
-                        "g":Binary(), # DSA
-                        "p":Binary(), # DSA
-                        "q":Binary(), # DSA
-                        "y":Binary(), # DSA
-                        "curve":String(), # ECDSA
-                        "b" :Binary(), # ECDSA
-                        "gx":Binary(), # ECDSA
-                        "gy":Binary(), # ECDSA
-                        "n" :Binary(), # ECDSA
-                        "p" :Binary(), # ECDSA
-                        "x" :Binary(), # ECDSA
-                        "y" :Binary(), # ECDSA
-                        "public_bytes":Binary()
-                    })
+                    "rsa_public_key":rsa_public_key,
+                    "dsa_public_key":dsa_public_key,
+                    "ecdsa_public_key":ecdsa_public_key,
+                    "ed25519_public_key":ed25519_public_key,
                 }),
             }),
         }),
