@@ -789,7 +789,7 @@ zgrab_xssh = Record({
                 "server_host_key":SubRecord({
                     "raw":Binary(),
                     "algorithm":String(),
-                    "fingerprint_sha256":Binary(),
+                    "fingerprint_sha256":String(),
                     "rsa_public_key":rsa_public_key,
                     "dsa_public_key":dsa_public_key,
                     "ecdsa_public_key":ecdsa_public_key,
@@ -803,7 +803,7 @@ zgrab_xssh = Record({
                             "ed25519_public_key":ed25519_public_key,
                         }),
                         "key_raw":Binary(),
-                        "key_fingerprint_256":Binary(),
+                        "key_fingerprint_256":String(),
                         "serial":String(),
                         "cert_type":Integer(),
                         "cert_type_string":String(),
@@ -822,7 +822,7 @@ zgrab_xssh = Record({
                             "ed25519_public_key":ed25519_public_key,
                         }),
                         "signature_key_raw":Binary(),
-                        "signature_key_fingerprint_256":Binary(),
+                        "signature_key_fingerprint_256":String(),
                         "signature":SubRecord({
                             "format":String(),
                             "blob":Binary(),

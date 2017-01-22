@@ -7,6 +7,7 @@ package xssh
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -73,7 +74,7 @@ type JsonCertificate struct {
 	Nonce                   []byte               `json:"nonce,omitempty"`
 	Key                     *PublicKeyJsonLog    `json:"key,omitempty"`
 	KeyRaw                  []byte               `json:"key_raw"`
-	KeyFingerprint          []byte               `json:"key_fingerprint_sha256"`
+	KeyFingerprint          string               `json:"key_fingerprint_sha256"`
 	Serial                  string               `json:"serial"`
 	CertType                uint32               `json:"cert_type"`
 	CertTypeString          string               `json:"cert_type_string"`
@@ -83,7 +84,7 @@ type JsonCertificate struct {
 	Reserved                []byte               `json:"reserved,omitempty"`
 	SignatureKey            *PublicKeyJsonLog    `json:"signature_key"`
 	SignatureKeyRaw         []byte               `json:"signature_key_raw"`
-	SignatureKeyFingerprint []byte               `json:"signature_key_fingerprint_256"`
+	SignatureKeyFingerprint string               `json:"signature_key_fingerprint_256"`
 	Signature               *Signature           `json:"signature,omitempty"`
 	ParseError              string               `json:"parse_error,omitempty"`
 	Extensions              *JsonExtensions      `json:"extensions,omitempty"`
@@ -110,7 +111,7 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 
 	temp.KeyRaw = c.Key.Marshal()
 	tempHash := sha256.Sum256(temp.KeyRaw)
-	temp.KeyFingerprint = tempHash[:]
+	temp.KeyFingerprint = hex.EncodeToString(tempHash[:])
 
 	switch c.CertType {
 	case 1:
@@ -140,7 +141,7 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 
 	temp.SignatureKeyRaw = c.SignatureKey.Marshal()
 	tempHash = sha256.Sum256(temp.SignatureKeyRaw)
-	temp.SignatureKeyFingerprint = tempHash[:]
+	temp.SignatureKeyFingerprint = hex.EncodeToString(tempHash[:])
 
 	if len(c.CriticalOptions) != 0 {
 		temp.CriticalOptions = new(JsonCriticalOptions)
