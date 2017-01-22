@@ -797,13 +797,13 @@ zgrab_xssh = Record({
                     "certkey_public_key":SubRecord({
 	                    "nonce":Binary(),
                         "key":SubRecord({
+                            "raw":Binary(),
+                            "fingerprint_sha256":String(),
                             "rsa_public_key":rsa_public_key,
                             "dsa_public_key":dsa_public_key,
                             "ecdsa_public_key":ecdsa_public_key,
                             "ed25519_public_key":ed25519_public_key,
                         }),
-                        "key_raw":Binary(),
-                        "key_fingerprint_256":String(),
                         "serial":String(),
                         "cert_type":SubRecord({
                             "id":Integer(),
@@ -818,13 +818,13 @@ zgrab_xssh = Record({
                         }),
                         "reserved":Binary(),
                         "signature_key":SubRecord({
+                            "raw":Binary(),
+                            "fingerprint_sha256":String(),
                             "rsa_public_key":rsa_public_key,
                             "dsa_public_key":dsa_public_key,
                             "ecdsa_public_key":ecdsa_public_key,
                             "ed25519_public_key":ed25519_public_key,
                         }),
-                        "signature_key_raw":Binary(),
-                        "signature_key_fingerprint_256":String(),
                         "signature":SubRecord({
                             "format":String(),
                             "blob":Binary(),

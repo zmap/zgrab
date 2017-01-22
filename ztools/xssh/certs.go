@@ -75,24 +75,26 @@ type JsonCertType struct {
 	Name string `json:"name"`
 }
 
+type JsonPubKeyWrapper struct {
+	PublicKeyJsonLog
+	Raw         []byte `json:"raw,omitempty"`
+	Fingerprint string `json:"fingerprint_sha256"`
+}
+
 type JsonCertificate struct {
-	Nonce                   []byte               `json:"nonce,omitempty"`
-	Key                     *PublicKeyJsonLog    `json:"key,omitempty"`
-	KeyRaw                  []byte               `json:"key_raw"`
-	KeyFingerprint          string               `json:"key_fingerprint_sha256"`
-	Serial                  string               `json:"serial"`
-	CertType                *JsonCertType        `json:"cert_type,omitempty"`
-	KeyId                   string               `json:"key_id,omitempty"`
-	ValidPrincipals         []string             `json:"valid_principals,omitempty"`
-	Validity                *JsonValidity        `json:"validity,omitempty"`
-	Reserved                []byte               `json:"reserved,omitempty"`
-	SignatureKey            *PublicKeyJsonLog    `json:"signature_key"`
-	SignatureKeyRaw         []byte               `json:"signature_key_raw"`
-	SignatureKeyFingerprint string               `json:"signature_key_fingerprint_256"`
-	Signature               *Signature           `json:"signature,omitempty"`
-	ParseError              string               `json:"parse_error,omitempty"`
-	Extensions              *JsonExtensions      `json:"extensions,omitempty"`
-	CriticalOptions         *JsonCriticalOptions `json:"critical_options,omitempty"`
+	Nonce           []byte               `json:"nonce,omitempty"`
+	Key             *JsonPubKeyWrapper   `json:"key,omitempty"`
+	Serial          string               `json:"serial"`
+	CertType        *JsonCertType        `json:"cert_type,omitempty"`
+	KeyId           string               `json:"key_id,omitempty"`
+	ValidPrincipals []string             `json:"valid_principals,omitempty"`
+	Validity        *JsonValidity        `json:"validity,omitempty"`
+	Reserved        []byte               `json:"reserved,omitempty"`
+	SignatureKey    *JsonPubKeyWrapper   `json:"signature_key"`
+	Signature       *Signature           `json:"signature,omitempty"`
+	ParseError      string               `json:"parse_error,omitempty"`
+	Extensions      *JsonExtensions      `json:"extensions,omitempty"`
+	CriticalOptions *JsonCriticalOptions `json:"critical_options,omitempty"`
 }
 
 func (c *Certificate) MarshalJSON() ([]byte, error) {
@@ -105,16 +107,16 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		Signature:       c.Signature,
 	}
 
-	temp.Key = new(PublicKeyJsonLog)
+	temp.Key = new(JsonPubKeyWrapper)
 
 	ok := temp.Key.AddPublicKey(c.Key)
 	if !ok {
 		temp.ParseError = "Cannot parse key to JSON"
 	}
 
-	temp.KeyRaw = c.Key.Marshal()
-	tempHash := sha256.Sum256(temp.KeyRaw)
-	temp.KeyFingerprint = hex.EncodeToString(tempHash[:])
+	temp.Key.Raw = c.Key.Marshal()
+	tempHash := sha256.Sum256(temp.Key.Raw)
+	temp.Key.Fingerprint = hex.EncodeToString(tempHash[:])
 
 	temp.CertType = new(JsonCertType)
 	temp.CertType.Id = c.CertType
@@ -138,15 +140,15 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		Length:      c.ValidBefore - c.ValidAfter,
 	}
 
-	temp.SignatureKey = new(PublicKeyJsonLog)
+	temp.SignatureKey = new(JsonPubKeyWrapper)
 	ok = temp.SignatureKey.AddPublicKey(c.SignatureKey)
 	if !ok {
 		temp.ParseError = "Cannot parse signature key to JSON"
 	}
 
-	temp.SignatureKeyRaw = c.SignatureKey.Marshal()
-	tempHash = sha256.Sum256(temp.SignatureKeyRaw)
-	temp.SignatureKeyFingerprint = hex.EncodeToString(tempHash[:])
+	temp.SignatureKey.Raw = c.SignatureKey.Marshal()
+	tempHash = sha256.Sum256(temp.SignatureKey.Raw)
+	temp.SignatureKey.Fingerprint = hex.EncodeToString(tempHash[:])
 
 	if len(c.CriticalOptions) != 0 {
 		temp.CriticalOptions = new(JsonCriticalOptions)
