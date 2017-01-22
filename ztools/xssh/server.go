@@ -6,6 +6,7 @@ package xssh
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -31,6 +32,81 @@ type Permissions struct {
 	// support for an extension does not preclude authenticating a
 	// user.
 	Extensions map[string]string
+}
+
+// The Critical Options and Extensions as stated in PROTOCOL.certkeys as of 3May2016
+// http://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.certkeys?rev=HEAD
+var allKnownCriticalOptions = []string{"force-command", "source-address"}
+var allKnownExtensions = []string{"permit-X11-forwarding", "permit-agent-forwarding", "permit-port-forwarding", "permit-pty", "permit-user-rc"}
+
+type JsonCriticalOptions struct {
+	options map[string]string
+}
+
+func (jOptions *JsonCriticalOptions) MarshalJSON() ([]byte, error) {
+	knownOpt := make(map[string]string)
+	var unknownOpt []string
+
+	for key, value := range jOptions.options {
+		isKnown := false
+		for _, known := range allKnownCriticalOptions {
+			if key == known {
+				isKnown = true
+				break
+			}
+		}
+
+		if isKnown {
+			knownOpt[key] = value
+		} else {
+			unknownOpt = append(unknownOpt, fmt.Sprintf("%s : %s", key, value))
+		}
+	}
+
+	temp := make(map[string]interface{})
+	if len(knownOpt) > 0 {
+		temp["known"] = knownOpt
+	}
+	if len(unknownOpt) > 0 {
+		temp["unknown"] = unknownOpt
+	}
+
+	return json.Marshal(temp)
+}
+
+type JsonExtensions struct {
+	extensions map[string]string
+}
+
+func (ext *JsonExtensions) MarshalJSON() ([]byte, error) {
+	knownExt := make(map[string]string)
+	var unknownExt []string
+
+	for key, value := range ext.extensions {
+		isKnown := false
+		for _, known := range allKnownExtensions {
+			if key == known {
+				isKnown = true
+				break
+			}
+		}
+
+		if isKnown {
+			knownExt[key] = value
+		} else {
+			unknownExt = append(unknownExt, fmt.Sprintf("%s : %s", key, value))
+		}
+	}
+
+	temp := make(map[string]interface{})
+	if len(knownExt) > 0 {
+		temp["known"] = knownExt
+	}
+	if len(unknownExt) > 0 {
+		temp["unknown"] = unknownExt
+	}
+
+	return json.Marshal(temp)
 }
 
 // ServerConfig holds server specific configuration data.

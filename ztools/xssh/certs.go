@@ -6,11 +6,13 @@ package xssh
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"sort"
+	"strconv"
 	"time"
 )
 
@@ -35,8 +37,8 @@ const (
 
 // Signature represents a cryptographic signature.
 type Signature struct {
-	Format string
-	Blob   []byte
+	Format string `json:"format"`
+	Blob   []byte `json:"blob,omitempty"`
 }
 
 // CertTimeInfinity can be used for OpenSSHCertV01.ValidBefore to indicate that
@@ -60,8 +62,84 @@ type Certificate struct {
 	Signature    *Signature
 }
 
+type JsonValidity struct {
+	ValidAfter  time.Time `json:"valid_after"`
+	ValidBefore time.Time `json:"valid_before"`
+	Length      uint64    `json:"length"`
+}
+
+type JsonCertificate struct {
+	Nonce           []byte               `json:"nonce,omitempty"`
+	Key             *PublicKeyJsonLog    `json:"key,omitempty"`
+	Serial          string               `json:"serial"`
+	CertType        uint32               `json:"cert_type"`
+	CertTypeString  string               `json:"cert_type_string"`
+	KeyId           string               `json:"key_id,omitempty"`
+	ValidPrincipals []string             `json:"valid_principals,omitempty"`
+	Validity        *JsonValidity        `json:"validity,omitempty"`
+	Reserved        []byte               `json:"reserved,omitempty"`
+	SignatureKey    *PublicKeyJsonLog    `json:"signature_key"`
+	Signature       *Signature           `json:"signature,omitempty"`
+	ParseError      string               `json:"parse_error,omitempty"`
+	Extensions      *JsonExtensions      `json:"extensions,omitempty"`
+	CriticalOptions *JsonCriticalOptions `json:"critical_options,omitempty"`
+}
+
 func (c *Certificate) MarshalJSON() ([]byte, error) {
-	panic("unimplemented")
+	temp := JsonCertificate{
+		Nonce:           c.Nonce,
+		Serial:          strconv.FormatUint(c.Serial, 10),
+		CertType:        c.CertType,
+		KeyId:           c.KeyId,
+		ValidPrincipals: c.ValidPrincipals,
+		Reserved:        c.Reserved,
+		Signature:       c.Signature,
+	}
+
+	temp.Key = new(PublicKeyJsonLog)
+
+	ok := temp.Key.AddPublicKey(c.Key)
+	if !ok {
+		temp.ParseError = "Cannot parse key to JSON"
+	}
+
+	switch c.CertType {
+	case 1:
+		temp.CertTypeString = "USER"
+		break
+
+	case 2:
+		temp.CertTypeString = "HOST"
+		break
+
+	default:
+		temp.CertTypeString = "unknown"
+		break
+	}
+
+	temp.Validity = &JsonValidity{
+		ValidAfter:  time.Unix(int64(c.ValidAfter), 0).UTC(),
+		ValidBefore: time.Unix(int64(c.ValidBefore), 0).UTC(),
+		Length:      c.ValidBefore - c.ValidAfter,
+	}
+
+	temp.SignatureKey = new(PublicKeyJsonLog)
+	ok = temp.SignatureKey.AddPublicKey(c.SignatureKey)
+	if !ok {
+		temp.ParseError = "Cannot parse signature key to JSON"
+	}
+
+	if len(c.CriticalOptions) != 0 {
+		temp.CriticalOptions = new(JsonCriticalOptions)
+		temp.CriticalOptions.options = c.CriticalOptions
+	}
+
+	if len(c.Extensions) != 0 {
+		temp.Extensions = new(JsonExtensions)
+		temp.Extensions.extensions = c.Extensions
+	}
+
+	return json.Marshal(temp)
 }
 
 // genericCertData holds the key-independent part of the certificate data.

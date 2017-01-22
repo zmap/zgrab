@@ -794,6 +794,54 @@ zgrab_xssh = Record({
                     "dsa_public_key":dsa_public_key,
                     "ecdsa_public_key":ecdsa_public_key,
                     "ed25519_public_key":ed25519_public_key,
+                    "certkey_public_key":SubRecord({
+	                    "nonce":Binary(),
+                        "key":SubRecord({
+                            "rsa_public_key":rsa_public_key,
+                            "dsa_public_key":dsa_public_key,
+                            "ecdsa_public_key":ecdsa_public_key,
+                            "ed25519_public_key":ed25519_public_key,
+                        }),
+                        "serial":String(),
+                        "cert_type":Integer(),
+                        "cert_type_string":String(),
+                        "key_id":String(),
+                        "valid_principals":ListOf(String()),
+                        "validity":SubRecord({
+                            "valid_after":DateTime(doc="Timestamp of when certificate is first valid. Timezone is UTC."),
+                            "valid_before":DateTime(doc="Timestamp of when certificate expires. Timezone is UTC."),
+                            "length":Integer(),
+                        }),
+                        "reserved":Binary(),
+                        "signature_key":SubRecord({
+                            "rsa_public_key":rsa_public_key,
+                            "dsa_public_key":dsa_public_key,
+                            "ecdsa_public_key":ecdsa_public_key,
+                            "ed25519_public_key":ed25519_public_key,
+                        }),
+                        "signature":SubRecord({
+                            "format":String(),
+                            "blob":Binary(),
+                        }),
+                        "parse_error":String(),
+                        "extensions":SubRecord({
+                            "known":SubRecord({
+                                "permit-X11-forwarding":String(),
+                                "permit-agent-forwarding":String(),
+                                "permit-port-forwarding":String(),
+                                "permit-pty":String(),
+                                "permit-user-rc":String(),
+                            }),
+                            "unknown":ListOf(String()),
+                        }),
+                        "critical_options":SubRecord({
+                            "known":SubRecord({
+                                "force-command":String(),
+                                "source-address":String(),
+                            }),
+                            "unknown":ListOf(String()),
+                        })
+                    }),
                 }),
             }),
         }),

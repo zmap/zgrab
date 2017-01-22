@@ -68,16 +68,48 @@ func (m *handshakeMagics) write(w io.Writer) {
 	writeString(w, m.serverKexInit)
 }
 
-type ServerHostKeyJsonLog struct {
-	Raw            []byte     `json:"raw"`
-	Algorithm      string     `json:"algorithm"`
-	Fingerprint    []byte     `json:"fingerprint_sha256,omitempty"`
-	TrailingData   []byte     `json:"trailing_data,omitempty"`
-	ParseError     string     `json:"parse_error,omitempty"`
+type PublicKeyJsonLog struct {
 	RSAHostKey     *PublicKey `json:"rsa_public_key,omitempty"`
 	DSAHostKey     *PublicKey `json:"dsa_public_key,omitempty"`
 	ECDSAHostKey   *PublicKey `json:"ecdsa_public_key,omitempty"`
 	Ed25519HostKey *PublicKey `json:"ed25519_public_key,omitempty"`
+	CertKeyHostKey *PublicKey `json:"certkey_public_key,omitempty"`
+}
+
+func (pkLog *PublicKeyJsonLog) AddPublicKey(pubKey PublicKey) bool {
+	switch pubKey.Type() {
+	case KeyAlgoRSA:
+		pkLog.RSAHostKey = &pubKey
+		return true
+
+	case KeyAlgoDSA:
+		pkLog.DSAHostKey = &pubKey
+		return true
+
+	case KeyAlgoECDSA256, KeyAlgoECDSA384, KeyAlgoECDSA521:
+		pkLog.ECDSAHostKey = &pubKey
+		return true
+
+	case KeyAlgoED25519:
+		pkLog.Ed25519HostKey = &pubKey
+		return true
+
+	case CertAlgoRSAv01, CertAlgoDSAv01, CertAlgoECDSA256v01, CertAlgoECDSA384v01, CertAlgoECDSA521v01, CertAlgoED25519v01:
+		pkLog.CertKeyHostKey = &pubKey
+		return true
+
+	default:
+		return false
+	}
+}
+
+type ServerHostKeyJsonLog struct {
+	PublicKeyJsonLog
+	Raw          []byte `json:"raw"`
+	Algorithm    string `json:"algorithm"`
+	Fingerprint  []byte `json:"fingerprint_sha256,omitempty"`
+	TrailingData []byte `json:"trailing_data,omitempty"`
+	ParseError   string `json:"parse_error,omitempty"`
 }
 
 func LogServerHostKey(sshRawKey []byte) *ServerHostKeyJsonLog {
@@ -98,31 +130,11 @@ func LogServerHostKey(sshRawKey []byte) *ServerHostKeyJsonLog {
 		ret.ParseError = err.Error()
 		return ret
 	}
-
 	ret.TrailingData = rest
 
-	switch keyObj.Type() {
-	case KeyAlgoRSA:
-		ret.RSAHostKey = &keyObj
-		break
-
-	case KeyAlgoDSA:
-		ret.DSAHostKey = &keyObj
-		break
-
-	case KeyAlgoECDSA256, KeyAlgoECDSA384, KeyAlgoECDSA521:
-		ret.ECDSAHostKey = &keyObj
-		break
-
-	case KeyAlgoED25519:
-		ret.Ed25519HostKey = &keyObj
-		break
-
-	// TODO: Add case for cert-key
-
-	default:
+	ok = ret.PublicKeyJsonLog.AddPublicKey(keyObj)
+	if !ok {
 		ret.ParseError = "Cannot parse to JSON"
-		break
 	}
 
 	return ret
