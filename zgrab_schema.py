@@ -805,8 +805,10 @@ zgrab_xssh = Record({
                         "key_raw":Binary(),
                         "key_fingerprint_256":String(),
                         "serial":String(),
-                        "cert_type":Integer(),
-                        "cert_type_string":String(),
+                        "cert_type":SubRecord({
+                            "id":Integer(),
+                            "name":String(),
+                        }),
                         "key_id":String(),
                         "valid_principals":ListOf(String()),
                         "validity":SubRecord({

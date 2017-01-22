@@ -70,14 +70,18 @@ type JsonValidity struct {
 	Length      uint64    `json:"length"`
 }
 
+type JsonCertType struct {
+	Id   uint32 `json:"id"`
+	Name string `json:"name"`
+}
+
 type JsonCertificate struct {
 	Nonce                   []byte               `json:"nonce,omitempty"`
 	Key                     *PublicKeyJsonLog    `json:"key,omitempty"`
 	KeyRaw                  []byte               `json:"key_raw"`
 	KeyFingerprint          string               `json:"key_fingerprint_sha256"`
 	Serial                  string               `json:"serial"`
-	CertType                uint32               `json:"cert_type"`
-	CertTypeString          string               `json:"cert_type_string"`
+	CertType                *JsonCertType        `json:"cert_type,omitempty"`
 	KeyId                   string               `json:"key_id,omitempty"`
 	ValidPrincipals         []string             `json:"valid_principals,omitempty"`
 	Validity                *JsonValidity        `json:"validity,omitempty"`
@@ -95,7 +99,6 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	temp := JsonCertificate{
 		Nonce:           c.Nonce,
 		Serial:          strconv.FormatUint(c.Serial, 10),
-		CertType:        c.CertType,
 		KeyId:           c.KeyId,
 		ValidPrincipals: c.ValidPrincipals,
 		Reserved:        c.Reserved,
@@ -113,17 +116,19 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 	tempHash := sha256.Sum256(temp.KeyRaw)
 	temp.KeyFingerprint = hex.EncodeToString(tempHash[:])
 
+	temp.CertType = new(JsonCertType)
+	temp.CertType.Id = c.CertType
 	switch c.CertType {
 	case 1:
-		temp.CertTypeString = "USER"
+		temp.CertType.Name = "USER"
 		break
 
 	case 2:
-		temp.CertTypeString = "HOST"
+		temp.CertType.Name = "HOST"
 		break
 
 	default:
-		temp.CertTypeString = "unknown"
+		temp.CertType.Name = "unknown"
 		break
 	}
 
