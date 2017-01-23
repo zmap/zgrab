@@ -39,8 +39,8 @@ const (
 
 // Signature represents a cryptographic signature.
 type Signature struct {
-	Format string `json:"format"`
-	Blob   []byte `json:"blob,omitempty"`
+	Format string `json:"algorithm,omitempty"`
+	Blob   []byte `json:"value,omitempty"`
 }
 
 // CertTimeInfinity can be used for OpenSSHCertV01.ValidBefore to indicate that

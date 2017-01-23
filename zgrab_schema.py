@@ -828,8 +828,8 @@ zgrab_xssh = Record({
                             "ed25519_public_key":ed25519_public_key,
                         }),
                         "signature":SubRecord({
-                            "format":String(),
-                            "blob":Binary(),
+                            "algorithm":String(),
+                            "value":Binary(),
                         }),
                         "parse_error":String(),
                         "extensions":SubRecord({
