@@ -38,6 +38,32 @@ alternate_name = SubRecord({
     "uniform_resource_identifiers":ListOf(AnalyzedString(es_include_raw=True)),
 })
 
+rsa_public_key = SubRecord({
+    "exponent":Long(),
+    "modulus":Binary(),
+    "length":Integer(doc="Bit-length of modulus."),
+}),
+
+dsa_public_key:SubRecord({
+    "p":Binary(),
+    "q":Binary(),
+    "g":Binary(),
+    "y":Binary(),
+})
+ecdsa_public_key:SubRecord({
+    "pub":Binary(),
+    "b":Binary(),
+    "gx":Binary(),
+    "gy":Binary(),
+    "n":Binary(),
+    "p":Binary(),
+    "x":Binary(),
+    "y":Binary(),
+    "curve":String(),
+    "length":Unsigned16BitInteger(),
+    "asn1_oid":String(),
+})
+
 zgrab_parsed_certificate = SubRecord({
     "subject":zgrab_subj_issuer,
     "issuer":zgrab_subj_issuer,
@@ -57,30 +83,9 @@ zgrab_parsed_certificate = SubRecord({
         "key_algorithm":SubRecord({
             "name":String(doc="Name of public key type, e.g., RSA or ECDSA. More information is available the named SubRecord (e.g., rsa_public_key)."),
          }),
-        "rsa_public_key":SubRecord({
-            "exponent":Long(),
-            "modulus":Binary(),
-            "length":Integer(doc="Bit-length of modulus.")
-         }),
-        "dsa_public_key":SubRecord({
-            "p":Binary(),
-            "q":Binary(),
-            "g":Binary(),
-            "y":Binary(),
-        }),
-        "ecdsa_public_key":SubRecord({
-            "pub":Binary(),
-            "b":Binary(),
-            "gx":Binary(),
-            "gy":Binary(),
-            "n":Binary(),
-            "p":Binary(),
-            "x":Binary(),
-            "y":Binary(),
-            "curve":String(),
-            "length":Unsigned16BitInteger(),
-            "asn1_oid":String()
-        })
+        "rsa_public_key":rsa_public_key,
+        "dsa_public_key":dsa_public_key,
+        "ecdsa_public_key":ecdsa_public_key,
     }),
     "extensions":SubRecord({
         "key_usage":SubRecord({
@@ -727,6 +732,126 @@ zgrab_ssh = Record({
             "key_exchange_dh_group_reply": zgrab_ssh_dh_reply,
             "key_exchange_dh_init": zgrab_ssh_dh_init,
             "key_exchange_dh_reply": zgrab_ssh_dh_reply,
+        }),
+    }),
+}, extends=zgrab_base)
+
+ed25519_public_key:SubRecord({
+    "public_bytes":Binary(),
+})
+
+zgrab_xssh = Record({
+    "data":SubRecord({
+        "xssh":SubRecord({
+            "server_id":SubRecord({
+                "raw":Analyzedstring(),
+                "version":String(),
+                "software":AnalyzedString(),
+                "comment":AnalyzedString(),
+            }),
+            "server_key_exchange":SubRecord({
+                "cookie": Binary(),
+                "kex_algorithms":ListOf(String()),
+                "host_key_algorithms":ListOf(String()),
+                "client_to_server_ciphers":ListOf(String()),
+                "server_to_client_ciphers":ListOf(String()),
+                "client_to_server_macs":ListOf(String()),
+                "server_to_client_macs":ListOf(String()),
+                "client_to_server_compression":ListOf(String()),
+                "server_to_client_compression":ListOf(String()),
+                "client_to_server_languages":ListOf(String()),
+                "server_to_client_languages":ListOf(String()),
+                "first_kex_follows":Boolean(),
+                "reserved":Short(),
+            }),
+            "userauth":ListOf(String()),
+            "algorithm_selection":SubRecord({
+                "dh_kex_algorithm":String(),
+                "host_key_algorithm":String(),
+                "client_to_server_alg_group": SubRecord({
+                    "cipher":String(),
+                    "mac":String(),
+                    "compression":String(),
+                }),
+                "server_to_client_alg_group": SubRecord({
+                    "cipher":String(),
+                    "mac":String(),
+                    "compression":String(),
+                }),
+            }),
+            "dh_key_exchange": SubRecord({
+                "parameters": SubRecord({
+                    "client_public":Binary(),
+                    "client_private":Binary(),
+                    "server_public":Binary()
+                }),
+                "server_signature":Binary(),
+                "server_host_key":SubRecord({
+                    "raw":Binary(),
+                    "algorithm":String(),
+                    "fingerprint_sha256":String(),
+                    "rsa_public_key":rsa_public_key,
+                    "dsa_public_key":dsa_public_key,
+                    "ecdsa_public_key":ecdsa_public_key,
+                    "ed25519_public_key":ed25519_public_key,
+                    "certkey_public_key":SubRecord({
+	                    "nonce":Binary(),
+                        "key":SubRecord({
+                            "raw":Binary(),
+                            "fingerprint_sha256":String(),
+                            "algorithm":String(),
+                            "rsa_public_key":rsa_public_key,
+                            "dsa_public_key":dsa_public_key,
+                            "ecdsa_public_key":ecdsa_public_key,
+                            "ed25519_public_key":ed25519_public_key,
+                        }),
+                        "serial":String(),
+                        "cert_type":SubRecord({
+                            "id":Integer(),
+                            "name":String(),
+                        }),
+                        "key_id":String(),
+                        "valid_principals":ListOf(String()),
+                        "validity":SubRecord({
+                            "valid_after":DateTime(doc="Timestamp of when certificate is first valid. Timezone is UTC."),
+                            "valid_before":DateTime(doc="Timestamp of when certificate expires. Timezone is UTC."),
+                            "length":Integer(),
+                        }),
+                        "reserved":Binary(),
+                        "signature_key":SubRecord({
+                            "raw":Binary(),
+                            "fingerprint_sha256":String(),
+                            "algorithm":String(),
+                            "rsa_public_key":rsa_public_key,
+                            "dsa_public_key":dsa_public_key,
+                            "ecdsa_public_key":ecdsa_public_key,
+                            "ed25519_public_key":ed25519_public_key,
+                        }),
+                        "signature":SubRecord({
+                            "algorithm":String(),
+                            "value":Binary(),
+                        }),
+                        "parse_error":String(),
+                        "extensions":SubRecord({
+                            "known":SubRecord({
+                                "permit-X11-forwarding":String(),
+                                "permit-agent-forwarding":String(),
+                                "permit-port-forwarding":String(),
+                                "permit-pty":String(),
+                                "permit-user-rc":String(),
+                            }),
+                            "unknown":ListOf(String()),
+                        }),
+                        "critical_options":SubRecord({
+                            "known":SubRecord({
+                                "force-command":String(),
+                                "source-address":String(),
+                            }),
+                            "unknown":ListOf(String()),
+                        })
+                    }),
+                }),
+            }),
         }),
     }),
 }, extends=zgrab_base)

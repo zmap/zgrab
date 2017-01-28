@@ -213,6 +213,26 @@ type jsonCertificate struct {
 	Redacted                  bool                         `json:"redacted"`
 }
 
+func AddECDSAPublicKeyToKeyMap(keyMap map[string]interface{}, key *ecdsa.PublicKey) {
+	params := key.Params()
+	keyMap["p"] = params.P.Bytes()
+	keyMap["n"] = params.N.Bytes()
+	keyMap["b"] = params.B.Bytes()
+	keyMap["gx"] = params.Gx.Bytes()
+	keyMap["gy"] = params.Gy.Bytes()
+	keyMap["x"] = key.X.Bytes()
+	keyMap["y"] = key.Y.Bytes()
+	keyMap["curve"] = key.Curve.Params().Name
+	keyMap["length"] = key.Curve.Params().BitSize
+}
+
+func AddDSAPublicKeyToKeyMap(keyMap map[string]interface{}, key *dsa.PublicKey) {
+	keyMap["p"] = key.P.Bytes()
+	keyMap["q"] = key.Q.Bytes()
+	keyMap["g"] = key.G.Bytes()
+	keyMap["y"] = key.Y.Bytes()
+}
+
 func (c *Certificate) MarshalJSON() ([]byte, error) {
 	// Fill out the certificate
 	jc := new(jsonCertificate)
@@ -273,23 +293,10 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		rsaKey.PublicKey = key
 		jc.SubjectKeyInfo.RSAPublicKey = rsaKey
 	case *dsa.PublicKey:
-		keyMap["p"] = key.P.Bytes()
-		keyMap["q"] = key.Q.Bytes()
-		keyMap["g"] = key.G.Bytes()
-		keyMap["y"] = key.Y.Bytes()
+		AddDSAPublicKeyToKeyMap(keyMap, key)
 		jc.SubjectKeyInfo.DSAPublicKey = keyMap
 	case *ecdsa.PublicKey:
-		params := key.Params()
-		keyMap["p"] = params.P.Bytes()
-		keyMap["n"] = params.N.Bytes()
-		keyMap["b"] = params.B.Bytes()
-		keyMap["gx"] = params.Gx.Bytes()
-		keyMap["gy"] = params.Gy.Bytes()
-		keyMap["x"] = key.X.Bytes()
-		keyMap["y"] = key.Y.Bytes()
-		keyMap["curve"] = key.Curve.Params().Name
-		keyMap["length"] = key.Curve.Params().BitSize
-
+		AddECDSAPublicKeyToKeyMap(keyMap, key)
 		jc.SubjectKeyInfo.ECDSAPublicKey = keyMap
 	case *AugmentedECDSA:
 		pub := key.Pub
