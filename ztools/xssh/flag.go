@@ -14,6 +14,7 @@ type XSSHConfig struct {
 	HostKeyAlgorithms HostKeyAlgorithmsList
 	KexAlgorithms     KexAlgorithmsList
 	Verbose           bool
+	Ciphers           CipherList
 }
 
 type HostKeyAlgorithmsList struct {
@@ -90,6 +91,42 @@ func (kaList *KexAlgorithmsList) GetStringSlice() []string {
 	}
 }
 
+type CipherList struct {
+	Ciphers []string
+}
+
+func (cList *CipherList) String() string {
+	return strings.Join(cList.Ciphers, ",")
+}
+
+func (cList *CipherList) Set(value string) error {
+	for _, cipher := range strings.Split(value, ",") {
+		isValid := false
+		for knownCipher := range cipherModes {
+			if cipher == knownCipher {
+				isValid = true
+				break
+			}
+
+		}
+		if !isValid {
+			return errors.New(fmt.Sprintf("Can not support cipher : %s", cipher))
+		}
+
+		cList.Ciphers = append(cList.Ciphers, cipher)
+	}
+
+	return nil
+}
+
+func (cList *CipherList) Get() []string {
+	if len(cList.Ciphers) == 0 {
+		return supportedCiphers
+	} else {
+		return cList.Ciphers
+	}
+}
+
 func init() {
 	flag.StringVar(&pkgConfig.ClientID, "xssh-client-id", packageVersion, "Specify the client ID string to use")
 
@@ -104,5 +141,12 @@ func init() {
 		strings.Join(supportedKexAlgos, ","),
 	)
 	flag.Var(&pkgConfig.KexAlgorithms, "xssh-kex-algorithms", kexAlgUsage)
+
+	ciphersUsage := fmt.Sprintf(
+		"A comma-separated list of which cipher algorithms to support (default \"%s\")",
+		strings.Join(supportedCiphers, ","),
+	)
+	flag.Var(&pkgConfig.Ciphers, "xssh-ciphers", ciphersUsage)
+
 	flag.BoolVar(&pkgConfig.Verbose, "xssh-verbose", false, "Output additional information.")
 }

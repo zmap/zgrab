@@ -25,6 +25,8 @@ const (
 )
 
 // supportedCiphers specifies the supported ciphers in preference order.
+// These are *not* the supported ciphers, they are the default ciphers.
+// The all supported ciphers are listed in the ciphers.go -> cipherModes map
 var supportedCiphers = []string{
 	"aes128-ctr", "aes192-ctr", "aes256-ctr",
 	"aes128-gcm@openssh.com",
