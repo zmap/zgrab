@@ -153,6 +153,10 @@ type kexAlgorithm interface {
 
 	// Create a JSON object for the kexAlgorithm group
 	MarshalJSON() ([]byte, error)
+
+	// Get a new instance of this interface
+	// Because the base x/crypto package passes the same object to each connection
+	GetNew() kexAlgorithm
 }
 
 // dhGroup is a multiplicative group suitable for implementing Diffie-Hellman key agreement.
@@ -170,6 +174,10 @@ func (group *dhGroup) MarshalJSON() ([]byte, error) {
 	group.JsonLog.Parameters.Generator = group.g
 	group.JsonLog.Parameters.Prime = group.p
 	return json.Marshal(group.JsonLog)
+}
+
+func (group *dhGroup) GetNew() kexAlgorithm {
+	return new(dhGroup)
 }
 
 func (group *dhGroup) diffieHellman(theirPublic, myPrivate *big.Int) (*big.Int, error) {
@@ -325,6 +333,10 @@ type ecdhJsonLog struct {
 
 func (kex *ecdh) MarshalJSON() ([]byte, error) {
 	return json.Marshal(kex.JsonLog)
+}
+
+func (kex *ecdh) GetNew() kexAlgorithm {
+	return new(ecdh)
 }
 
 func (kex *ecdh) Client(c packetConn, rand io.Reader, magics *handshakeMagics) (*kexResult, error) {
@@ -557,6 +569,10 @@ type curve25519sha256JsonLogParameters struct {
 
 func (kex *curve25519sha256) MarshalJSON() ([]byte, error) {
 	return json.Marshal(kex.JsonLog)
+}
+
+func (kex *curve25519sha256) GetNew() kexAlgorithm {
+	return new(curve25519sha256)
 }
 
 type curve25519KeyPair struct {
