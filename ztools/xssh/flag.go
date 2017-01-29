@@ -38,7 +38,7 @@ func (hkaList *HostKeyAlgorithmsList) Set(value string) error {
 		}
 
 		if !isValid {
-			return errors.New(fmt.Sprintf(`Can not support host key algorithm : "%s"`, alg))
+			return errors.New(fmt.Sprintf(`host key algorithm not supported: %s"`, alg))
 		}
 
 		hkaList.Algorithms = append(hkaList.Algorithms, alg)
@@ -75,7 +75,7 @@ func (kaList *KexAlgorithmsList) Set(value string) error {
 		}
 
 		if !isValid {
-			return errors.New(fmt.Sprintf(`Can not support DH key exchange algorithm : "%s"`, alg))
+			return errors.New(fmt.Sprintf(`DH KEX algorithm not supported: "%s"`, alg))
 		}
 
 		kaList.Algorithms = append(kaList.Algorithms, alg)
@@ -110,7 +110,7 @@ func (cList *CipherList) Set(value string) error {
 		}
 
 		if !isValid {
-			return errors.New(fmt.Sprintf("Can not support cipher : %s", cipher))
+			return errors.New(fmt.Sprintf(`cipher not supported: "%s"`, cipher))
 		}
 
 		cList.Ciphers = append(cList.Ciphers, cipher)
