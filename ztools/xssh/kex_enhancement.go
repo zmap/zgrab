@@ -1,23 +1,35 @@
-package ssh
+package xssh
 
 import (
 	"crypto"
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math/big"
+
+	ztoolsKeys "github.com/zmap/zgrab/ztools/keys"
 )
 
-type dhGEXSHA1 struct {
-	g, p *big.Int
+type dhGEXSHA1JsonLog struct {
+	DHParams        *ztoolsKeys.DHParams  `json:"parameters,omitempty"`
+	ServerHostKey   *ServerHostKeyJsonLog `json:"server_host_key,omitempty"`
+	ServerSignature []byte                `json:"server_signature,omitempty"`
 }
 
-const (
-	MinBits       = 1024
-	MaxBits       = 8192
-	PreferredBits = 2048
-)
+type dhGEXSHA1 struct {
+	g, p    *big.Int
+	JsonLog *dhGEXSHA1JsonLog
+}
+
+func (gex *dhGEXSHA1) GetNew(_ string) kexAlgorithm {
+	return new(dhGEXSHA1)
+}
+
+func (gex *dhGEXSHA1) MarshalJSON() ([]byte, error) {
+	return json.Marshal(gex.JsonLog)
+}
 
 func (gex *dhGEXSHA1) diffieHellman(theirPublic, myPrivate *big.Int) (*big.Int, error) {
 	if theirPublic.Sign() <= 0 || theirPublic.Cmp(gex.p) >= 0 {
@@ -27,13 +39,16 @@ func (gex *dhGEXSHA1) diffieHellman(theirPublic, myPrivate *big.Int) (*big.Int, 
 }
 
 func (gex *dhGEXSHA1) Client(c packetConn, randSource io.Reader, magics *handshakeMagics) (*kexResult, error) {
+	gex.JsonLog = new(dhGEXSHA1JsonLog)
+	gex.JsonLog.DHParams = new(ztoolsKeys.DHParams)
+
 	hashFunc := crypto.SHA1
 
 	// Send GexRequest
 	kexDHGexRequest := kexDHGexRequestMsg{
-		MinBits:      MinBits,
-		PreferedBits: PreferredBits,
-		MaxBits:      MaxBits,
+		MinBits:      uint32(pkgConfig.GEXMinBits),
+		PreferedBits: uint32(pkgConfig.GEXPreferredBits),
+		MaxBits:      uint32(pkgConfig.GEXMaxBits),
 	}
 	if err := c.writePacket(Marshal(&kexDHGexRequest)); err != nil {
 		return nil, err
@@ -50,8 +65,11 @@ func (gex *dhGEXSHA1) Client(c packetConn, randSource io.Reader, magics *handsha
 		return nil, err
 	}
 
-	// reject if p's bit length < MinBits or > MaxBits
-	if kexDHGexGroup.P.BitLen() < MinBits || kexDHGexGroup.P.BitLen() > MaxBits {
+	gex.JsonLog.DHParams.Generator = kexDHGexGroup.G
+	gex.JsonLog.DHParams.Prime = kexDHGexGroup.P
+
+	// reject if p's bit length < pkgConfig.GEXMinBits or > pkgConfig.GEXMaxBits
+	if kexDHGexGroup.P.BitLen() < pkgConfig.GEXMinBits || kexDHGexGroup.P.BitLen() > pkgConfig.GEXMaxBits {
 		return nil, fmt.Errorf("Server-generated gex p (dont't ask) is out of range (%d bits)", kexDHGexGroup.P.BitLen())
 	}
 
@@ -67,6 +85,12 @@ func (gex *dhGEXSHA1) Client(c packetConn, randSource io.Reader, magics *handsha
 	kexDHGexInit := kexDHGexInitMsg{
 		X: X,
 	}
+
+	if pkgConfig.Verbose {
+		gex.JsonLog.DHParams.ClientPublic = X
+		gex.JsonLog.DHParams.ClientPrivate = x
+	}
+
 	if err := c.writePacket(Marshal(&kexDHGexInit)); err != nil {
 		return nil, err
 	}
@@ -82,6 +106,10 @@ func (gex *dhGEXSHA1) Client(c packetConn, randSource io.Reader, magics *handsha
 		return nil, err
 	}
 
+	gex.JsonLog.DHParams.ServerPublic = kexDHGexReply.Y
+	gex.JsonLog.ServerHostKey = LogServerHostKey(kexDHGexReply.HostKey)
+	gex.JsonLog.ServerSignature = kexDHGexReply.Signature[:]
+
 	kInt, err := gex.diffieHellman(kexDHGexReply.Y, x)
 	if err != nil {
 		return nil, err
@@ -90,9 +118,9 @@ func (gex *dhGEXSHA1) Client(c packetConn, randSource io.Reader, magics *handsha
 	h := hashFunc.New()
 	magics.write(h)
 	writeString(h, kexDHGexReply.HostKey)
-	binary.Write(h, binary.BigEndian, uint32(MinBits))
-	binary.Write(h, binary.BigEndian, uint32(PreferredBits))
-	binary.Write(h, binary.BigEndian, uint32(MaxBits))
+	binary.Write(h, binary.BigEndian, uint32(pkgConfig.GEXMinBits))
+	binary.Write(h, binary.BigEndian, uint32(pkgConfig.GEXPreferredBits))
+	binary.Write(h, binary.BigEndian, uint32(pkgConfig.GEXMaxBits))
 	writeInt(h, gex.p)
 	writeInt(h, gex.g)
 	writeInt(h, X)
@@ -124,11 +152,11 @@ func (gex *dhGEXSHA1) Server(c packetConn, randSource io.Reader, magics *handsha
 	}
 
 	// smoosh the user's preferred size into our own limits
-	if kexDHGexRequest.PreferedBits > MaxBits {
-		kexDHGexRequest.PreferedBits = MaxBits
+	if kexDHGexRequest.PreferedBits > uint32(pkgConfig.GEXMaxBits) {
+		kexDHGexRequest.PreferedBits = uint32(pkgConfig.GEXMaxBits)
 	}
-	if kexDHGexRequest.PreferedBits < MinBits {
-		kexDHGexRequest.PreferedBits = MinBits
+	if kexDHGexRequest.PreferedBits < uint32(pkgConfig.GEXMinBits) {
+		kexDHGexRequest.PreferedBits = uint32(pkgConfig.GEXMinBits)
 	}
 	// fix min/max if they're inconsistent.  technically, we could just pout
 	// and hang up, but there's no harm in giving them the benefit of the
@@ -184,9 +212,9 @@ func (gex *dhGEXSHA1) Server(c packetConn, randSource io.Reader, magics *handsha
 	h := hashFunc.New()
 	magics.write(h)
 	writeString(h, hostKeyBytes)
-	binary.Write(h, binary.BigEndian, uint32(MinBits))
-	binary.Write(h, binary.BigEndian, uint32(PreferredBits))
-	binary.Write(h, binary.BigEndian, uint32(MaxBits))
+	binary.Write(h, binary.BigEndian, uint32(pkgConfig.GEXMinBits))
+	binary.Write(h, binary.BigEndian, uint32(pkgConfig.GEXPreferredBits))
+	binary.Write(h, binary.BigEndian, uint32(pkgConfig.GEXMaxBits))
 	writeInt(h, gex.p)
 	writeInt(h, gex.g)
 	writeInt(h, kexDHGexInit.X)
