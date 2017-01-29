@@ -69,8 +69,8 @@ func (kaList *KexAlgorithmsList) Set(value string) error {
 	kaList.IsSet = true
 	for _, alg := range strings.Split(value, ",") {
 		isValid := false
-		for _, val := range supportedKexAlgos {
-			if val == alg {
+		for knownAlgoName, _ := range kexAlgoMap {
+			if knownAlgoName == alg {
 				isValid = true
 				break
 			}
