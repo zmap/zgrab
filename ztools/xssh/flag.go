@@ -131,19 +131,19 @@ func init() {
 	flag.StringVar(&pkgConfig.ClientID, "xssh-client-id", packageVersion, "Specify the client ID string to use")
 
 	hostKeyAlgUsage := fmt.Sprintf(
-		"A comma-separated list of which host key algorithms to support (default \"%s\")",
+		"A comma-separated list of which host key algorithms to offer (default \"%s\")",
 		strings.Join(supportedHostKeyAlgos, ","),
 	)
 	flag.Var(&pkgConfig.HostKeyAlgorithms, "xssh-host-key-algorithms", hostKeyAlgUsage)
 
 	kexAlgUsage := fmt.Sprintf(
-		"A comma-separated list of which DH key exchange algorithms to support (default \"%s\")",
+		"A comma-separated list of which DH key exchange algorithms to offer (default \"%s\")",
 		strings.Join(supportedKexAlgos, ","),
 	)
 	flag.Var(&pkgConfig.KexAlgorithms, "xssh-kex-algorithms", kexAlgUsage)
 
 	ciphersUsage := fmt.Sprintf(
-		"A comma-separated list of which cipher algorithms to support (default \"%s\")",
+		"A comma-separated list of which cipher algorithms to offer (default \"%s\")",
 		strings.Join(supportedCiphers, ","),
 	)
 	flag.Var(&pkgConfig.Ciphers, "xssh-ciphers", ciphersUsage)
