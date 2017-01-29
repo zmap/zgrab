@@ -14,6 +14,7 @@ type XSSHConfig struct {
 	HostKeyAlgorithms HostKeyAlgorithmsList
 	KexAlgorithms     KexAlgorithmsList
 	Verbose           bool
+	Ciphers           CipherList
 }
 
 type HostKeyAlgorithmsList struct {
@@ -37,7 +38,7 @@ func (hkaList *HostKeyAlgorithmsList) Set(value string) error {
 		}
 
 		if !isValid {
-			return errors.New(fmt.Sprintf(`Can not support host key algorithm : "%s"`, alg))
+			return errors.New(fmt.Sprintf(`host key algorithm not supported: %s"`, alg))
 		}
 
 		hkaList.Algorithms = append(hkaList.Algorithms, alg)
@@ -74,7 +75,7 @@ func (kaList *KexAlgorithmsList) Set(value string) error {
 		}
 
 		if !isValid {
-			return errors.New(fmt.Sprintf(`Can not support DH key exchange algorithm : "%s"`, alg))
+			return errors.New(fmt.Sprintf(`DH KEX algorithm not supported: "%s"`, alg))
 		}
 
 		kaList.Algorithms = append(kaList.Algorithms, alg)
@@ -90,19 +91,62 @@ func (kaList *KexAlgorithmsList) GetStringSlice() []string {
 	}
 }
 
+type CipherList struct {
+	Ciphers []string
+}
+
+func (cList *CipherList) String() string {
+	return strings.Join(cList.Ciphers, ",")
+}
+
+func (cList *CipherList) Set(value string) error {
+	for _, cipher := range strings.Split(value, ",") {
+		isValid := false
+		for knownCipher := range cipherModes {
+			if cipher == knownCipher {
+				isValid = true
+				break
+			}
+		}
+
+		if !isValid {
+			return errors.New(fmt.Sprintf(`cipher not supported: "%s"`, cipher))
+		}
+
+		cList.Ciphers = append(cList.Ciphers, cipher)
+	}
+
+	return nil
+}
+
+func (cList *CipherList) Get() []string {
+	if len(cList.Ciphers) == 0 {
+		return supportedCiphers
+	} else {
+		return cList.Ciphers
+	}
+}
+
 func init() {
 	flag.StringVar(&pkgConfig.ClientID, "xssh-client-id", packageVersion, "Specify the client ID string to use")
 
 	hostKeyAlgUsage := fmt.Sprintf(
-		"A comma-separated list of which host key algorithms to support (default \"%s\")",
+		"A comma-separated list of which host key algorithms to offer (default \"%s\")",
 		strings.Join(supportedHostKeyAlgos, ","),
 	)
 	flag.Var(&pkgConfig.HostKeyAlgorithms, "xssh-host-key-algorithms", hostKeyAlgUsage)
 
 	kexAlgUsage := fmt.Sprintf(
-		"A comma-separated list of which DH key exchange algorithms to support (default \"%s\")",
+		"A comma-separated list of which DH key exchange algorithms to offer (default \"%s\")",
 		strings.Join(supportedKexAlgos, ","),
 	)
 	flag.Var(&pkgConfig.KexAlgorithms, "xssh-kex-algorithms", kexAlgUsage)
+
+	ciphersUsage := fmt.Sprintf(
+		"A comma-separated list of which cipher algorithms to offer (default \"%s\")",
+		strings.Join(defaultCiphers, ","),
+	)
+	flag.Var(&pkgConfig.Ciphers, "xssh-ciphers", ciphersUsage)
+
 	flag.BoolVar(&pkgConfig.Verbose, "xssh-verbose", false, "Output additional information.")
 }
