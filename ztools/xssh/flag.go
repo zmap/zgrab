@@ -107,8 +107,8 @@ func (cList *CipherList) Set(value string) error {
 				isValid = true
 				break
 			}
-
 		}
+
 		if !isValid {
 			return errors.New(fmt.Sprintf("Can not support cipher : %s", cipher))
 		}
