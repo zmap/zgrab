@@ -32,6 +32,7 @@ var supportedCiphers = []string{
 	"aes128-gcm@openssh.com",
 	"arcfour256", "arcfour128",
 }
+var defaultCiphers = supportedCiphers
 
 // supportedKexAlgos specifies the supported key-exchange algorithms in
 // preference order.

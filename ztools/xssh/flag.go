@@ -144,7 +144,7 @@ func init() {
 
 	ciphersUsage := fmt.Sprintf(
 		"A comma-separated list of which cipher algorithms to offer (default \"%s\")",
-		strings.Join(supportedCiphers, ","),
+		strings.Join(defaultCiphers, ","),
 	)
 	flag.Var(&pkgConfig.Ciphers, "xssh-ciphers", ciphersUsage)
 
