@@ -44,75 +44,86 @@ func (c *Conn) clientHandshake() error {
 	c.handshakeLog = new(ServerHandshake)
 	c.heartbleedLog = new(Heartbleed)
 
-	hello := &clientHelloMsg{
-		vers:                 c.config.maxVersion(),
-		compressionMethods:   []uint8{compressionNone},
-		random:               make([]byte, 32),
-		ocspStapling:         true,
-		serverName:           c.config.ServerName,
-		supportedCurves:      c.config.curvePreferences(),
-		supportedPoints:      []uint8{pointFormatUncompressed},
-		nextProtoNeg:         len(c.config.NextProtos) > 0,
-		secureRenegotiation:  true,
-		extendedMasterSecret: c.config.maxVersion() >= VersionTLS10 && c.config.ExtendedMasterSecret,
-	}
+	var hello *clientHelloMsg
+	var helloBytes []byte
 
-	if c.config.ForceSessionTicketExt {
-		hello.ticketSupported = true
-	}
-	if c.config.SignedCertificateTimestampExt {
-		hello.sctEnabled = true
-	}
+	if c.config.ClientFingerprint == nil {
+		hello = &clientHelloMsg{
+			vers:                 c.config.maxVersion(),
+			compressionMethods:   []uint8{compressionNone},
+			random:               make([]byte, 32),
+			ocspStapling:         true,
+			serverName:           c.config.ServerName,
+			supportedCurves:      c.config.curvePreferences(),
+			supportedPoints:      []uint8{pointFormatUncompressed},
+			nextProtoNeg:         len(c.config.NextProtos) > 0,
+			secureRenegotiation:  true,
+			extendedMasterSecret: c.config.maxVersion() >= VersionTLS10 && c.config.ExtendedMasterSecret,
+		}
 
-	if c.config.HeartbeatEnabled && !c.config.ExtendedRandom {
-		hello.heartbeatEnabled = true
-		hello.heartbeatMode = heartbeatModePeerAllowed
-	}
+		if c.config.ForceSessionTicketExt {
+			hello.ticketSupported = true
+		}
+		if c.config.SignedCertificateTimestampExt {
+			hello.sctEnabled = true
+		}
 
-	possibleCipherSuites := c.config.cipherSuites()
-	hello.cipherSuites = make([]uint16, 0, len(possibleCipherSuites))
+		if c.config.HeartbeatEnabled && !c.config.ExtendedRandom {
+			hello.heartbeatEnabled = true
+			hello.heartbeatMode = heartbeatModePeerAllowed
+		}
 
-	if c.config.ForceSuites {
-		hello.cipherSuites = possibleCipherSuites
-	} else {
+		possibleCipherSuites := c.config.cipherSuites()
+		hello.cipherSuites = make([]uint16, 0, len(possibleCipherSuites))
 
-	NextCipherSuite:
-		for _, suiteId := range possibleCipherSuites {
-			for _, suite := range implementedCipherSuites {
-				if suite.id != suiteId {
-					continue
+		if c.config.ForceSuites {
+			hello.cipherSuites = possibleCipherSuites
+		} else {
+
+		NextCipherSuite:
+			for _, suiteId := range possibleCipherSuites {
+				for _, suite := range implementedCipherSuites {
+					if suite.id != suiteId {
+						continue
+					}
+					// Don't advertise TLS 1.2-only cipher suites unless
+					// we're attempting TLS 1.2.
+					if hello.vers < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
+						continue
+					}
+					hello.cipherSuites = append(hello.cipherSuites, suiteId)
+					continue NextCipherSuite
 				}
-				// Don't advertise TLS 1.2-only cipher suites unless
-				// we're attempting TLS 1.2.
-				if hello.vers < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
-					continue
-				}
-				hello.cipherSuites = append(hello.cipherSuites, suiteId)
-				continue NextCipherSuite
 			}
 		}
-	}
 
-	if len(c.config.ClientRandom) == 32 {
-		copy(hello.random, c.config.ClientRandom)
+		if len(c.config.ClientRandom) == 32 {
+			copy(hello.random, c.config.ClientRandom)
+		} else {
+			_, err := io.ReadFull(c.config.rand(), hello.random)
+			if err != nil {
+				c.sendAlert(alertInternalError)
+				return errors.New("tls: short read from Rand: " + err.Error())
+			}
+		}
+
+		if c.config.ExtendedRandom {
+			hello.extendedRandomEnabled = true
+			hello.extendedRandom = make([]byte, 32)
+			if _, err := io.ReadFull(c.config.rand(), hello.extendedRandom); err != nil {
+				return errors.New("tls: short read from Rand: " + err.Error())
+			}
+		}
+
+		if hello.vers >= VersionTLS12 {
+			hello.signatureAndHashes = c.config.signatureAndHashesForClient()
+		}
+		helloBytes = hello.marshal()
 	} else {
-		_, err := io.ReadFull(c.config.rand(), hello.random)
-		if err != nil {
-			c.sendAlert(alertInternalError)
-			return errors.New("tls: short read from Rand: " + err.Error())
+		helloBytes = c.config.ClientFingerprint.marshal()
+		if ok := hello.unmarshal(helloBytes); !ok {
+			return errors.New("Incompatible Custom Client Fingerprint")
 		}
-	}
-
-	if c.config.ExtendedRandom {
-		hello.extendedRandomEnabled = true
-		hello.extendedRandom = make([]byte, 32)
-		if _, err := io.ReadFull(c.config.rand(), hello.extendedRandom); err != nil {
-			return errors.New("tls: short read from Rand: " + err.Error())
-		}
-	}
-
-	if hello.vers >= VersionTLS12 {
-		hello.signatureAndHashes = c.config.signatureAndHashesForClient()
 	}
 
 	var session *ClientSessionState
@@ -121,7 +132,6 @@ func (c *Conn) clientHandshake() error {
 	if c.config.SessionTicketsDisabled {
 		sessionCache = nil
 	}
-
 	if sessionCache != nil {
 		hello.ticketSupported = true
 
@@ -160,7 +170,7 @@ func (c *Conn) clientHandshake() error {
 		}
 	}
 
-	c.writeRecord(recordTypeHandshake, hello.marshal())
+	c.writeRecord(recordTypeHandshake, helloBytes)
 	c.handshakeLog.ClientHello = hello.MakeLog()
 
 	msg, err := c.readHandshake()

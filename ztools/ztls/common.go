@@ -225,6 +225,34 @@ type ClientSessionCache interface {
 	Put(sessionKey string, cs *ClientSessionState)
 }
 
+type ClientExtension interface {
+	Marshal() (data []byte)
+}
+
+type SniExtension struct {
+	domains []string
+}
+
+func (e *SniExtension) marshall() []byte {
+	//TK write marshall
+	return []byte{}
+}
+
+type ClientHelloConfiguration struct {
+	RecordVersion      uint16
+	HandshakeVersion   uint16
+	ClientRandom       []byte
+	SessionID          []byte
+	CipherSuites       []uint16
+	CompressionMethods []uint8
+	Extensions         []ClientExtension
+}
+
+func (c *ClientHelloConfiguration) marshal() []byte {
+	//TK write marshall
+	return []byte{}
+}
+
 // A Config structure is used to configure a TLS client or server.
 // After one has been passed to a TLS function it must not be
 // modified. A Config may be reused; the tls package will also not
@@ -352,6 +380,9 @@ type Config struct {
 
 	// Explicitly set Client random
 	ClientRandom []byte
+
+	// If non-null specifies the contents of the client-hello
+	ClientFingerprint *ClientHelloConfiguration
 }
 
 func (c *Config) serverInit() {
