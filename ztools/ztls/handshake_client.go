@@ -32,6 +32,30 @@ type clientHandshakeState struct {
 	session         *ClientSessionState
 }
 
+type SniExtension struct {
+	domains []string
+}
+
+func (e *SniExtension) marshall() []byte {
+	//TK write marshall
+	return []byte{}
+}
+
+type ClientHelloConfiguration struct {
+	RecordVersion      uint16
+	HandshakeVersion   uint16
+	ClientRandom       []byte
+	SessionID          []byte
+	CipherSuites       []uint16
+	CompressionMethods []uint8
+	Extensions         []ClientExtension
+}
+
+func (c *ClientHelloConfiguration) marshal() []byte {
+	//TK write marshall
+	return []byte{}
+}
+
 func (c *Conn) clientHandshake() error {
 	if c.config == nil {
 		c.config = defaultConfig()
