@@ -46,6 +46,9 @@ func (c *Conn) clientHandshake() error {
 
 	var hello *clientHelloMsg
 	var helloBytes []byte
+	var session *ClientSessionState
+	var cacheKey string
+	var sessionCache ClientSessionCache
 
 	if c.config.ClientFingerprint == nil {
 		hello = &clientHelloMsg{
@@ -118,55 +121,56 @@ func (c *Conn) clientHandshake() error {
 		if hello.vers >= VersionTLS12 {
 			hello.signatureAndHashes = c.config.signatureAndHashesForClient()
 		}
+
+		sessionCache = c.config.ClientSessionCache
+		if c.config.SessionTicketsDisabled {
+			sessionCache = nil
+		}
+		if sessionCache != nil {
+			hello.ticketSupported = true
+
+			// Try to resume a previously negotiated TLS session, if
+			// available.
+			cacheKey = clientSessionCacheKey(c.conn.RemoteAddr(), c.config)
+			candidateSession, ok := sessionCache.Get(cacheKey)
+			if ok {
+				// Check that the ciphersuite/version used for the
+				// previous session are still valid.
+				cipherSuiteOk := false
+				for _, id := range hello.cipherSuites {
+					if id == candidateSession.cipherSuite {
+						cipherSuiteOk = true
+						break
+					}
+				}
+
+				versOk := candidateSession.vers >= c.config.minVersion() &&
+					candidateSession.vers <= c.config.maxVersion()
+				if versOk && cipherSuiteOk {
+					session = candidateSession
+				}
+			}
+		}
+
+		if session != nil {
+			hello.sessionTicket = session.sessionTicket
+			// A random session ID is used to detect when the
+			// server accepted the ticket and is resuming a session
+			// (see RFC 5077).
+			hello.sessionId = make([]byte, 16)
+			if _, err := io.ReadFull(c.config.rand(), hello.sessionId); err != nil {
+				c.sendAlert(alertInternalError)
+				return errors.New("tls: short read from Rand: " + err.Error())
+			}
+		}
+
 		helloBytes = hello.marshal()
 	} else {
+		session = nil
+		sessionCache = nil
 		helloBytes = c.config.ClientFingerprint.marshal()
 		if ok := hello.unmarshal(helloBytes); !ok {
 			return errors.New("Incompatible Custom Client Fingerprint")
-		}
-	}
-
-	var session *ClientSessionState
-	var cacheKey string
-	sessionCache := c.config.ClientSessionCache
-	if c.config.SessionTicketsDisabled {
-		sessionCache = nil
-	}
-	if sessionCache != nil {
-		hello.ticketSupported = true
-
-		// Try to resume a previously negotiated TLS session, if
-		// available.
-		cacheKey = clientSessionCacheKey(c.conn.RemoteAddr(), c.config)
-		candidateSession, ok := sessionCache.Get(cacheKey)
-		if ok {
-			// Check that the ciphersuite/version used for the
-			// previous session are still valid.
-			cipherSuiteOk := false
-			for _, id := range hello.cipherSuites {
-				if id == candidateSession.cipherSuite {
-					cipherSuiteOk = true
-					break
-				}
-			}
-
-			versOk := candidateSession.vers >= c.config.minVersion() &&
-				candidateSession.vers <= c.config.maxVersion()
-			if versOk && cipherSuiteOk {
-				session = candidateSession
-			}
-		}
-	}
-
-	if session != nil {
-		hello.sessionTicket = session.sessionTicket
-		// A random session ID is used to detect when the
-		// server accepted the ticket and is resuming a session
-		// (see RFC 5077).
-		hello.sessionId = make([]byte, 16)
-		if _, err := io.ReadFull(c.config.rand(), hello.sessionId); err != nil {
-			c.sendAlert(alertInternalError)
-			return errors.New("tls: short read from Rand: " + err.Error())
 		}
 	}
 
