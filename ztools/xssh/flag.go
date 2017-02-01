@@ -17,16 +17,14 @@ type XSSHConfig struct {
 }
 
 type HostKeyAlgorithmsList struct {
-	IsSet      bool
 	Algorithms []string
 }
 
 func (hkaList *HostKeyAlgorithmsList) String() string {
-	return "BROKEN HostKeyAlgorithmsList.String()"
+	return strings.Join(hkaList.Algorithms, ",")
 }
 
 func (hkaList *HostKeyAlgorithmsList) Set(value string) error {
-	hkaList.IsSet = true
 	for _, alg := range strings.Split(value, ",") {
 		isValid := false
 		for _, val := range supportedHostKeyAlgos {
@@ -45,8 +43,8 @@ func (hkaList *HostKeyAlgorithmsList) Set(value string) error {
 	return nil
 }
 
-func (hkaList *HostKeyAlgorithmsList) GetStringSlice() []string {
-	if !hkaList.IsSet {
+func (hkaList *HostKeyAlgorithmsList) Get() []string {
+	if len(hkaList.Algorithms) == 0 {
 		return supportedHostKeyAlgos
 	} else {
 		return hkaList.Algorithms
@@ -54,16 +52,14 @@ func (hkaList *HostKeyAlgorithmsList) GetStringSlice() []string {
 }
 
 type KexAlgorithmsList struct {
-	IsSet      bool
 	Algorithms []string
 }
 
 func (kaList *KexAlgorithmsList) String() string {
-	return "BROKEN HostKeyAlgorithmsList.String()"
+	return strings.Join(kaList.Algorithms, ",")
 }
 
 func (kaList *KexAlgorithmsList) Set(value string) error {
-	kaList.IsSet = true
 	for _, alg := range strings.Split(value, ",") {
 		isValid := false
 		for _, val := range supportedKexAlgos {
@@ -82,8 +78,8 @@ func (kaList *KexAlgorithmsList) Set(value string) error {
 	return nil
 }
 
-func (kaList *KexAlgorithmsList) GetStringSlice() []string {
-	if !kaList.IsSet {
+func (kaList *KexAlgorithmsList) Get() []string {
+	if len(kaList.Algorithms) == 0 {
 		return supportedKexAlgos
 	} else {
 		return kaList.Algorithms
