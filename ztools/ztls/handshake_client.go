@@ -74,6 +74,18 @@ func (c *ClientHelloConfiguration) marshal(config *Config) ([]byte, error) {
 	ciphers[0] = uint8(len(c.CipherSuites) >> 7)
 	ciphers[1] = uint8(len(c.CipherSuites) << 1)
 	for i, suite := range c.CipherSuites {
+		if !config.ForceSuites {
+			found := false
+			for _, impl := range implementedCipherSuites {
+				if impl.id == suite {
+					found = true
+				}
+			}
+			if !found {
+				return nil, errors.New(fmt.Sprintf("tls: unimplemented cipher suite %d", suite))
+			}
+		}
+
 		ciphers[2+i*2] = uint8(suite >> 8)
 		ciphers[3+i*2] = uint8(suite)
 	}
@@ -82,6 +94,13 @@ func (c *ClientHelloConfiguration) marshal(config *Config) ([]byte, error) {
 	compressions[0] = uint8(len(c.CompressionMethods))
 	if len(c.CompressionMethods) > 0 {
 		copy(compressions[1:], c.CompressionMethods)
+		if c.CompressionMethods[0] != 0 {
+			return nil, errors.New(fmt.Sprintf("tls: unimplemented compression method %d", c.CompressionMethods[0]))
+		} else if len(c.CompressionMethods) > 1 {
+			return nil, errors.New(fmt.Sprintf("tls: unimplemented compression method %d", c.CompressionMethods[1]))
+		}
+	} else {
+		return nil, errors.New("tls: no compression method")
 	}
 
 	var extensions []byte
