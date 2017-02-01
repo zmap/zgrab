@@ -51,7 +51,6 @@ type ClientHelloConfiguration struct {
 }
 
 func (c *ClientHelloConfiguration) marshal(config *Config) ([]byte, error) {
-	//TK write marshall
 	head := make([]byte, 38)
 	head[0] = 1
 	head[4] = uint8(c.HandshakeVersion >> 8)
@@ -239,8 +238,13 @@ func (c *Conn) clientHandshake() error {
 	} else {
 		session = nil
 		sessionCache = nil
-		helloBytes, err := c.config.ClientFingerprint.marshal(c.config)
-		if ok := hello.unmarshal(helloBytes); !ok && err == nil {
+		var err error
+		helloBytes, err = c.config.ClientFingerprint.marshal(c.config)
+		if err != nil {
+			return err
+		}
+		hello = &clientHelloMsg{}
+		if ok := hello.unmarshal(helloBytes); !ok {
 			return errors.New("Incompatible Custom Client Fingerprint")
 		}
 	}
