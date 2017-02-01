@@ -36,13 +36,12 @@ type SniExtension struct {
 	domains []string
 }
 
-func (e *SniExtension) marshall() []byte {
+func (e *SniExtension) Marshal() []byte {
 	//TK write marshall
 	return []byte{}
 }
 
 type ClientHelloConfiguration struct {
-	RecordVersion      uint16
 	HandshakeVersion   uint16
 	ClientRandom       []byte
 	SessionID          []byte
@@ -51,9 +50,57 @@ type ClientHelloConfiguration struct {
 	Extensions         []ClientExtension
 }
 
-func (c *ClientHelloConfiguration) marshal() []byte {
+func (c *ClientHelloConfiguration) marshal(config *Config) ([]byte, error) {
 	//TK write marshall
-	return []byte{}
+	head := make([]byte, 38)
+	head[0] = 1
+	head[4] = uint8(c.HandshakeVersion >> 8)
+	head[5] = uint8(c.HandshakeVersion)
+	if len(c.ClientRandom) == 32 {
+		copy(head[6:38], c.ClientRandom[0:32])
+	} else {
+		_, err := io.ReadFull(config.rand(), head[6:38])
+		if err != nil {
+			return nil, errors.New("tls: short read from Rand: " + err.Error())
+		}
+	}
+
+	sessionID := make([]byte, len(c.SessionID)+1)
+	sessionID[0] = uint8(len(c.SessionID))
+	if len(c.SessionID) > 0 {
+		copy(sessionID[1:], c.SessionID)
+	}
+
+	ciphers := make([]byte, 2+2*len(c.CipherSuites))
+	ciphers[0] = uint8(len(c.CipherSuites) >> 7)
+	ciphers[1] = uint8(len(c.CipherSuites) << 1)
+	for i, suite := range c.CipherSuites {
+		ciphers[2+i*2] = uint8(suite >> 8)
+		ciphers[3+i*2] = uint8(suite)
+	}
+
+	compressions := make([]byte, len(c.CompressionMethods)+1)
+	compressions[0] = uint8(len(c.CompressionMethods))
+	if len(c.CompressionMethods) > 0 {
+		copy(compressions[1:], c.CompressionMethods)
+	}
+
+	var extensions []byte
+	for _, ext := range c.Extensions {
+		extensions = append(extensions, ext.Marshal()...)
+	}
+	if len(extensions) > 0 {
+		length := make([]byte, 2)
+		length[0] = uint8(len(extensions) >> 8)
+		length[1] = uint8(len(extensions))
+		extensions = append(length, extensions...)
+	}
+	hello := append(head, append(sessionID, append(ciphers, append(compressions, extensions...)...)...)...)
+	hello[1] = uint8((len(hello) - 4) >> 16)
+	hello[2] = uint8((len(hello) - 4) >> 8)
+	hello[3] = uint8((len(hello) - 4))
+
+	return hello, nil
 }
 
 func (c *Conn) clientHandshake() error {
@@ -192,8 +239,8 @@ func (c *Conn) clientHandshake() error {
 	} else {
 		session = nil
 		sessionCache = nil
-		helloBytes = c.config.ClientFingerprint.marshal()
-		if ok := hello.unmarshal(helloBytes); !ok {
+		helloBytes, err := c.config.ClientFingerprint.marshal(c.config)
+		if ok := hello.unmarshal(helloBytes); !ok && err == nil {
 			return errors.New("Incompatible Custom Client Fingerprint")
 		}
 	}
