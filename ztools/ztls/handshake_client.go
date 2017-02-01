@@ -33,12 +33,32 @@ type clientHandshakeState struct {
 }
 
 type SniExtension struct {
-	domains []string
+	Domains []string
 }
 
-func (e *SniExtension) Marshal() []byte {
-	//TK write marshall
-	return []byte{}
+func (e SniExtension) Marshal() []byte {
+	result := []byte{}
+	for _, domain := range e.Domains {
+		current := make([]byte, 2+len(domain))
+		copy(current[2:], []byte(domain))
+		current[0] = uint8(len(domain) >> 8)
+		current[1] = uint8(len(domain))
+		result = append(result, current...)
+	}
+	sniHeader := make([]byte, 3)
+	sniHeader[0] = uint8((len(result) + 1) >> 8)
+	sniHeader[1] = uint8((len(result) + 1))
+	sniHeader[2] = 0
+	result = append(sniHeader, result...)
+
+	extHeader := make([]byte, 4)
+	extHeader[0] = 0
+	extHeader[1] = 0
+	extHeader[2] = uint8((len(result)) >> 8)
+	extHeader[3] = uint8((len(result)))
+	result = append(extHeader, result...)
+
+	return result
 }
 
 type ClientHelloConfiguration struct {
