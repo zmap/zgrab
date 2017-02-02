@@ -208,7 +208,16 @@ func (e SessionTicketExtension) Marshal() []byte {
 }
 
 type SignatureAlgorithmExtension struct {
-	SignatureAndHashes []signatureAndHash
+	SignatureAndHashes []uint16
+}
+
+func (e SignatureAlgorithmExtension) getStruct() []signatureAndHash {
+	result := make([]signatureAndHash, len(e.SignatureAndHashes))
+	for i, alg := range e.SignatureAndHashes {
+		result[i].hash = uint8(alg >> 8)
+		result[i].signature = uint8(alg)
+	}
+	return result
 }
 
 func (e SignatureAlgorithmExtension) Marshal() []byte {
@@ -219,7 +228,7 @@ func (e SignatureAlgorithmExtension) Marshal() []byte {
 	result[3] = uint8((2 + 2*len(e.SignatureAndHashes)))
 	result[4] = uint8((2 * len(e.SignatureAndHashes)) >> 8)
 	result[5] = uint8((2 * len(e.SignatureAndHashes)))
-	for i, pair := range e.SignatureAndHashes {
+	for i, pair := range e.getStruct() {
 		result[6+2*i] = uint8(pair.hash)
 		result[7+2*i] = uint8(pair.signature)
 	}
@@ -245,7 +254,7 @@ func (c *ClientHelloConfiguration) ValidateExtensions() error {
 				}
 			}
 		case SignatureAlgorithmExtension:
-			for _, algs := range ext.(SignatureAlgorithmExtension).SignatureAndHashes {
+			for _, algs := range ext.(SignatureAlgorithmExtension).getStruct() {
 				found := false
 				for _, supported := range supportedSKXSignatureAlgorithms {
 					if algs.hash == supported.hash && algs.signature == supported.signature {
@@ -284,8 +293,8 @@ func (c *ClientHelloConfiguration) ModifyConfig(config *Config) *Config {
 		case ExtendedMasterSecretExtension:
 			config.ExtendedMasterSecret = true
 		case SignatureAlgorithmExtension:
-			supportedSKXSignatureAlgorithms = ext.(SignatureAlgorithmExtension).SignatureAndHashes
-			defaultSKXSignatureAlgorithms = ext.(SignatureAlgorithmExtension).SignatureAndHashes
+			supportedSKXSignatureAlgorithms = ext.(SignatureAlgorithmExtension).getStruct()
+			defaultSKXSignatureAlgorithms = ext.(SignatureAlgorithmExtension).getStruct()
 		case SCTExtension:
 			config.SignedCertificateTimestampExt = true
 		case SupportedCurvesExtension:
