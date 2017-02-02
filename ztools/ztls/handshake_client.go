@@ -80,8 +80,8 @@ func (e ALPNExtension) Marshal() []byte {
 	result = append(alpnHeader, result...)
 
 	extHeader := make([]byte, 4)
-	extHeader[0] = 0
-	extHeader[1] = 0
+	extHeader[0] = 0 //TK
+	extHeader[1] = 0 //TK
 	extHeader[2] = uint8((len(result)) >> 8)
 	extHeader[3] = uint8((len(result)))
 	result = append(extHeader, result...)
@@ -130,11 +130,16 @@ type StatusRequestExtension struct {
 }
 
 func (e StatusRequestExtension) Marshal() []byte {
-	result := make([]byte, 4)
+	result := make([]byte, 9)
 	result[0] = byte(extensionStatusRequest >> 8)
 	result[1] = byte(extensionStatusRequest & 0xff)
 	result[2] = 0
-	result[3] = 0
+	result[3] = 5
+	result[4] = 1 // OCSP type
+	result[5] = 0
+	result[6] = 0
+	result[7] = 0
+	result[8] = 0
 	return result
 }
 
@@ -257,6 +262,41 @@ func (c *ClientHelloConfiguration) ValidateExtensions() error {
 	return nil
 }
 
+func (c *ClientHelloConfiguration) ModifyConfig(config *Config) *Config {
+	config.NextProtos = []string{}
+	config.CipherSuites = c.CipherSuites
+	config.MaxVersion = c.HandshakeVersion
+	config.ClientRandom = c.ClientRandom
+	config.CurvePreferences = []CurveID{}
+	config.HeartbeatEnabled = false
+	config.ExtendedRandom = false
+	config.ForceSessionTicketExt = false
+	config.ExtendedMasterSecret = false
+	config.SignedCertificateTimestampExt = false
+	for _, ext := range c.Extensions {
+		switch ext.(type) {
+		case SniExtension:
+			if config.ServerName == "" && len(ext.(SniExtension).Domains) > 0 {
+				config.ServerName = ext.(SniExtension).Domains[0]
+			}
+		case ALPNExtension:
+			//TK
+		case ExtendedMasterSecretExtension:
+			config.ExtendedMasterSecret = true
+		case SignatureAlgorithmExtension:
+			supportedSKXSignatureAlgorithms = ext.(SignatureAlgorithmExtension).SignatureAndHashes
+			defaultSKXSignatureAlgorithms = ext.(SignatureAlgorithmExtension).SignatureAndHashes
+		case SCTExtension:
+			config.SignedCertificateTimestampExt = true
+		case SupportedCurvesExtension:
+			config.CurvePreferences = ext.(SupportedCurvesExtension).Curves
+		case SessionTicketExtension:
+			config.ForceSessionTicketExt = true
+		}
+	}
+	return config
+}
+
 func (c *ClientHelloConfiguration) marshal(config *Config) ([]byte, error) {
 	if err := c.ValidateExtensions(); err != nil {
 		return nil, err
@@ -334,6 +374,10 @@ func (c *ClientHelloConfiguration) marshal(config *Config) ([]byte, error) {
 func (c *Conn) clientHandshake() error {
 	if c.config == nil {
 		c.config = defaultConfig()
+	}
+
+	if c.config.ClientFingerprint != nil {
+		c.config = c.config.ClientFingerprint.ModifyConfig(c.config)
 	}
 
 	if len(c.config.ServerName) == 0 && !c.config.InsecureSkipVerify {
@@ -526,7 +570,7 @@ func (c *Conn) clientHandshake() error {
 		session:      session,
 	}
 
-	hs.finishedHash.Write(hs.hello.marshal())
+	hs.finishedHash.Write(helloBytes)
 	hs.finishedHash.Write(hs.serverHello.marshal())
 
 	isResume, err := hs.processServerHello()

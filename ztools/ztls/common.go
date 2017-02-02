@@ -358,6 +358,7 @@ type Config struct {
 	ClientRandom []byte
 
 	// If non-null specifies the contents of the client-hello
+	// WARNING: Setting this may invalidate other fields in the Config object
 	ClientFingerprint *ClientHelloConfiguration
 }
 
