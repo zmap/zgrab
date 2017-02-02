@@ -47,6 +47,7 @@ var (
 	tlsVersion                    string
 	rootCAFileName                string
 	prometheusAddress             string
+	clientHelloFileName           string
 )
 
 // Module configurations
@@ -97,6 +98,8 @@ func init() {
 	flag.BoolVar(&config.Fox, "fox", false, "Send some Niagara Fox Tunneling data")
 	flag.BoolVar(&config.S7, "s7", false, "Send some Siemens S7 data")
 	flag.BoolVar(&config.NoSNI, "no-sni", false, "Do not send domain name in TLS handshake regardless of whether known")
+
+	flag.StringVar(&clientHelloFileName, "raw-client-hello", "", "Provide a raw ClientHello to be sent; only the SNI will be rewritten (implies --tls)")
 
 	flag.BoolVar(&config.ExportsOnly, "export-ciphers", false, "Send only export ciphers")
 	flag.BoolVar(&config.ExportsDHOnly, "export-dhe-ciphers", false, "Send only export DHE ciphers")
@@ -337,6 +340,16 @@ func init() {
 	}
 	logger := zlog.New(logFile, "banner-grab")
 	config.ErrorLog = logger
+
+	// Open TLS ClientHello, if applicable
+	if clientHelloFileName != "" {
+		if clientHello, err := ioutil.ReadFile(clientHelloFileName); err != nil {
+			zlog.Fatal(err)
+		} else {
+			config.ExternalClientHello = clientHello
+			config.ForceClientHello = true
+		}
+	}
 }
 
 func main() {

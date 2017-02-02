@@ -127,6 +127,8 @@ type Config struct {
 	ExtendedMasterSecret          bool
 	TLSVerbose                    bool
 	SignedCertificateTimestampExt bool
+	ForceClientHello              bool
+	ExternalClientHello           []byte
 
 	// SSH
 	SSH SSHScanConfig
