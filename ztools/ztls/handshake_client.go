@@ -33,7 +33,8 @@ type clientHandshakeState struct {
 }
 
 type SniExtension struct {
-	Domains []string
+	Domains      []string
+	Autopopulate bool
 }
 
 func (e SniExtension) Marshal() []byte {
@@ -296,9 +297,12 @@ func (c *ClientHelloConfiguration) ModifyConfig(config *Config) *Config {
 	config.ForceSessionTicketExt = false
 	config.ExtendedMasterSecret = false
 	config.SignedCertificateTimestampExt = false
-	for _, ext := range c.Extensions {
+	for i, ext := range c.Extensions {
 		switch ext.(type) {
 		case SniExtension:
+			if ext.(SniExtension).Autopopulate {
+				c.Extensions[i] = SniExtension{[]string{config.ServerName}, true}
+			}
 			if config.ServerName == "" && len(ext.(SniExtension).Domains) > 0 {
 				config.ServerName = ext.(SniExtension).Domains[0]
 			}
