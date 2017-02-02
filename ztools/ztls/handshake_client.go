@@ -207,6 +207,20 @@ func (e SessionTicketExtension) Marshal() []byte {
 	return result
 }
 
+type HeartbeatExtension struct {
+	Mode byte
+}
+
+func (e HeartbeatExtension) Marshal() []byte {
+	result := make([]byte, 5)
+	result[0] = byte(extensionHeartbeat >> 8)
+	result[1] = byte(extensionHeartbeat & 0xff)
+	result[2] = uint8(1 >> 8)
+	result[3] = uint8(1)
+	result[4] = e.Mode
+	return result
+}
+
 type SignatureAlgorithmExtension struct {
 	SignatureAndHashes []uint16
 }
