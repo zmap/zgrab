@@ -36,7 +36,6 @@ import (
 
 // Command-line flags
 var (
-	encoding                      string
 	outputFileName, inputFileName string
 	logFileName, metadataFileName string
 	messageFileName               string
@@ -63,7 +62,6 @@ var (
 // Pre-main bind flags to variables
 func init() {
 
-	flag.StringVar(&config.Encoding, "encoding", "string", "Encode banner as string|hex|base64")
 	flag.StringVar(&outputFileName, "output-file", "-", "Output filename, use - for stdout")
 	flag.StringVar(&inputFileName, "input-file", "-", "Input filename, use - for stdin")
 	flag.StringVar(&metadataFileName, "metadata-file", "-", "File to record banner-grab metadata, use - for stdout")
@@ -249,17 +247,6 @@ func init() {
 	if config.Heartbleed && !(config.StartTLS || config.TLS) {
 		zlog.Fatal("Must specify one of --tls or --starttls for --heartbleed")
 	}
-
-	encoding = strings.ToLower(config.Encoding)
-	// Check output encoding
-	switch encoding {
-	case "string":
-	case "base64":
-	case "hex":
-	default:
-		zlog.Fatalf("Invalid encoding '%s'", config.Encoding)
-	}
-	config.Encoding = encoding
 
 	// Validate port
 	if portFlag > 65535 {

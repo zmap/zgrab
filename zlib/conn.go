@@ -75,9 +75,6 @@ type Conn struct {
 
 	domain string
 
-	// Encoding type
-	ReadEncoding string
-
 	// SSH
 	sshScan *SSHScanConfig
 
@@ -432,7 +429,7 @@ func (c *Conn) SMTPBanner(b []byte) (int, error) {
 }
 
 func (c *Conn) EHLO(domain string) error {
-	cmd := []byte("EHLO " + domain + "\r\n")
+    cmd := []byte("EHLO " + domain + "\r\n")
 	if _, err := c.getUnderlyingConn().Write(cmd); err != nil {
 		return err
 	}
