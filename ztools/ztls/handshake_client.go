@@ -32,6 +32,13 @@ type clientHandshakeState struct {
 	session         *ClientSessionState
 }
 
+type NullExtension struct {
+}
+
+func (e NullExtension) Marshal() []byte {
+	return []byte{}
+}
+
 type SniExtension struct {
 	Domains      []string
 	Autopopulate bool
@@ -193,7 +200,8 @@ func (e PointFormatExtension) Marshal() []byte {
 }
 
 type SessionTicketExtension struct {
-	Ticket []byte
+	Ticket       []byte
+	Autopopulate bool
 }
 
 func (e SessionTicketExtension) Marshal() []byte {
@@ -250,13 +258,24 @@ func (e SignatureAlgorithmExtension) Marshal() []byte {
 	return result
 }
 
+type CacheKeyGenerator interface {
+	Key(net.Addr) string
+}
+
 type ClientHelloConfiguration struct {
-	HandshakeVersion   uint16
-	ClientRandom       []byte
+	HandshakeVersion uint16
+	//if len == 0, will be randomized
+	ClientRandom []byte
+	//if RandomSessionID > 0, will overwrite contents w/ random bytes when a session resumption occurs
+	RandomSessionID    int
 	SessionID          []byte
 	CipherSuites       []uint16
 	CompressionMethods []uint8
 	Extensions         []ClientExtension
+	//Optional, must both be non-nil, or neither.
+	//Custom Session cache implementations allowed
+	SessionCache ClientSessionCache
+	CacheKey     CacheKeyGenerator
 }
 
 func (c *ClientHelloConfiguration) ValidateExtensions() error {
@@ -537,7 +556,50 @@ func (c *Conn) clientHandshake() error {
 		helloBytes = hello.marshal()
 	} else {
 		session = nil
-		sessionCache = nil
+		sessionCache = c.config.ClientFingerprint.SessionCache
+		if sessionCache != nil {
+			if c.config.ClientFingerprint.CacheKey == nil {
+				return errors.New("Must specify CacheKey if SessionCache is defined in Config.ClientFingerprint")
+			}
+			cacheKey = c.config.ClientFingerprint.CacheKey.Key(c.conn.RemoteAddr())
+			candidateSession, ok := sessionCache.Get(cacheKey)
+			if ok {
+				cipherSuiteOk := false
+				for _, id := range c.config.ClientFingerprint.CipherSuites {
+					if id == candidateSession.cipherSuite {
+						cipherSuiteOk = true
+						break
+					}
+				}
+				versOk := candidateSession.vers >= c.config.minVersion() &&
+					candidateSession.vers <= c.config.ClientFingerprint.HandshakeVersion
+				if versOk && cipherSuiteOk {
+					session = candidateSession
+				}
+			}
+		}
+		for i, ext := range c.config.ClientFingerprint.Extensions {
+			switch ext.(type) {
+			case SessionTicketExtension:
+				if ext.(SessionTicketExtension).Autopopulate {
+					if session == nil {
+						if !c.config.ForceSessionTicketExt {
+							c.config.ClientFingerprint.Extensions[i] = NullExtension{}
+						}
+					} else {
+						c.config.ClientFingerprint.Extensions[i] = SessionTicketExtension{session.sessionTicket, true}
+						if c.config.ClientFingerprint.RandomSessionID > 0 {
+							c.config.ClientFingerprint.SessionID = make([]byte, c.config.ClientFingerprint.RandomSessionID)
+							if _, err := io.ReadFull(c.config.rand(), c.config.ClientFingerprint.SessionID); err != nil {
+								c.sendAlert(alertInternalError)
+								return errors.New("tls: short read from Rand: " + err.Error())
+							}
+
+						}
+					}
+				}
+			}
+		}
 		var err error
 		helloBytes, err = c.config.ClientFingerprint.marshal(c.config)
 		if err != nil {
