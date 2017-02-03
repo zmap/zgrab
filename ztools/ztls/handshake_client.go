@@ -263,16 +263,24 @@ type CacheKeyGenerator interface {
 }
 
 type ClientHelloConfiguration struct {
+	//Version in the handshake header
 	HandshakeVersion uint16
-	//if len == 0, will be randomized
+
+	//if len == 32, it will specify the client random
+	//Otherwise, the field will be random
 	ClientRandom []byte
-	//if RandomSessionID > 0, will overwrite contents w/ random bytes when a session resumption occurs
-	RandomSessionID    int
-	SessionID          []byte
+
+	//if RandomSessionID > 0, will overwrite SessionID w/ that many
+	//random bytes when a session resumption occurs
+	RandomSessionID int
+	SessionID       []byte
+
+	//These fields will appear exactly in order in the ClientHello
 	CipherSuites       []uint16
 	CompressionMethods []uint8
 	Extensions         []ClientExtension
-	//Optional, must both be non-nil, or neither.
+
+	//Optional, both must be non-nil, or neither.
 	//Custom Session cache implementations allowed
 	SessionCache ClientSessionCache
 	CacheKey     CacheKeyGenerator
