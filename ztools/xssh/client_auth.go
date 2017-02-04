@@ -13,6 +13,11 @@ import (
 
 // clientAuthenticate authenticates with the remote server. See RFC 4252.
 func (c *connection) clientAuthenticate(config *ClientConfig) error {
+	if c.transport.config.ConnLog != nil && !pkgConfig.CollectUserAuth {
+		// Use ConnLog existence to indicate that this is a run and not testing
+		return nil
+	}
+
 	// initiate user auth session
 	if err := c.transport.writePacket(Marshal(&serviceRequestMsg{serviceUserAuth})); err != nil {
 		return err

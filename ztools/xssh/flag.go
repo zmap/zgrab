@@ -14,6 +14,7 @@ type XSSHConfig struct {
 	HostKeyAlgorithms HostKeyAlgorithmsList
 	KexAlgorithms     KexAlgorithmsList
 	Verbose           bool
+	CollectUserAuth   bool
 }
 
 type HostKeyAlgorithmsList struct {
@@ -101,4 +102,5 @@ func init() {
 	)
 	flag.Var(&pkgConfig.KexAlgorithms, "xssh-kex-algorithms", kexAlgUsage)
 	flag.BoolVar(&pkgConfig.Verbose, "xssh-verbose", false, "Output additional information.")
+	flag.BoolVar(&pkgConfig.CollectUserAuth, "xssh-userauth", false, "Use the 'none' authentication request to see what userauth methods are allowed.")
 }
