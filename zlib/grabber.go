@@ -214,7 +214,7 @@ func makeHTTPGrabber(config *Config, grabData *GrabData) func(string, string, st
 
 		var tlsConfig *ztls.Config
 		if config.TLS {
-			tlsConfig = makeTLSConfig(config, urlHost)
+			tlsConfig = makeTLSConfig(config, httpHost)
 		}
 
 		transport := &http.Transport{
