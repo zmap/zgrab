@@ -14,6 +14,9 @@ type XSSHConfig struct {
 	HostKeyAlgorithms HostKeyAlgorithmsList
 	KexAlgorithms     KexAlgorithmsList
 	Verbose           bool
+	GEXMinBits        int
+	GEXMaxBits        int
+	GEXPreferredBits  int
 }
 
 type HostKeyAlgorithmsList struct {
@@ -62,8 +65,8 @@ func (kaList *KexAlgorithmsList) String() string {
 func (kaList *KexAlgorithmsList) Set(value string) error {
 	for _, alg := range strings.Split(value, ",") {
 		isValid := false
-		for _, val := range supportedKexAlgos {
-			if val == alg {
+		for knownAlgoName, _ := range kexAlgoMap {
+			if knownAlgoName == alg {
 				isValid = true
 				break
 			}
@@ -101,4 +104,8 @@ func init() {
 	)
 	flag.Var(&pkgConfig.KexAlgorithms, "xssh-kex-algorithms", kexAlgUsage)
 	flag.BoolVar(&pkgConfig.Verbose, "xssh-verbose", false, "Output additional information.")
+
+	flag.IntVar(&pkgConfig.GEXMinBits, "xssh-gex-min-bits", 1024, "The minimum number of bits to accept for a GEX DH key exchange.")
+	flag.IntVar(&pkgConfig.GEXMaxBits, "xssh-gex-max-bits", 8192, "The maximum number of bits to accept for a GEX DH key exchange.")
+	flag.IntVar(&pkgConfig.GEXPreferredBits, "xssh-gex-preferred-bits", 2048, "The preferred number of bits to accept for a GEX DH key exchange.")
 }

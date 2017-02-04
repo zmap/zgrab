@@ -33,6 +33,8 @@ var supportedCiphers = []string{
 
 // supportedKexAlgos specifies the supported key-exchange algorithms in
 // preference order.
+// These are *not* the supported DH KEX algorithms, they are the x/crypto defaults.
+// All supported algorithms are given in the kex.go -> kexAlgoMap variable.
 var supportedKexAlgos = []string{
 	kexAlgoCurve25519SHA256,
 	// P384 and P521 are not constant-time yet, but since we don't

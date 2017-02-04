@@ -29,6 +29,7 @@ const (
 	kexAlgoECDH384          = "ecdh-sha2-nistp384"
 	kexAlgoECDH521          = "ecdh-sha2-nistp521"
 	kexAlgoCurve25519SHA256 = "curve25519-sha256@libssh.org"
+	kexAlgoDHGEXSHA1        = "diffie-hellman-group-exchange-sha1"
 )
 
 // kexResult captures the outcome of a key exchange.
@@ -583,6 +584,7 @@ func init() {
 	kexAlgoMap[kexAlgoECDH384] = &ecdh{curve: elliptic.P384()}
 	kexAlgoMap[kexAlgoECDH256] = &ecdh{curve: elliptic.P256()}
 	kexAlgoMap[kexAlgoCurve25519SHA256] = &curve25519sha256{}
+	kexAlgoMap[kexAlgoDHGEXSHA1] = &dhGEXSHA1{}
 }
 
 // curve25519sha256 implements the curve25519-sha256@libssh.org key
