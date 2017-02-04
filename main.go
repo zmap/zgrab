@@ -369,6 +369,7 @@ func main() {
 		TLSVersion: tlsVersion,
 		MailType:   mailType,
 		SNISupport: !config.NoSNI,
+		Flags:      os.Args,
 	}
 	enc := json.NewEncoder(metadataFile)
 	if err := enc.Encode(&s); err != nil {
