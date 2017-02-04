@@ -106,9 +106,6 @@ type Config struct {
 	// DNS
 	LookupDomain bool
 
-	// Encoding
-	Encoding string
-
 	// TLS
 	TLS                           bool
 	TLSVersion                    uint16

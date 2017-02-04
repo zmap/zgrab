@@ -383,7 +383,6 @@ func makeGrabber(config *Config) func(*Conn) error {
 		if config.SSH.SSH {
 			c.sshScan = &config.SSH
 		}
-		c.ReadEncoding = config.Encoding
 		if config.TLS {
 			if err := c.TLSHandshake(); err != nil {
 				c.erroredComponent = "tls"

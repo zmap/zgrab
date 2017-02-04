@@ -75,9 +75,6 @@ type Conn struct {
 
 	domain string
 
-	// Encoding type
-	ReadEncoding string
-
 	// SSH
 	sshScan *SSHScanConfig
 
