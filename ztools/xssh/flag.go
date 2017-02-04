@@ -100,7 +100,6 @@ func (cList *CipherList) Set(value string) error {
 	for _, inCipher := range strings.Split(value, ",") {
 		isValid := false
 		for _, knownCipher := range allSupportedCiphers {
-			fmt.Printf("Checking %s -- %s\n", inCipher, knownCipher)
 			if inCipher == knownCipher {
 				isValid = true
 				break
