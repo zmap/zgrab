@@ -42,7 +42,7 @@ rsa_public_key = SubRecord({
     "exponent":Long(),
     "modulus":Binary(),
     "length":Integer(doc="Bit-length of modulus."),
-}),
+})
 
 dsa_public_key = SubRecord({
     "p":Binary(),
