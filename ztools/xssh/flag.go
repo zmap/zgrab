@@ -15,6 +15,9 @@ type XSSHConfig struct {
 	KexAlgorithms     KexAlgorithmsList
 	Verbose           bool
 	CollectUserAuth   bool
+	GexMinBits        uint
+	GexMaxBits        uint
+	GexPreferredBits  uint
 }
 
 type HostKeyAlgorithmsList struct {
@@ -103,4 +106,8 @@ func init() {
 	flag.Var(&pkgConfig.KexAlgorithms, "xssh-kex-algorithms", kexAlgUsage)
 	flag.BoolVar(&pkgConfig.Verbose, "xssh-verbose", false, "Output additional information.")
 	flag.BoolVar(&pkgConfig.CollectUserAuth, "xssh-userauth", false, "Use the 'none' authentication request to see what userauth methods are allowed.")
+
+	flag.UintVar(&pkgConfig.GexMinBits, "xssh-gex-min-bits", 1024, "The minimum number of bits for the DH GEX prime.")
+	flag.UintVar(&pkgConfig.GexMaxBits, "xssh-gex-max-bits", 8192, "The maximum number of bits for the DH GEX prime.")
+	flag.UintVar(&pkgConfig.GexPreferredBits, "xssh-gex-preferred-bits", 2048, "The preferred number of bits for the DH GEX prime.")
 }
