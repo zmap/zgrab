@@ -737,7 +737,7 @@ zgrab_ssh = Record({
     }),
 }, extends=zgrab_base)
 
-ed25519_public_key:SubRecord({
+ed25519_public_key = SubRecord({
     "public_bytes":Binary(),
 })
 
