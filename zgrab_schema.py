@@ -44,13 +44,14 @@ rsa_public_key = SubRecord({
     "length":Integer(doc="Bit-length of modulus."),
 }),
 
-dsa_public_key:SubRecord({
+dsa_public_key = SubRecord({
     "p":Binary(),
     "q":Binary(),
     "g":Binary(),
     "y":Binary(),
 })
-ecdsa_public_key:SubRecord({
+
+ecdsa_public_key = SubRecord({
     "pub":Binary(),
     "b":Binary(),
     "gx":Binary(),
