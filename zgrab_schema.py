@@ -784,6 +784,8 @@ zgrab_xssh = Record({
                     "client_public":Binary(),
                     "client_private":Binary(),
                     "server_public":Binary()
+                    "prime":Binary()
+                    "generator":Binary()
                 }),
                 "server_signature":Binary(),
                 "server_host_key":SubRecord({

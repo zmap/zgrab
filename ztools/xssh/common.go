@@ -31,14 +31,25 @@ var supportedCiphers = []string{
 	"arcfour256", "arcfour128",
 }
 
-// supportedKexAlgos specifies the supported key-exchange algorithms in
+// defaultKexAlgos specifies the default key-exchange algorithms in
 // preference order.
-var supportedKexAlgos = []string{
+var defaultKexAlgos = []string{
 	kexAlgoCurve25519SHA256,
 	// P384 and P521 are not constant-time yet, but since we don't
 	// reuse ephemeral keys, using them for ECDH should be OK.
 	kexAlgoECDH256, kexAlgoECDH384, kexAlgoECDH521,
 	kexAlgoDH14SHA1, kexAlgoDH1SHA1,
+}
+
+// allSupportedKexAlgos specifies all key-exchange algorithms supported
+var allSupportedKexAlgos = []string{
+	kexAlgoCurve25519SHA256,
+	// P384 and P521 are not constant-time yet, but since we don't
+	// reuse ephemeral keys, using them for ECDH should be OK.
+	kexAlgoECDH256, kexAlgoECDH384, kexAlgoECDH521,
+	kexAlgoDH14SHA1, kexAlgoDH1SHA1,
+	// Not enabled by default:
+	kexAlgoDHGEXSHA1, kexAlgoDHGEXSHA256,
 }
 
 // supportedKexAlgos specifies the supported host-key algorithms (i.e. methods
@@ -227,7 +238,7 @@ func (c *Config) SetDefaults() {
 	c.Ciphers = ciphers
 
 	if c.KeyExchanges == nil {
-		c.KeyExchanges = supportedKexAlgos
+		c.KeyExchanges = defaultKexAlgos
 	}
 
 	if c.MACs == nil {

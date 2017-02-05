@@ -63,7 +63,7 @@ func (kaList *KexAlgorithmsList) String() string {
 func (kaList *KexAlgorithmsList) Set(value string) error {
 	for _, alg := range strings.Split(value, ",") {
 		isValid := false
-		for _, val := range supportedKexAlgos {
+		for _, val := range allSupportedKexAlgos {
 			if val == alg {
 				isValid = true
 				break
@@ -81,7 +81,7 @@ func (kaList *KexAlgorithmsList) Set(value string) error {
 
 func (kaList *KexAlgorithmsList) Get() []string {
 	if len(kaList.Algorithms) == 0 {
-		return supportedKexAlgos
+		return defaultKexAlgos
 	} else {
 		return kaList.Algorithms
 	}
@@ -98,7 +98,7 @@ func init() {
 
 	kexAlgUsage := fmt.Sprintf(
 		"A comma-separated list of which DH key exchange algorithms to support (default \"%s\")",
-		strings.Join(supportedKexAlgos, ","),
+		strings.Join(defaultKexAlgos, ","),
 	)
 	flag.Var(&pkgConfig.KexAlgorithms, "xssh-kex-algorithms", kexAlgUsage)
 	flag.BoolVar(&pkgConfig.Verbose, "xssh-verbose", false, "Output additional information.")

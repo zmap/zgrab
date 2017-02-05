@@ -1,25 +1,21 @@
-package ssh
+package xssh
 
 import (
 	"crypto"
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math/big"
+
+	ztoolsKeys "github.com/zmap/zgrab/ztools/keys"
 )
 
 const (
 	kexAlgoDHGEXSHA1   = "diffie-hellman-group-exchange-sha1"
 	kexAlgoDHGEXSHA256 = "diffie-hellman-group-exchange-sha256"
 )
-
-func init() {
-	supportedKexAlgos = append(supportedKexAlgos[:4], append([]string{kexAlgoDHGEXSHA1}, supportedKexAlgos[3:]...)...)
-
-	kexAlgoMap[kexAlgoDHGEXSHA1] = &dhGEXSHA{hashFunc: crypto.SHA1}
-	kexAlgoMap[kexAlgoDHGEXSHA256] = &dhGEXSHA{hashFunc: crypto.SHA256}
-}
 
 // Messages
 type kexDHGexGroupMsg struct {
@@ -49,9 +45,41 @@ const (
 	PreferredBits = 2048
 )
 
+type gexJsonLog struct {
+	Parameters      *ztoolsKeys.DHParams  `json:"parameters,omitempty"`
+	ServerSignature []byte                `json:"server_signature,omitempty"`
+	ServerHostKey   *ServerHostKeyJsonLog `json:"server_host_key,omitempty"`
+}
+
 type dhGEXSHA struct {
 	g, p     *big.Int
 	hashFunc crypto.Hash
+	JsonLog  *gexJsonLog
+}
+
+func (gex *dhGEXSHA) GetNew(keyType string) kexAlgorithm {
+	switch keyType {
+	case kexAlgoDHGEXSHA1:
+		ret := new(dhGEXSHA)
+		ret.hashFunc = crypto.SHA1
+		ret.JsonLog = new(gexJsonLog)
+		ret.JsonLog.Parameters = new(ztoolsKeys.DHParams)
+		return ret
+
+	case kexAlgoDHGEXSHA256:
+		ret := new(dhGEXSHA)
+		ret.hashFunc = crypto.SHA256
+		ret.JsonLog = new(gexJsonLog)
+		ret.JsonLog.Parameters = new(ztoolsKeys.DHParams)
+		return ret
+
+	default:
+		panic("Unimplemented GEX selected")
+	}
+}
+
+func (gex *dhGEXSHA) MarshalJSON() ([]byte, error) {
+	return json.Marshal(gex.JsonLog)
 }
 
 func (gex *dhGEXSHA) diffieHellman(theirPublic, myPrivate *big.Int) (*big.Int, error) {
@@ -83,6 +111,11 @@ func (gex *dhGEXSHA) Client(c packetConn, randSource io.Reader, magics *handshak
 		return nil, err
 	}
 
+	if gex.JsonLog != nil {
+		gex.JsonLog.Parameters.Prime = kexDHGexGroup.P
+		gex.JsonLog.Parameters.Generator = kexDHGexGroup.G
+	}
+
 	// reject if p's bit length < MinBits or > MaxBits
 	if kexDHGexGroup.P.BitLen() < MinBits || kexDHGexGroup.P.BitLen() > MaxBits {
 		return nil, fmt.Errorf("Server-generated gex p (dont't ask) is out of range (%d bits)", kexDHGexGroup.P.BitLen())
@@ -100,6 +133,12 @@ func (gex *dhGEXSHA) Client(c packetConn, randSource io.Reader, magics *handshak
 	kexDHGexInit := kexDHGexInitMsg{
 		X: X,
 	}
+
+	if gex.JsonLog != nil && pkgConfig.Verbose {
+		gex.JsonLog.Parameters.ClientPrivate = x
+		gex.JsonLog.Parameters.ClientPublic = X
+	}
+
 	if err := c.writePacket(Marshal(&kexDHGexInit)); err != nil {
 		return nil, err
 	}
@@ -113,6 +152,12 @@ func (gex *dhGEXSHA) Client(c packetConn, randSource io.Reader, magics *handshak
 	var kexDHGexReply kexDHGexReplyMsg
 	if err = Unmarshal(packet, &kexDHGexReply); err != nil {
 		return nil, err
+	}
+
+	if gex.JsonLog != nil {
+		gex.JsonLog.Parameters.ServerPublic = kexDHGexReply.Y
+		gex.JsonLog.ServerSignature = kexDHGexReply.Signature
+		gex.JsonLog.ServerHostKey = LogServerHostKey(kexDHGexReply.HostKey)
 	}
 
 	kInt, err := gex.diffieHellman(kexDHGexReply.Y, x)
