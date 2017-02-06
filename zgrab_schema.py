@@ -42,15 +42,16 @@ rsa_public_key = SubRecord({
     "exponent":Long(),
     "modulus":Binary(),
     "length":Integer(doc="Bit-length of modulus."),
-}),
+})
 
-dsa_public_key:SubRecord({
+dsa_public_key = SubRecord({
     "p":Binary(),
     "q":Binary(),
     "g":Binary(),
     "y":Binary(),
 })
-ecdsa_public_key:SubRecord({
+
+ecdsa_public_key = SubRecord({
     "pub":Binary(),
     "b":Binary(),
     "gx":Binary(),
@@ -736,7 +737,9 @@ zgrab_ssh = Record({
     }),
 }, extends=zgrab_base)
 
-ed25519_public_key:SubRecord({
+zschema.registry.register_schema("zgrab-ssh", zgrab_ssh)
+
+ed25519_public_key = SubRecord({
     "public_bytes":Binary(),
 })
 
@@ -744,7 +747,7 @@ zgrab_xssh = Record({
     "data":SubRecord({
         "xssh":SubRecord({
             "server_id":SubRecord({
-                "raw":Analyzedstring(),
+                "raw":AnalyzedString(),
                 "version":String(),
                 "software":AnalyzedString(),
                 "comment":AnalyzedString(),
@@ -856,4 +859,4 @@ zgrab_xssh = Record({
     }),
 }, extends=zgrab_base)
 
-zschema.registry.register_schema("zgrab-ssh", zgrab_ssh)
+zschema.registry.register_schema("zgrab-xssh", zgrab_xssh)

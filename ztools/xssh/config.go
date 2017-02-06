@@ -6,5 +6,6 @@ func MakeXSSHConfig() *ClientConfig {
 	ret.ClientVersion = pkgConfig.ClientID
 	ret.HostKeyAlgorithms = pkgConfig.HostKeyAlgorithms.Get()
 	ret.KeyExchanges = pkgConfig.KexAlgorithms.Get()
+	ret.Ciphers = pkgConfig.Ciphers.Get()
 	return ret
 }
