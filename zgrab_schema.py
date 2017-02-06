@@ -743,6 +743,14 @@ ed25519_public_key = SubRecord({
     "public_bytes":Binary(),
 })
 
+xssh_signature = SubRecord({
+    "parsed":SubRecord({
+        "algorithm":String(),
+        "value":Binary(),
+    }),
+    "raw":Binary(),
+})
+
 zgrab_xssh = Record({
     "data":SubRecord({
         "xssh":SubRecord({
@@ -790,7 +798,7 @@ zgrab_xssh = Record({
                     "prime":Binary()
                     "generator":Binary()
                 }),
-                "server_signature":Binary(),
+                "server_signature":xssh_signature,
                 "server_host_key":SubRecord({
                     "raw":Binary(),
                     "algorithm":String(),
@@ -832,10 +840,7 @@ zgrab_xssh = Record({
                             "ecdsa_public_key":ecdsa_public_key,
                             "ed25519_public_key":ed25519_public_key,
                         }),
-                        "signature":SubRecord({
-                            "algorithm":String(),
-                            "value":Binary(),
-                        }),
+                        "signature":xssh_signature,
                         "parse_error":String(),
                         "extensions":SubRecord({
                             "known":SubRecord({
