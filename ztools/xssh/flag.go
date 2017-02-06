@@ -37,7 +37,7 @@ func (hkaList *HostKeyAlgorithmsList) Set(value string) error {
 		}
 
 		if !isValid {
-			return errors.New(fmt.Sprintf(`Can not support host key algorithm : "%s"`, alg))
+			return errors.New(fmt.Sprintf(`host key algorithm not supported: "%s"`, alg))
 		}
 
 		hkaList.Algorithms = append(hkaList.Algorithms, alg)
@@ -72,7 +72,7 @@ func (kaList *KexAlgorithmsList) Set(value string) error {
 		}
 
 		if !isValid {
-			return errors.New(fmt.Sprintf(`Can not support DH key exchange algorithm : "%s"`, alg))
+			return errors.New(fmt.Sprintf(`DH KEX algorithm not supported: "%s"`, alg))
 		}
 
 		kaList.Algorithms = append(kaList.Algorithms, alg)
@@ -128,13 +128,13 @@ func init() {
 	flag.StringVar(&pkgConfig.ClientID, "xssh-client-id", packageVersion, "Specify the client ID string to use")
 
 	hostKeyAlgUsage := fmt.Sprintf(
-		"A comma-separated list of which host key algorithms to support (default \"%s\")",
+		"A comma-separated list of which host key algorithms to offer (default \"%s\")",
 		strings.Join(supportedHostKeyAlgos, ","),
 	)
 	flag.Var(&pkgConfig.HostKeyAlgorithms, "xssh-host-key-algorithms", hostKeyAlgUsage)
 
 	kexAlgUsage := fmt.Sprintf(
-		"A comma-separated list of which DH key exchange algorithms to support (default \"%s\")",
+		"A comma-separated list of which DH key exchange algorithms to offer (default \"%s\")",
 		strings.Join(supportedKexAlgos, ","),
 	)
 	flag.Var(&pkgConfig.KexAlgorithms, "xssh-kex-algorithms", kexAlgUsage)
