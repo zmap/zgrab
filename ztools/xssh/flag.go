@@ -16,6 +16,9 @@ type XSSHConfig struct {
 	Verbose           bool
 	CollectUserAuth   bool
 	Ciphers           CipherList
+	GexMinBits        uint
+	GexMaxBits        uint
+	GexPreferredBits  uint
 }
 
 type HostKeyAlgorithmsList struct {
@@ -64,7 +67,7 @@ func (kaList *KexAlgorithmsList) String() string {
 func (kaList *KexAlgorithmsList) Set(value string) error {
 	for _, alg := range strings.Split(value, ",") {
 		isValid := false
-		for _, val := range supportedKexAlgos {
+		for _, val := range allSupportedKexAlgos {
 			if val == alg {
 				isValid = true
 				break
@@ -82,7 +85,7 @@ func (kaList *KexAlgorithmsList) Set(value string) error {
 
 func (kaList *KexAlgorithmsList) Get() []string {
 	if len(kaList.Algorithms) == 0 {
-		return supportedKexAlgos
+		return defaultKexAlgos
 	} else {
 		return kaList.Algorithms
 	}
@@ -135,7 +138,7 @@ func init() {
 
 	kexAlgUsage := fmt.Sprintf(
 		"A comma-separated list of which DH key exchange algorithms to offer (default \"%s\")",
-		strings.Join(supportedKexAlgos, ","),
+		strings.Join(defaultKexAlgos, ","),
 	)
 	flag.Var(&pkgConfig.KexAlgorithms, "xssh-kex-algorithms", kexAlgUsage)
 
@@ -147,4 +150,8 @@ func init() {
 	flag.BoolVar(&pkgConfig.Verbose, "xssh-verbose", false, "Output additional information.")
 
 	flag.BoolVar(&pkgConfig.CollectUserAuth, "xssh-userauth", false, "Use the 'none' authentication request to see what userauth methods are allowed.")
+
+	flag.UintVar(&pkgConfig.GexMinBits, "xssh-gex-min-bits", 1024, "The minimum number of bits for the DH GEX prime.")
+	flag.UintVar(&pkgConfig.GexMaxBits, "xssh-gex-max-bits", 8192, "The maximum number of bits for the DH GEX prime.")
+	flag.UintVar(&pkgConfig.GexPreferredBits, "xssh-gex-preferred-bits", 2048, "The preferred number of bits for the DH GEX prime.")
 }
