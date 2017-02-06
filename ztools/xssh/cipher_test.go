@@ -13,7 +13,7 @@ import (
 )
 
 func TestDefaultCiphersExist(t *testing.T) {
-	for _, cipherAlgo := range supportedCiphers {
+	for _, cipherAlgo := range defaultCiphers {
 		if _, ok := cipherModes[cipherAlgo]; !ok {
 			t.Errorf("default cipher %q is unknown", cipherAlgo)
 		}
