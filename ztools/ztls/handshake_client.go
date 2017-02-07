@@ -44,7 +44,7 @@ func (c *Conn) clientHandshake() error {
 	var cacheKey string
 
 	// first, let's check if a ClientHello template was provided by the user
-	if c.config.ForceClientHello {
+	if c.config.ExternalClientHello != nil {
 
 		hello = new(clientHelloMsg)
 

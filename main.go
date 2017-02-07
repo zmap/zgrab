@@ -99,7 +99,7 @@ func init() {
 	flag.BoolVar(&config.S7, "s7", false, "Send some Siemens S7 data")
 	flag.BoolVar(&config.NoSNI, "no-sni", false, "Do not send domain name in TLS handshake regardless of whether known")
 
-	flag.StringVar(&clientHelloFileName, "raw-client-hello", "", "Provide a raw ClientHello to be sent; only the SNI will be rewritten (implies --tls)")
+	flag.StringVar(&clientHelloFileName, "raw-client-hello", "", "Provide a raw ClientHello to be sent; only the SNI will be rewritten")
 
 	flag.BoolVar(&config.ExportsOnly, "export-ciphers", false, "Send only export ciphers")
 	flag.BoolVar(&config.ExportsDHOnly, "export-dhe-ciphers", false, "Send only export DHE ciphers")
@@ -347,7 +347,6 @@ func init() {
 			zlog.Fatal(err)
 		} else {
 			config.ExternalClientHello = clientHello
-			config.ForceClientHello = true
 		}
 	}
 }

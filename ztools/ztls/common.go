@@ -354,8 +354,7 @@ type Config struct {
 	// Explicitly set Client random
 	ClientRandom []byte
 
-	// Explicitly set ClientHello
-	ForceClientHello bool
+	// Explicitly set ClientHello with raw data
 	ExternalClientHello []byte
 }
 
