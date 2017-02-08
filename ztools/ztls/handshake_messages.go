@@ -29,6 +29,7 @@ type clientHelloMsg struct {
 	extendedRandom        []byte
 	extendedMasterSecret  bool
 	sctEnabled            bool
+	alpnProtocols         []string
 }
 
 func (m *clientHelloMsg) equal(i interface{}) bool {
@@ -57,7 +58,8 @@ func (m *clientHelloMsg) equal(i interface{}) bool {
 		m.heartbeatMode == m1.heartbeatMode &&
 		m.extendedRandomEnabled == m1.extendedRandomEnabled &&
 		bytes.Equal(m.extendedRandom, m1.extendedRandom) &&
-		m.extendedMasterSecret == m1.extendedMasterSecret
+		m.extendedMasterSecret == m1.extendedMasterSecret &&
+		eqStrings(m.alpnProtocols, m1.alpnProtocols)
 }
 
 func (m *clientHelloMsg) marshal() []byte {
@@ -97,6 +99,17 @@ func (m *clientHelloMsg) marshal() []byte {
 	}
 	if m.secureRenegotiation {
 		extensionsLength += 1
+		numExtensions++
+	}
+	if len(m.alpnProtocols) > 0 {
+		extensionsLength += 2
+		for _, s := range m.alpnProtocols {
+			if l := len(s); l == 0 || l > 255 {
+				panic("invalid ALPN protocol")
+			}
+			extensionsLength++
+			extensionsLength += len(s)
+		}
 		numExtensions++
 	}
 	if m.heartbeatEnabled {
@@ -264,6 +277,27 @@ func (m *clientHelloMsg) marshal() []byte {
 		z[3] = 1
 		z = z[5:]
 	}
+	if len(m.alpnProtocols) > 0 {
+		z[0] = byte(extensionALPN >> 8)
+		z[1] = byte(extensionALPN & 0xff)
+		lengths := z[2:]
+		z = z[6:]
+
+		stringsLength := 0
+		for _, s := range m.alpnProtocols {
+			l := len(s)
+			z[0] = byte(l)
+			copy(z[1:], s)
+			z = z[1+l:]
+			stringsLength += 1 + l
+		}
+
+		lengths[2] = byte(stringsLength >> 8)
+		lengths[3] = byte(stringsLength)
+		stringsLength += 2
+		lengths[0] = byte(stringsLength >> 8)
+		lengths[1] = byte(stringsLength)
+	}
 	if m.heartbeatEnabled {
 		z[0] = byte(extensionHeartbeat >> 8)
 		z[1] = byte(extensionHeartbeat)
@@ -355,6 +389,7 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 	m.signatureAndHashes = nil
 	m.heartbeatEnabled = false
 	m.extendedMasterSecret = false
+	m.alpnProtocols = nil
 	m.scts = false
 
 	if len(data) == 0 {
@@ -465,6 +500,24 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 				return false
 			}
 			m.secureRenegotiation = true
+		case extensionALPN:
+			if length < 2 {
+				return false
+			}
+			l := int(data[0])<<8 | int(data[1])
+			if l != length-2 {
+				return false
+			}
+			d := data[2:length]
+			for len(d) != 0 {
+				stringLen := int(d[0])
+				d = d[1:]
+				if stringLen == 0 || stringLen > len(d) {
+					return false
+				}
+				m.alpnProtocols = append(m.alpnProtocols, string(d[:stringLen]))
+				d = d[stringLen:]
+			}
 		case extensionHeartbeat:
 			// https://tools.ietf.org/html/rfc6520
 			if length != 1 {
@@ -526,6 +579,7 @@ type serverHelloMsg struct {
 	extendedRandomEnabled bool
 	extendedRandom        []byte
 	extendedMasterSecret  bool
+	alpnProtocol          string
 }
 
 func (m *serverHelloMsg) equal(i interface{}) bool {
@@ -545,7 +599,8 @@ func (m *serverHelloMsg) equal(i interface{}) bool {
 		m.ocspStapling == m1.ocspStapling &&
 		m.ticketSupported == m1.ticketSupported &&
 		m.secureRenegotiation == m1.secureRenegotiation &&
-		m.extendedMasterSecret == m1.extendedMasterSecret
+		m.extendedMasterSecret == m1.extendedMasterSecret &&
+		m.alpnProtocol == m1.alpnProtocol
 }
 
 func (m *serverHelloMsg) marshal() []byte {
@@ -574,6 +629,13 @@ func (m *serverHelloMsg) marshal() []byte {
 	}
 	if m.secureRenegotiation {
 		extensionsLength += 1
+		numExtensions++
+	}
+	if alpnLen := len(m.alpnProtocol); alpnLen > 0 {
+		if alpnLen >= 256 {
+			panic("invalid ALPN protocol")
+		}
+		extensionsLength += 2 + 1 + alpnLen
 		numExtensions++
 	}
 	if m.heartbeatEnabled {
@@ -655,6 +717,20 @@ func (m *serverHelloMsg) marshal() []byte {
 		z[3] = 1
 		z = z[5:]
 	}
+	if alpnLen := len(m.alpnProtocol); alpnLen > 0 {
+		z[0] = byte(extensionALPN >> 8)
+		z[1] = byte(extensionALPN & 0xff)
+		l := 2 + 1 + alpnLen
+		z[2] = byte(l >> 8)
+		z[3] = byte(l)
+		l -= 2
+		z[4] = byte(l >> 8)
+		z[5] = byte(l)
+		l -= 1
+		z[6] = byte(l)
+		copy(z[7:], []byte(m.alpnProtocol))
+		z = z[7+alpnLen:]
+	}
 	if m.heartbeatEnabled {
 		z[0] = byte(extensionHeartbeat >> 8)
 		z[1] = byte(extensionHeartbeat)
@@ -730,6 +806,7 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 	m.heartbeatEnabled = false
 	m.extendedRandomEnabled = false
 	m.extendedMasterSecret = false
+	m.alpnProtocol = ""
 
 	if len(data) == 0 {
 		// ServerHello is optionally followed by extension data
@@ -784,6 +861,26 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 				return false
 			}
 			m.secureRenegotiation = true
+		case extensionALPN:
+			d := data[:length]
+			if len(d) < 3 {
+				return false
+			}
+			l := int(d[0])<<8 | int(d[1])
+			if l != len(d)-2 {
+				return false
+			}
+			d = d[2:]
+			l = int(d[0])
+			if l != len(d)-1 {
+				return false
+			}
+			d = d[1:]
+			if len(d) == 0 {
+				// ALPN protocols must not be empty.
+				return false
+			}
+			m.alpnProtocol = string(d)
 		case extensionHeartbeat:
 			m.heartbeatEnabled = true
 			m.heartbeatMode = data[0]
