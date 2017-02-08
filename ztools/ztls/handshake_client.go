@@ -425,7 +425,6 @@ func (c *ClientHelloConfiguration) marshal(config *Config) ([]byte, error) {
 	return hello, nil
 }
 
-
 func (c *Conn) clientHandshake() error {
 	if c.config == nil {
 		c.config = defaultConfig()
@@ -435,8 +434,7 @@ func (c *Conn) clientHandshake() error {
 	var session *ClientSessionState
 	var sessionCache ClientSessionCache
 	var cacheKey string
-	
-	
+
 	if c.config.ClientFingerprint != nil {
 		c.config = c.config.ClientFingerprint.ModifyConfig(c.config)
 	}
@@ -497,8 +495,8 @@ func (c *Conn) clientHandshake() error {
 		if ok := hello.unmarshal(helloBytes); !ok {
 			return errors.New("Incompatible Custom Client Fingerprint")
 		}
-	
-	// next, let's check if a ClientHello template was provided by the user
+
+		// next, let's check if a ClientHello template was provided by the user
 	} else if c.config.ExternalClientHello != nil {
 
 		hello = new(clientHelloMsg)
@@ -513,7 +511,7 @@ func (c *Conn) clientHandshake() error {
 		// then we update the 'raw' value of the message
 		hello.raw = nil
 		helloBytes = hello.marshal()
-		
+
 		session = nil
 		sessionCache = nil
 	} else {
@@ -527,6 +525,7 @@ func (c *Conn) clientHandshake() error {
 			supportedPoints:      []uint8{pointFormatUncompressed},
 			nextProtoNeg:         len(c.config.NextProtos) > 0,
 			secureRenegotiation:  true,
+			alpnProtocols:        c.config.NextProtos,
 			extendedMasterSecret: c.config.maxVersion() >= VersionTLS10 && c.config.ExtendedMasterSecret,
 		}
 
@@ -617,7 +616,7 @@ func (c *Conn) clientHandshake() error {
 				}
 			}
 		}
-		
+
 		if session != nil {
 			hello.sessionTicket = session.sessionTicket
 			// A random session ID is used to detect when the
@@ -630,7 +629,7 @@ func (c *Conn) clientHandshake() error {
 			}
 
 		}
-		
+
 		helloBytes = hello.marshal()
 	}
 
