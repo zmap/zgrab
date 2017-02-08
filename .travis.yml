@@ -1,11 +1,15 @@
 language: go
 go:
-- 1.7.4
+  - 1.7.4
+python:
+  - 2.7     
 install:
-- go get ./...
-- go get -t ./...
+  - go get ./...
+  - go get -t ./...
+  - python -m pip install zschema
 script:
   - go test -v ./...
+  - python zgrab_schema.py
 notifications:
   email:
   - zmap-devel@umich.edu
