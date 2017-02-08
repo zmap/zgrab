@@ -12,6 +12,7 @@ install:
   - sudo pip install -U zschema
 script:
   - go test -v ./...
+  - pip list
   - python zgrab_schema.py
 notifications:
   email:
