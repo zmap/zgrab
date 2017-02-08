@@ -67,6 +67,7 @@ type Conn struct {
 	CipherSuites                  []uint16
 	ForceSuites                   bool
 	noSNI                         bool
+	ExternalClientHello           []byte
 	extendedRandom                bool
 	gatherSessionTicket           bool
 	offerExtendedMasterSecret     bool
@@ -87,6 +88,10 @@ func (c *Conn) getUnderlyingConn() net.Conn {
 		return c.tlsConn
 	}
 	return c.conn
+}
+
+func (c *Conn) SetExternalClientHello(clientHello []byte) {
+	c.ExternalClientHello = clientHello
 }
 
 func (c *Conn) SetExtendedRandom() {
@@ -309,6 +314,9 @@ func (c *Conn) TLSHandshake() error {
 	}
 	if c.offerExtendedMasterSecret {
 		tlsConfig.ExtendedMasterSecret = true
+	}
+	if c.ExternalClientHello != nil {
+		tlsConfig.ExternalClientHello = c.ExternalClientHello
 	}
 
 	c.tlsConn = ztls.Client(c.conn, tlsConfig)

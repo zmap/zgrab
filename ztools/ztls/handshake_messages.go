@@ -4,7 +4,10 @@
 
 package ztls
 
-import "bytes"
+import (
+	"bytes"
+	"reflect"
+)
 
 type clientHelloMsg struct {
 	raw                   []byte
@@ -30,6 +33,7 @@ type clientHelloMsg struct {
 	extendedMasterSecret  bool
 	sctEnabled            bool
 	alpnProtocols         []string
+	unknownExtensions     [][]byte
 }
 
 func (m *clientHelloMsg) equal(i interface{}) bool {
@@ -59,7 +63,8 @@ func (m *clientHelloMsg) equal(i interface{}) bool {
 		m.extendedRandomEnabled == m1.extendedRandomEnabled &&
 		bytes.Equal(m.extendedRandom, m1.extendedRandom) &&
 		m.extendedMasterSecret == m1.extendedMasterSecret &&
-		eqStrings(m.alpnProtocols, m1.alpnProtocols)
+		eqStrings(m.alpnProtocols, m1.alpnProtocols) &&
+		reflect.DeepEqual(m.unknownExtensions, m1.unknownExtensions)
 }
 
 func (m *clientHelloMsg) marshal() []byte {
@@ -126,6 +131,13 @@ func (m *clientHelloMsg) marshal() []byte {
 	if m.sctEnabled {
 		numExtensions++
 	}
+	if len(m.unknownExtensions) > 0 {
+		// we do not update numExtensions because the extension code and length
+		// are already contained at the beginning of every 'ext' below
+		for _, ext := range m.unknownExtensions {
+			extensionsLength += len(ext)
+		}
+	}
 	if numExtensions > 0 {
 		extensionsLength += 4 * numExtensions
 		length += 2 + extensionsLength
@@ -153,7 +165,7 @@ func (m *clientHelloMsg) marshal() []byte {
 	copy(z[1:], m.compressionMethods)
 
 	z = z[1+len(m.compressionMethods):]
-	if numExtensions > 0 {
+	if numExtensions > 0 || len(m.unknownExtensions) > 0 {
 		z[0] = byte(extensionsLength >> 8)
 		z[1] = byte(extensionsLength)
 		z = z[2:]
@@ -333,6 +345,12 @@ func (m *clientHelloMsg) marshal() []byte {
 		// zero uint16 for the zero-length extension_data
 		z = z[4:]
 	}
+	if len(m.unknownExtensions) > 0 {
+		for _, ext := range m.unknownExtensions {
+			copy(z, ext)
+			z = z[len(ext):]
+		}
+	}
 
 	m.raw = x
 
@@ -391,6 +409,7 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 	m.extendedMasterSecret = false
 	m.alpnProtocols = nil
 	m.scts = false
+	m.unknownExtensions = [][]byte(nil)
 
 	if len(data) == 0 {
 		// ClientHello is optionally followed by extension data
@@ -410,6 +429,7 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 		if len(data) < 4 {
 			return false
 		}
+		fullData := data
 		extension := uint16(data[0])<<8 | uint16(data[1])
 		length := int(data[2])<<8 | int(data[3])
 		data = data[4:]
@@ -419,6 +439,7 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 
 		switch extension {
 		case extensionServerName:
+			// we keep only the last name for m.serverName
 			if length < 2 {
 				return false
 			}
@@ -554,6 +575,9 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 			if length != 0 {
 				return false
 			}
+		default:
+			fullExt := append(fullData[:4], data[:length]...)
+			m.unknownExtensions = append(m.unknownExtensions, fullExt)
 		}
 		data = data[length:]
 	}
@@ -580,6 +604,7 @@ type serverHelloMsg struct {
 	extendedRandom        []byte
 	extendedMasterSecret  bool
 	alpnProtocol          string
+	unknownExtensions     [][]byte
 }
 
 func (m *serverHelloMsg) equal(i interface{}) bool {
@@ -600,7 +625,8 @@ func (m *serverHelloMsg) equal(i interface{}) bool {
 		m.ticketSupported == m1.ticketSupported &&
 		m.secureRenegotiation == m1.secureRenegotiation &&
 		m.extendedMasterSecret == m1.extendedMasterSecret &&
-		m.alpnProtocol == m1.alpnProtocol
+		m.alpnProtocol == m1.alpnProtocol &&
+		reflect.DeepEqual(m.unknownExtensions, m1.unknownExtensions)
 }
 
 func (m *serverHelloMsg) marshal() []byte {
@@ -657,6 +683,13 @@ func (m *serverHelloMsg) marshal() []byte {
 		extensionsLength += 2 + sctLen
 		numExtensions++
 	}
+	if len(m.unknownExtensions) > 0 {
+		// we do not update numExtensions because the extension code and length
+		// are already contained at the beginning of every 'ext' below
+		for _, ext := range m.unknownExtensions {
+			extensionsLength += len(ext)
+		}
+	}
 	if numExtensions > 0 {
 		extensionsLength += 4 * numExtensions
 		length += 2 + extensionsLength
@@ -678,7 +711,7 @@ func (m *serverHelloMsg) marshal() []byte {
 	z[2] = uint8(m.compressionMethod)
 
 	z = z[3:]
-	if numExtensions > 0 {
+	if numExtensions > 0 || len(m.unknownExtensions) > 0 {
 		z[0] = byte(extensionsLength >> 8)
 		z[1] = byte(extensionsLength)
 		z = z[2:]
@@ -774,6 +807,12 @@ func (m *serverHelloMsg) marshal() []byte {
 			z = z[len(sct)+2:]
 		}
 	}
+	if len(m.unknownExtensions) > 0 {
+		for _, ext := range m.unknownExtensions {
+			copy(z, ext)
+			z = z[len(ext):]
+		}
+	}
 	m.raw = x
 	return x
 }
@@ -807,6 +846,7 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 	m.extendedRandomEnabled = false
 	m.extendedMasterSecret = false
 	m.alpnProtocol = ""
+	m.unknownExtensions = [][]byte(nil)
 
 	if len(data) == 0 {
 		// ServerHello is optionally followed by extension data
@@ -826,6 +866,7 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 		if len(data) < 4 {
 			return false
 		}
+		fullData := data
 		extension := uint16(data[0])<<8 | uint16(data[1])
 		length := int(data[2])<<8 | int(data[3])
 		data = data[4:]
@@ -928,6 +969,9 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 				m.scts = append(m.scts, d[:sctLen])
 				d = d[sctLen:]
 			}
+		default:
+			fullExt := append(fullData[:4], data[:length]...)
+			m.unknownExtensions = append(m.unknownExtensions, fullExt)
 		}
 		data = data[length:]
 	}

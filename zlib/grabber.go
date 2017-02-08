@@ -195,6 +195,9 @@ func makeTLSConfig(config *Config, urlHost string) *ztls.Config {
 	if !config.NoSNI && urlHost != "" {
 		tlsConfig.ServerName = urlHost
 	}
+	if config.ExternalClientHello != nil {
+		tlsConfig.ExternalClientHello = config.ExternalClientHello
+	}
 
 	return tlsConfig
 }
@@ -375,6 +378,9 @@ func makeGrabber(config *Config) func(*Conn) error {
 		}
 		if config.ExtendedMasterSecret {
 			c.SetOfferExtendedMasterSecret()
+		}
+		if config.ExternalClientHello != nil {
+			c.SetExternalClientHello(config.ExternalClientHello)
 		}
 		if config.TLSVerbose {
 			c.SetTLSVerbose()

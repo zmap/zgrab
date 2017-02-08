@@ -353,6 +353,9 @@ type Config struct {
 
 	// Explicitly set Client random
 	ClientRandom []byte
+
+	// Explicitly set ClientHello with raw data
+	ExternalClientHello []byte
 }
 
 func (c *Config) serverInit() {
