@@ -108,7 +108,7 @@ func (c *ClientHelloConfiguration) ModifyConfig(config *Config) *Config {
 				config.ServerName = ext.(SniExtension).Domains[0]
 			}
 		case ALPNExtension:
-			//TK
+			config.NextProtos = ext.(ALPNExtension).Protocols
 		case ExtendedMasterSecretExtension:
 			config.ExtendedMasterSecret = true
 		case SignatureAlgorithmExtension:

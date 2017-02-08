@@ -56,8 +56,8 @@ func (e ALPNExtension) Marshal() []byte {
 	result = append(alpnHeader, result...)
 
 	extHeader := make([]byte, 4)
-	extHeader[0] = 0 //TK
-	extHeader[1] = 0 //TK
+	extHeader[0] = byte(extensionALPN >> 8)
+	extHeader[1] = byte(extensionALPN & 0xff)
 	extHeader[2] = uint8((len(result)) >> 8)
 	extHeader[3] = uint8((len(result)))
 	result = append(extHeader, result...)
