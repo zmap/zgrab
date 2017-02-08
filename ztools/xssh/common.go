@@ -24,16 +24,25 @@ const (
 	serviceSSH      = "ssh-connection"
 )
 
-// supportedCiphers specifies the supported ciphers in preference order.
-var supportedCiphers = []string{
+// defaultCiphers specifies the default ciphers in preference order.
+var defaultCiphers = []string{
 	"aes128-ctr", "aes192-ctr", "aes256-ctr",
 	"aes128-gcm@openssh.com",
 	"arcfour256", "arcfour128",
 }
 
-// supportedKexAlgos specifies the supported key-exchange algorithms in
+// allSupportedCiphers specifies all ciphers which are supported
+var allSupportedCiphers = []string{
+	"aes128-ctr", "aes192-ctr", "aes256-ctr",
+	gcmCipherID,
+	"arcfour256", "arcfour128",
+	// Not offered by default:
+	"arcfour", aes128cbcID, tripledescbcID,
+}
+
+// defaultKexAlgos specifies the default key-exchange algorithms in
 // preference order.
-var supportedKexAlgos = []string{
+var defaultKexAlgos = []string{
 	kexAlgoCurve25519SHA256,
 	// P384 and P521 are not constant-time yet, but since we don't
 	// reuse ephemeral keys, using them for ECDH should be OK.
@@ -41,7 +50,18 @@ var supportedKexAlgos = []string{
 	kexAlgoDH14SHA1, kexAlgoDH1SHA1,
 }
 
-// supportedKexAlgos specifies the supported host-key algorithms (i.e. methods
+// allSupportedKexAlgos specifies all key-exchange algorithms supported
+var allSupportedKexAlgos = []string{
+	kexAlgoCurve25519SHA256,
+	// P384 and P521 are not constant-time yet, but since we don't
+	// reuse ephemeral keys, using them for ECDH should be OK.
+	kexAlgoECDH256, kexAlgoECDH384, kexAlgoECDH521,
+	kexAlgoDH14SHA1, kexAlgoDH1SHA1,
+	// Not enabled by default:
+	kexAlgoDHGEXSHA1, kexAlgoDHGEXSHA256,
+}
+
+// supportedHostKeyAlgos specifies the supported host-key algorithms (i.e. methods
 // of authenticating servers) in preference order.
 var supportedHostKeyAlgos = []string{
 	CertAlgoRSAv01, CertAlgoDSAv01, CertAlgoECDSA256v01,
@@ -215,7 +235,7 @@ func (c *Config) SetDefaults() {
 		c.Rand = rand.Reader
 	}
 	if c.Ciphers == nil {
-		c.Ciphers = supportedCiphers
+		c.Ciphers = defaultCiphers
 	}
 	var ciphers []string
 	for _, c := range c.Ciphers {
@@ -227,7 +247,7 @@ func (c *Config) SetDefaults() {
 	c.Ciphers = ciphers
 
 	if c.KeyExchanges == nil {
-		c.KeyExchanges = supportedKexAlgos
+		c.KeyExchanges = defaultKexAlgos
 	}
 
 	if c.MACs == nil {

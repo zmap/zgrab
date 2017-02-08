@@ -425,29 +425,98 @@ func (c *ClientHelloConfiguration) marshal(config *Config) ([]byte, error) {
 	return hello, nil
 }
 
+
 func (c *Conn) clientHandshake() error {
 	if c.config == nil {
 		c.config = defaultConfig()
 	}
-
+	var hello *clientHelloMsg
+	var helloBytes []byte
+	var session *ClientSessionState
+	var sessionCache ClientSessionCache
+	var cacheKey string
+	
+	
 	if c.config.ClientFingerprint != nil {
 		c.config = c.config.ClientFingerprint.ModifyConfig(c.config)
 	}
 
-	if len(c.config.ServerName) == 0 && !c.config.InsecureSkipVerify {
-		return errors.New("tls: either ServerName or InsecureSkipVerify must be specified in the tls.Config")
-	}
+	// first, let's check if a ClientFingerprint template was provided by the config
+	if c.config.ClientFingerprint != nil {
+		session = nil
+		sessionCache = c.config.ClientFingerprint.SessionCache
+		if sessionCache != nil {
+			if c.config.ClientFingerprint.CacheKey == nil {
+				return errors.New("Must specify CacheKey if SessionCache is defined in Config.ClientFingerprint")
+			}
+			cacheKey = c.config.ClientFingerprint.CacheKey.Key(c.conn.RemoteAddr())
+			candidateSession, ok := sessionCache.Get(cacheKey)
+			if ok {
+				cipherSuiteOk := false
+				for _, id := range c.config.ClientFingerprint.CipherSuites {
+					if id == candidateSession.cipherSuite {
+						cipherSuiteOk = true
+						break
+					}
+				}
+				versOk := candidateSession.vers >= c.config.minVersion() &&
+					candidateSession.vers <= c.config.ClientFingerprint.HandshakeVersion
+				if versOk && cipherSuiteOk {
+					session = candidateSession
+				}
+			}
+		}
+		for i, ext := range c.config.ClientFingerprint.Extensions {
+			switch ext.(type) {
+			case SessionTicketExtension:
+				if ext.(SessionTicketExtension).Autopopulate {
+					if session == nil {
+						if !c.config.ForceSessionTicketExt {
+							c.config.ClientFingerprint.Extensions[i] = NullExtension{}
+						}
+					} else {
+						c.config.ClientFingerprint.Extensions[i] = SessionTicketExtension{session.sessionTicket, true}
+						if c.config.ClientFingerprint.RandomSessionID > 0 {
+							c.config.ClientFingerprint.SessionID = make([]byte, c.config.ClientFingerprint.RandomSessionID)
+							if _, err := io.ReadFull(c.config.rand(), c.config.ClientFingerprint.SessionID); err != nil {
+								c.sendAlert(alertInternalError)
+								return errors.New("tls: short read from Rand: " + err.Error())
+							}
 
-	c.handshakeLog = new(ServerHandshake)
-	c.heartbleedLog = new(Heartbleed)
+						}
+					}
+				}
+			}
+		}
+		var err error
+		helloBytes, err = c.config.ClientFingerprint.marshal(c.config)
+		if err != nil {
+			return err
+		}
+		hello = &clientHelloMsg{}
+		if ok := hello.unmarshal(helloBytes); !ok {
+			return errors.New("Incompatible Custom Client Fingerprint")
+		}
+	
+	// next, let's check if a ClientHello template was provided by the user
+	} else if c.config.ExternalClientHello != nil {
 
-	var hello *clientHelloMsg
-	var helloBytes []byte
-	var session *ClientSessionState
-	var cacheKey string
-	var sessionCache ClientSessionCache
+		hello = new(clientHelloMsg)
 
-	if c.config.ClientFingerprint == nil {
+		if !hello.unmarshal(c.config.ExternalClientHello) {
+			return errors.New("could not read the ClientHello provided")
+		}
+
+		// update the SNI with one name, whether or not the extension was already there
+		hello.serverName = c.config.ServerName
+
+		// then we update the 'raw' value of the message
+		hello.raw = nil
+		helloBytes = hello.marshal()
+		
+		session = nil
+		sessionCache = nil
+	} else {
 		hello = &clientHelloMsg{
 			vers:                 c.config.maxVersion(),
 			compressionMethods:   []uint8{compressionNone},
@@ -548,7 +617,7 @@ func (c *Conn) clientHandshake() error {
 				}
 			}
 		}
-
+		
 		if session != nil {
 			hello.sessionTicket = session.sessionTicket
 			// A random session ID is used to detect when the
@@ -559,66 +628,14 @@ func (c *Conn) clientHandshake() error {
 				c.sendAlert(alertInternalError)
 				return errors.New("tls: short read from Rand: " + err.Error())
 			}
-		}
 
+		}
+		
 		helloBytes = hello.marshal()
-	} else {
-		session = nil
-		sessionCache = c.config.ClientFingerprint.SessionCache
-		if sessionCache != nil {
-			if c.config.ClientFingerprint.CacheKey == nil {
-				return errors.New("Must specify CacheKey if SessionCache is defined in Config.ClientFingerprint")
-			}
-			cacheKey = c.config.ClientFingerprint.CacheKey.Key(c.conn.RemoteAddr())
-			candidateSession, ok := sessionCache.Get(cacheKey)
-			if ok {
-				cipherSuiteOk := false
-				for _, id := range c.config.ClientFingerprint.CipherSuites {
-					if id == candidateSession.cipherSuite {
-						cipherSuiteOk = true
-						break
-					}
-				}
-				versOk := candidateSession.vers >= c.config.minVersion() &&
-					candidateSession.vers <= c.config.ClientFingerprint.HandshakeVersion
-				if versOk && cipherSuiteOk {
-					session = candidateSession
-				}
-			}
-		}
-		for i, ext := range c.config.ClientFingerprint.Extensions {
-			switch ext.(type) {
-			case SessionTicketExtension:
-				if ext.(SessionTicketExtension).Autopopulate {
-					if session == nil {
-						if !c.config.ForceSessionTicketExt {
-							c.config.ClientFingerprint.Extensions[i] = NullExtension{}
-						}
-					} else {
-						c.config.ClientFingerprint.Extensions[i] = SessionTicketExtension{session.sessionTicket, true}
-						if c.config.ClientFingerprint.RandomSessionID > 0 {
-							c.config.ClientFingerprint.SessionID = make([]byte, c.config.ClientFingerprint.RandomSessionID)
-							if _, err := io.ReadFull(c.config.rand(), c.config.ClientFingerprint.SessionID); err != nil {
-								c.sendAlert(alertInternalError)
-								return errors.New("tls: short read from Rand: " + err.Error())
-							}
-
-						}
-					}
-				}
-			}
-		}
-		var err error
-		helloBytes, err = c.config.ClientFingerprint.marshal(c.config)
-		if err != nil {
-			return err
-		}
-		hello = &clientHelloMsg{}
-		if ok := hello.unmarshal(helloBytes); !ok {
-			return errors.New("Incompatible Custom Client Fingerprint")
-		}
 	}
 
+	c.handshakeLog = new(ServerHandshake)
+	c.heartbleedLog = new(Heartbleed)
 	c.writeRecord(recordTypeHandshake, helloBytes)
 	c.handshakeLog.ClientHello = hello.MakeLog()
 
@@ -1102,9 +1119,29 @@ func (hs *clientHandshakeState) processServerHello() (bool, error) {
 		return false, errors.New("tls: server selected unsupported compression format")
 	}
 
-	if !hs.hello.nextProtoNeg && hs.serverHello.nextProtoNeg {
+	clientDidNPN := hs.hello.nextProtoNeg
+	clientDidALPN := len(hs.hello.alpnProtocols) > 0
+	serverHasNPN := hs.serverHello.nextProtoNeg
+	serverHasALPN := len(hs.serverHello.alpnProtocol) > 0
+
+	if !clientDidNPN && serverHasNPN {
 		c.sendAlert(alertHandshakeFailure)
-		return false, errors.New("server advertised unrequested NPN extension")
+		return false, errors.New("tls: server advertised unrequested NPN extension")
+	}
+
+	if !clientDidALPN && serverHasALPN {
+		c.sendAlert(alertHandshakeFailure)
+		return false, errors.New("tls: server advertised unrequested ALPN extension")
+	}
+
+	if serverHasNPN && serverHasALPN {
+		c.sendAlert(alertHandshakeFailure)
+		return false, errors.New("tls: server advertised both NPN and ALPN extensions")
+	}
+
+	if serverHasALPN {
+		c.clientProtocol = hs.serverHello.alpnProtocol
+		c.clientProtocolFallback = false
 	}
 
 	if hs.serverResumedSession() {
@@ -1223,18 +1260,18 @@ func clientSessionCacheKey(serverAddr net.Addr, config *Config) string {
 	return serverAddr.String()
 }
 
-// mutualProtocol finds the mutual Next Protocol Negotiation protocol given the
-// set of client and server supported protocols. The set of client supported
-// protocols must not be empty. It returns the resulting protocol and flag
+// mutualProtocol finds the mutual Next Protocol Negotiation or ALPN protocol
+// given list of possible protocols and a list of the preference order. The
+// first list must not be empty. It returns the resulting protocol and flag
 // indicating if the fallback case was reached.
-func mutualProtocol(clientProtos, serverProtos []string) (string, bool) {
-	for _, s := range serverProtos {
-		for _, c := range clientProtos {
+func mutualProtocol(protos, preferenceProtos []string) (string, bool) {
+	for _, s := range preferenceProtos {
+		for _, c := range protos {
 			if s == c {
 				return s, false
 			}
 		}
 	}
 
-	return clientProtos[0], true
+	return protos[0], true
 }

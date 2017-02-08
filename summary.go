@@ -33,6 +33,7 @@ type Summary struct {
 	MailType   string
 	CAFile     string
 	SNISupport bool
+	Flags      []string
 }
 
 type encodedSummary struct {
@@ -49,6 +50,7 @@ type encodedSummary struct {
 	MailType   *string       `json:"mail_type"`
 	CAFile     *string       `json:"ca_file_name"`
 	SNISupport bool          `json:"sni_support"`
+	Flags      []string      `json:"flags"`
 }
 
 func (s *Summary) MarshalJSON() ([]byte, error) {
@@ -63,6 +65,7 @@ func (s *Summary) MarshalJSON() ([]byte, error) {
 	e.Senders = s.Senders
 	e.Timeout = uint(s.Timeout / time.Second)
 	e.SNISupport = s.SNISupport
+	e.Flags = s.Flags
 	if s.TLSVersion != "" {
 		e.TLSVersion = &s.TLSVersion
 	}

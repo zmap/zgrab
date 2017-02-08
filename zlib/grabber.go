@@ -195,6 +195,9 @@ func makeTLSConfig(config *Config, urlHost string) *ztls.Config {
 	if !config.NoSNI && urlHost != "" {
 		tlsConfig.ServerName = urlHost
 	}
+	if config.ExternalClientHello != nil {
+		tlsConfig.ExternalClientHello = config.ExternalClientHello
+	}
 
 	return tlsConfig
 }
@@ -214,7 +217,7 @@ func makeHTTPGrabber(config *Config, grabData *GrabData) func(string, string, st
 
 		var tlsConfig *ztls.Config
 		if config.TLS {
-			tlsConfig = makeTLSConfig(config, urlHost)
+			tlsConfig = makeTLSConfig(config, httpHost)
 		}
 
 		transport := &http.Transport{
@@ -376,6 +379,9 @@ func makeGrabber(config *Config) func(*Conn) error {
 		if config.ExtendedMasterSecret {
 			c.SetOfferExtendedMasterSecret()
 		}
+		if config.ExternalClientHello != nil {
+			c.SetExternalClientHello(config.ExternalClientHello)
+		}
 		if config.TLSVerbose {
 			c.SetTLSVerbose()
 		}
@@ -383,7 +389,6 @@ func makeGrabber(config *Config) func(*Conn) error {
 		if config.SSH.SSH {
 			c.sshScan = &config.SSH
 		}
-		c.ReadEncoding = config.Encoding
 		if config.TLS {
 			if err := c.TLSHandshake(); err != nil {
 				c.erroredComponent = "tls"

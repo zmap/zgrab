@@ -36,7 +36,6 @@ import (
 
 // Command-line flags
 var (
-	encoding                      string
 	outputFileName, inputFileName string
 	logFileName, metadataFileName string
 	messageFileName               string
@@ -48,6 +47,7 @@ var (
 	tlsVersion                    string
 	rootCAFileName                string
 	prometheusAddress             string
+	clientHelloFileName           string
 )
 
 // Module configurations
@@ -63,7 +63,6 @@ var (
 // Pre-main bind flags to variables
 func init() {
 
-	flag.StringVar(&config.Encoding, "encoding", "string", "Encode banner as string|hex|base64")
 	flag.StringVar(&outputFileName, "output-file", "-", "Output filename, use - for stdout")
 	flag.StringVar(&inputFileName, "input-file", "-", "Input filename, use - for stdin")
 	flag.StringVar(&metadataFileName, "metadata-file", "-", "File to record banner-grab metadata, use - for stdout")
@@ -99,6 +98,8 @@ func init() {
 	flag.BoolVar(&config.Fox, "fox", false, "Send some Niagara Fox Tunneling data")
 	flag.BoolVar(&config.S7, "s7", false, "Send some Siemens S7 data")
 	flag.BoolVar(&config.NoSNI, "no-sni", false, "Do not send domain name in TLS handshake regardless of whether known")
+
+	flag.StringVar(&clientHelloFileName, "raw-client-hello", "", "Provide a raw ClientHello to be sent; only the SNI will be rewritten")
 
 	flag.BoolVar(&config.ExportsOnly, "export-ciphers", false, "Send only export ciphers")
 	flag.BoolVar(&config.ExportsDHOnly, "export-dhe-ciphers", false, "Send only export DHE ciphers")
@@ -250,17 +251,6 @@ func init() {
 		zlog.Fatal("Must specify one of --tls or --starttls for --heartbleed")
 	}
 
-	encoding = strings.ToLower(config.Encoding)
-	// Check output encoding
-	switch encoding {
-	case "string":
-	case "base64":
-	case "hex":
-	default:
-		zlog.Fatalf("Invalid encoding '%s'", config.Encoding)
-	}
-	config.Encoding = encoding
-
 	// Validate port
 	if portFlag > 65535 {
 		zlog.Fatal("Port", portFlag, "out of range")
@@ -350,6 +340,15 @@ func init() {
 	}
 	logger := zlog.New(logFile, "banner-grab")
 	config.ErrorLog = logger
+
+	// Open TLS ClientHello, if applicable
+	if clientHelloFileName != "" {
+		if clientHello, err := ioutil.ReadFile(clientHelloFileName); err != nil {
+			zlog.Fatal(err)
+		} else {
+			config.ExternalClientHello = clientHello
+		}
+	}
 }
 
 func main() {
@@ -382,6 +381,7 @@ func main() {
 		TLSVersion: tlsVersion,
 		MailType:   mailType,
 		SNISupport: !config.NoSNI,
+		Flags:      os.Args,
 	}
 	enc := json.NewEncoder(metadataFile)
 	if err := enc.Encode(&s); err != nil {

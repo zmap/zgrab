@@ -106,9 +106,6 @@ type Config struct {
 	// DNS
 	LookupDomain bool
 
-	// Encoding
-	Encoding string
-
 	// TLS
 	TLS                           bool
 	TLSVersion                    uint16
@@ -130,6 +127,7 @@ type Config struct {
 	ExtendedMasterSecret          bool
 	TLSVerbose                    bool
 	SignedCertificateTimestampExt bool
+	ExternalClientHello           []byte
 
 	// SSH
 	SSH SSHScanConfig

@@ -42,15 +42,16 @@ rsa_public_key = SubRecord({
     "exponent":Long(),
     "modulus":Binary(),
     "length":Integer(doc="Bit-length of modulus."),
-}),
+})
 
-dsa_public_key:SubRecord({
+dsa_public_key = SubRecord({
     "p":Binary(),
     "q":Binary(),
     "g":Binary(),
     "y":Binary(),
 })
-ecdsa_public_key:SubRecord({
+
+ecdsa_public_key = SubRecord({
     "pub":Binary(),
     "b":Binary(),
     "gx":Binary(),
@@ -736,7 +737,9 @@ zgrab_ssh = Record({
     }),
 }, extends=zgrab_base)
 
-ed25519_public_key:SubRecord({
+zschema.registry.register_schema("zgrab-ssh", zgrab_ssh)
+
+ed25519_public_key = SubRecord({
     "public_bytes":Binary(),
 })
 
@@ -744,7 +747,7 @@ zgrab_xssh = Record({
     "data":SubRecord({
         "xssh":SubRecord({
             "server_id":SubRecord({
-                "raw":Analyzedstring(),
+                "raw":AnalyzedString(),
                 "version":String(),
                 "software":AnalyzedString(),
                 "comment":AnalyzedString(),
@@ -783,7 +786,9 @@ zgrab_xssh = Record({
                 "parameters": SubRecord({
                     "client_public":Binary(),
                     "client_private":Binary(),
-                    "server_public":Binary()
+                    "server_public":Binary(),
+                    "prime":Binary(),
+                    "generator":Binary(),
                 }),
                 "server_signature":Binary(),
                 "server_host_key":SubRecord({
@@ -795,7 +800,7 @@ zgrab_xssh = Record({
                     "ecdsa_public_key":ecdsa_public_key,
                     "ed25519_public_key":ed25519_public_key,
                     "certkey_public_key":SubRecord({
-	                    "nonce":Binary(),
+                        "nonce":Binary(),
                         "key":SubRecord({
                             "raw":Binary(),
                             "fingerprint_sha256":String(),
@@ -856,4 +861,4 @@ zgrab_xssh = Record({
     }),
 }, extends=zgrab_base)
 
-zschema.registry.register_schema("zgrab-ssh", zgrab_ssh)
+zschema.registry.register_schema("zgrab-xssh", zgrab_xssh)
