@@ -223,12 +223,12 @@ func init() {
 		config.SMTP = true
 	}
 
-    if config.SMTP && !config.EHLO {
-        name, err := os.Hostname()
-        if err != nil {
-            zlog.Errorf("Unable to set hostname")
-        }
-    }
+	if config.SMTP && !config.EHLO {
+		name, err := os.Hostname()
+		if err != nil {
+			zlog.Errorf("Unable to set hostname")
+		}
+	}
 
 	if config.SMTP && (config.IMAP || config.POP3) {
 		zlog.Fatal("Cannot conform to SMTP and IMAP/POP3 at the same time")
