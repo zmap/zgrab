@@ -1,5 +1,10 @@
 package ztls
 
+import (
+	"errors"
+	"fmt"
+)
+
 type NullExtension struct {
 }
 
@@ -191,7 +196,7 @@ type PointFormatExtension struct {
 }
 
 func (e PointFormatExtension) CheckImplemented() error {
-	for _, format := range ext.(PointFormatExtension).Formats {
+	for _, format := range e.Formats {
 		if format != pointFormatUncompressed {
 			return errors.New(fmt.Sprintf("Unsupported EC Point Format %d", format))
 		}
@@ -256,7 +261,7 @@ type SignatureAlgorithmExtension struct {
 }
 
 func (e SignatureAlgorithmExtension) CheckImplemented() error {
-	for _, algs := range casted.getStructuredAlgorithms() {
+	for _, algs := range e.getStructuredAlgorithms() {
 		found := false
 		for _, supported := range supportedSKXSignatureAlgorithms {
 			if algs.hash == supported.hash && algs.signature == supported.signature {
