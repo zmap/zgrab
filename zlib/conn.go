@@ -429,11 +429,6 @@ func (c *Conn) SMTPBanner(b []byte) (int, error) {
 }
 
 func (c *Conn) EHLO(domain string) error {
-	if domain == "" {
-		localAddr := c.LocalAddr().String()
-		idx := strings.LastIndex(localAddr, ":")
-		domain = localAddr[0:idx]
-	}
 	cmd := []byte("EHLO " + domain + "\r\n")
 	if _, err := c.getUnderlyingConn().Write(cmd); err != nil {
 		return err
