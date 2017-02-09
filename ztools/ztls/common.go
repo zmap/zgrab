@@ -226,10 +226,6 @@ type ClientSessionCache interface {
 	Put(sessionKey string, cs *ClientSessionState)
 }
 
-type ClientExtension interface {
-	Marshal() (data []byte)
-}
-
 // A Config structure is used to configure a TLS client or server.
 // After one has been passed to a TLS function it must not be
 // modified. A Config may be reused; the tls package will also not
@@ -363,7 +359,7 @@ type Config struct {
 
 	// If non-null specifies the contents of the client-hello
 	// WARNING: Setting this may invalidate other fields in the Config object
-	ClientFingerprint *ClientHelloConfiguration
+	ClientFingerprintConfiguration *ClientFingerprintConfiguration
 }
 
 func (c *Config) serverInit() {

@@ -3,6 +3,10 @@ package ztls
 type NullExtension struct {
 }
 
+func (e NullExtension) CheckImplemented() error {
+	return nil
+}
+
 func (e NullExtension) Marshal() []byte {
 	return []byte{}
 }
@@ -10,6 +14,10 @@ func (e NullExtension) Marshal() []byte {
 type SniExtension struct {
 	Domains      []string
 	Autopopulate bool
+}
+
+func (e SniExtension) CheckImplemented() error {
+	return nil
 }
 
 func (e SniExtension) Marshal() []byte {
@@ -41,6 +49,10 @@ type ALPNExtension struct {
 	Protocols []string
 }
 
+func (e ALPNExtension) CheckImplemented() error {
+	return nil
+}
+
 func (e ALPNExtension) Marshal() []byte {
 	result := []byte{}
 	for _, protocol := range e.Protocols {
@@ -68,6 +80,10 @@ func (e ALPNExtension) Marshal() []byte {
 type SecureRenegotiationExtension struct {
 }
 
+func (e SecureRenegotiationExtension) CheckImplemented() error {
+	return nil
+}
+
 func (e SecureRenegotiationExtension) Marshal() []byte {
 	result := make([]byte, 5)
 	result[0] = byte(extensionRenegotiationInfo >> 8)
@@ -79,6 +95,10 @@ func (e SecureRenegotiationExtension) Marshal() []byte {
 }
 
 type ExtendedMasterSecretExtension struct {
+}
+
+func (e ExtendedMasterSecretExtension) CheckImplemented() error {
+	return nil
 }
 
 func (e ExtendedMasterSecretExtension) Marshal() []byte {
@@ -93,6 +113,10 @@ func (e ExtendedMasterSecretExtension) Marshal() []byte {
 type NextProtocolNegotiationExtension struct {
 }
 
+func (e NextProtocolNegotiationExtension) CheckImplemented() error {
+	return nil
+}
+
 func (e NextProtocolNegotiationExtension) Marshal() []byte {
 	result := make([]byte, 4)
 	result[0] = byte(extensionNextProtoNeg >> 8)
@@ -103,6 +127,10 @@ func (e NextProtocolNegotiationExtension) Marshal() []byte {
 }
 
 type StatusRequestExtension struct {
+}
+
+func (e StatusRequestExtension) CheckImplemented() error {
+	return nil
 }
 
 func (e StatusRequestExtension) Marshal() []byte {
@@ -122,6 +150,10 @@ func (e StatusRequestExtension) Marshal() []byte {
 type SCTExtension struct {
 }
 
+func (e SCTExtension) CheckImplemented() error {
+	return nil
+}
+
 func (e SCTExtension) Marshal() []byte {
 	result := make([]byte, 4)
 	result[0] = byte(extensionSCT >> 8)
@@ -133,6 +165,10 @@ func (e SCTExtension) Marshal() []byte {
 
 type SupportedCurvesExtension struct {
 	Curves []CurveID
+}
+
+func (e SupportedCurvesExtension) CheckImplemented() error {
+	return nil
 }
 
 func (e SupportedCurvesExtension) Marshal() []byte {
@@ -154,6 +190,15 @@ type PointFormatExtension struct {
 	Formats []uint8
 }
 
+func (e PointFormatExtension) CheckImplemented() error {
+	for _, format := range ext.(PointFormatExtension).Formats {
+		if format != pointFormatUncompressed {
+			return errors.New(fmt.Sprintf("Unsupported EC Point Format %d", format))
+		}
+	}
+	return nil
+}
+
 func (e PointFormatExtension) Marshal() []byte {
 	result := make([]byte, 5+len(e.Formats))
 	result[0] = byte(extensionSupportedPoints >> 8)
@@ -172,6 +217,10 @@ type SessionTicketExtension struct {
 	Autopopulate bool
 }
 
+func (e SessionTicketExtension) CheckImplemented() error {
+	return nil
+}
+
 func (e SessionTicketExtension) Marshal() []byte {
 	result := make([]byte, 4+len(e.Ticket))
 	result[0] = byte(extensionSessionTicket >> 8)
@@ -188,6 +237,10 @@ type HeartbeatExtension struct {
 	Mode byte
 }
 
+func (e HeartbeatExtension) CheckImplemented() error {
+	return nil
+}
+
 func (e HeartbeatExtension) Marshal() []byte {
 	result := make([]byte, 5)
 	result[0] = byte(extensionHeartbeat >> 8)
@@ -202,7 +255,23 @@ type SignatureAlgorithmExtension struct {
 	SignatureAndHashes []uint16
 }
 
-func (e SignatureAlgorithmExtension) getStruct() []signatureAndHash {
+func (e SignatureAlgorithmExtension) CheckImplemented() error {
+	for _, algs := range casted.getStructuredAlgorithms() {
+		found := false
+		for _, supported := range supportedSKXSignatureAlgorithms {
+			if algs.hash == supported.hash && algs.signature == supported.signature {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return errors.New(fmt.Sprintf("Unsupported Hash and Signature Algorithm (%d, %d)", algs.hash, algs.signature))
+		}
+	}
+	return nil
+}
+
+func (e SignatureAlgorithmExtension) getStructuredAlgorithms() []signatureAndHash {
 	result := make([]signatureAndHash, len(e.SignatureAndHashes))
 	for i, alg := range e.SignatureAndHashes {
 		result[i].hash = uint8(alg >> 8)
@@ -219,7 +288,7 @@ func (e SignatureAlgorithmExtension) Marshal() []byte {
 	result[3] = uint8((2 + 2*len(e.SignatureAndHashes)))
 	result[4] = uint8((2 * len(e.SignatureAndHashes)) >> 8)
 	result[5] = uint8((2 * len(e.SignatureAndHashes)))
-	for i, pair := range e.getStruct() {
+	for i, pair := range e.getStructuredAlgorithms() {
 		result[6+2*i] = uint8(pair.hash)
 		result[7+2*i] = uint8(pair.signature)
 	}

@@ -36,58 +36,45 @@ type CacheKeyGenerator interface {
 	Key(net.Addr) string
 }
 
-type ClientHelloConfiguration struct {
-	//Version in the handshake header
+type ClientFingerprintConfiguration struct {
+	// Version in the handshake header
 	HandshakeVersion uint16
 
-	//if len == 32, it will specify the client random
-	//Otherwise, the field will be random
+	// if len == 32, it will specify the client random
+	// Otherwise, the field will be random
 	ClientRandom []byte
 
-	//if RandomSessionID > 0, will overwrite SessionID w/ that many
-	//random bytes when a session resumption occurs
+	// if RandomSessionID > 0, will overwrite SessionID w/ that many
+	// random bytes when a session resumption occurs
 	RandomSessionID int
 	SessionID       []byte
 
-	//These fields will appear exactly in order in the ClientHello
+	// These fields will appear exactly in order in the ClientHello
 	CipherSuites       []uint16
 	CompressionMethods []uint8
 	Extensions         []ClientExtension
 
-	//Optional, both must be non-nil, or neither.
-	//Custom Session cache implementations allowed
+	// Optional, both must be non-nil, or neither.
+	// Custom Session cache implementations allowed
 	SessionCache ClientSessionCache
 	CacheKey     CacheKeyGenerator
 }
 
-func (c *ClientHelloConfiguration) ValidateExtensions() error {
+type ClientExtension interface {
+	Marshal() []byte
+	CheckImplemented() error
+}
+
+func (c *ClientFingerprintConfiguration) CheckImplementedExtensions() error {
 	for _, ext := range c.Extensions {
-		switch ext.(type) {
-		case PointFormatExtension:
-			for _, format := range ext.(PointFormatExtension).Formats {
-				if format != pointFormatUncompressed {
-					return errors.New(fmt.Sprintf("Unsupported EC Point Format %d", format))
-				}
-			}
-		case SignatureAlgorithmExtension:
-			for _, algs := range ext.(SignatureAlgorithmExtension).getStruct() {
-				found := false
-				for _, supported := range supportedSKXSignatureAlgorithms {
-					if algs.hash == supported.hash && algs.signature == supported.signature {
-						found = true
-						break
-					}
-				}
-				if !found {
-					return errors.New(fmt.Sprintf("Unsupported Hash and Signature Algorithm (%d, %d)", algs.hash, algs.signature))
-				}
-			}
+		if err := ext.CheckImplemented(); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func (c *ClientHelloConfiguration) ModifyConfig(config *Config) *Config {
+func (c *ClientFingerprintConfiguration) ModifyConfig(config *Config) *Config {
 	config.NextProtos = []string{}
 	config.CipherSuites = c.CipherSuites
 	config.MaxVersion = c.HandshakeVersion
@@ -99,34 +86,36 @@ func (c *ClientHelloConfiguration) ModifyConfig(config *Config) *Config {
 	config.ExtendedMasterSecret = false
 	config.SignedCertificateTimestampExt = false
 	for i, ext := range c.Extensions {
-		switch ext.(type) {
+		switch casted := ext.(type) {
 		case SniExtension:
-			if ext.(SniExtension).Autopopulate {
+			if casted.Autopopulate {
 				c.Extensions[i] = SniExtension{[]string{config.ServerName}, true}
 			}
-			if config.ServerName == "" && len(ext.(SniExtension).Domains) > 0 {
-				config.ServerName = ext.(SniExtension).Domains[0]
+			if config.ServerName == "" && len(casted.Domains) > 0 {
+				config.ServerName = casted.Domains[0]
 			}
 		case ALPNExtension:
-			config.NextProtos = ext.(ALPNExtension).Protocols
+			config.NextProtos = casted.Protocols
 		case ExtendedMasterSecretExtension:
 			config.ExtendedMasterSecret = true
 		case SignatureAlgorithmExtension:
-			supportedSKXSignatureAlgorithms = ext.(SignatureAlgorithmExtension).getStruct()
-			defaultSKXSignatureAlgorithms = ext.(SignatureAlgorithmExtension).getStruct()
+			supportedSKXSignatureAlgorithms = casted.getStructuredAlgorithms()
+			defaultSKXSignatureAlgorithms = casted.getStructuredAlgorithms()
 		case SCTExtension:
 			config.SignedCertificateTimestampExt = true
 		case SupportedCurvesExtension:
-			config.CurvePreferences = ext.(SupportedCurvesExtension).Curves
+			config.CurvePreferences = casted.Curves
 		case SessionTicketExtension:
 			config.ForceSessionTicketExt = true
+		default:
+			continue
 		}
 	}
 	return config
 }
 
-func (c *ClientHelloConfiguration) marshal(config *Config) ([]byte, error) {
-	if err := c.ValidateExtensions(); err != nil {
+func (c *ClientFingerprintConfiguration) marshal(config *Config) ([]byte, error) {
+	if err := c.CheckImplementedExtensions(); err != nil {
 		return nil, err
 	}
 	head := make([]byte, 38)
@@ -209,48 +198,48 @@ func (c *Conn) clientHandshake() error {
 	var sessionCache ClientSessionCache
 	var cacheKey string
 
-	if c.config.ClientFingerprint != nil {
-		c.config = c.config.ClientFingerprint.ModifyConfig(c.config)
+	if c.config.ClientFingerprintConfiguration != nil {
+		c.config = c.config.ClientFingerprintConfiguration.ModifyConfig(c.config)
 	}
 
-	// first, let's check if a ClientFingerprint template was provided by the config
-	if c.config.ClientFingerprint != nil {
+	// first, let's check if a ClientFingerprintConfiguration template was provided by the config
+	if c.config.ClientFingerprintConfiguration != nil {
 		session = nil
-		sessionCache = c.config.ClientFingerprint.SessionCache
+		sessionCache = c.config.ClientFingerprintConfiguration.SessionCache
 		if sessionCache != nil {
-			if c.config.ClientFingerprint.CacheKey == nil {
-				return errors.New("Must specify CacheKey if SessionCache is defined in Config.ClientFingerprint")
+			if c.config.ClientFingerprintConfiguration.CacheKey == nil {
+				return errors.New("Must specify CacheKey if SessionCache is defined in Config.ClientFingerprintConfiguration")
 			}
-			cacheKey = c.config.ClientFingerprint.CacheKey.Key(c.conn.RemoteAddr())
+			cacheKey = c.config.ClientFingerprintConfiguration.CacheKey.Key(c.conn.RemoteAddr())
 			candidateSession, ok := sessionCache.Get(cacheKey)
 			if ok {
 				cipherSuiteOk := false
-				for _, id := range c.config.ClientFingerprint.CipherSuites {
+				for _, id := range c.config.ClientFingerprintConfiguration.CipherSuites {
 					if id == candidateSession.cipherSuite {
 						cipherSuiteOk = true
 						break
 					}
 				}
 				versOk := candidateSession.vers >= c.config.minVersion() &&
-					candidateSession.vers <= c.config.ClientFingerprint.HandshakeVersion
+					candidateSession.vers <= c.config.ClientFingerprintConfiguration.HandshakeVersion
 				if versOk && cipherSuiteOk {
 					session = candidateSession
 				}
 			}
 		}
-		for i, ext := range c.config.ClientFingerprint.Extensions {
+		for i, ext := range c.config.ClientFingerprintConfiguration.Extensions {
 			switch ext.(type) {
 			case SessionTicketExtension:
 				if ext.(SessionTicketExtension).Autopopulate {
 					if session == nil {
 						if !c.config.ForceSessionTicketExt {
-							c.config.ClientFingerprint.Extensions[i] = NullExtension{}
+							c.config.ClientFingerprintConfiguration.Extensions[i] = NullExtension{}
 						}
 					} else {
-						c.config.ClientFingerprint.Extensions[i] = SessionTicketExtension{session.sessionTicket, true}
-						if c.config.ClientFingerprint.RandomSessionID > 0 {
-							c.config.ClientFingerprint.SessionID = make([]byte, c.config.ClientFingerprint.RandomSessionID)
-							if _, err := io.ReadFull(c.config.rand(), c.config.ClientFingerprint.SessionID); err != nil {
+						c.config.ClientFingerprintConfiguration.Extensions[i] = SessionTicketExtension{session.sessionTicket, true}
+						if c.config.ClientFingerprintConfiguration.RandomSessionID > 0 {
+							c.config.ClientFingerprintConfiguration.SessionID = make([]byte, c.config.ClientFingerprintConfiguration.RandomSessionID)
+							if _, err := io.ReadFull(c.config.rand(), c.config.ClientFingerprintConfiguration.SessionID); err != nil {
 								c.sendAlert(alertInternalError)
 								return errors.New("tls: short read from Rand: " + err.Error())
 							}
@@ -261,7 +250,7 @@ func (c *Conn) clientHandshake() error {
 			}
 		}
 		var err error
-		helloBytes, err = c.config.ClientFingerprint.marshal(c.config)
+		helloBytes, err = c.config.ClientFingerprintConfiguration.marshal(c.config)
 		if err != nil {
 			return err
 		}
@@ -444,7 +433,7 @@ func (c *Conn) clientHandshake() error {
 	cipherImplemented := cipherIDInCipherList(serverHello.cipherSuite, implementedCipherSuites)
 	cipherShared := cipherIDInCipherIDList(serverHello.cipherSuite, c.config.cipherSuites())
 	if suite == nil {
-		//c.sendAlert(alertHandshakeFailure)
+		// c.sendAlert(alertHandshakeFailure)
 		if !cipherShared {
 			c.cipherError = ErrNoMutualCipher
 		} else if !cipherImplemented {
