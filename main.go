@@ -226,6 +226,15 @@ func init() {
 		config.SMTP = true
 	}
 
+	if config.SMTP && !config.EHLO {
+		name, err := os.Hostname()
+		if err != nil {
+			zlog.Fatalf("unable to get hostname for EHLO: %s", err.Error())
+		}
+		config.EHLODomain = name
+		config.EHLO = true
+	}
+
 	if config.SMTP && (config.IMAP || config.POP3) {
 		zlog.Fatal("Cannot conform to SMTP and IMAP/POP3 at the same time")
 	}
