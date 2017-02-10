@@ -229,6 +229,7 @@ func init() {
 			zlog.Errorf("Unable to set hostname")
 		}
         config.EHLODomain = name
+        config.EHLO = true
 	}
 
 	if config.SMTP && (config.IMAP || config.POP3) {
