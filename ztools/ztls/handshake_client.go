@@ -61,8 +61,14 @@ type ClientFingerprintConfiguration struct {
 }
 
 type ClientExtension interface {
+	// Produce the bytes on the wire for this extension, type and length included
 	Marshal() []byte
+
+	// Function will return an error if zTLS does not implement the necessary features for this extension
 	CheckImplemented() error
+
+	// Modifies the config to reflect the state of the extension
+	WriteToConfig(*Config) error
 }
 
 func (c *ClientFingerprintConfiguration) CheckImplementedExtensions() error {
@@ -74,7 +80,7 @@ func (c *ClientFingerprintConfiguration) CheckImplementedExtensions() error {
 	return nil
 }
 
-func (c *ClientFingerprintConfiguration) ModifyConfig(config *Config) *Config {
+func (c *ClientFingerprintConfiguration) WriteToConfig(config *Config) error {
 	config.NextProtos = []string{}
 	config.CipherSuites = c.CipherSuites
 	config.MaxVersion = c.HandshakeVersion
@@ -85,33 +91,12 @@ func (c *ClientFingerprintConfiguration) ModifyConfig(config *Config) *Config {
 	config.ForceSessionTicketExt = false
 	config.ExtendedMasterSecret = false
 	config.SignedCertificateTimestampExt = false
-	for i, ext := range c.Extensions {
-		switch casted := ext.(type) {
-		case SniExtension:
-			if casted.Autopopulate {
-				c.Extensions[i] = SniExtension{[]string{config.ServerName}, true}
-			}
-			if config.ServerName == "" && len(casted.Domains) > 0 {
-				config.ServerName = casted.Domains[0]
-			}
-		case ALPNExtension:
-			config.NextProtos = casted.Protocols
-		case ExtendedMasterSecretExtension:
-			config.ExtendedMasterSecret = true
-		case SignatureAlgorithmExtension:
-			supportedSKXSignatureAlgorithms = casted.getStructuredAlgorithms()
-			defaultSKXSignatureAlgorithms = casted.getStructuredAlgorithms()
-		case SCTExtension:
-			config.SignedCertificateTimestampExt = true
-		case SupportedCurvesExtension:
-			config.CurvePreferences = casted.Curves
-		case SessionTicketExtension:
-			config.ForceSessionTicketExt = true
-		default:
-			continue
+	for _, ext := range c.Extensions {
+		if err := ext.WriteToConfig(config); err != nil {
+			return err
 		}
 	}
-	return config
+	return nil
 }
 
 func (c *ClientFingerprintConfiguration) marshal(config *Config) ([]byte, error) {
@@ -131,6 +116,9 @@ func (c *ClientFingerprintConfiguration) marshal(config *Config) ([]byte, error)
 		}
 	}
 
+	if len(c.SessionID) >= 256 {
+		return nil, errors.New("tls: SessionID too long")
+	}
 	sessionID := make([]byte, len(c.SessionID)+1)
 	sessionID[0] = uint8(len(c.SessionID))
 	if len(c.SessionID) > 0 {
@@ -157,13 +145,17 @@ func (c *ClientFingerprintConfiguration) marshal(config *Config) ([]byte, error)
 		ciphers[3+i*2] = uint8(suite)
 	}
 
+	if len(c.CompressionMethods) >= 256 {
+		return nil, errors.New("tls: Too many compression methods")
+	}
 	compressions := make([]byte, len(c.CompressionMethods)+1)
 	compressions[0] = uint8(len(c.CompressionMethods))
 	if len(c.CompressionMethods) > 0 {
 		copy(compressions[1:], c.CompressionMethods)
 		if c.CompressionMethods[0] != 0 {
 			return nil, errors.New(fmt.Sprintf("tls: unimplemented compression method %d", c.CompressionMethods[0]))
-		} else if len(c.CompressionMethods) > 1 {
+		}
+		if len(c.CompressionMethods) > 1 {
 			return nil, errors.New(fmt.Sprintf("tls: unimplemented compression method %d", c.CompressionMethods[1]))
 		}
 	} else {
@@ -181,9 +173,13 @@ func (c *ClientFingerprintConfiguration) marshal(config *Config) ([]byte, error)
 		extensions = append(length, extensions...)
 	}
 	hello := append(head, append(sessionID, append(ciphers, append(compressions, extensions...)...)...)...)
-	hello[1] = uint8((len(hello) - 4) >> 16)
-	hello[2] = uint8((len(hello) - 4) >> 8)
-	hello[3] = uint8((len(hello) - 4))
+	lengthOnTheWire := len(hello) - 4
+	if lengthOnTheWire >= 1<<24 {
+		return nil, errors.New("ClientHello message too long")
+	}
+	hello[1] = uint8(lengthOnTheWire >> 16)
+	hello[2] = uint8(lengthOnTheWire >> 8)
+	hello[3] = uint8(lengthOnTheWire)
 
 	return hello, nil
 }
@@ -199,7 +195,9 @@ func (c *Conn) clientHandshake() error {
 	var cacheKey string
 
 	if c.config.ClientFingerprintConfiguration != nil {
-		c.config = c.config.ClientFingerprintConfiguration.ModifyConfig(c.config)
+		if err := c.config.ClientFingerprintConfiguration.WriteToConfig(c.config); err != nil {
+			return err
+		}
 	}
 
 	// first, let's check if a ClientFingerprintConfiguration template was provided by the config

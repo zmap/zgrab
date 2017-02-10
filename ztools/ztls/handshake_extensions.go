@@ -8,6 +8,10 @@ import (
 type NullExtension struct {
 }
 
+func (e NullExtension) WriteToConfig(c *Config) error {
+	return nil
+}
+
 func (e NullExtension) CheckImplemented() error {
 	return nil
 }
@@ -19,6 +23,28 @@ func (e NullExtension) Marshal() []byte {
 type SniExtension struct {
 	Domains      []string
 	Autopopulate bool
+}
+
+func (e SniExtension) WriteToConfig(c *Config) error {
+	if e.Autopopulate {
+		for i, ext := range c.ClientFingerprintConfiguration.Extensions {
+			switch ext.(type) {
+			case SniExtension:
+				c.ClientFingerprintConfiguration.Extensions[i] = SniExtension{
+					Domains:      []string{c.ServerName},
+					Autopopulate: true,
+				}
+			default:
+				continue
+			}
+		}
+	}
+	// If a server name is not specified in the config, but is available in the extensions
+	// we set it for certificate validation later on
+	if c.ServerName == "" && len(e.Domains) > 0 {
+		c.ServerName = e.Domains[0]
+	}
+	return nil
 }
 
 func (e SniExtension) CheckImplemented() error {
@@ -54,6 +80,11 @@ type ALPNExtension struct {
 	Protocols []string
 }
 
+func (e ALPNExtension) WriteToConfig(c *Config) error {
+	c.NextProtos = e.Protocols
+	return nil
+}
+
 func (e ALPNExtension) CheckImplemented() error {
 	return nil
 }
@@ -85,6 +116,10 @@ func (e ALPNExtension) Marshal() []byte {
 type SecureRenegotiationExtension struct {
 }
 
+func (e SecureRenegotiationExtension) WriteToConfig(c *Config) error {
+	return nil
+}
+
 func (e SecureRenegotiationExtension) CheckImplemented() error {
 	return nil
 }
@@ -100,6 +135,11 @@ func (e SecureRenegotiationExtension) Marshal() []byte {
 }
 
 type ExtendedMasterSecretExtension struct {
+}
+
+func (e ExtendedMasterSecretExtension) WriteToConfig(c *Config) error {
+	c.ExtendedMasterSecret = true
+	return nil
 }
 
 func (e ExtendedMasterSecretExtension) CheckImplemented() error {
@@ -118,6 +158,10 @@ func (e ExtendedMasterSecretExtension) Marshal() []byte {
 type NextProtocolNegotiationExtension struct {
 }
 
+func (e NextProtocolNegotiationExtension) WriteToConfig(c *Config) error {
+	return nil
+}
+
 func (e NextProtocolNegotiationExtension) CheckImplemented() error {
 	return nil
 }
@@ -132,6 +176,10 @@ func (e NextProtocolNegotiationExtension) Marshal() []byte {
 }
 
 type StatusRequestExtension struct {
+}
+
+func (e StatusRequestExtension) WriteToConfig(c *Config) error {
+	return nil
 }
 
 func (e StatusRequestExtension) CheckImplemented() error {
@@ -155,6 +203,11 @@ func (e StatusRequestExtension) Marshal() []byte {
 type SCTExtension struct {
 }
 
+func (e SCTExtension) WriteToConfig(c *Config) error {
+	c.SignedCertificateTimestampExt = true
+	return nil
+}
+
 func (e SCTExtension) CheckImplemented() error {
 	return nil
 }
@@ -170,6 +223,11 @@ func (e SCTExtension) Marshal() []byte {
 
 type SupportedCurvesExtension struct {
 	Curves []CurveID
+}
+
+func (e SupportedCurvesExtension) WriteToConfig(c *Config) error {
+	c.CurvePreferences = e.Curves
+	return nil
 }
 
 func (e SupportedCurvesExtension) CheckImplemented() error {
@@ -193,6 +251,10 @@ func (e SupportedCurvesExtension) Marshal() []byte {
 
 type PointFormatExtension struct {
 	Formats []uint8
+}
+
+func (e PointFormatExtension) WriteToConfig(c *Config) error {
+	return nil
 }
 
 func (e PointFormatExtension) CheckImplemented() error {
@@ -222,6 +284,11 @@ type SessionTicketExtension struct {
 	Autopopulate bool
 }
 
+func (e SessionTicketExtension) WriteToConfig(c *Config) error {
+	c.ForceSessionTicketExt = true
+	return nil
+}
+
 func (e SessionTicketExtension) CheckImplemented() error {
 	return nil
 }
@@ -242,6 +309,10 @@ type HeartbeatExtension struct {
 	Mode byte
 }
 
+func (e HeartbeatExtension) WriteToConfig(c *Config) error {
+	return nil
+}
+
 func (e HeartbeatExtension) CheckImplemented() error {
 	return nil
 }
@@ -258,6 +329,12 @@ func (e HeartbeatExtension) Marshal() []byte {
 
 type SignatureAlgorithmExtension struct {
 	SignatureAndHashes []uint16
+}
+
+func (e SignatureAlgorithmExtension) WriteToConfig(c *Config) error {
+	supportedSKXSignatureAlgorithms = e.getStructuredAlgorithms()
+	defaultSKXSignatureAlgorithms = e.getStructuredAlgorithms()
+	return nil
 }
 
 func (e SignatureAlgorithmExtension) CheckImplemented() error {
