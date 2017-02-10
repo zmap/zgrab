@@ -226,10 +226,10 @@ func init() {
 	if config.SMTP && !config.EHLO {
 		name, err := os.Hostname()
 		if err != nil {
-			zlog.Errorf("Unable to set hostname")
+			zlog.Fatalf("unable to get hostname for EHLO: %s", err.Error())
 		}
-        config.EHLODomain = name
-        config.EHLO = true
+		config.EHLODomain = name
+		config.EHLO = true
 	}
 
 	if config.SMTP && (config.IMAP || config.POP3) {
