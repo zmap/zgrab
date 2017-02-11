@@ -192,7 +192,11 @@ func (c *ClientFingerprintConfiguration) marshal(config *Config) ([]byte, error)
 		length[1] = uint8(len(extensions))
 		extensions = append(length, extensions...)
 	}
-	hello := append(head, append(sessionID, append(ciphers, append(compressions, extensions...)...)...)...)
+	helloArray := [][]byte{head, sessionID, ciphers, compressions, extensions}
+	hello := []byte{}
+	for _, b := range helloArray {
+		hello = append(hello, b...)
+	}
 	lengthOnTheWire := len(hello) - 4
 	if lengthOnTheWire >= 1<<24 {
 		return nil, errors.New("ClientHello message too long")
