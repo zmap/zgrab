@@ -11,12 +11,14 @@ import (
 	"crypto/rsa"
 	"crypto/subtle"
 	"encoding/asn1"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"math/big"
 	"net"
 	"strconv"
+	"time"
 
 	"github.com/zmap/zgrab/ztools/x509"
 )
@@ -40,9 +42,11 @@ type ClientFingerprintConfiguration struct {
 	// Version in the handshake header
 	HandshakeVersion uint16
 
-	// if len == 32, it will specify the client random
+	// if len == 32, it will specify the client random.
 	// Otherwise, the field will be random
-	ClientRandom []byte
+	// except the top 4 bytes if InsertTimestamp is true
+	ClientRandom    []byte
+	InsertTimestamp bool
 
 	// if RandomSessionID > 0, will overwrite SessionID w/ that many
 	// random bytes when a session resumption occurs
@@ -99,6 +103,13 @@ func (c *ClientFingerprintConfiguration) WriteToConfig(config *Config) error {
 	return nil
 }
 
+func currentTimestamp() ([]byte, error) {
+	t := time.Now().Unix()
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.BigEndian, t)
+	return buf.Bytes(), err
+}
+
 func (c *ClientFingerprintConfiguration) marshal(config *Config) ([]byte, error) {
 	if err := c.CheckImplementedExtensions(); err != nil {
 		return nil, err
@@ -110,7 +121,16 @@ func (c *ClientFingerprintConfiguration) marshal(config *Config) ([]byte, error)
 	if len(c.ClientRandom) == 32 {
 		copy(head[6:38], c.ClientRandom[0:32])
 	} else {
-		_, err := io.ReadFull(config.rand(), head[6:38])
+		start := 6
+		if c.InsertTimestamp {
+			t, err := currentTimestamp()
+			if err != nil {
+				return nil, err
+			}
+			copy(head[start:start+4], t)
+			start = start + 4
+		}
+		_, err := io.ReadFull(config.rand(), head[start:38])
 		if err != nil {
 			return nil, errors.New("tls: short read from Rand: " + err.Error())
 		}
