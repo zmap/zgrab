@@ -218,19 +218,16 @@ func (c *Conn) clientHandshake() error {
 	var sessionCache ClientSessionCache
 	var cacheKey string
 
+	// first, let's check if a ClientFingerprintConfiguration template was provided by the config
 	if c.config.ClientFingerprintConfiguration != nil {
 		if err := c.config.ClientFingerprintConfiguration.WriteToConfig(c.config); err != nil {
 			return err
 		}
-	}
-
-	// first, let's check if a ClientFingerprintConfiguration template was provided by the config
-	if c.config.ClientFingerprintConfiguration != nil {
 		session = nil
 		sessionCache = c.config.ClientFingerprintConfiguration.SessionCache
 		if sessionCache != nil {
 			if c.config.ClientFingerprintConfiguration.CacheKey == nil {
-				return errors.New("Must specify CacheKey if SessionCache is defined in Config.ClientFingerprintConfiguration")
+				return errors.New("tls: must specify CacheKey if SessionCache is defined in Config.ClientFingerprintConfiguration")
 			}
 			cacheKey = c.config.ClientFingerprintConfiguration.CacheKey.Key(c.conn.RemoteAddr())
 			candidateSession, ok := sessionCache.Get(cacheKey)
@@ -278,7 +275,7 @@ func (c *Conn) clientHandshake() error {
 		}
 		hello = &clientHelloMsg{}
 		if ok := hello.unmarshal(helloBytes); !ok {
-			return errors.New("Incompatible Custom Client Fingerprint")
+			return errors.New("tls: incompatible ClientFingerprintConfiguration")
 		}
 
 		// next, let's check if a ClientHello template was provided by the user
