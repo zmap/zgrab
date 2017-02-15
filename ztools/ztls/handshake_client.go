@@ -247,15 +247,15 @@ func (c *Conn) clientHandshake() error {
 			}
 		}
 		for i, ext := range c.config.ClientFingerprintConfiguration.Extensions {
-			switch ext.(type) {
-			case SessionTicketExtension:
-				if ext.(SessionTicketExtension).Autopopulate {
+			switch casted := ext.(type) {
+			case *SessionTicketExtension:
+				if casted.Autopopulate {
 					if session == nil {
 						if !c.config.ForceSessionTicketExt {
-							c.config.ClientFingerprintConfiguration.Extensions[i] = NullExtension{}
+							c.config.ClientFingerprintConfiguration.Extensions[i] = &NullExtension{}
 						}
 					} else {
-						c.config.ClientFingerprintConfiguration.Extensions[i] = SessionTicketExtension{session.sessionTicket, true}
+						c.config.ClientFingerprintConfiguration.Extensions[i] = &SessionTicketExtension{session.sessionTicket, true}
 						if c.config.ClientFingerprintConfiguration.RandomSessionID > 0 {
 							c.config.ClientFingerprintConfiguration.SessionID = make([]byte, c.config.ClientFingerprintConfiguration.RandomSessionID)
 							if _, err := io.ReadFull(c.config.rand(), c.config.ClientFingerprintConfiguration.SessionID); err != nil {

@@ -8,29 +8,29 @@ import (
 type NullExtension struct {
 }
 
-func (e NullExtension) WriteToConfig(c *Config) error {
+func (e *NullExtension) WriteToConfig(c *Config) error {
 	return nil
 }
 
-func (e NullExtension) CheckImplemented() error {
+func (e *NullExtension) CheckImplemented() error {
 	return nil
 }
 
-func (e NullExtension) Marshal() []byte {
+func (e *NullExtension) Marshal() []byte {
 	return []byte{}
 }
 
-type SniExtension struct {
+type SNIExtension struct {
 	Domains      []string
 	Autopopulate bool
 }
 
-func (e SniExtension) WriteToConfig(c *Config) error {
+func (e *SNIExtension) WriteToConfig(c *Config) error {
 	if e.Autopopulate {
 		for i, ext := range c.ClientFingerprintConfiguration.Extensions {
 			switch ext.(type) {
-			case SniExtension:
-				c.ClientFingerprintConfiguration.Extensions[i] = SniExtension{
+			case *SNIExtension:
+				c.ClientFingerprintConfiguration.Extensions[i] = &SNIExtension{
 					Domains:      []string{c.ServerName},
 					Autopopulate: true,
 				}
@@ -47,11 +47,11 @@ func (e SniExtension) WriteToConfig(c *Config) error {
 	return nil
 }
 
-func (e SniExtension) CheckImplemented() error {
+func (e *SNIExtension) CheckImplemented() error {
 	return nil
 }
 
-func (e SniExtension) Marshal() []byte {
+func (e *SNIExtension) Marshal() []byte {
 	result := []byte{}
 	for _, domain := range e.Domains {
 		current := make([]byte, 2+len(domain))
@@ -80,16 +80,16 @@ type ALPNExtension struct {
 	Protocols []string
 }
 
-func (e ALPNExtension) WriteToConfig(c *Config) error {
+func (e *ALPNExtension) WriteToConfig(c *Config) error {
 	c.NextProtos = e.Protocols
 	return nil
 }
 
-func (e ALPNExtension) CheckImplemented() error {
+func (e *ALPNExtension) CheckImplemented() error {
 	return nil
 }
 
-func (e ALPNExtension) Marshal() []byte {
+func (e *ALPNExtension) Marshal() []byte {
 	result := []byte{}
 	for _, protocol := range e.Protocols {
 		current := make([]byte, 2+len(protocol))
@@ -116,15 +116,15 @@ func (e ALPNExtension) Marshal() []byte {
 type SecureRenegotiationExtension struct {
 }
 
-func (e SecureRenegotiationExtension) WriteToConfig(c *Config) error {
+func (e *SecureRenegotiationExtension) WriteToConfig(c *Config) error {
 	return nil
 }
 
-func (e SecureRenegotiationExtension) CheckImplemented() error {
+func (e *SecureRenegotiationExtension) CheckImplemented() error {
 	return nil
 }
 
-func (e SecureRenegotiationExtension) Marshal() []byte {
+func (e *SecureRenegotiationExtension) Marshal() []byte {
 	result := make([]byte, 5)
 	result[0] = byte(extensionRenegotiationInfo >> 8)
 	result[1] = byte(extensionRenegotiationInfo & 0xff)
@@ -137,16 +137,16 @@ func (e SecureRenegotiationExtension) Marshal() []byte {
 type ExtendedMasterSecretExtension struct {
 }
 
-func (e ExtendedMasterSecretExtension) WriteToConfig(c *Config) error {
+func (e *ExtendedMasterSecretExtension) WriteToConfig(c *Config) error {
 	c.ExtendedMasterSecret = true
 	return nil
 }
 
-func (e ExtendedMasterSecretExtension) CheckImplemented() error {
+func (e *ExtendedMasterSecretExtension) CheckImplemented() error {
 	return nil
 }
 
-func (e ExtendedMasterSecretExtension) Marshal() []byte {
+func (e *ExtendedMasterSecretExtension) Marshal() []byte {
 	result := make([]byte, 4)
 	result[0] = byte(extensionExtendedMasterSecret >> 8)
 	result[1] = byte(extensionExtendedMasterSecret & 0xff)
@@ -158,15 +158,15 @@ func (e ExtendedMasterSecretExtension) Marshal() []byte {
 type NextProtocolNegotiationExtension struct {
 }
 
-func (e NextProtocolNegotiationExtension) WriteToConfig(c *Config) error {
+func (e *NextProtocolNegotiationExtension) WriteToConfig(c *Config) error {
 	return nil
 }
 
-func (e NextProtocolNegotiationExtension) CheckImplemented() error {
+func (e *NextProtocolNegotiationExtension) CheckImplemented() error {
 	return nil
 }
 
-func (e NextProtocolNegotiationExtension) Marshal() []byte {
+func (e *NextProtocolNegotiationExtension) Marshal() []byte {
 	result := make([]byte, 4)
 	result[0] = byte(extensionNextProtoNeg >> 8)
 	result[1] = byte(extensionNextProtoNeg & 0xff)
@@ -178,15 +178,15 @@ func (e NextProtocolNegotiationExtension) Marshal() []byte {
 type StatusRequestExtension struct {
 }
 
-func (e StatusRequestExtension) WriteToConfig(c *Config) error {
+func (e *StatusRequestExtension) WriteToConfig(c *Config) error {
 	return nil
 }
 
-func (e StatusRequestExtension) CheckImplemented() error {
+func (e *StatusRequestExtension) CheckImplemented() error {
 	return nil
 }
 
-func (e StatusRequestExtension) Marshal() []byte {
+func (e *StatusRequestExtension) Marshal() []byte {
 	result := make([]byte, 9)
 	result[0] = byte(extensionStatusRequest >> 8)
 	result[1] = byte(extensionStatusRequest & 0xff)
@@ -203,16 +203,16 @@ func (e StatusRequestExtension) Marshal() []byte {
 type SCTExtension struct {
 }
 
-func (e SCTExtension) WriteToConfig(c *Config) error {
+func (e *SCTExtension) WriteToConfig(c *Config) error {
 	c.SignedCertificateTimestampExt = true
 	return nil
 }
 
-func (e SCTExtension) CheckImplemented() error {
+func (e *SCTExtension) CheckImplemented() error {
 	return nil
 }
 
-func (e SCTExtension) Marshal() []byte {
+func (e *SCTExtension) Marshal() []byte {
 	result := make([]byte, 4)
 	result[0] = byte(extensionSCT >> 8)
 	result[1] = byte(extensionSCT & 0xff)
@@ -225,16 +225,27 @@ type SupportedCurvesExtension struct {
 	Curves []CurveID
 }
 
-func (e SupportedCurvesExtension) WriteToConfig(c *Config) error {
+func (e *SupportedCurvesExtension) WriteToConfig(c *Config) error {
 	c.CurvePreferences = e.Curves
 	return nil
 }
 
-func (e SupportedCurvesExtension) CheckImplemented() error {
+func (e *SupportedCurvesExtension) CheckImplemented() error {
+	for _, curve := range e.Curves {
+		found := false
+		for _, supported := range defaultCurvePreferences {
+			if curve == supported {
+				found = true
+			}
+		}
+		if !found {
+			return fmt.Errorf("Unsupported CurveID %d", curve)
+		}
+	}
 	return nil
 }
 
-func (e SupportedCurvesExtension) Marshal() []byte {
+func (e *SupportedCurvesExtension) Marshal() []byte {
 	result := make([]byte, 6+2*len(e.Curves))
 	result[0] = byte(extensionSupportedCurves >> 8)
 	result[1] = byte(extensionSupportedCurves & 0xff)
@@ -253,20 +264,20 @@ type PointFormatExtension struct {
 	Formats []uint8
 }
 
-func (e PointFormatExtension) WriteToConfig(c *Config) error {
+func (e *PointFormatExtension) WriteToConfig(c *Config) error {
 	return nil
 }
 
-func (e PointFormatExtension) CheckImplemented() error {
+func (e *PointFormatExtension) CheckImplemented() error {
 	for _, format := range e.Formats {
 		if format != pointFormatUncompressed {
-			return errors.New(fmt.Sprintf("Unsupported EC Point Format %d", format))
+			return fmt.Errorf("Unsupported EC Point Format %d", format)
 		}
 	}
 	return nil
 }
 
-func (e PointFormatExtension) Marshal() []byte {
+func (e *PointFormatExtension) Marshal() []byte {
 	result := make([]byte, 5+len(e.Formats))
 	result[0] = byte(extensionSupportedPoints >> 8)
 	result[1] = byte(extensionSupportedPoints & 0xff)
@@ -284,16 +295,16 @@ type SessionTicketExtension struct {
 	Autopopulate bool
 }
 
-func (e SessionTicketExtension) WriteToConfig(c *Config) error {
+func (e *SessionTicketExtension) WriteToConfig(c *Config) error {
 	c.ForceSessionTicketExt = true
 	return nil
 }
 
-func (e SessionTicketExtension) CheckImplemented() error {
+func (e *SessionTicketExtension) CheckImplemented() error {
 	return nil
 }
 
-func (e SessionTicketExtension) Marshal() []byte {
+func (e *SessionTicketExtension) Marshal() []byte {
 	result := make([]byte, 4+len(e.Ticket))
 	result[0] = byte(extensionSessionTicket >> 8)
 	result[1] = byte(extensionSessionTicket & 0xff)
@@ -309,15 +320,15 @@ type HeartbeatExtension struct {
 	Mode byte
 }
 
-func (e HeartbeatExtension) WriteToConfig(c *Config) error {
+func (e *HeartbeatExtension) WriteToConfig(c *Config) error {
 	return nil
 }
 
-func (e HeartbeatExtension) CheckImplemented() error {
+func (e *HeartbeatExtension) CheckImplemented() error {
 	return nil
 }
 
-func (e HeartbeatExtension) Marshal() []byte {
+func (e *HeartbeatExtension) Marshal() []byte {
 	result := make([]byte, 5)
 	result[0] = byte(extensionHeartbeat >> 8)
 	result[1] = byte(extensionHeartbeat & 0xff)
@@ -331,13 +342,13 @@ type SignatureAlgorithmExtension struct {
 	SignatureAndHashes []uint16
 }
 
-func (e SignatureAlgorithmExtension) WriteToConfig(c *Config) error {
+func (e *SignatureAlgorithmExtension) WriteToConfig(c *Config) error {
 	supportedSKXSignatureAlgorithms = e.getStructuredAlgorithms()
 	defaultSKXSignatureAlgorithms = e.getStructuredAlgorithms()
 	return nil
 }
 
-func (e SignatureAlgorithmExtension) CheckImplemented() error {
+func (e *SignatureAlgorithmExtension) CheckImplemented() error {
 	for _, algs := range e.getStructuredAlgorithms() {
 		found := false
 		for _, supported := range supportedSKXSignatureAlgorithms {
@@ -353,7 +364,7 @@ func (e SignatureAlgorithmExtension) CheckImplemented() error {
 	return nil
 }
 
-func (e SignatureAlgorithmExtension) getStructuredAlgorithms() []signatureAndHash {
+func (e *SignatureAlgorithmExtension) getStructuredAlgorithms() []signatureAndHash {
 	result := make([]signatureAndHash, len(e.SignatureAndHashes))
 	for i, alg := range e.SignatureAndHashes {
 		result[i].hash = uint8(alg >> 8)
@@ -362,7 +373,7 @@ func (e SignatureAlgorithmExtension) getStructuredAlgorithms() []signatureAndHas
 	return result
 }
 
-func (e SignatureAlgorithmExtension) Marshal() []byte {
+func (e *SignatureAlgorithmExtension) Marshal() []byte {
 	result := make([]byte, 6+2*len(e.SignatureAndHashes))
 	result[0] = byte(extensionSignatureAlgorithms >> 8)
 	result[1] = byte(extensionSignatureAlgorithms & 0xff)
