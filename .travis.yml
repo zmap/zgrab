@@ -1,11 +1,18 @@
+sudo: required
+dist: trusty
 language: go
 go:
-- 1.7.4
+  - 1.7.4
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq python-pip
 install:
-- go get ./...
-- go get -t ./...
+  - go get ./...
+  - go get -t ./...
+  - pip install -U zschema
 script:
   - go test -v ./...
+  - python zgrab_schema.py
 notifications:
   email:
   - zmap-devel@umich.edu
