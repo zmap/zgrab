@@ -30,9 +30,13 @@ func (e *SNIExtension) WriteToConfig(c *Config) error {
 		for i, ext := range c.ClientFingerprintConfiguration.Extensions {
 			switch ext.(type) {
 			case *SNIExtension:
-				c.ClientFingerprintConfiguration.Extensions[i] = &SNIExtension{
-					Domains:      []string{c.ServerName},
-					Autopopulate: true,
+				if c.ServerName == "" {
+					c.ClientFingerprintConfiguration.Extensions[i] = &NullExtension{}
+				} else {
+					c.ClientFingerprintConfiguration.Extensions[i] = &SNIExtension{
+						Domains:      []string{c.ServerName},
+						Autopopulate: true,
+					}
 				}
 			default:
 				continue
@@ -92,10 +96,9 @@ func (e *ALPNExtension) CheckImplemented() error {
 func (e *ALPNExtension) Marshal() []byte {
 	result := []byte{}
 	for _, protocol := range e.Protocols {
-		current := make([]byte, 2+len(protocol))
-		copy(current[2:], []byte(protocol))
-		current[0] = uint8(len(protocol) >> 8)
-		current[1] = uint8(len(protocol))
+		current := make([]byte, 1+len(protocol))
+		copy(current[1:], []byte(protocol))
+		current[0] = uint8(len(protocol))
 		result = append(result, current...)
 	}
 	alpnHeader := make([]byte, 2)
