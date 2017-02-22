@@ -454,6 +454,12 @@ func (c *Conn) SMTPHelp() error {
 	return err
 }
 
+func (c *Conn) SMTPQuit() error {
+	cmd := []byte("QUIT\r\n")
+	_, err := c.getUnderlyingConn().Write(cmd)
+	return err
+}
+
 func (c *Conn) readPop3Response(res []byte) (int, error) {
 	return util.ReadUntilRegex(c.getUnderlyingConn(), res, pop3EndRegex)
 }
@@ -464,6 +470,12 @@ func (c *Conn) POP3Banner(b []byte) (int, error) {
 	return n, err
 }
 
+func (c *Conn) POP3Quit() error {
+	cmd := []byte("QUIT\r\n")
+	_, err := c.getUnderlyingConn().Write(cmd)
+	return err
+}
+
 func (c *Conn) readImapStatusResponse(res []byte) (int, error) {
 	return util.ReadUntilRegex(c.getUnderlyingConn(), res, imapStatusEndRegex)
 }
@@ -472,6 +484,12 @@ func (c *Conn) IMAPBanner(b []byte) (int, error) {
 	n, err := c.readImapStatusResponse(b)
 	c.grabData.Banner = string(b[0:n])
 	return n, err
+}
+
+func (c *Conn) IMAPQuit() error {
+	cmd := []byte("a001 CLOSE\r\n")
+	_, err := c.getUnderlyingConn().Write(cmd)
+	return err
 }
 
 func (c *Conn) CheckHeartbleed(b []byte) (int, error) {
