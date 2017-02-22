@@ -516,14 +516,17 @@ func makeGrabber(config *Config) func(*Conn) error {
 
 		if config.SMTP {
 			if err := c.SMTPQuit(); err != nil {
+				c.erroredComponent = "quit"
 				return err
 			}
 		} else if config.POP3 {
 			if err := c.POP3Quit(); err != nil {
+				c.erroredComponent = "quit"
 				return err
 			}
 		} else if config.IMAP {
 			if err := c.IMAPQuit(); err != nil {
+				c.erroredComponent = "quit"
 				return err
 			}
 		}
