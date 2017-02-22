@@ -514,21 +514,20 @@ func makeGrabber(config *Config) func(*Conn) error {
 			}
 		}
 
-		if config.Banners {
-			if config.SMTP {
-				if err := c.SMTPQuit(); err != nil {
-					return err
-				}
-			} else if config.POP3 {
-				if err := c.POP3Quit(); err != nil {
-					return err
-				}
-			} else if config.IMAP {
-				if err := c.IMAPQuit(); err != nil {
-					return err
-				}
+		if config.SMTP {
+			if err := c.SMTPQuit(); err != nil {
+				return err
+			}
+		} else if config.POP3 {
+			if err := c.POP3Quit(); err != nil {
+				return err
+			}
+		} else if config.IMAP {
+			if err := c.IMAPQuit(); err != nil {
+				return err
 			}
 		}
+
 		if config.Modbus {
 			if _, err := c.SendModbusEcho(); err != nil {
 				c.erroredComponent = "modbus"
