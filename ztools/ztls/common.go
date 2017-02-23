@@ -461,20 +461,48 @@ func (c *Config) Clone() *Config {
 }
 
 func (c *Config) serverInit() {
-	if c.SessionTicketsDisabled {
+	if c.SessionTicketsDisabled || len(c.ticketKeys()) != 0 {
 		return
 	}
 
-	// If the key has already been set then we have nothing to do.
+	var originalConfig *Config
+	c.mutex.Lock()
+	originalConfig, c.originalConfig = c.originalConfig, nil
+	c.mutex.Unlock()
+
+	alreadySet := false
 	for _, b := range c.SessionTicketKey {
 		if b != 0 {
+			alreadySet = true
+			break
+		}
+	}
+
+	if !alreadySet {
+		if originalConfig != nil {
+			copy(c.SessionTicketKey[:], originalConfig.SessionTicketKey[:])
+		} else if _, err := io.ReadFull(c.rand(), c.SessionTicketKey[:]); err != nil {
+			c.SessionTicketsDisabled = true
 			return
 		}
 	}
 
-	if _, err := io.ReadFull(c.rand(), c.SessionTicketKey[:]); err != nil {
-		c.SessionTicketsDisabled = true
+	if originalConfig != nil {
+		originalConfig.mutex.RLock()
+		c.sessionTicketKeys = originalConfig.sessionTicketKeys
+		originalConfig.mutex.RUnlock()
+	} else {
+		c.sessionTicketKeys = []ticketKey{ticketKeyFromBytes(c.SessionTicketKey)}
 	}
+}
+
+func (c *Config) ticketKeys() []ticketKey {
+	c.mutex.RLock()
+	// c.sessionTicketKeys is constant once created. SetSessionTicketKeys
+	// will only update it by replacing it with a new value.
+	ret := c.sessionTicketKeys
+	c.mutex.RUnlock()
+	return ret
 }
 
 func (c *Config) rand() io.Reader {
