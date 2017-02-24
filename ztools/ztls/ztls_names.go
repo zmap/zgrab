@@ -9,6 +9,7 @@ import "strconv"
 var signatureNames map[uint8]string
 var hashNames map[uint8]string
 var cipherSuiteNames map[int]string
+var compressionNames map[uint8]string
 
 func init() {
 	signatureNames = make(map[uint8]string, 8)
@@ -380,6 +381,12 @@ func init() {
 	cipherSuiteNames[0xFF83] = "SSL_RSA_WITH_3DES_EDE_CBC_MD5"
 	cipherSuiteNames[0xFF03] = "SSL_EN_RC2_128_CBC_WITH_MD5"
 	cipherSuiteNames[0xFF85] = "OP_PCL_TLS10_AES_128_CBC_SHA512"
+
+	// https://www.iana.org/assignments/comp-meth-ids/comp-meth-ids.xhtml#comp-meth-ids-2
+	compressionNames = make(map[uint8]string)
+	compressionNames[0] = "NULL"
+	compressionNames[1] = "DEFLATE"
+	compressionNames[64] = "LZS"
 }
 
 func nameForSignature(s uint8) string {
@@ -411,6 +418,18 @@ func (cs CipherSuite) String() string {
 		return name
 	}
 	return "unknown"
+}
+
+func (cm CompressionMethod) String() string {
+	if name, ok := compressionNames[uint8(cm)]; ok {
+		return name
+	}
+	return "unknown"
+}
+
+func nameForCompressionMethod(cm uint8) string {
+	compressionMethod := CompressionMethod(cm)
+	return compressionMethod.String()
 }
 
 func (v TLSVersion) Bytes() []byte {
