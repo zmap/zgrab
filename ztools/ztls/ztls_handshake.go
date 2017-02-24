@@ -41,11 +41,11 @@ type ClientHello struct {
 	NextProtoNeg         bool                `json:"next_protocol_negotiation"`
 	ServerName           string              `json:"server_name,omitempty"`
 	Scts                 bool                `json:"scts"`
+	SupportedCurves      []CurveID           `json:"supported_curves,omitempty"`
+	SupportedPoints      []PointFormat       `json:"supported_point_formats,omitempty"`
 
 	// Need logging added
 
-	SupportedCurves    []CurveID          `json:"supported_curves,omitempty"`
-	SupportedPoints    []uint8            `json:"supported_points,omitempty"`
 	SessionTicket      []uint8            `json:"session_ticket,omitempty"`
 	SignatureAndHashes []signatureAndHash `json:"signature_and_hashes,omitempty"`
 	SctEnabled         bool               `json:"sct_enabled"`
@@ -300,6 +300,19 @@ func (m *clientHelloMsg) MakeLog() *ClientHello {
 	ch.NextProtoNeg = m.nextProtoNeg
 	ch.ServerName = m.serverName
 	ch.Scts = m.scts
+
+	ch.SupportedCurves = make([]CurveID, len(m.supportedCurves))
+	copy(ch.SupportedCurves, m.supportedCurves)
+
+	ch.SupportedPoints = make([]PointFormat, len(m.supportedPoints))
+	for i, aFormat := range m.supportedPoints {
+		ch.SupportedPoints[i] = PointFormat(aFormat)
+	}
+
+	//SessionTicket      []uint8            `json:"session_ticket,omitempty"`
+	//SignatureAndHashes []signatureAndHash `json:"signature_and_hashes,omitempty"`
+	//SctEnabled         bool               `json:"sct_enabled"`
+	//AlpnProtocols      []string           `json:"alpn_protocols,omitempty"`
 
 	ch.UnknownExtensions = make([][]byte, len(m.unknownExtensions))
 	for i, extBytes := range m.unknownExtensions {
