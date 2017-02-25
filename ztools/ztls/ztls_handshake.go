@@ -24,8 +24,6 @@ type TLSVersion uint16
 
 type CipherSuite uint16
 
-type CompressionMethod uint8
-
 type ClientHello struct {
 	Version              TLSVersion          `json:"version"`
 	Random               []byte              `json:"random"`
@@ -208,6 +206,8 @@ func (cs *CipherSuite) UnmarshalJSON(b []byte) error {
 	*cs = CipherSuite(aux.Value)
 	return nil
 }
+
+type CompressionMethod uint8
 
 func (cm *CompressionMethod) MarshalJSON() ([]byte, error) {
 	buf := make([]byte, 1)
