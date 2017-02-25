@@ -369,6 +369,8 @@ func (ka *signedKeyAgreement) signParameters(config *Config, cert *Certificate, 
 	k[0] = byte(len(sig) >> 8)
 	k[1] = byte(len(sig))
 	copy(k[2:], sig)
+	ka.raw = sig
+	ka.valid = true // We (the server) signed
 	return skx, nil
 }
 
