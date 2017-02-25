@@ -419,6 +419,7 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 		c.sendAlert(alertHandshakeFailure)
 		return err
 	}
+	c.handshakeLog.ClientKeyExchange = ckx.MakeLog(keyAgreement)
 
 	hs.preMasterSecret = make([]byte, len(preMasterSecret))
 	copy(hs.preMasterSecret, preMasterSecret)
