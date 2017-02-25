@@ -469,6 +469,7 @@ type ecdheKeyAgreement struct {
 	verifyError   error
 	curveID       uint16
 	clientPrivKey []byte
+	serverPrivKey []byte
 	clientX       *big.Int
 	clientY       *big.Int
 }
@@ -503,6 +504,9 @@ NextCandidate:
 		return nil, err
 	}
 	ecdhePublic := elliptic.Marshal(ka.curve, ka.x, ka.y)
+
+	ka.serverPrivKey = make([]byte, len(ka.privateKey))
+	copy(ka.serverPrivKey, ka.privateKey)
 
 	// http://tools.ietf.org/html/rfc4492#section-5.4
 	serverECDHParams := make([]byte, 1+2+1+len(ecdhePublic))

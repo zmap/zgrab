@@ -61,6 +61,12 @@ func (ka *ecdheKeyAgreement) ECDHParams() *keys.ECDHParams {
 		out.ServerPublic.Y = new(big.Int)
 		out.ServerPublic.Y.Set(ka.y)
 	}
+	if len(ka.serverPrivKey) > 0 {
+		out.ServerPrivate = new(keys.ECDHPrivateParams)
+		out.ServerPrivate.Length = len(ka.serverPrivKey)
+		out.ServerPrivate.Value = make([]byte, len(ka.serverPrivKey))
+		copy(out.ServerPrivate.Value, ka.serverPrivKey)
+	}
 	return out
 }
 
