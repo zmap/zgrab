@@ -43,8 +43,8 @@ type ClientHello struct {
 	Scts                 bool                `json:"scts"`
 	SupportedCurves      []CurveID           `json:"supported_curves,omitempty"`
 	SupportedPoints      []PointFormat       `json:"supported_point_formats,omitempty"`
-	SessionTicket        []uint8             `json:"session_ticket,omitempty"`
-	SignatureAndHashes   []signatureAndHash  `json:"signature_and_hashes,omitempty"`
+	SessionTicket        *SessionTicket      `json:"session_ticket,omitempty"`
+	SignatureAndHashes   []SignatureAndHash  `json:"signature_and_hashes,omitempty"`
 	SctEnabled           bool                `json:"sct_enabled"`
 	AlpnProtocols        []string            `json:"alpn_protocols,omitempty"`
 	UnknownExtensions    [][]byte            `json:"unknown_extensions,omitempty"`
@@ -305,10 +305,22 @@ func (m *clientHelloMsg) MakeLog() *ClientHello {
 		ch.SupportedPoints[i] = PointFormat(aFormat)
 	}
 
-	//SessionTicket      []uint8            `json:"session_ticket,omitempty"`
-	//SignatureAndHashes []signatureAndHash `json:"signature_and_hashes,omitempty"`
-	//SctEnabled         bool               `json:"sct_enabled"`
-	//AlpnProtocols      []string           `json:"alpn_protocols,omitempty"`
+	if len(m.sessionTicket) > 0 {
+		ch.SessionTicket = new(SessionTicket)
+		copy(ch.SessionTicket.Value, m.sessionTicket)
+		ch.SessionTicket.Length = len(m.sessionTicket)
+		ch.SessionTicket.LifetimeHint = 0 // Clients don't send
+	}
+
+	ch.SignatureAndHashes = make([]SignatureAndHash, len(m.signatureAndHashes))
+	for i, aGroup := range m.signatureAndHashes {
+		ch.SignatureAndHashes[i] = SignatureAndHash(aGroup)
+	}
+
+	ch.SctEnabled = m.sctEnabled
+
+	ch.AlpnProtocols = make([]string, len(m.alpnProtocols))
+	copy(ch.AlpnProtocols, m.alpnProtocols)
 
 	ch.UnknownExtensions = make([][]byte, len(m.unknownExtensions))
 	for i, extBytes := range m.unknownExtensions {

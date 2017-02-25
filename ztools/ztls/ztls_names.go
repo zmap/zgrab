@@ -432,6 +432,7 @@ func init() {
 
 	// https://www.iana.org/assignments/tls-parameters/tls-parameters.xml#tls-parameters-9
 	pointFormatNames = make(map[uint8]string)
+	pointFormatNames[0] = "uncompressed"
 	pointFormatNames[1] = "ansiX962_compressed_prime"
 	pointFormatNames[2] = "ansiX962_compressed_char2"
 }
