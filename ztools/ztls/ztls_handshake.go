@@ -43,15 +43,11 @@ type ClientHello struct {
 	Scts                 bool                `json:"scts"`
 	SupportedCurves      []CurveID           `json:"supported_curves,omitempty"`
 	SupportedPoints      []PointFormat       `json:"supported_point_formats,omitempty"`
-
-	// Need logging added
-
-	SessionTicket      []uint8            `json:"session_ticket,omitempty"`
-	SignatureAndHashes []signatureAndHash `json:"signature_and_hashes,omitempty"`
-	SctEnabled         bool               `json:"sct_enabled"`
-	AlpnProtocols      []string           `json:"alpn_protocols,omitempty"`
-
-	UnknownExtensions [][]byte `json:"unknown_extensions,omitempty"`
+	SessionTicket        []uint8             `json:"session_ticket,omitempty"`
+	SignatureAndHashes   []signatureAndHash  `json:"signature_and_hashes,omitempty"`
+	SctEnabled           bool                `json:"sct_enabled"`
+	AlpnProtocols        []string            `json:"alpn_protocols,omitempty"`
+	UnknownExtensions    [][]byte            `json:"unknown_extensions,omitempty"`
 }
 
 type ParsedAndRawSCT struct {
