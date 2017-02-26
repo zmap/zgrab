@@ -359,6 +359,10 @@ type Config struct {
 	// Explicitly set ClientHello with raw data
 	ExternalClientHello []byte
 
+	// If non-null specifies the contents of the client-hello
+	// WARNING: Setting this may invalidate other fields in the Config object
+	ClientFingerprintConfiguration *ClientFingerprintConfiguration
+
 	// GetConfigForClient, if not nil, is called after a ClientHello is
 	// received from a client. It may return a non-nil Config in order to
 	// change the Config that will be used to handle this connection. If
@@ -429,26 +433,27 @@ func (c *Config) Clone() *Config {
 	c.mutex.RUnlock()
 
 	return &Config{
-		Rand:                     c.Rand,
-		Time:                     c.Time,
-		Certificates:             c.Certificates,
-		NameToCertificate:        c.NameToCertificate,
-		GetConfigForClient:       c.GetConfigForClient,
-		RootCAs:                  c.RootCAs,
-		NextProtos:               c.NextProtos,
-		ServerName:               c.ServerName,
-		ClientAuth:               c.ClientAuth,
-		ClientCAs:                c.ClientCAs,
-		InsecureSkipVerify:       c.InsecureSkipVerify,
-		CipherSuites:             c.CipherSuites,
-		PreferServerCipherSuites: c.PreferServerCipherSuites,
-		SessionTicketsDisabled:   c.SessionTicketsDisabled,
-		SessionTicketKey:         c.SessionTicketKey,
-		ClientSessionCache:       c.ClientSessionCache,
-		MinVersion:               c.MinVersion,
-		MaxVersion:               c.MaxVersion,
-		CurvePreferences:         c.CurvePreferences,
-		sessionTicketKeys:        sessionTicketKeys,
+		Rand:                           c.Rand,
+		Time:                           c.Time,
+		Certificates:                   c.Certificates,
+		NameToCertificate:              c.NameToCertificate,
+		GetConfigForClient:             c.GetConfigForClient,
+		RootCAs:                        c.RootCAs,
+		NextProtos:                     c.NextProtos,
+		ServerName:                     c.ServerName,
+		ClientAuth:                     c.ClientAuth,
+		ClientCAs:                      c.ClientCAs,
+		InsecureSkipVerify:             c.InsecureSkipVerify,
+		CipherSuites:                   c.CipherSuites,
+		PreferServerCipherSuites:       c.PreferServerCipherSuites,
+		SessionTicketsDisabled:         c.SessionTicketsDisabled,
+		SessionTicketKey:               c.SessionTicketKey,
+		ClientSessionCache:             c.ClientSessionCache,
+		MinVersion:                     c.MinVersion,
+		MaxVersion:                     c.MaxVersion,
+		CurvePreferences:               c.CurvePreferences,
+		sessionTicketKeys:              sessionTicketKeys,
+		ClientFingerprintConfiguration: c.ClientFingerprintConfiguration,
 		// originalConfig is deliberately not duplicated.
 
 		// Not merged from upstream:

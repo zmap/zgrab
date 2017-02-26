@@ -154,6 +154,7 @@ func (m *clientHelloMsg) marshal() []byte {
 	x[38] = uint8(len(m.sessionId))
 	copy(x[39:39+len(m.sessionId)], m.sessionId)
 	y := x[39+len(m.sessionId):]
+	// This is a clever way to store the lower 16 bits of 2*len(m.cipherSuites)
 	y[0] = uint8(len(m.cipherSuites) >> 7)
 	y[1] = uint8(len(m.cipherSuites) << 1)
 	for i, suite := range m.cipherSuites {
