@@ -439,3 +439,65 @@ func TestLRUClientSessionCache(t *testing.T) {
 		t.Fatalf("failed to add nil entry to cache")
 	}
 }
+
+// Test the custom client hello feature by imitating a Firefox ClientHello message
+func TestHandshakeClientCustomHello(t *testing.T) {
+	hello := ClientFingerprintConfiguration{}
+	hello.HandshakeVersion = 0x0303
+
+	hello.CipherSuites = []uint16{
+		TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+		TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+		TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+		TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+		TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+		TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+		TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+		TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+		TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+		TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+		TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
+		TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
+		TLS_RSA_WITH_AES_128_CBC_SHA,
+		TLS_RSA_WITH_AES_256_CBC_SHA,
+		TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+	}
+	hello.CompressionMethods = []uint8{0}
+	sni := SNIExtension{[]string{}, true}
+	ec := SupportedCurvesExtension{[]CurveID{CurveP256, CurveP384, CurveP521}}
+	points := PointFormatExtension{[]uint8{0}}
+	st := SessionTicketExtension{[]byte{}, true}
+	alpn := ALPNExtension{[]string{"h2", "http/1.1"}}
+	sigs := SignatureAlgorithmExtension{[]uint16{0x0401,
+		0x0501,
+		0x0601,
+		0x0201,
+		0x0403,
+		0x0503,
+		0x0603,
+		0x0203,
+		0x0502,
+		0x0402,
+		0x0202,
+	}}
+
+	hello.Extensions = []ClientExtension{&sni,
+		&ExtendedMasterSecretExtension{},
+		&SecureRenegotiationExtension{},
+		&ec,
+		&points,
+		&st,
+		&NextProtocolNegotiationExtension{},
+		&alpn,
+		&StatusRequestExtension{},
+		&sigs,
+	}
+	config := *testConfig
+	config.ClientFingerprintConfiguration = &hello
+	test := &clientTest{
+		name:    "ClientFingerprint",
+		command: []string{"openssl", "s_server"},
+		config:  &config,
+	}
+	runClientTestTLS12(t, test)
+}

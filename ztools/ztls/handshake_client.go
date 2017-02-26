@@ -11,12 +11,14 @@ import (
 	"crypto/rsa"
 	"crypto/subtle"
 	"encoding/asn1"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"math/big"
 	"net"
 	"strconv"
+	"time"
 
 	"github.com/zmap/zgrab/ztools/x509"
 )
@@ -32,19 +34,252 @@ type clientHandshakeState struct {
 	session         *ClientSessionState
 }
 
+type CacheKeyGenerator interface {
+	Key(net.Addr) string
+}
+
+type ClientFingerprintConfiguration struct {
+	// Version in the handshake header
+	HandshakeVersion uint16
+
+	// if len == 32, it will specify the client random.
+	// Otherwise, the field will be random
+	// except the top 4 bytes if InsertTimestamp is true
+	ClientRandom    []byte
+	InsertTimestamp bool
+
+	// if RandomSessionID > 0, will overwrite SessionID w/ that many
+	// random bytes when a session resumption occurs
+	RandomSessionID int
+	SessionID       []byte
+
+	// These fields will appear exactly in order in the ClientHello
+	CipherSuites       []uint16
+	CompressionMethods []uint8
+	Extensions         []ClientExtension
+
+	// Optional, both must be non-nil, or neither.
+	// Custom Session cache implementations allowed
+	SessionCache ClientSessionCache
+	CacheKey     CacheKeyGenerator
+}
+
+type ClientExtension interface {
+	// Produce the bytes on the wire for this extension, type and length included
+	Marshal() []byte
+
+	// Function will return an error if zTLS does not implement the necessary features for this extension
+	CheckImplemented() error
+
+	// Modifies the config to reflect the state of the extension
+	WriteToConfig(*Config) error
+}
+
+func (c *ClientFingerprintConfiguration) CheckImplementedExtensions() error {
+	for _, ext := range c.Extensions {
+		if err := ext.CheckImplemented(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *ClientFingerprintConfiguration) WriteToConfig(config *Config) error {
+	config.NextProtos = []string{}
+	config.CipherSuites = c.CipherSuites
+	config.MaxVersion = c.HandshakeVersion
+	config.ClientRandom = c.ClientRandom
+	config.CurvePreferences = []CurveID{}
+	config.HeartbeatEnabled = false
+	config.ExtendedRandom = false
+	config.ForceSessionTicketExt = false
+	config.ExtendedMasterSecret = false
+	config.SignedCertificateTimestampExt = false
+	for _, ext := range c.Extensions {
+		if err := ext.WriteToConfig(config); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func currentTimestamp() ([]byte, error) {
+	t := time.Now().Unix()
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.BigEndian, t)
+	return buf.Bytes(), err
+}
+
+func (c *ClientFingerprintConfiguration) marshal(config *Config) ([]byte, error) {
+	if err := c.CheckImplementedExtensions(); err != nil {
+		return nil, err
+	}
+	head := make([]byte, 38)
+	head[0] = 1
+	head[4] = uint8(c.HandshakeVersion >> 8)
+	head[5] = uint8(c.HandshakeVersion)
+	if len(c.ClientRandom) == 32 {
+		copy(head[6:38], c.ClientRandom[0:32])
+	} else {
+		start := 6
+		if c.InsertTimestamp {
+			t, err := currentTimestamp()
+			if err != nil {
+				return nil, err
+			}
+			copy(head[start:start+4], t)
+			start = start + 4
+		}
+		_, err := io.ReadFull(config.rand(), head[start:38])
+		if err != nil {
+			return nil, errors.New("tls: short read from Rand: " + err.Error())
+		}
+	}
+
+	if len(c.SessionID) >= 256 {
+		return nil, errors.New("tls: SessionID too long")
+	}
+	sessionID := make([]byte, len(c.SessionID)+1)
+	sessionID[0] = uint8(len(c.SessionID))
+	if len(c.SessionID) > 0 {
+		copy(sessionID[1:], c.SessionID)
+	}
+
+	ciphers := make([]byte, 2+2*len(c.CipherSuites))
+	ciphers[0] = uint8(len(c.CipherSuites) >> 7)
+	ciphers[1] = uint8(len(c.CipherSuites) << 1)
+	for i, suite := range c.CipherSuites {
+		if !config.ForceSuites {
+			found := false
+			for _, impl := range implementedCipherSuites {
+				if impl.id == suite {
+					found = true
+				}
+			}
+			if !found {
+				return nil, errors.New(fmt.Sprintf("tls: unimplemented cipher suite %d", suite))
+			}
+		}
+
+		ciphers[2+i*2] = uint8(suite >> 8)
+		ciphers[3+i*2] = uint8(suite)
+	}
+
+	if len(c.CompressionMethods) >= 256 {
+		return nil, errors.New("tls: Too many compression methods")
+	}
+	compressions := make([]byte, len(c.CompressionMethods)+1)
+	compressions[0] = uint8(len(c.CompressionMethods))
+	if len(c.CompressionMethods) > 0 {
+		copy(compressions[1:], c.CompressionMethods)
+		if c.CompressionMethods[0] != 0 {
+			return nil, errors.New(fmt.Sprintf("tls: unimplemented compression method %d", c.CompressionMethods[0]))
+		}
+		if len(c.CompressionMethods) > 1 {
+			return nil, errors.New(fmt.Sprintf("tls: unimplemented compression method %d", c.CompressionMethods[1]))
+		}
+	} else {
+		return nil, errors.New("tls: no compression method")
+	}
+
+	var extensions []byte
+	for _, ext := range c.Extensions {
+		extensions = append(extensions, ext.Marshal()...)
+	}
+	if len(extensions) > 0 {
+		length := make([]byte, 2)
+		length[0] = uint8(len(extensions) >> 8)
+		length[1] = uint8(len(extensions))
+		extensions = append(length, extensions...)
+	}
+	helloArray := [][]byte{head, sessionID, ciphers, compressions, extensions}
+	hello := []byte{}
+	for _, b := range helloArray {
+		hello = append(hello, b...)
+	}
+	lengthOnTheWire := len(hello) - 4
+	if lengthOnTheWire >= 1<<24 {
+		return nil, errors.New("ClientHello message too long")
+	}
+	hello[1] = uint8(lengthOnTheWire >> 16)
+	hello[2] = uint8(lengthOnTheWire >> 8)
+	hello[3] = uint8(lengthOnTheWire)
+
+	return hello, nil
+}
+
 func (c *Conn) clientHandshake() error {
 	if c.config == nil {
 		c.config = defaultConfig()
 	}
-
 	var hello *clientHelloMsg
-
+	var helloBytes []byte
 	var session *ClientSessionState
 	var sessionCache ClientSessionCache
 	var cacheKey string
 
-	// first, let's check if a ClientHello template was provided by the user
-	if c.config.ExternalClientHello != nil {
+	// first, let's check if a ClientFingerprintConfiguration template was provided by the config
+	if c.config.ClientFingerprintConfiguration != nil {
+		if err := c.config.ClientFingerprintConfiguration.WriteToConfig(c.config); err != nil {
+			return err
+		}
+		session = nil
+		sessionCache = c.config.ClientFingerprintConfiguration.SessionCache
+		if sessionCache != nil {
+			if c.config.ClientFingerprintConfiguration.CacheKey == nil {
+				return errors.New("tls: must specify CacheKey if SessionCache is defined in Config.ClientFingerprintConfiguration")
+			}
+			cacheKey = c.config.ClientFingerprintConfiguration.CacheKey.Key(c.conn.RemoteAddr())
+			candidateSession, ok := sessionCache.Get(cacheKey)
+			if ok {
+				cipherSuiteOk := false
+				for _, id := range c.config.ClientFingerprintConfiguration.CipherSuites {
+					if id == candidateSession.cipherSuite {
+						cipherSuiteOk = true
+						break
+					}
+				}
+				versOk := candidateSession.vers >= c.config.minVersion() &&
+					candidateSession.vers <= c.config.ClientFingerprintConfiguration.HandshakeVersion
+				if versOk && cipherSuiteOk {
+					session = candidateSession
+				}
+			}
+		}
+		for i, ext := range c.config.ClientFingerprintConfiguration.Extensions {
+			switch casted := ext.(type) {
+			case *SessionTicketExtension:
+				if casted.Autopopulate {
+					if session == nil {
+						if !c.config.ForceSessionTicketExt {
+							c.config.ClientFingerprintConfiguration.Extensions[i] = &NullExtension{}
+						}
+					} else {
+						c.config.ClientFingerprintConfiguration.Extensions[i] = &SessionTicketExtension{session.sessionTicket, true}
+						if c.config.ClientFingerprintConfiguration.RandomSessionID > 0 {
+							c.config.ClientFingerprintConfiguration.SessionID = make([]byte, c.config.ClientFingerprintConfiguration.RandomSessionID)
+							if _, err := io.ReadFull(c.config.rand(), c.config.ClientFingerprintConfiguration.SessionID); err != nil {
+								c.sendAlert(alertInternalError)
+								return errors.New("tls: short read from Rand: " + err.Error())
+							}
+
+						}
+					}
+				}
+			}
+		}
+		var err error
+		helloBytes, err = c.config.ClientFingerprintConfiguration.marshal(c.config)
+		if err != nil {
+			return err
+		}
+		hello = &clientHelloMsg{}
+		if ok := hello.unmarshal(helloBytes); !ok {
+			return errors.New("tls: incompatible ClientFingerprintConfiguration")
+		}
+
+		// next, let's check if a ClientHello template was provided by the user
+	} else if c.config.ExternalClientHello != nil {
 
 		hello = new(clientHelloMsg)
 
@@ -57,13 +292,11 @@ func (c *Conn) clientHandshake() error {
 
 		// then we update the 'raw' value of the message
 		hello.raw = nil
-		_ = hello.marshal()
+		helloBytes = hello.marshal()
 
 		session = nil
 		sessionCache = nil
-
 	} else {
-
 		if len(c.config.ServerName) == 0 && !c.config.InsecureSkipVerify {
 			return errors.New("tls: either ServerName or InsecureSkipVerify must be specified in the tls.Config")
 		}
@@ -144,7 +377,6 @@ func (c *Conn) clientHandshake() error {
 		if c.config.SessionTicketsDisabled {
 			sessionCache = nil
 		}
-
 		if sessionCache != nil {
 			hello.ticketSupported = true
 
@@ -181,13 +413,15 @@ func (c *Conn) clientHandshake() error {
 				c.sendAlert(alertInternalError)
 				return errors.New("tls: short read from Rand: " + err.Error())
 			}
+
 		}
+
+		helloBytes = hello.marshal()
 	}
 
 	c.handshakeLog = new(ServerHandshake)
 	c.heartbleedLog = new(Heartbleed)
-
-	c.writeRecord(recordTypeHandshake, hello.marshal())
+	c.writeRecord(recordTypeHandshake, helloBytes)
 	c.handshakeLog.ClientHello = hello.MakeLog()
 
 	msg, err := c.readHandshake()
@@ -218,7 +452,7 @@ func (c *Conn) clientHandshake() error {
 	cipherImplemented := cipherIDInCipherList(serverHello.cipherSuite, implementedCipherSuites)
 	cipherShared := cipherIDInCipherIDList(serverHello.cipherSuite, c.config.cipherSuites())
 	if suite == nil {
-		//c.sendAlert(alertHandshakeFailure)
+		// c.sendAlert(alertHandshakeFailure)
 		if !cipherShared {
 			c.cipherError = ErrNoMutualCipher
 		} else if !cipherImplemented {
@@ -235,7 +469,7 @@ func (c *Conn) clientHandshake() error {
 		session:      session,
 	}
 
-	hs.finishedHash.Write(hs.hello.marshal())
+	hs.finishedHash.Write(helloBytes)
 	hs.finishedHash.Write(hs.serverHello.marshal())
 
 	isResume, err := hs.processServerHello()

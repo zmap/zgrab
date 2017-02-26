@@ -356,6 +356,10 @@ type Config struct {
 
 	// Explicitly set ClientHello with raw data
 	ExternalClientHello []byte
+
+	// If non-null specifies the contents of the client-hello
+	// WARNING: Setting this may invalidate other fields in the Config object
+	ClientFingerprintConfiguration *ClientFingerprintConfiguration
 }
 
 func (c *Config) serverInit() {
