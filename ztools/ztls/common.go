@@ -9,9 +9,11 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha512"
 	"fmt"
 	"io"
 	"math/big"
+	"net"
 	"strings"
 	"sync"
 	"time"
@@ -360,23 +362,152 @@ type Config struct {
 	// If non-null specifies the contents of the client-hello
 	// WARNING: Setting this may invalidate other fields in the Config object
 	ClientFingerprintConfiguration *ClientFingerprintConfiguration
+
+	// GetConfigForClient, if not nil, is called after a ClientHello is
+	// received from a client. It may return a non-nil Config in order to
+	// change the Config that will be used to handle this connection. If
+	// the returned Config is nil, the original Config will be used. The
+	// Config returned by this callback may not be subsequently modified.
+	//
+	// If GetConfigForClient is nil, the Config passed to Server() will be
+	// used for all connections.
+	//
+	// Uniquely for the fields in the returned Config, session ticket keys
+	// will be duplicated from the original Config if not set.
+	// Specifically, if SetSessionTicketKeys was called on the original
+	// config but not on the returned config then the ticket keys from the
+	// original config will be copied into the new config before use.
+	// Otherwise, if SessionTicketKey was set in the original config but
+	// not in the returned config then it will be copied into the returned
+	// config before use. If neither of those cases applies then the key
+	// material from the returned config will be used for session tickets.
+	GetConfigForClient func(*ClientHelloInfo) (*Config, error)
+
+	// mutex protects sessionTicketKeys and originalConfig.
+	mutex sync.RWMutex
+	// sessionTicketKeys contains zero or more ticket keys. If the length
+	// is zero, SessionTicketsDisabled must be true. The first key is used
+	// for new tickets and any subsequent keys can be used to decrypt old
+	// tickets.
+	sessionTicketKeys []ticketKey
+	// originalConfig is set to the Config that was passed to Server if
+	// this Config is returned by a GetConfigForClient callback. It's used
+	// by serverInit in order to copy session ticket keys if needed.
+	originalConfig *Config
+}
+
+// ticketKeyNameLen is the number of bytes of identifier that is prepended to
+// an encrypted session ticket in order to identify the key used to encrypt it.
+const ticketKeyNameLen = 16
+
+// ticketKey is the internal representation of a session ticket key.
+type ticketKey struct {
+	// keyName is an opaque byte string that serves to identify the session
+	// ticket key. It's exposed as plaintext in every session ticket.
+	keyName [ticketKeyNameLen]byte
+	aesKey  [16]byte
+	hmacKey [16]byte
+}
+
+// ticketKeyFromBytes converts from the external representation of a session
+// ticket key to a ticketKey. Externally, session ticket keys are 32 random
+// bytes and this function expands that into sufficient name and key material.
+func ticketKeyFromBytes(b [32]byte) (key ticketKey) {
+	hashed := sha512.Sum512(b[:])
+	copy(key.keyName[:], hashed[:ticketKeyNameLen])
+	copy(key.aesKey[:], hashed[ticketKeyNameLen:ticketKeyNameLen+16])
+	copy(key.hmacKey[:], hashed[ticketKeyNameLen+16:ticketKeyNameLen+32])
+	return key
+}
+
+// Clone returns a shallow clone of c. It is safe to clone a Config that is
+// being used concurrently by a TLS client or server.
+func (c *Config) Clone() *Config {
+	// Running serverInit ensures that it's safe to read
+	// SessionTicketsDisabled.
+	c.serverInitOnce.Do(c.serverInit)
+
+	var sessionTicketKeys []ticketKey
+	c.mutex.RLock()
+	sessionTicketKeys = c.sessionTicketKeys
+	c.mutex.RUnlock()
+
+	return &Config{
+		Rand:                           c.Rand,
+		Time:                           c.Time,
+		Certificates:                   c.Certificates,
+		NameToCertificate:              c.NameToCertificate,
+		GetConfigForClient:             c.GetConfigForClient,
+		RootCAs:                        c.RootCAs,
+		NextProtos:                     c.NextProtos,
+		ServerName:                     c.ServerName,
+		ClientAuth:                     c.ClientAuth,
+		ClientCAs:                      c.ClientCAs,
+		InsecureSkipVerify:             c.InsecureSkipVerify,
+		CipherSuites:                   c.CipherSuites,
+		PreferServerCipherSuites:       c.PreferServerCipherSuites,
+		SessionTicketsDisabled:         c.SessionTicketsDisabled,
+		SessionTicketKey:               c.SessionTicketKey,
+		ClientSessionCache:             c.ClientSessionCache,
+		MinVersion:                     c.MinVersion,
+		MaxVersion:                     c.MaxVersion,
+		CurvePreferences:               c.CurvePreferences,
+		sessionTicketKeys:              sessionTicketKeys,
+		ClientFingerprintConfiguration: c.ClientFingerprintConfiguration,
+		// originalConfig is deliberately not duplicated.
+
+		// Not merged from upstream:
+		// GetCertificate: c.GetCertificate,
+		// DynamicRecordSizingDisabled: c.DynamicRecordSizingDisabled,
+		// VerifyPeerCertificate:    c.VerifyPeerCertificate,
+		// KeyLogWriter:             c.KeyLogWriter,
+		// Renegotiation:            c.Renegotiation,
+	}
 }
 
 func (c *Config) serverInit() {
-	if c.SessionTicketsDisabled {
+	if c.SessionTicketsDisabled || len(c.ticketKeys()) != 0 {
 		return
 	}
 
-	// If the key has already been set then we have nothing to do.
+	var originalConfig *Config
+	c.mutex.Lock()
+	originalConfig, c.originalConfig = c.originalConfig, nil
+	c.mutex.Unlock()
+
+	alreadySet := false
 	for _, b := range c.SessionTicketKey {
 		if b != 0 {
+			alreadySet = true
+			break
+		}
+	}
+
+	if !alreadySet {
+		if originalConfig != nil {
+			copy(c.SessionTicketKey[:], originalConfig.SessionTicketKey[:])
+		} else if _, err := io.ReadFull(c.rand(), c.SessionTicketKey[:]); err != nil {
+			c.SessionTicketsDisabled = true
 			return
 		}
 	}
 
-	if _, err := io.ReadFull(c.rand(), c.SessionTicketKey[:]); err != nil {
-		c.SessionTicketsDisabled = true
+	if originalConfig != nil {
+		originalConfig.mutex.RLock()
+		c.sessionTicketKeys = originalConfig.sessionTicketKeys
+		originalConfig.mutex.RUnlock()
+	} else {
+		c.sessionTicketKeys = []ticketKey{ticketKeyFromBytes(c.SessionTicketKey)}
 	}
+}
+
+func (c *Config) ticketKeys() []ticketKey {
+	c.mutex.RLock()
+	// c.sessionTicketKeys is constant once created. SetSessionTicketKeys
+	// will only update it by replacing it with a new value.
+	ret := c.sessionTicketKeys
+	c.mutex.RUnlock()
+	return ret
 }
 
 func (c *Config) rand() io.Reader {
@@ -439,6 +570,26 @@ func (c *Config) mutualVersion(vers uint16) (uint16, bool) {
 		vers = maxVersion
 	}
 	return vers, true
+}
+
+// SetSessionTicketKeys updates the session ticket keys for a server. The first
+// key will be used when creating new tickets, while all keys can be used for
+// decrypting tickets. It is safe to call this function while the server is
+// running in order to rotate the session ticket keys. The function will panic
+// if keys is empty.
+func (c *Config) SetSessionTicketKeys(keys [][32]byte) {
+	if len(keys) == 0 {
+		panic("tls: keys must have at least one key")
+	}
+
+	newKeys := make([]ticketKey, len(keys))
+	for i, bytes := range keys {
+		newKeys[i] = ticketKeyFromBytes(bytes)
+	}
+
+	c.mutex.Lock()
+	c.sessionTicketKeys = newKeys
+	c.mutex.Unlock()
 }
 
 // getCertificateForName returns the best certificate for the given name,
@@ -653,4 +804,75 @@ func isSupportedSignatureAndHash(sigHash signatureAndHash, sigHashes []signature
 		}
 	}
 	return false
+}
+
+// SignatureScheme identifies a signature algorithm supported by TLS. See
+// https://tools.ietf.org/html/draft-ietf-tls-tls13-18#section-4.2.3.
+type SignatureScheme uint16
+
+const (
+	PKCS1WithSHA1   SignatureScheme = 0x0201
+	PKCS1WithSHA256 SignatureScheme = 0x0401
+	PKCS1WithSHA384 SignatureScheme = 0x0501
+	PKCS1WithSHA512 SignatureScheme = 0x0601
+
+	PSSWithSHA256 SignatureScheme = 0x0804
+	PSSWithSHA384 SignatureScheme = 0x0805
+	PSSWithSHA512 SignatureScheme = 0x0806
+
+	ECDSAWithP256AndSHA256 SignatureScheme = 0x0403
+	ECDSAWithP384AndSHA384 SignatureScheme = 0x0503
+	ECDSAWithP521AndSHA512 SignatureScheme = 0x0603
+)
+
+// ClientHelloInfo contains information from a ClientHello message in order to
+// guide certificate selection in the GetCertificate callback.
+type ClientHelloInfo struct {
+	// CipherSuites lists the CipherSuites supported by the client (e.g.
+	// TLS_RSA_WITH_RC4_128_SHA).
+	CipherSuites []uint16
+
+	// ServerName indicates the name of the server requested by the client
+	// in order to support virtual hosting. ServerName is only set if the
+	// client is using SNI (see
+	// http://tools.ietf.org/html/rfc4366#section-3.1).
+	ServerName string
+
+	// SupportedCurves lists the elliptic curves supported by the client.
+	// SupportedCurves is set only if the Supported Elliptic Curves
+	// Extension is being used (see
+	// http://tools.ietf.org/html/rfc4492#section-5.1.1).
+	SupportedCurves []CurveID
+
+	// SupportedPoints lists the point formats supported by the client.
+	// SupportedPoints is set only if the Supported Point Formats Extension
+	// is being used (see
+	// http://tools.ietf.org/html/rfc4492#section-5.1.2).
+	SupportedPoints []uint8
+
+	// SignatureSchemes lists the signature and hash schemes that the client
+	// is willing to verify. SignatureSchemes is set only if the Signature
+	// Algorithms Extension is being used (see
+	// https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1).
+	SignatureSchemes []SignatureScheme
+
+	// SupportedProtos lists the application protocols supported by the client.
+	// SupportedProtos is set only if the Application-Layer Protocol
+	// Negotiation Extension is being used (see
+	// https://tools.ietf.org/html/rfc7301#section-3.1).
+	//
+	// Servers can select a protocol by setting Config.NextProtos in a
+	// GetConfigForClient return value.
+	SupportedProtos []string
+
+	// SupportedVersions lists the TLS versions supported by the client.
+	// For TLS versions less than 1.3, this is extrapolated from the max
+	// version advertised by the client, so values other than the greatest
+	// might be rejected if used.
+	SupportedVersions []uint16
+
+	// Conn is the underlying net.Conn for the connection. Do not read
+	// from, or write to, this connection; that will cause the TLS
+	// connection to fail.
+	Conn net.Conn
 }
