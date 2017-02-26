@@ -9,6 +9,7 @@ import "strconv"
 var signatureNames map[uint8]string
 var hashNames map[uint8]string
 var cipherSuiteNames map[int]string
+var clientAuthTypeNames map[int]string
 
 func init() {
 	signatureNames = make(map[uint8]string, 8)
@@ -380,6 +381,14 @@ func init() {
 	cipherSuiteNames[0xFF83] = "SSL_RSA_WITH_3DES_EDE_CBC_MD5"
 	cipherSuiteNames[0xFF03] = "SSL_EN_RC2_128_CBC_WITH_MD5"
 	cipherSuiteNames[0xFF85] = "OP_PCL_TLS10_AES_128_CBC_SHA512"
+
+	// Name-value paires *are* not standardized, only dereferenced for JSON output
+	clientAuthTypeNames = make(map[int]string)
+	clientAuthTypeNames[0] = "NoClientCert"
+	clientAuthTypeNames[1] = "RequestClientCert"
+	clientAuthTypeNames[2] = "RequireAnyClientCert"
+	clientAuthTypeNames[3] = "VerifyClientCertIfGiven"
+	clientAuthTypeNames[4] = "RequireAndVerifyClientCert"
 }
 
 func nameForSignature(s uint8) string {
