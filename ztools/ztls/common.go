@@ -78,6 +78,7 @@ const (
 	extensionSupportedCurves      uint16 = 10
 	extensionSupportedPoints      uint16 = 11
 	extensionSignatureAlgorithms  uint16 = 13
+	extensionALPN                 uint16 = 16
 	extensionExtendedMasterSecret uint16 = 23
 	extensionSessionTicket        uint16 = 35
 	extensionNextProtoNeg         uint16 = 13172 // not IANA assigned
@@ -352,6 +353,13 @@ type Config struct {
 
 	// Explicitly set Client random
 	ClientRandom []byte
+
+	// Explicitly set ClientHello with raw data
+	ExternalClientHello []byte
+
+	// If non-null specifies the contents of the client-hello
+	// WARNING: Setting this may invalidate other fields in the Config object
+	ClientFingerprintConfiguration *ClientFingerprintConfiguration
 }
 
 func (c *Config) serverInit() {

@@ -11,12 +11,14 @@ import (
 	"crypto/rsa"
 	"crypto/subtle"
 	"encoding/asn1"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"math/big"
 	"net"
 	"strconv"
+	"time"
 
 	"github.com/zmap/zgrab/ztools/x509"
 )
@@ -32,135 +34,394 @@ type clientHandshakeState struct {
 	session         *ClientSessionState
 }
 
+type CacheKeyGenerator interface {
+	Key(net.Addr) string
+}
+
+type ClientFingerprintConfiguration struct {
+	// Version in the handshake header
+	HandshakeVersion uint16
+
+	// if len == 32, it will specify the client random.
+	// Otherwise, the field will be random
+	// except the top 4 bytes if InsertTimestamp is true
+	ClientRandom    []byte
+	InsertTimestamp bool
+
+	// if RandomSessionID > 0, will overwrite SessionID w/ that many
+	// random bytes when a session resumption occurs
+	RandomSessionID int
+	SessionID       []byte
+
+	// These fields will appear exactly in order in the ClientHello
+	CipherSuites       []uint16
+	CompressionMethods []uint8
+	Extensions         []ClientExtension
+
+	// Optional, both must be non-nil, or neither.
+	// Custom Session cache implementations allowed
+	SessionCache ClientSessionCache
+	CacheKey     CacheKeyGenerator
+}
+
+type ClientExtension interface {
+	// Produce the bytes on the wire for this extension, type and length included
+	Marshal() []byte
+
+	// Function will return an error if zTLS does not implement the necessary features for this extension
+	CheckImplemented() error
+
+	// Modifies the config to reflect the state of the extension
+	WriteToConfig(*Config) error
+}
+
+func (c *ClientFingerprintConfiguration) CheckImplementedExtensions() error {
+	for _, ext := range c.Extensions {
+		if err := ext.CheckImplemented(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *ClientFingerprintConfiguration) WriteToConfig(config *Config) error {
+	config.NextProtos = []string{}
+	config.CipherSuites = c.CipherSuites
+	config.MaxVersion = c.HandshakeVersion
+	config.ClientRandom = c.ClientRandom
+	config.CurvePreferences = []CurveID{}
+	config.HeartbeatEnabled = false
+	config.ExtendedRandom = false
+	config.ForceSessionTicketExt = false
+	config.ExtendedMasterSecret = false
+	config.SignedCertificateTimestampExt = false
+	for _, ext := range c.Extensions {
+		if err := ext.WriteToConfig(config); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func currentTimestamp() ([]byte, error) {
+	t := time.Now().Unix()
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.BigEndian, t)
+	return buf.Bytes(), err
+}
+
+func (c *ClientFingerprintConfiguration) marshal(config *Config) ([]byte, error) {
+	if err := c.CheckImplementedExtensions(); err != nil {
+		return nil, err
+	}
+	head := make([]byte, 38)
+	head[0] = 1
+	head[4] = uint8(c.HandshakeVersion >> 8)
+	head[5] = uint8(c.HandshakeVersion)
+	if len(c.ClientRandom) == 32 {
+		copy(head[6:38], c.ClientRandom[0:32])
+	} else {
+		start := 6
+		if c.InsertTimestamp {
+			t, err := currentTimestamp()
+			if err != nil {
+				return nil, err
+			}
+			copy(head[start:start+4], t)
+			start = start + 4
+		}
+		_, err := io.ReadFull(config.rand(), head[start:38])
+		if err != nil {
+			return nil, errors.New("tls: short read from Rand: " + err.Error())
+		}
+	}
+
+	if len(c.SessionID) >= 256 {
+		return nil, errors.New("tls: SessionID too long")
+	}
+	sessionID := make([]byte, len(c.SessionID)+1)
+	sessionID[0] = uint8(len(c.SessionID))
+	if len(c.SessionID) > 0 {
+		copy(sessionID[1:], c.SessionID)
+	}
+
+	ciphers := make([]byte, 2+2*len(c.CipherSuites))
+	ciphers[0] = uint8(len(c.CipherSuites) >> 7)
+	ciphers[1] = uint8(len(c.CipherSuites) << 1)
+	for i, suite := range c.CipherSuites {
+		if !config.ForceSuites {
+			found := false
+			for _, impl := range implementedCipherSuites {
+				if impl.id == suite {
+					found = true
+				}
+			}
+			if !found {
+				return nil, errors.New(fmt.Sprintf("tls: unimplemented cipher suite %d", suite))
+			}
+		}
+
+		ciphers[2+i*2] = uint8(suite >> 8)
+		ciphers[3+i*2] = uint8(suite)
+	}
+
+	if len(c.CompressionMethods) >= 256 {
+		return nil, errors.New("tls: Too many compression methods")
+	}
+	compressions := make([]byte, len(c.CompressionMethods)+1)
+	compressions[0] = uint8(len(c.CompressionMethods))
+	if len(c.CompressionMethods) > 0 {
+		copy(compressions[1:], c.CompressionMethods)
+		if c.CompressionMethods[0] != 0 {
+			return nil, errors.New(fmt.Sprintf("tls: unimplemented compression method %d", c.CompressionMethods[0]))
+		}
+		if len(c.CompressionMethods) > 1 {
+			return nil, errors.New(fmt.Sprintf("tls: unimplemented compression method %d", c.CompressionMethods[1]))
+		}
+	} else {
+		return nil, errors.New("tls: no compression method")
+	}
+
+	var extensions []byte
+	for _, ext := range c.Extensions {
+		extensions = append(extensions, ext.Marshal()...)
+	}
+	if len(extensions) > 0 {
+		length := make([]byte, 2)
+		length[0] = uint8(len(extensions) >> 8)
+		length[1] = uint8(len(extensions))
+		extensions = append(length, extensions...)
+	}
+	helloArray := [][]byte{head, sessionID, ciphers, compressions, extensions}
+	hello := []byte{}
+	for _, b := range helloArray {
+		hello = append(hello, b...)
+	}
+	lengthOnTheWire := len(hello) - 4
+	if lengthOnTheWire >= 1<<24 {
+		return nil, errors.New("ClientHello message too long")
+	}
+	hello[1] = uint8(lengthOnTheWire >> 16)
+	hello[2] = uint8(lengthOnTheWire >> 8)
+	hello[3] = uint8(lengthOnTheWire)
+
+	return hello, nil
+}
+
 func (c *Conn) clientHandshake() error {
 	if c.config == nil {
 		c.config = defaultConfig()
 	}
+	var hello *clientHelloMsg
+	var helloBytes []byte
+	var session *ClientSessionState
+	var sessionCache ClientSessionCache
+	var cacheKey string
 
-	if len(c.config.ServerName) == 0 && !c.config.InsecureSkipVerify {
-		return errors.New("tls: either ServerName or InsecureSkipVerify must be specified in the tls.Config")
+	// first, let's check if a ClientFingerprintConfiguration template was provided by the config
+	if c.config.ClientFingerprintConfiguration != nil {
+		if err := c.config.ClientFingerprintConfiguration.WriteToConfig(c.config); err != nil {
+			return err
+		}
+		session = nil
+		sessionCache = c.config.ClientFingerprintConfiguration.SessionCache
+		if sessionCache != nil {
+			if c.config.ClientFingerprintConfiguration.CacheKey == nil {
+				return errors.New("tls: must specify CacheKey if SessionCache is defined in Config.ClientFingerprintConfiguration")
+			}
+			cacheKey = c.config.ClientFingerprintConfiguration.CacheKey.Key(c.conn.RemoteAddr())
+			candidateSession, ok := sessionCache.Get(cacheKey)
+			if ok {
+				cipherSuiteOk := false
+				for _, id := range c.config.ClientFingerprintConfiguration.CipherSuites {
+					if id == candidateSession.cipherSuite {
+						cipherSuiteOk = true
+						break
+					}
+				}
+				versOk := candidateSession.vers >= c.config.minVersion() &&
+					candidateSession.vers <= c.config.ClientFingerprintConfiguration.HandshakeVersion
+				if versOk && cipherSuiteOk {
+					session = candidateSession
+				}
+			}
+		}
+		for i, ext := range c.config.ClientFingerprintConfiguration.Extensions {
+			switch casted := ext.(type) {
+			case *SessionTicketExtension:
+				if casted.Autopopulate {
+					if session == nil {
+						if !c.config.ForceSessionTicketExt {
+							c.config.ClientFingerprintConfiguration.Extensions[i] = &NullExtension{}
+						}
+					} else {
+						c.config.ClientFingerprintConfiguration.Extensions[i] = &SessionTicketExtension{session.sessionTicket, true}
+						if c.config.ClientFingerprintConfiguration.RandomSessionID > 0 {
+							c.config.ClientFingerprintConfiguration.SessionID = make([]byte, c.config.ClientFingerprintConfiguration.RandomSessionID)
+							if _, err := io.ReadFull(c.config.rand(), c.config.ClientFingerprintConfiguration.SessionID); err != nil {
+								c.sendAlert(alertInternalError)
+								return errors.New("tls: short read from Rand: " + err.Error())
+							}
+
+						}
+					}
+				}
+			}
+		}
+		var err error
+		helloBytes, err = c.config.ClientFingerprintConfiguration.marshal(c.config)
+		if err != nil {
+			return err
+		}
+		hello = &clientHelloMsg{}
+		if ok := hello.unmarshal(helloBytes); !ok {
+			return errors.New("tls: incompatible ClientFingerprintConfiguration")
+		}
+
+		// next, let's check if a ClientHello template was provided by the user
+	} else if c.config.ExternalClientHello != nil {
+
+		hello = new(clientHelloMsg)
+
+		if !hello.unmarshal(c.config.ExternalClientHello) {
+			return errors.New("could not read the ClientHello provided")
+		}
+
+		// update the SNI with one name, whether or not the extension was already there
+		hello.serverName = c.config.ServerName
+
+		// then we update the 'raw' value of the message
+		hello.raw = nil
+		helloBytes = hello.marshal()
+
+		session = nil
+		sessionCache = nil
+	} else {
+		if len(c.config.ServerName) == 0 && !c.config.InsecureSkipVerify {
+			return errors.New("tls: either ServerName or InsecureSkipVerify must be specified in the tls.Config")
+		}
+
+		hello = &clientHelloMsg{
+			vers:                 c.config.maxVersion(),
+			compressionMethods:   []uint8{compressionNone},
+			random:               make([]byte, 32),
+			ocspStapling:         true,
+			serverName:           c.config.ServerName,
+			supportedCurves:      c.config.curvePreferences(),
+			supportedPoints:      []uint8{pointFormatUncompressed},
+			nextProtoNeg:         len(c.config.NextProtos) > 0,
+			secureRenegotiation:  true,
+			alpnProtocols:        c.config.NextProtos,
+			extendedMasterSecret: c.config.maxVersion() >= VersionTLS10 && c.config.ExtendedMasterSecret,
+		}
+
+		if c.config.ForceSessionTicketExt {
+			hello.ticketSupported = true
+		}
+		if c.config.SignedCertificateTimestampExt {
+			hello.sctEnabled = true
+		}
+
+		if c.config.HeartbeatEnabled && !c.config.ExtendedRandom {
+			hello.heartbeatEnabled = true
+			hello.heartbeatMode = heartbeatModePeerAllowed
+		}
+
+		possibleCipherSuites := c.config.cipherSuites()
+		hello.cipherSuites = make([]uint16, 0, len(possibleCipherSuites))
+
+		if c.config.ForceSuites {
+			hello.cipherSuites = possibleCipherSuites
+		} else {
+
+		NextCipherSuite:
+			for _, suiteId := range possibleCipherSuites {
+				for _, suite := range implementedCipherSuites {
+					if suite.id != suiteId {
+						continue
+					}
+					// Don't advertise TLS 1.2-only cipher suites unless
+					// we're attempting TLS 1.2.
+					if hello.vers < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
+						continue
+					}
+					hello.cipherSuites = append(hello.cipherSuites, suiteId)
+					continue NextCipherSuite
+				}
+			}
+		}
+
+		if len(c.config.ClientRandom) == 32 {
+			copy(hello.random, c.config.ClientRandom)
+		} else {
+			_, err := io.ReadFull(c.config.rand(), hello.random)
+			if err != nil {
+				c.sendAlert(alertInternalError)
+				return errors.New("tls: short read from Rand: " + err.Error())
+			}
+		}
+
+		if c.config.ExtendedRandom {
+			hello.extendedRandomEnabled = true
+			hello.extendedRandom = make([]byte, 32)
+			if _, err := io.ReadFull(c.config.rand(), hello.extendedRandom); err != nil {
+				return errors.New("tls: short read from Rand: " + err.Error())
+			}
+		}
+
+		if hello.vers >= VersionTLS12 {
+			hello.signatureAndHashes = c.config.signatureAndHashesForClient()
+		}
+
+		sessionCache = c.config.ClientSessionCache
+		if c.config.SessionTicketsDisabled {
+			sessionCache = nil
+		}
+		if sessionCache != nil {
+			hello.ticketSupported = true
+
+			// Try to resume a previously negotiated TLS session, if
+			// available.
+			cacheKey = clientSessionCacheKey(c.conn.RemoteAddr(), c.config)
+			candidateSession, ok := sessionCache.Get(cacheKey)
+			if ok {
+				// Check that the ciphersuite/version used for the
+				// previous session are still valid.
+				cipherSuiteOk := false
+				for _, id := range hello.cipherSuites {
+					if id == candidateSession.cipherSuite {
+						cipherSuiteOk = true
+						break
+					}
+				}
+
+				versOk := candidateSession.vers >= c.config.minVersion() &&
+					candidateSession.vers <= c.config.maxVersion()
+				if versOk && cipherSuiteOk {
+					session = candidateSession
+				}
+			}
+		}
+
+		if session != nil {
+			hello.sessionTicket = session.sessionTicket
+			// A random session ID is used to detect when the
+			// server accepted the ticket and is resuming a session
+			// (see RFC 5077).
+			hello.sessionId = make([]byte, 16)
+			if _, err := io.ReadFull(c.config.rand(), hello.sessionId); err != nil {
+				c.sendAlert(alertInternalError)
+				return errors.New("tls: short read from Rand: " + err.Error())
+			}
+
+		}
+
+		helloBytes = hello.marshal()
 	}
 
 	c.handshakeLog = new(ServerHandshake)
 	c.heartbleedLog = new(Heartbleed)
-
-	hello := &clientHelloMsg{
-		vers:                 c.config.maxVersion(),
-		compressionMethods:   []uint8{compressionNone},
-		random:               make([]byte, 32),
-		ocspStapling:         true,
-		serverName:           c.config.ServerName,
-		supportedCurves:      c.config.curvePreferences(),
-		supportedPoints:      []uint8{pointFormatUncompressed},
-		nextProtoNeg:         len(c.config.NextProtos) > 0,
-		secureRenegotiation:  true,
-		extendedMasterSecret: c.config.maxVersion() >= VersionTLS10 && c.config.ExtendedMasterSecret,
-	}
-
-	if c.config.ForceSessionTicketExt {
-		hello.ticketSupported = true
-	}
-	if c.config.SignedCertificateTimestampExt {
-		hello.sctEnabled = true
-	}
-
-	if c.config.HeartbeatEnabled && !c.config.ExtendedRandom {
-		hello.heartbeatEnabled = true
-		hello.heartbeatMode = heartbeatModePeerAllowed
-	}
-
-	possibleCipherSuites := c.config.cipherSuites()
-	hello.cipherSuites = make([]uint16, 0, len(possibleCipherSuites))
-
-	if c.config.ForceSuites {
-		hello.cipherSuites = possibleCipherSuites
-	} else {
-
-	NextCipherSuite:
-		for _, suiteId := range possibleCipherSuites {
-			for _, suite := range implementedCipherSuites {
-				if suite.id != suiteId {
-					continue
-				}
-				// Don't advertise TLS 1.2-only cipher suites unless
-				// we're attempting TLS 1.2.
-				if hello.vers < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
-					continue
-				}
-				hello.cipherSuites = append(hello.cipherSuites, suiteId)
-				continue NextCipherSuite
-			}
-		}
-	}
-
-	if len(c.config.ClientRandom) == 32 {
-		copy(hello.random, c.config.ClientRandom)
-	} else {
-		_, err := io.ReadFull(c.config.rand(), hello.random)
-		if err != nil {
-			c.sendAlert(alertInternalError)
-			return errors.New("tls: short read from Rand: " + err.Error())
-		}
-	}
-
-	if c.config.ExtendedRandom {
-		hello.extendedRandomEnabled = true
-		hello.extendedRandom = make([]byte, 32)
-		if _, err := io.ReadFull(c.config.rand(), hello.extendedRandom); err != nil {
-			return errors.New("tls: short read from Rand: " + err.Error())
-		}
-	}
-
-	if hello.vers >= VersionTLS12 {
-		hello.signatureAndHashes = c.config.signatureAndHashesForClient()
-	}
-
-	var session *ClientSessionState
-	var cacheKey string
-	sessionCache := c.config.ClientSessionCache
-	if c.config.SessionTicketsDisabled {
-		sessionCache = nil
-	}
-
-	if sessionCache != nil {
-		hello.ticketSupported = true
-
-		// Try to resume a previously negotiated TLS session, if
-		// available.
-		cacheKey = clientSessionCacheKey(c.conn.RemoteAddr(), c.config)
-		candidateSession, ok := sessionCache.Get(cacheKey)
-		if ok {
-			// Check that the ciphersuite/version used for the
-			// previous session are still valid.
-			cipherSuiteOk := false
-			for _, id := range hello.cipherSuites {
-				if id == candidateSession.cipherSuite {
-					cipherSuiteOk = true
-					break
-				}
-			}
-
-			versOk := candidateSession.vers >= c.config.minVersion() &&
-				candidateSession.vers <= c.config.maxVersion()
-			if versOk && cipherSuiteOk {
-				session = candidateSession
-			}
-		}
-	}
-
-	if session != nil {
-		hello.sessionTicket = session.sessionTicket
-		// A random session ID is used to detect when the
-		// server accepted the ticket and is resuming a session
-		// (see RFC 5077).
-		hello.sessionId = make([]byte, 16)
-		if _, err := io.ReadFull(c.config.rand(), hello.sessionId); err != nil {
-			c.sendAlert(alertInternalError)
-			return errors.New("tls: short read from Rand: " + err.Error())
-		}
-	}
-
-	c.writeRecord(recordTypeHandshake, hello.marshal())
+	c.writeRecord(recordTypeHandshake, helloBytes)
 	c.handshakeLog.ClientHello = hello.MakeLog()
 
 	msg, err := c.readHandshake()
@@ -191,7 +452,7 @@ func (c *Conn) clientHandshake() error {
 	cipherImplemented := cipherIDInCipherList(serverHello.cipherSuite, implementedCipherSuites)
 	cipherShared := cipherIDInCipherIDList(serverHello.cipherSuite, c.config.cipherSuites())
 	if suite == nil {
-		//c.sendAlert(alertHandshakeFailure)
+		// c.sendAlert(alertHandshakeFailure)
 		if !cipherShared {
 			c.cipherError = ErrNoMutualCipher
 		} else if !cipherImplemented {
@@ -208,7 +469,7 @@ func (c *Conn) clientHandshake() error {
 		session:      session,
 	}
 
-	hs.finishedHash.Write(hs.hello.marshal())
+	hs.finishedHash.Write(helloBytes)
 	hs.finishedHash.Write(hs.serverHello.marshal())
 
 	isResume, err := hs.processServerHello()
@@ -643,9 +904,29 @@ func (hs *clientHandshakeState) processServerHello() (bool, error) {
 		return false, errors.New("tls: server selected unsupported compression format")
 	}
 
-	if !hs.hello.nextProtoNeg && hs.serverHello.nextProtoNeg {
+	clientDidNPN := hs.hello.nextProtoNeg
+	clientDidALPN := len(hs.hello.alpnProtocols) > 0
+	serverHasNPN := hs.serverHello.nextProtoNeg
+	serverHasALPN := len(hs.serverHello.alpnProtocol) > 0
+
+	if !clientDidNPN && serverHasNPN {
 		c.sendAlert(alertHandshakeFailure)
-		return false, errors.New("server advertised unrequested NPN extension")
+		return false, errors.New("tls: server advertised unrequested NPN extension")
+	}
+
+	if !clientDidALPN && serverHasALPN {
+		c.sendAlert(alertHandshakeFailure)
+		return false, errors.New("tls: server advertised unrequested ALPN extension")
+	}
+
+	if serverHasNPN && serverHasALPN {
+		c.sendAlert(alertHandshakeFailure)
+		return false, errors.New("tls: server advertised both NPN and ALPN extensions")
+	}
+
+	if serverHasALPN {
+		c.clientProtocol = hs.serverHello.alpnProtocol
+		c.clientProtocolFallback = false
 	}
 
 	if hs.serverResumedSession() {
@@ -764,18 +1045,18 @@ func clientSessionCacheKey(serverAddr net.Addr, config *Config) string {
 	return serverAddr.String()
 }
 
-// mutualProtocol finds the mutual Next Protocol Negotiation protocol given the
-// set of client and server supported protocols. The set of client supported
-// protocols must not be empty. It returns the resulting protocol and flag
+// mutualProtocol finds the mutual Next Protocol Negotiation or ALPN protocol
+// given list of possible protocols and a list of the preference order. The
+// first list must not be empty. It returns the resulting protocol and flag
 // indicating if the fallback case was reached.
-func mutualProtocol(clientProtos, serverProtos []string) (string, bool) {
-	for _, s := range serverProtos {
-		for _, c := range clientProtos {
+func mutualProtocol(protos, preferenceProtos []string) (string, bool) {
+	for _, s := range preferenceProtos {
+		for _, c := range protos {
 			if s == c {
 				return s, false
 			}
 		}
 	}
 
-	return clientProtos[0], true
+	return protos[0], true
 }

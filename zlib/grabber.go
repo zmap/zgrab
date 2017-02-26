@@ -195,6 +195,9 @@ func makeTLSConfig(config *Config, urlHost string) *ztls.Config {
 	if !config.NoSNI && urlHost != "" {
 		tlsConfig.ServerName = urlHost
 	}
+	if config.ExternalClientHello != nil {
+		tlsConfig.ExternalClientHello = config.ExternalClientHello
+	}
 
 	return tlsConfig
 }
@@ -376,6 +379,9 @@ func makeGrabber(config *Config) func(*Conn) error {
 		if config.ExtendedMasterSecret {
 			c.SetOfferExtendedMasterSecret()
 		}
+		if config.ExternalClientHello != nil {
+			c.SetExternalClientHello(config.ExternalClientHello)
+		}
 		if config.TLSVerbose {
 			c.SetTLSVerbose()
 		}
@@ -511,6 +517,23 @@ func makeGrabber(config *Config) func(*Conn) error {
 					c.erroredComponent = "starttls"
 					return err
 				}
+			}
+		}
+
+		if config.SMTP {
+			if err := c.SMTPQuit(); err != nil {
+				c.erroredComponent = "quit"
+				return err
+			}
+		} else if config.POP3 {
+			if err := c.POP3Quit(); err != nil {
+				c.erroredComponent = "quit"
+				return err
+			}
+		} else if config.IMAP {
+			if err := c.IMAPQuit(); err != nil {
+				c.erroredComponent = "quit"
+				return err
 			}
 		}
 
