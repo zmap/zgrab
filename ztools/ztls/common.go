@@ -974,31 +974,32 @@ type ClientHelloInfo struct {
 }
 
 type ConfigJSON struct {
-	Certificates                  []Certificate      `json:"certificates,omitempty"`
-	RootCAs                       *x509.CertPool     `json:"root_cas,omitempty"`
-	NextProtos                    []string           `json:"next_protocols,omitempty"`
-	ServerName                    string             `json:"server_name,omitempty"`
-	ClientAuth                    ClientAuthType     `json:"client_auth_type"`
-	ClientCAs                     *x509.CertPool     `json:"client_cas,omitempty"`
-	InsecureSkipVerify            bool               `json:"skip_verify"`
-	CipherSuites                  []CipherSuite      `json:"cipher_suites,omitempty"`
-	PreferServerCipherSuites      bool               `json:"prefer_server_cipher_suites"`
-	SessionTicketsDisabled        bool               `json:"session_tickets_disabled"`
-	SessionTicketKey              []byte             `json:"session_ticket_key,omitempty"`
-	ClientSessionCache            ClientSessionCache `json:"client_session_cache,omitempty"`
-	MinVersion                    TLSVersion         `json:"min_tls_version,omitempty"`
-	MaxVersion                    TLSVersion         `json:"max_tls_version,omitempty"`
-	CurvePreferences              []CurveID          `json:"curve_preferences,omitempty"`
-	ForceSuites                   bool               `json:"force_cipher_suites"1`
-	ExportRSAKey                  *rsa.PrivateKey    `json:"export_rsa_key,omitempty"`
-	HeartbeatEnabled              bool               `json:"heartbeat_enabled"`
-	ClientDSAEnabled              bool               `json:"client_dsa_enabled"`
-	ExtendedRandom                bool               `json:"extended_random_enabled"`
-	ForceSessionTicketExt         bool               `json:"session_ticket_ext_enabled"`
-	ExtendedMasterSecret          bool               `json:"extended_master_secret_enabled"`
-	SignedCertificateTimestampExt bool               `json:"sct_ext_enabled"`
-	ClientRandom                  []byte             `json:"client_random,omitempty"`
-	ExternalClientHello           []byte             `json:"external_client_hello,omitempty"`
+	Certificates                   []Certificate                   `json:"certificates,omitempty"`
+	RootCAs                        *x509.CertPool                  `json:"root_cas,omitempty"`
+	NextProtos                     []string                        `json:"next_protocols,omitempty"`
+	ServerName                     string                          `json:"server_name,omitempty"`
+	ClientAuth                     ClientAuthType                  `json:"client_auth_type"`
+	ClientCAs                      *x509.CertPool                  `json:"client_cas,omitempty"`
+	InsecureSkipVerify             bool                            `json:"skip_verify"`
+	CipherSuites                   []CipherSuite                   `json:"cipher_suites,omitempty"`
+	PreferServerCipherSuites       bool                            `json:"prefer_server_cipher_suites"`
+	SessionTicketsDisabled         bool                            `json:"session_tickets_disabled"`
+	SessionTicketKey               []byte                          `json:"session_ticket_key,omitempty"`
+	ClientSessionCache             ClientSessionCache              `json:"client_session_cache,omitempty"`
+	MinVersion                     TLSVersion                      `json:"min_tls_version,omitempty"`
+	MaxVersion                     TLSVersion                      `json:"max_tls_version,omitempty"`
+	CurvePreferences               []CurveID                       `json:"curve_preferences,omitempty"`
+	ForceSuites                    bool                            `json:"force_cipher_suites"1`
+	ExportRSAKey                   *rsa.PrivateKey                 `json:"export_rsa_key,omitempty"`
+	HeartbeatEnabled               bool                            `json:"heartbeat_enabled"`
+	ClientDSAEnabled               bool                            `json:"client_dsa_enabled"`
+	ExtendedRandom                 bool                            `json:"extended_random_enabled"`
+	ForceSessionTicketExt          bool                            `json:"session_ticket_ext_enabled"`
+	ExtendedMasterSecret           bool                            `json:"extended_master_secret_enabled"`
+	SignedCertificateTimestampExt  bool                            `json:"sct_ext_enabled"`
+	ClientRandom                   []byte                          `json:"client_random,omitempty"`
+	ExternalClientHello            []byte                          `json:"external_client_hello,omitempty"`
+	ClientFingerprintConfiguration *ClientFingerprintConfiguration `json:"client_fingerprint_config,omitempty"`
 }
 
 func (config *Config) MarshalJSON() ([]byte, error) {
@@ -1024,7 +1025,7 @@ func (config *Config) MarshalJSON() ([]byte, error) {
 	aux.ClientSessionCache = config.ClientSessionCache
 	aux.MinVersion = TLSVersion(config.minVersion())
 	aux.MaxVersion = TLSVersion(config.maxVersion())
-	aux.CurvePreferences = config.curvePreferences() // TODO: Update after PR #241 is complete
+	aux.CurvePreferences = config.curvePreferences()
 	aux.ForceSuites = config.ForceSuites
 	aux.ExportRSAKey = config.ExportRSAKey
 	aux.HeartbeatEnabled = config.HeartbeatEnabled
@@ -1035,6 +1036,7 @@ func (config *Config) MarshalJSON() ([]byte, error) {
 	aux.SignedCertificateTimestampExt = config.SignedCertificateTimestampExt
 	aux.ClientRandom = config.ClientRandom
 	aux.ExternalClientHello = config.ExternalClientHello
+	aux.ClientFingerprintConfiguration = config.ClientFingerprintConfiguration
 
 	return json.Marshal(aux)
 }
