@@ -35,6 +35,7 @@ type ECDHParams struct {
 	TLSCurveID    TLSCurveID         `json:"curve_id,omitempty"`
 	Curve         elliptic.Curve     `json:"-"`
 	ServerPublic  *ECPoint           `json:"server_public,omitempty"`
+	ServerPrivate *ECDHPrivateParams `json:"server_private,omitempty"`
 	ClientPublic  *ECPoint           `json:"client_public,omitempty"`
 	ClientPrivate *ECDHPrivateParams `json:"client_private,omitempty"`
 }

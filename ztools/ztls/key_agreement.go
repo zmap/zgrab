@@ -369,6 +369,8 @@ func (ka *signedKeyAgreement) signParameters(config *Config, cert *Certificate, 
 	k[0] = byte(len(sig) >> 8)
 	k[1] = byte(len(sig))
 	copy(k[2:], sig)
+	ka.raw = sig
+	ka.valid = true // We (the server) signed
 	return skx, nil
 }
 
@@ -467,6 +469,7 @@ type ecdheKeyAgreement struct {
 	verifyError   error
 	curveID       uint16
 	clientPrivKey []byte
+	serverPrivKey []byte
 	clientX       *big.Int
 	clientY       *big.Int
 }
@@ -495,13 +498,15 @@ NextCandidate:
 		return nil, errors.New("tls: preferredCurves includes unsupported curve")
 	}
 
-	var x, y *big.Int
 	var err error
-	ka.privateKey, x, y, err = elliptic.GenerateKey(ka.curve, config.rand())
+	ka.privateKey, ka.x, ka.y, err = elliptic.GenerateKey(ka.curve, config.rand())
 	if err != nil {
 		return nil, err
 	}
-	ecdhePublic := elliptic.Marshal(ka.curve, x, y)
+	ecdhePublic := elliptic.Marshal(ka.curve, ka.x, ka.y)
+
+	ka.serverPrivKey = make([]byte, len(ka.privateKey))
+	copy(ka.serverPrivKey, ka.privateKey)
 
 	// http://tools.ietf.org/html/rfc4492#section-5.4
 	serverECDHParams := make([]byte, 1+2+1+len(ecdhePublic))
@@ -518,13 +523,14 @@ func (ka *ecdheKeyAgreement) processClientKeyExchange(config *Config, cert *Cert
 	if len(ckx.ciphertext) == 0 || int(ckx.ciphertext[0]) != len(ckx.ciphertext)-1 {
 		return nil, errClientKeyExchange
 	}
-	x, y := elliptic.Unmarshal(ka.curve, ckx.ciphertext[1:])
-	if x == nil {
+	ka.clientX, ka.clientY = elliptic.Unmarshal(ka.curve, ckx.ciphertext[1:])
+	if ka.clientX == nil {
 		return nil, errClientKeyExchange
 	}
-	x, _ = ka.curve.ScalarMult(x, y, ka.privateKey)
+
+	sharedX, _ := ka.curve.ScalarMult(ka.clientX, ka.clientY, ka.privateKey)
 	preMasterSecret := make([]byte, (ka.curve.Params().BitSize+7)>>3)
-	xBytes := x.Bytes()
+	xBytes := sharedX.Bytes()
 	copy(preMasterSecret[len(preMasterSecret)-len(xBytes):], xBytes)
 
 	return preMasterSecret, nil

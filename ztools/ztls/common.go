@@ -10,6 +10,8 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha512"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math/big"
@@ -104,11 +106,80 @@ const (
 	CurveP521 CurveID = 25
 )
 
+func (curveID *CurveID) MarshalJSON() ([]byte, error) {
+	buf := make([]byte, 2)
+	buf[0] = byte(*curveID >> 8)
+	buf[1] = byte(*curveID)
+	enc := strings.ToUpper(hex.EncodeToString(buf))
+	aux := struct {
+		Hex   string `json:"hex"`
+		Name  string `json:"name"`
+		Value uint16 `json:"value"`
+	}{
+		Hex:   fmt.Sprintf("0x%s", enc),
+		Name:  curveID.String(),
+		Value: uint16(*curveID),
+	}
+
+	return json.Marshal(aux)
+}
+
+func (curveID *CurveID) UnmarshalJSON(b []byte) error {
+	aux := struct {
+		Hex   string `json:"hex"`
+		Name  string `json:"name"`
+		Value uint16 `json:"value"`
+	}{}
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	if expectedName := nameForCurve(aux.Value); expectedName != aux.Name {
+		return fmt.Errorf("mismatched curve and name, curve: %d, name: %s, expected name: %s", aux.Value, aux.Name, expectedName)
+	}
+	*curveID = CurveID(aux.Value)
+	return nil
+}
+
+type PointFormat uint8
+
 // TLS Elliptic Curve Point Formats
 // http://www.iana.org/assignments/tls-parameters/tls-parameters.xml#tls-parameters-9
 const (
 	pointFormatUncompressed uint8 = 0
 )
+
+func (pFormat *PointFormat) MarshalJSON() ([]byte, error) {
+	buf := make([]byte, 1)
+	buf[0] = byte(*pFormat)
+	enc := strings.ToUpper(hex.EncodeToString(buf))
+	aux := struct {
+		Hex   string `json:"hex"`
+		Name  string `json:"name"`
+		Value uint8  `json:"value"`
+	}{
+		Hex:   fmt.Sprintf("0x%s", enc),
+		Name:  pFormat.String(),
+		Value: uint8(*pFormat),
+	}
+
+	return json.Marshal(aux)
+}
+
+func (pFormat *PointFormat) UnmarshalJSON(b []byte) error {
+	aux := struct {
+		Hex   string `json:"hex"`
+		Name  string `json:"name"`
+		Value uint8  `json:"value"`
+	}{}
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	if expectedName := nameForPointFormat(aux.Value); expectedName != aux.Name {
+		return fmt.Errorf("mismatched point format and name, point format: %d, name: %s, expected name: %s", aux.Value, aux.Name, expectedName)
+	}
+	*pFormat = PointFormat(aux.Value)
+	return nil
+}
 
 // TLS CertificateStatusType (RFC 3546)
 const (

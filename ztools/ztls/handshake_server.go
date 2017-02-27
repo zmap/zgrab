@@ -31,6 +31,7 @@ type serverHandshakeState struct {
 	masterSecret          []byte
 	certsFromClient       [][]byte
 	cert                  *Certificate
+	preMasterSecret       []byte
 	cachedClientHelloInfo *ClientHelloInfo
 }
 
@@ -83,6 +84,9 @@ func (c *Conn) serverHandshake() error {
 			return err
 		}
 	}
+
+	c.handshakeLog.KeyMaterial = hs.MakeLog()
+
 	c.handshakeComplete = true
 
 	return nil
@@ -92,6 +96,7 @@ func (c *Conn) serverHandshake() error {
 // whether we will perform session resumption.
 func (hs *serverHandshakeState) readClientHello() (isResume bool, err error) {
 	c := hs.c
+	c.handshakeLog = new(ServerHandshake)
 
 	msg, err := c.readHandshake()
 	if err != nil {
@@ -105,6 +110,7 @@ func (hs *serverHandshakeState) readClientHello() (isResume bool, err error) {
 	}
 	c.clientHelloRaw = hs.clientHello.raw
 	c.clientCiphers = hs.clientHello.cipherSuites
+	c.handshakeLog.ClientHello = hs.clientHello.MakeLog()
 
 	if c.config.GetConfigForClient != nil {
 		if newConfig, err := c.config.GetConfigForClient(hs.clientHelloInfo()); err != nil {
@@ -293,6 +299,7 @@ func (hs *serverHandshakeState) doResumeHandshake() error {
 	hs.hello.sessionId = hs.clientHello.sessionId
 	hs.finishedHash.Write(hs.hello.marshal())
 	c.writeRecord(recordTypeHandshake, hs.hello.marshal())
+	c.handshakeLog.ServerHello = hs.hello.MakeLog()
 
 	if len(hs.sessionState.certificates) > 0 {
 		if _, err := hs.processCertsFromClient(hs.sessionState.certificates); err != nil {
@@ -318,11 +325,13 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 	c.extendedMasterSecret = hs.hello.extendedMasterSecret
 	hs.finishedHash.Write(hs.hello.marshal())
 	c.writeRecord(recordTypeHandshake, hs.hello.marshal())
+	c.handshakeLog.ServerHello = hs.hello.MakeLog()
 
 	certMsg := new(certificateMsg)
 	certMsg.certificates = hs.cert.Certificate
 	hs.finishedHash.Write(certMsg.marshal())
 	c.writeRecord(recordTypeHandshake, certMsg.marshal())
+	c.handshakeLog.ServerCertificates = certMsg.MakeLog()
 
 	if hs.hello.ocspStapling {
 		certStatus := new(certificateStatusMsg)
@@ -341,6 +350,7 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 	if skx != nil {
 		hs.finishedHash.Write(skx.marshal())
 		c.writeRecord(recordTypeHandshake, skx.marshal())
+		c.handshakeLog.ServerKeyExchange = skx.MakeLog(keyAgreement)
 	}
 
 	if c.config.ClientAuth >= RequestClientCert {
@@ -421,6 +431,10 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 		c.sendAlert(alertHandshakeFailure)
 		return err
 	}
+	c.handshakeLog.ClientKeyExchange = ckx.MakeLog(keyAgreement)
+
+	hs.preMasterSecret = make([]byte, len(preMasterSecret))
+	copy(hs.preMasterSecret, preMasterSecret)
 
 	if c.extendedMasterSecret {
 		hs.masterSecret = extendedMasterFromPreMasterSecret(c.vers, hs.suite, preMasterSecret, hs.finishedHash)
@@ -589,6 +603,7 @@ func (hs *serverHandshakeState) readFinished() error {
 		c.sendAlert(alertUnexpectedMessage)
 		return unexpectedMessageError(clientFinished, msg)
 	}
+	c.handshakeLog.ClientFinished = clientFinished.MakeLog()
 
 	verify := hs.finishedHash.clientSum(hs.masterSecret)
 	if len(verify) != len(clientFinished.verifyData) ||
@@ -636,6 +651,7 @@ func (hs *serverHandshakeState) sendFinished() error {
 	finished.verifyData = hs.finishedHash.serverSum(hs.masterSecret)
 	hs.finishedHash.Write(finished.marshal())
 	c.writeRecord(recordTypeHandshake, finished.marshal())
+	c.handshakeLog.ServerFinished = finished.MakeLog()
 
 	c.cipherSuite = hs.suite.id
 

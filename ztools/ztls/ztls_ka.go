@@ -61,6 +61,12 @@ func (ka *ecdheKeyAgreement) ECDHParams() *keys.ECDHParams {
 		out.ServerPublic.Y = new(big.Int)
 		out.ServerPublic.Y.Set(ka.y)
 	}
+	if len(ka.serverPrivKey) > 0 {
+		out.ServerPrivate = new(keys.ECDHPrivateParams)
+		out.ServerPrivate.Length = len(ka.serverPrivKey)
+		out.ServerPrivate.Value = make([]byte, len(ka.serverPrivKey))
+		copy(out.ServerPrivate.Value, ka.serverPrivKey)
+	}
 	return out
 }
 
@@ -68,19 +74,21 @@ func (ka *ecdheKeyAgreement) ClientECDHParams() *keys.ECDHParams {
 	out := new(keys.ECDHParams)
 	out.TLSCurveID = keys.TLSCurveID(ka.curveID)
 	out.ClientPublic = &keys.ECPoint{}
-	if ka.x != nil {
+	if ka.clientX != nil {
 		out.ClientPublic.X = new(big.Int)
 		out.ClientPublic.X.Set(ka.clientX)
 	}
-	if ka.y != nil {
+	if ka.clientY != nil {
 		out.ClientPublic.Y = new(big.Int)
 		out.ClientPublic.Y.Set(ka.clientY)
 	}
 
-	out.ClientPrivate = new(keys.ECDHPrivateParams)
-	out.ClientPrivate.Length = len(ka.clientPrivKey)
-	out.ClientPrivate.Value = make([]byte, len(ka.clientPrivKey))
-	copy(out.ClientPrivate.Value, ka.clientPrivKey)
+	if len(ka.clientPrivKey) > 0 {
+		out.ClientPrivate = new(keys.ECDHPrivateParams)
+		out.ClientPrivate.Length = len(ka.clientPrivKey)
+		out.ClientPrivate.Value = make([]byte, len(ka.clientPrivKey))
+		copy(out.ClientPrivate.Value, ka.clientPrivKey)
+	}
 	return out
 }
 
@@ -94,6 +102,9 @@ func (ka *dheKeyAgreement) DHParams() *keys.DHParams {
 	}
 	if ka.yServer != nil {
 		out.ServerPublic = new(big.Int).Set(ka.yServer)
+	}
+	if ka.yServer.Cmp(ka.yOurs) == 0 && ka.xOurs != nil {
+		out.ServerPrivate = new(big.Int).Set(ka.xOurs)
 	}
 	return out
 }
@@ -109,7 +120,7 @@ func (ka *dheKeyAgreement) ClientDHParams() *keys.DHParams {
 	if ka.yClient != nil {
 		out.ClientPublic = new(big.Int).Set(ka.yClient)
 	}
-	if ka.xOurs != nil {
+	if ka.yClient.Cmp(ka.yOurs) == 0 && ka.xOurs != nil {
 		out.ClientPrivate = new(big.Int).Set(ka.xOurs)
 	}
 	return out

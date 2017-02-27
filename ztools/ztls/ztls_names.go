@@ -9,6 +9,9 @@ import "strconv"
 var signatureNames map[uint8]string
 var hashNames map[uint8]string
 var cipherSuiteNames map[int]string
+var compressionNames map[uint8]string
+var curveNames map[uint16]string
+var pointFormatNames map[uint8]string
 
 func init() {
 	signatureNames = make(map[uint8]string, 8)
@@ -380,6 +383,58 @@ func init() {
 	cipherSuiteNames[0xFF83] = "SSL_RSA_WITH_3DES_EDE_CBC_MD5"
 	cipherSuiteNames[0xFF03] = "SSL_EN_RC2_128_CBC_WITH_MD5"
 	cipherSuiteNames[0xFF85] = "OP_PCL_TLS10_AES_128_CBC_SHA512"
+
+	// https://www.iana.org/assignments/comp-meth-ids/comp-meth-ids.xhtml#comp-meth-ids-2
+	compressionNames = make(map[uint8]string)
+	compressionNames[0] = "NULL"
+	compressionNames[1] = "DEFLATE"
+	compressionNames[64] = "LZS"
+
+	// https://www.iana.org/assignments/tls-parameters/tls-parameters.xml#tls-parameters-8
+	curveNames = make(map[uint16]string)
+	curveNames[1] = "sect163k1"
+	curveNames[2] = "sect163r1"
+	curveNames[3] = "sect163r2"
+	curveNames[4] = "sect193r1"
+	curveNames[5] = "sect193r2"
+	curveNames[6] = "sect233k1"
+	curveNames[7] = "sect233r1"
+	curveNames[8] = "sect239k1"
+	curveNames[9] = "sect283k1"
+	curveNames[10] = "sect283r1"
+	curveNames[11] = "sect409k1"
+	curveNames[12] = "sect409r1"
+	curveNames[13] = "sect571k1"
+	curveNames[14] = "sect571r1"
+	curveNames[15] = "secp160k1"
+	curveNames[16] = "secp160r1"
+	curveNames[17] = "secp160r2"
+	curveNames[18] = "secp192k1"
+	curveNames[19] = "secp192r1"
+	curveNames[20] = "secp224k1"
+	curveNames[21] = "secp224r1"
+	curveNames[22] = "secp256k1"
+	curveNames[23] = "secp256r1"
+	curveNames[24] = "secp384r1"
+	curveNames[25] = "secp521r1"
+	curveNames[26] = "brainpoolP256r1"
+	curveNames[27] = "brainpoolP384r1"
+	curveNames[28] = "brainpoolP512r1"
+	curveNames[29] = "ecdh_x25519" // TEMPORARY -- expires 1Mar2018
+	curveNames[30] = "ecdh_x448"   // TEMPORARY -- expires 1Mar2018
+	curveNames[256] = "ffdhe2048"
+	curveNames[257] = "ffdhe3072"
+	curveNames[258] = "ffdhe4096"
+	curveNames[259] = "ffdhe6144"
+	curveNames[260] = "ffdhe8192"
+	curveNames[65281] = "arbitrary_explicit_prime_curves"
+	curveNames[65282] = "arbitrary_explicit_char2_curves"
+
+	// https://www.iana.org/assignments/tls-parameters/tls-parameters.xml#tls-parameters-9
+	pointFormatNames = make(map[uint8]string)
+	pointFormatNames[0] = "uncompressed"
+	pointFormatNames[1] = "ansiX962_compressed_prime"
+	pointFormatNames[2] = "ansiX962_compressed_char2"
 }
 
 func nameForSignature(s uint8) string {
@@ -411,6 +466,42 @@ func (cs CipherSuite) String() string {
 		return name
 	}
 	return "unknown"
+}
+
+func (cm CompressionMethod) String() string {
+	if name, ok := compressionNames[uint8(cm)]; ok {
+		return name
+	}
+	return "unknown"
+}
+
+func (curveID CurveID) String() string {
+	if name, ok := curveNames[uint16(curveID)]; ok {
+		return name
+	}
+	return "unknown"
+}
+
+func (pFormat PointFormat) String() string {
+	if name, ok := pointFormatNames[uint8(pFormat)]; ok {
+		return name
+	}
+	return "unknown"
+}
+
+func nameForCompressionMethod(cm uint8) string {
+	compressionMethod := CompressionMethod(cm)
+	return compressionMethod.String()
+}
+
+func nameForCurve(curveID uint16) string {
+	curve := CurveID(curveID)
+	return curve.String()
+}
+
+func nameForPointFormat(pFormat uint8) string {
+	format := PointFormat(pFormat)
+	return format.String()
 }
 
 func (v TLSVersion) Bytes() []byte {
