@@ -25,9 +25,27 @@ type TLSVersion uint16
 type CipherSuite uint16
 
 type ClientHello struct {
-	Random         []byte `json:"random"`
-	ExtendedRandom []byte `json:"extended_random,omitempty"`
-	SessionID      []byte `json:"session_id,omitempty"`
+	Version              TLSVersion          `json:"version"`
+	Random               []byte              `json:"random"`
+	SessionID            []byte              `json:"session_id,omitempty"`
+	CipherSuites         []CipherSuite       `json:"cipher_suites"`
+	CompressionMethods   []CompressionMethod `json:"compression_methods"`
+	OcspStapling         bool                `json:"ocsp_stapling"`
+	TicketSupported      bool                `json:"ticket"`
+	SecureRenegotiation  bool                `json:"secure_renegotiation"`
+	HeartbeatSupported   bool                `json:"heartbeat"`
+	ExtendedRandom       []byte              `json:"extended_random,omitempty"`
+	ExtendedMasterSecret bool                `json:"extended_master_secret"`
+	NextProtoNeg         bool                `json:"next_protocol_negotiation"`
+	ServerName           string              `json:"server_name,omitempty"`
+	Scts                 bool                `json:"scts"`
+	SupportedCurves      []CurveID           `json:"supported_curves,omitempty"`
+	SupportedPoints      []PointFormat       `json:"supported_point_formats,omitempty"`
+	SessionTicket        *SessionTicket      `json:"session_ticket,omitempty"`
+	SignatureAndHashes   []SignatureAndHash  `json:"signature_and_hashes,omitempty"`
+	SctEnabled           bool                `json:"sct_enabled"`
+	AlpnProtocols        []string            `json:"alpn_protocols,omitempty"`
+	UnknownExtensions    [][]byte            `json:"unknown_extensions,omitempty"`
 }
 
 type ParsedAndRawSCT struct {
@@ -189,6 +207,41 @@ func (cs *CipherSuite) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+type CompressionMethod uint8
+
+func (cm *CompressionMethod) MarshalJSON() ([]byte, error) {
+	buf := make([]byte, 1)
+	buf[0] = byte(*cm)
+	enc := strings.ToUpper(hex.EncodeToString(buf))
+	aux := struct {
+		Hex   string `json:"hex"`
+		Name  string `json:"name"`
+		Value uint8  `json:"value"`
+	}{
+		Hex:   fmt.Sprintf("0x%s", enc),
+		Name:  cm.String(),
+		Value: uint8(*cm),
+	}
+
+	return json.Marshal(aux)
+}
+
+func (cm *CompressionMethod) UnmarshalJSON(b []byte) error {
+	aux := struct {
+		Hex   string `json:"hex"`
+		Name  string `json:"name"`
+		Value uint8  `json:"value"`
+	}{}
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	if expectedName := nameForCompressionMethod(aux.Value); expectedName != aux.Name {
+		return fmt.Errorf("mismatched compression method and name, compression method: %d, name: %s, expected name: %s", aux.Value, aux.Name, expectedName)
+	}
+	*cm = CompressionMethod(aux.Value)
+	return nil
+}
+
 func (c *Conn) GetHandshakeLog() *ServerHandshake {
 	return c.handshakeLog
 }
@@ -211,13 +264,69 @@ func (c *Conn) OutSeq() []byte {
 
 func (m *clientHelloMsg) MakeLog() *ClientHello {
 	ch := new(ClientHello)
+
+	ch.Version = TLSVersion(m.vers)
+
 	ch.Random = make([]byte, len(m.random))
 	copy(ch.Random, m.random)
+
 	ch.SessionID = make([]byte, len(m.sessionId))
 	copy(ch.SessionID, m.sessionId)
+
+	ch.CipherSuites = make([]CipherSuite, len(m.cipherSuites))
+	for i, aCipher := range m.cipherSuites {
+		ch.CipherSuites[i] = CipherSuite(aCipher)
+	}
+
+	ch.CompressionMethods = make([]CompressionMethod, len(m.compressionMethods))
+	for i, aCompressMethod := range m.compressionMethods {
+		ch.CompressionMethods[i] = CompressionMethod(aCompressMethod)
+	}
+
+	ch.OcspStapling = m.ocspStapling
+	ch.TicketSupported = m.ticketSupported
+	ch.SecureRenegotiation = m.secureRenegotiation
+	ch.HeartbeatSupported = m.heartbeatEnabled
+
 	if len(m.extendedRandom) > 0 {
 		ch.ExtendedRandom = make([]byte, len(m.extendedRandom))
 		copy(ch.ExtendedRandom, m.extendedRandom)
+	}
+
+	ch.NextProtoNeg = m.nextProtoNeg
+	ch.ServerName = m.serverName
+	ch.Scts = m.scts
+
+	ch.SupportedCurves = make([]CurveID, len(m.supportedCurves))
+	copy(ch.SupportedCurves, m.supportedCurves)
+
+	ch.SupportedPoints = make([]PointFormat, len(m.supportedPoints))
+	for i, aFormat := range m.supportedPoints {
+		ch.SupportedPoints[i] = PointFormat(aFormat)
+	}
+
+	if len(m.sessionTicket) > 0 {
+		ch.SessionTicket = new(SessionTicket)
+		copy(ch.SessionTicket.Value, m.sessionTicket)
+		ch.SessionTicket.Length = len(m.sessionTicket)
+		ch.SessionTicket.LifetimeHint = 0 // Clients don't send
+	}
+
+	ch.SignatureAndHashes = make([]SignatureAndHash, len(m.signatureAndHashes))
+	for i, aGroup := range m.signatureAndHashes {
+		ch.SignatureAndHashes[i] = SignatureAndHash(aGroup)
+	}
+
+	ch.SctEnabled = m.sctEnabled
+
+	ch.AlpnProtocols = make([]string, len(m.alpnProtocols))
+	copy(ch.AlpnProtocols, m.alpnProtocols)
+
+	ch.UnknownExtensions = make([][]byte, len(m.unknownExtensions))
+	for i, extBytes := range m.unknownExtensions {
+		tempBytes := make([]byte, len(extBytes))
+		copy(tempBytes, extBytes)
+		ch.UnknownExtensions[i] = tempBytes
 	}
 	return ch
 }
@@ -346,6 +455,22 @@ func (m *ClientSessionState) MakeLog() *SessionTicket {
 }
 
 func (m *clientHandshakeState) MakeLog() *KeyMaterial {
+	keymat := new(KeyMaterial)
+
+	keymat.MasterSecret = new(MasterSecret)
+	keymat.MasterSecret.Length = len(m.masterSecret)
+	keymat.MasterSecret.Value = make([]byte, len(m.masterSecret))
+	copy(keymat.MasterSecret.Value, m.masterSecret)
+
+	keymat.PreMasterSecret = new(PreMasterSecret)
+	keymat.PreMasterSecret.Length = len(m.preMasterSecret)
+	keymat.PreMasterSecret.Value = make([]byte, len(m.preMasterSecret))
+	copy(keymat.PreMasterSecret.Value, m.preMasterSecret)
+
+	return keymat
+}
+
+func (m *serverHandshakeState) MakeLog() *KeyMaterial {
 	keymat := new(KeyMaterial)
 
 	keymat.MasterSecret = new(MasterSecret)
