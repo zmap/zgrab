@@ -601,6 +601,7 @@ type Certificate struct {
 
 	// Certificate Policies values
 	QualifierId          [][]asn1.ObjectIdentifier
+	CPSuri               [][]string
 	ExplicitTexts        [][]asn1.RawValue
 	NoticeRefOrgnization [][]asn1.RawValue
 	NoticeRefNumbers     [][]NoticeNumber
