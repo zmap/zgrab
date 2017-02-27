@@ -330,6 +330,8 @@ type Config struct {
 
 	serverInitOnce sync.Once // guards calling (*Config).serverInit
 
+	// Add all ciphers in CipherSuites to Client Hello even if unimplemented
+	// Client-side Only
 	ForceSuites bool
 
 	// Export RSA Key
