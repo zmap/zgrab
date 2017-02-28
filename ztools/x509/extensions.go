@@ -66,6 +66,53 @@ type BasicConstraints struct {
 	MaxPathLen *int `json:"max_path_len,omitempty"`
 }
 
+type CertificatePolicies struct {
+	PolicyIdentifiers     []asn1.ObjectIdentifier
+	QualifierId           [][]asn1.ObjectIdentifier
+	CPSUri                [][]string
+	ExplicitTexts         [][]string
+	NoticeRefOrganization [][]string
+	NoticeRefNumbers      [][]NoticeNumber
+}
+
+type jsonCertificatePolicies struct {
+	PolicyIdentifiers     []string         `json:"policy_identifiers,omitempty"`
+	QualifierId           [][]string       `json:"qualifier_id,omitempty"`
+	ExplicitTexts         [][]string       `json:"explicit_texts,omitempty"`
+	CPSUri                [][]string       `json:"cps_uri,omitempty"`
+	NoticeRefOrganization [][]string       `json:"noticeref_organization,omitempty"`
+	NoticeRefNumbers      [][]NoticeNumber `json:"noticeref_numbers,omitempty"`
+}
+
+func (cp *CertificatePolicies) MarshalJSON() ([]byte, error) {
+	policyIdentifiers := make([]string, len(cp.PolicyIdentifiers))
+	for idx, oid := range cp.PolicyIdentifiers {
+		policyIdentifiers[idx] = oid.String()
+	}
+
+	qualifierIds := make([][]string, len(cp.QualifierId))
+	for i, oids := range cp.QualifierId {
+		for _, oid := range oids {
+			qualifierIds[i] = append(qualifierIds[i], oid.String())
+		}
+	}
+
+	//qualifierIds := make([][]string, len(cp))
+	//for idx, oid := range cp.QualifierId {
+	//	qualifierIds[idx] = oid.String()
+	//}
+
+	parsed := jsonCertificatePolicies{
+		PolicyIdentifiers:     policyIdentifiers,
+		QualifierId:           qualifierIds,
+		ExplicitTexts:         cp.ExplicitTexts,
+		NoticeRefOrganization: cp.NoticeRefOrganization,
+		NoticeRefNumbers:      cp.NoticeRefNumbers,
+		CPSUri:                cp.CPSUri,
+	}
+	return json.Marshal(parsed)
+}
+
 type GeneralNames struct {
 	DirectoryNames []pkix.Name
 	DNSNames       []string
@@ -304,7 +351,7 @@ func (kid SubjAuthKeyId) MarshalJSON() ([]byte, error) {
 
 type ExtendedKeyUsage []ExtKeyUsage
 
-type CertificatePolicies []asn1.ObjectIdentifier
+//type CertificatePolicies []asn1.ObjectIdentifier
 
 // The string functions for CertValidationLevel are auto-generated via
 // `go generate <full_path_to_x509_package>` or running `go generate` in the package directory
@@ -498,13 +545,13 @@ var OrganizationValidationOIDs = map[string]interface{}{
 	"2.16.792.3.0.3.1.1.2": nil,
 }
 
-func (cp CertificatePolicies) MarshalJSON() ([]byte, error) {
-	out := make([]string, len(cp))
-	for idx, oid := range cp {
-		out[idx] = oid.String()
-	}
-	return json.Marshal(out)
-}
+//func (cp CertificatePolicies) MarshalJSON() ([]byte, error) {
+//	out := make([]string, len(cp))
+//	for idx, oid := range cp {
+//		out[idx] = oid.String()
+//	}
+//	return json.Marshal(out)
+//}
 
 // TODO pull out other types
 type AuthorityInfoAccess struct {
@@ -535,7 +582,7 @@ func (c *Certificate) jsonifyExtensions() (*CertificateExtensions, UnknownCertif
 			exts.SubjectAltName.OtherNames = c.OtherNames
 			exts.SubjectAltName.RegisteredIDs = c.RegisteredIDs
 			exts.SubjectAltName.URIs = c.URIs
-		} else if e.Id.Equal(oidExtIssuerAltName){
+		} else if e.Id.Equal(oidExtIssuerAltName) {
 			exts.IssuerAltName = new(GeneralNames)
 			exts.IssuerAltName.DirectoryNames = c.IANDirectoryNames
 			exts.IssuerAltName.DNSNames = c.IANDNSNames
@@ -569,7 +616,13 @@ func (c *Certificate) jsonifyExtensions() (*CertificateExtensions, UnknownCertif
 		} else if e.Id.Equal(oidExtExtendedKeyUsage) {
 			exts.ExtendedKeyUsage = c.ExtKeyUsage
 		} else if e.Id.Equal(oidExtCertificatePolicy) {
-			exts.CertificatePolicies = c.PolicyIdentifiers
+			exts.CertificatePolicies.PolicyIdentifiers = c.PolicyIdentifiers
+			exts.CertificatePolicies.NoticeRefNumbers = c.NoticeRefNumbers
+			exts.CertificatePolicies.NoticeRefOrganization = c.ParsedNoticeRefOrganization
+			exts.CertificatePolicies.ExplicitTexts = c.ParsedExplicitTexts
+			exts.CertificatePolicies.QualifierId = c.QualifierId
+			exts.CertificatePolicies.CPSUri = c.CPSuri
+
 		} else if e.Id.Equal(oidExtAuthorityInfoAccess) {
 			exts.AuthorityInfoAccess = new(AuthorityInfoAccess)
 			exts.AuthorityInfoAccess.OCSPServer = c.OCSPServer

@@ -601,9 +601,13 @@ type Certificate struct {
 
 	// Certificate Policies values
 	QualifierId          [][]asn1.ObjectIdentifier
+	CPSuri               [][]string
 	ExplicitTexts        [][]asn1.RawValue
 	NoticeRefOrgnization [][]asn1.RawValue
 	NoticeRefNumbers     [][]NoticeNumber
+
+	ParsedExplicitTexts         [][]string
+	ParsedNoticeRefOrganization [][]string
 
 	// Name constraints
 	NameConstraintsCritical     bool // if true then the name constraints are marked critical.
@@ -1441,6 +1445,10 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				out.ExplicitTexts = make([][]asn1.RawValue, len(policies))
 				out.NoticeRefOrgnization = make([][]asn1.RawValue, len(policies))
 				out.NoticeRefNumbers = make([][]NoticeNumber, len(policies))
+				out.ParsedExplicitTexts = make([][]string, len(policies))
+				out.ParsedNoticeRefOrganization = make([][]string, len(policies))
+				out.CPSuri = make([][]string, len(policies))
+
 				for i, policy := range policies {
 					out.PolicyIdentifiers[i] = policy.Policy
 					// parse optional Qualifier for zlint
@@ -1454,10 +1462,12 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 							}
 							if len(un.ExplicitText.Bytes) != 0 {
 								out.ExplicitTexts[i] = append(out.ExplicitTexts[i], un.ExplicitText)
+								out.ParsedExplicitTexts[i] = append(out.ParsedExplicitTexts[i], string(un.ExplicitText.Bytes))
 							}
 							if un.NoticeRef.Organization.Bytes != nil || un.NoticeRef.NoticeNumbers != nil {
 								out.NoticeRefOrgnization[i] = append(out.NoticeRefOrgnization[i], un.NoticeRef.Organization)
 								out.NoticeRefNumbers[i] = append(out.NoticeRefNumbers[i], un.NoticeRef.NoticeNumbers)
+								out.ParsedNoticeRefOrganization[i] = append(out.ParsedNoticeRefOrganization[i], string(un.NoticeRef.Organization.Bytes))
 							}
 						}
 					}
