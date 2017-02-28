@@ -346,8 +346,6 @@ func (kid SubjAuthKeyId) MarshalJSON() ([]byte, error) {
 
 type ExtendedKeyUsage []ExtKeyUsage
 
-//type CertificatePolicies []asn1.ObjectIdentifier
-
 // The string functions for CertValidationLevel are auto-generated via
 // `go generate <full_path_to_x509_package>` or running `go generate` in the package directory
 //go:generate stringer -type=CertValidationLevel -output=generated_certvalidationlevel_string.go
@@ -539,14 +537,6 @@ var OrganizationValidationOIDs = map[string]interface{}{
 	// TurkTrust
 	"2.16.792.3.0.3.1.1.2": nil,
 }
-
-//func (cp CertificatePolicies) MarshalJSON() ([]byte, error) {
-//	out := make([]string, len(cp))
-//	for idx, oid := range cp {
-//		out[idx] = oid.String()
-//	}
-//	return json.Marshal(out)
-//}
 
 // TODO pull out other types
 type AuthorityInfoAccess struct {
