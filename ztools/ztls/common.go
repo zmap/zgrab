@@ -267,12 +267,30 @@ type ConnectionState struct {
 type ClientAuthType int
 
 const (
-	NoClientCert ClientAuthType = iota
-	RequestClientCert
-	RequireAnyClientCert
-	VerifyClientCertIfGiven
-	RequireAndVerifyClientCert
+	// Values have no meaning (were previously 'iota')
+	// Values added IOT allow dereference to name for JSON
+	NoClientCert               ClientAuthType = 0
+	RequestClientCert          ClientAuthType = 1
+	RequireAnyClientCert       ClientAuthType = 2
+	VerifyClientCertIfGiven    ClientAuthType = 3
+	RequireAndVerifyClientCert ClientAuthType = 4
 )
+
+func (authType *ClientAuthType) String() string {
+	if name, ok := clientAuthTypeNames[int(*authType)]; ok {
+		return name
+	}
+
+	return "unknown"
+}
+
+func (authType *ClientAuthType) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + authType.String() + `"`), nil
+}
+
+func (authType *ClientAuthType) UnmarshalJSON(b []byte) error {
+	panic("unimplemented")
+}
 
 // ClientSessionState contains the state needed by clients to resume TLS
 // sessions.
@@ -741,16 +759,21 @@ func (c *Config) BuildNameToCertificate() {
 
 // A Certificate is a chain of one or more certificates, leaf first.
 type Certificate struct {
-	Certificate [][]byte
-	PrivateKey  crypto.PrivateKey // supported types: *rsa.PrivateKey, *ecdsa.PrivateKey
+	Certificate [][]byte `json:"certificate_chain,omitempty"`
+
+	// supported types: *rsa.PrivateKey, *ecdsa.PrivateKey
 	// OCSPStaple contains an optional OCSP response which will be served
 	// to clients that request it.
-	OCSPStaple []byte
+	// Don't expose the private key by default (can be marshalled manually)
+	PrivateKey crypto.PrivateKey `json:"-"`
+
+	OCSPStaple []byte `json:"ocsp_staple,omitempty"`
+
 	// Leaf is the parsed form of the leaf certificate, which may be
 	// initialized using x509.ParseCertificate to reduce per-handshake
 	// processing for TLS clients doing client authentication. If nil, the
 	// leaf certificate will be parsed as needed.
-	Leaf *x509.Certificate
+	Leaf *x509.Certificate `json:"leaf,omitempty"`
 }
 
 // A TLS record.
@@ -948,4 +971,76 @@ type ClientHelloInfo struct {
 	// from, or write to, this connection; that will cause the TLS
 	// connection to fail.
 	Conn net.Conn
+}
+
+type ConfigJSON struct {
+	Certificates                   []Certificate                   `json:"certificates,omitempty"`
+	RootCAs                        *x509.CertPool                  `json:"root_cas,omitempty"`
+	NextProtos                     []string                        `json:"next_protocols,omitempty"`
+	ServerName                     string                          `json:"server_name,omitempty"`
+	ClientAuth                     ClientAuthType                  `json:"client_auth_type"`
+	ClientCAs                      *x509.CertPool                  `json:"client_cas,omitempty"`
+	InsecureSkipVerify             bool                            `json:"skip_verify"`
+	CipherSuites                   []CipherSuite                   `json:"cipher_suites,omitempty"`
+	PreferServerCipherSuites       bool                            `json:"prefer_server_cipher_suites"`
+	SessionTicketsDisabled         bool                            `json:"session_tickets_disabled"`
+	SessionTicketKey               []byte                          `json:"session_ticket_key,omitempty"`
+	ClientSessionCache             ClientSessionCache              `json:"client_session_cache,omitempty"`
+	MinVersion                     TLSVersion                      `json:"min_tls_version,omitempty"`
+	MaxVersion                     TLSVersion                      `json:"max_tls_version,omitempty"`
+	CurvePreferences               []CurveID                       `json:"curve_preferences,omitempty"`
+	ForceSuites                    bool                            `json:"force_cipher_suites"1`
+	ExportRSAKey                   *rsa.PrivateKey                 `json:"export_rsa_key,omitempty"`
+	HeartbeatEnabled               bool                            `json:"heartbeat_enabled"`
+	ClientDSAEnabled               bool                            `json:"client_dsa_enabled"`
+	ExtendedRandom                 bool                            `json:"extended_random_enabled"`
+	ForceSessionTicketExt          bool                            `json:"session_ticket_ext_enabled"`
+	ExtendedMasterSecret           bool                            `json:"extended_master_secret_enabled"`
+	SignedCertificateTimestampExt  bool                            `json:"sct_ext_enabled"`
+	ClientRandom                   []byte                          `json:"client_random,omitempty"`
+	ExternalClientHello            []byte                          `json:"external_client_hello,omitempty"`
+	ClientFingerprintConfiguration *ClientFingerprintConfiguration `json:"client_fingerprint_config,omitempty"`
+}
+
+func (config *Config) MarshalJSON() ([]byte, error) {
+	aux := new(ConfigJSON)
+
+	aux.Certificates = config.Certificates
+	aux.RootCAs = config.RootCAs
+	aux.NextProtos = config.NextProtos
+	aux.ServerName = config.ServerName
+	aux.ClientAuth = config.ClientAuth
+	aux.ClientCAs = config.ClientCAs
+	aux.InsecureSkipVerify = config.InsecureSkipVerify
+
+	ciphers := config.cipherSuites()
+	aux.CipherSuites = make([]CipherSuite, len(ciphers))
+	for i, aCipher := range ciphers {
+		aux.CipherSuites[i] = CipherSuite(aCipher)
+	}
+
+	aux.PreferServerCipherSuites = config.PreferServerCipherSuites
+	aux.SessionTicketsDisabled = config.SessionTicketsDisabled
+	aux.SessionTicketKey = config.SessionTicketKey[:]
+	aux.ClientSessionCache = config.ClientSessionCache
+	aux.MinVersion = TLSVersion(config.minVersion())
+	aux.MaxVersion = TLSVersion(config.maxVersion())
+	aux.CurvePreferences = config.curvePreferences()
+	aux.ForceSuites = config.ForceSuites
+	aux.ExportRSAKey = config.ExportRSAKey
+	aux.HeartbeatEnabled = config.HeartbeatEnabled
+	aux.ClientDSAEnabled = config.ClientDSAEnabled
+	aux.ExtendedRandom = config.ExtendedRandom
+	aux.ForceSessionTicketExt = config.ForceSessionTicketExt
+	aux.ExtendedMasterSecret = config.ExtendedMasterSecret
+	aux.SignedCertificateTimestampExt = config.SignedCertificateTimestampExt
+	aux.ClientRandom = config.ClientRandom
+	aux.ExternalClientHello = config.ExternalClientHello
+	aux.ClientFingerprintConfiguration = config.ClientFingerprintConfiguration
+
+	return json.Marshal(aux)
+}
+
+func (config *Config) UnmarshalJSON(b []byte) error {
+	panic("unimplemented")
 }

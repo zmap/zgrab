@@ -1091,3 +1091,7 @@ func (c *Conn) VerifyHostname(host string) error {
 	}
 	return c.peerCertificates[0].VerifyHostname(host)
 }
+
+func (c *Conn) Config() *Config {
+	return c.config
+}
