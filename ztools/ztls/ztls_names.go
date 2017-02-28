@@ -12,6 +12,7 @@ var cipherSuiteNames map[int]string
 var compressionNames map[uint8]string
 var curveNames map[uint16]string
 var pointFormatNames map[uint8]string
+var signatureSchemeNames map[uint16]string
 
 func init() {
 	signatureNames = make(map[uint8]string, 8)
@@ -435,6 +436,21 @@ func init() {
 	pointFormatNames[0] = "uncompressed"
 	pointFormatNames[1] = "ansiX962_compressed_prime"
 	pointFormatNames[2] = "ansiX962_compressed_char2"
+
+	// https://tools.ietf.org/html/draft-ietf-tls-tls13-18#section-4.2.3
+	signatureSchemeNames = make(map[uint16]string)
+	signatureSchemeNames[0x0201] = "rsa_pkcs1_sha1"
+	signatureSchemeNames[0x0401] = "rsa_pkcs1_sha256"
+	signatureSchemeNames[0x0501] = "rsa_pkcs1_sha384"
+	signatureSchemeNames[0x0601] = "rsa_pkcs1_sha512"
+	signatureSchemeNames[0x0403] = "ecdsa_secp256r1_sha256"
+	signatureSchemeNames[0x0503] = "ecdsa_secp384r1_sha384"
+	signatureSchemeNames[0x0603] = "ecdsa_secp521r1_sha512"
+	signatureSchemeNames[0x0804] = "rsa_pss_sha256"
+	signatureSchemeNames[0x0805] = "rsa_pss_sha384"
+	signatureSchemeNames[0x0806] = "rsa_pss_sha512"
+	signatureSchemeNames[0x0807] = "ed25519"
+	signatureSchemeNames[0x0808] = "ed448"
 }
 
 func nameForSignature(s uint8) string {
@@ -521,4 +537,20 @@ func (v TLSVersion) String() string {
 	default:
 		return "unknown"
 	}
+}
+
+func nameForSignatureScheme(scheme uint16) string {
+	sigScheme := SignatureScheme(scheme)
+	return sigScheme.String()
+}
+
+func (sigScheme *SignatureScheme) String() string {
+	if name, ok := signatureSchemeNames[uint16(*sigScheme)]; ok {
+		return name
+	}
+	return "unknown"
+}
+
+func (sigScheme *SignatureScheme) Bytes() []byte {
+	return []byte{byte(*sigScheme >> 8), byte(*sigScheme)}
 }
