@@ -97,11 +97,6 @@ func (cp *CertificatePolicies) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	//qualifierIds := make([][]string, len(cp))
-	//for idx, oid := range cp.QualifierId {
-	//	qualifierIds[idx] = oid.String()
-	//}
-
 	parsed := jsonCertificatePolicies{
 		PolicyIdentifiers:     policyIdentifiers,
 		QualifierId:           qualifierIds,
