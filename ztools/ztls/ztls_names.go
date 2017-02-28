@@ -12,6 +12,7 @@ var cipherSuiteNames map[int]string
 var compressionNames map[uint8]string
 var curveNames map[uint16]string
 var pointFormatNames map[uint8]string
+var clientAuthTypeNames map[int]string
 var signatureSchemeNames map[uint16]string
 
 func init() {
@@ -436,6 +437,14 @@ func init() {
 	pointFormatNames[0] = "uncompressed"
 	pointFormatNames[1] = "ansiX962_compressed_prime"
 	pointFormatNames[2] = "ansiX962_compressed_char2"
+
+	// Name-value paires *are* not standardized, only dereferenced for JSON output
+	clientAuthTypeNames = make(map[int]string)
+	clientAuthTypeNames[0] = "NoClientCert"
+	clientAuthTypeNames[1] = "RequestClientCert"
+	clientAuthTypeNames[2] = "RequireAnyClientCert"
+	clientAuthTypeNames[3] = "VerifyClientCertIfGiven"
+	clientAuthTypeNames[4] = "RequireAndVerifyClientCert"
 
 	// https://tools.ietf.org/html/draft-ietf-tls-tls13-18#section-4.2.3
 	signatureSchemeNames = make(map[uint16]string)
