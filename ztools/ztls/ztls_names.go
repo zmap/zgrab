@@ -448,18 +448,18 @@ func init() {
 
 	// https://tools.ietf.org/html/draft-ietf-tls-tls13-18#section-4.2.3
 	signatureSchemeNames = make(map[uint16]string)
-	signatureSchemeNames[0x0201] = "rsa_pkcs1_sha1"
-	signatureSchemeNames[0x0401] = "rsa_pkcs1_sha256"
-	signatureSchemeNames[0x0501] = "rsa_pkcs1_sha384"
-	signatureSchemeNames[0x0601] = "rsa_pkcs1_sha512"
-	signatureSchemeNames[0x0403] = "ecdsa_secp256r1_sha256"
-	signatureSchemeNames[0x0503] = "ecdsa_secp384r1_sha384"
-	signatureSchemeNames[0x0603] = "ecdsa_secp521r1_sha512"
-	signatureSchemeNames[0x0804] = "rsa_pss_sha256"
-	signatureSchemeNames[0x0805] = "rsa_pss_sha384"
-	signatureSchemeNames[0x0806] = "rsa_pss_sha512"
-	signatureSchemeNames[0x0807] = "ed25519"
-	signatureSchemeNames[0x0808] = "ed448"
+	signatureSchemeNames[uint16(PKCS1WithSHA1)] = "rsa_pkcs1_sha1"
+	signatureSchemeNames[uint16(PKCS1WithSHA256)] = "rsa_pkcs1_sha256"
+	signatureSchemeNames[uint16(PKCS1WithSHA384)] = "rsa_pkcs1_sha384"
+	signatureSchemeNames[uint16(PKCS1WithSHA512)] = "rsa_pkcs1_sha512"
+	signatureSchemeNames[uint16(PSSWithSHA256)] = "rsa_pss_sha256"
+	signatureSchemeNames[uint16(PSSWithSHA384)] = "rsa_pss_sha384"
+	signatureSchemeNames[uint16(PSSWithSHA512)] = "rsa_pss_sha512"
+	signatureSchemeNames[uint16(ECDSAWithP256AndSHA256)] = "ecdsa_secp256r1_sha256"
+	signatureSchemeNames[uint16(ECDSAWithP384AndSHA384)] = "ecdsa_secp384r1_sha384"
+	signatureSchemeNames[uint16(ECDSAWithP521AndSHA512)] = "ecdsa_secp521r1_sha512"
+	signatureSchemeNames[uint16(EdDSAWithEd25519)] = "ed25519"
+	signatureSchemeNames[uint16(EdDSAWithEd448)] = "ed448"
 }
 
 func nameForSignature(s uint8) string {

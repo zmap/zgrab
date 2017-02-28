@@ -920,6 +920,9 @@ const (
 	ECDSAWithP256AndSHA256 SignatureScheme = 0x0403
 	ECDSAWithP384AndSHA384 SignatureScheme = 0x0503
 	ECDSAWithP521AndSHA512 SignatureScheme = 0x0603
+
+	EdDSAWithEd25519 SignatureScheme = 0x0807
+	EdDSAWithEd448   SignatureScheme = 0x0808
 )
 
 func (sigScheme *SignatureScheme) MarshalJSON() ([]byte, error) {
