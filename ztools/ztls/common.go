@@ -1007,6 +1007,11 @@ type ClientHelloInfo struct {
 	// from, or write to, this connection; that will cause the TLS
 	// connection to fail.
 	Conn net.Conn
+
+	// Add a pointer to the entire ztls handshake structure so that it can
+	// be retrieved without hijacking the connection from higher-level
+	// packages
+	HandshakeLog *ServerHandshake
 }
 
 func (info *ClientHelloInfo) MarshalJSON() ([]byte, error) {
@@ -1025,6 +1030,9 @@ func (info *ClientHelloInfo) MarshalJSON() ([]byte, error) {
 		SupportedCurves:  info.SupportedCurves,
 		SignatureSchemes: info.SignatureSchemes,
 		SupportedProtos:  info.SupportedProtos,
+		// Do not marshal HandshakeLog IOT avoid duplication of data
+		// HandshakeLog can be marshalled manually from
+		// ClientHelloInfo.HandshakeLog or Conn.GetHandshakeLog()
 	}
 
 	aux.CipherSuites = make([]CipherSuite, len(info.CipherSuites))
