@@ -1455,6 +1455,7 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 					for _, qualifier := range policy.Qualifiers {
 						out.QualifierId[i] = append(out.QualifierId[i], qualifier.PolicyQualifierId)
 						userNoticeOID := asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 2, 2}
+						cpsURIOID := asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 2, 1}
 						if qualifier.PolicyQualifierId.Equal(userNoticeOID) {
 							var un userNotice
 							if _, err = asn1.Unmarshal(qualifier.Qualifier.FullBytes, &un); err != nil {
@@ -1469,6 +1470,13 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 								out.NoticeRefNumbers[i] = append(out.NoticeRefNumbers[i], un.NoticeRef.NoticeNumbers)
 								out.ParsedNoticeRefOrganization[i] = append(out.ParsedNoticeRefOrganization[i], string(un.NoticeRef.Organization.Bytes))
 							}
+						}
+						if qualifier.PolicyQualifierId.Equal(cpsURIOID) {
+							var cpsURIRaw asn1.RawValue
+							if _, err = asn1.Unmarshal(qualifier.Qualifier.FullBytes, &cpsURIRaw); err != nil {
+								return nil, err
+							}
+							out.CPSuri[i] = append(out.CPSuri[i], string(cpsURIRaw.Bytes))
 						}
 					}
 				}

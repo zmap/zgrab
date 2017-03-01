@@ -45,7 +45,7 @@ type CertificateExtensions struct {
 	AuthKeyID                      SubjAuthKeyId                    `json:"authority_key_id,omitempty"`
 	SubjectKeyID                   SubjAuthKeyId                    `json:"subject_key_id,omitempty"`
 	ExtendedKeyUsage               ExtendedKeyUsage                 `json:"extended_key_usage,omitempty"`
-	CertificatePolicies            CertificatePolicies              `json:"certificate_policies,omitmepty"`
+	CertificatePolicies            CertificatePoliciesData          `json:"certificate_policies,omitmepty"`
 	AuthorityInfoAccess            *AuthorityInfoAccess             `json:"authority_info_access,omitempty"`
 	IsPrecert                      IsPrecert                        `json:"ct_poison,omitempty"`
 	SignedCertificateTimestampList []*ct.SignedCertificateTimestamp `json:"signed_certificate_timestamps,omitempty"`
@@ -66,7 +66,43 @@ type BasicConstraints struct {
 	MaxPathLen *int `json:"max_path_len,omitempty"`
 }
 
-type CertificatePolicies struct {
+
+type NoticeReferenceData struct {
+	Organization	string				`json:"organization,omitempty"`
+	NoticeNumbers	[]NoticeNumber			`json:"notice_numbers,omitempty"`
+}
+
+type NoticeReference []NoticeReferenceData
+
+type UserNoticeData struct {
+	NoticeRef 		NoticeReference		`json:"notice_ref,omitempty"`
+	ExplicitText 		string			`json:"explicit_text,omitempty"`
+}
+
+type UserNotice []UserNoticeData
+
+type PolicyQualifierInfoData struct {
+	QualifierId		string			`json:"qualifier_id,omitempty"`
+	CPSUri			string			`json:"cps_uri,omitempty"`
+	UserNotice		UserNotice		`json:"user_notice,omitempty"`
+}
+
+type PolicyQualifierInfo struct {
+	PolicyQualifierInfo 	[]PolicyQualifierInfoData `json:"policy_qualifier_info,omitempty"`
+}
+
+type PolicyInformationData struct {
+	PolicyIdentifier	string			`json:"policy_identifier,omitempty"`
+	PolicyQualifierData	[]PolicyQualifierInfo	`json:"policy_qualifiers,omitempty"`
+}
+
+type PolicyInformation 	struct {
+	PolicyInformationData []PolicyInformationData	`json:"policy_information,omitempty"`
+}
+
+type CertificatePolicies []PolicyInformation
+
+type CertificatePoliciesData struct {
 	PolicyIdentifiers     []asn1.ObjectIdentifier
 	QualifierId           [][]asn1.ObjectIdentifier
 	CPSUri                [][]string
@@ -75,37 +111,56 @@ type CertificatePolicies struct {
 	NoticeRefNumbers      [][]NoticeNumber
 }
 
-type jsonCertificatePolicies struct {
-	PolicyIdentifiers     []string         `json:"policy_identifiers,omitempty"`
-	QualifierId           [][]string       `json:"qualifier_id,omitempty"`
-	ExplicitTexts         [][]string       `json:"explicit_texts,omitempty"`
-	CPSUri                [][]string       `json:"cps_uri,omitempty"`
-	NoticeRefOrganization [][]string       `json:"noticeref_organization,omitempty"`
-	NoticeRefNumbers      [][]NoticeNumber `json:"noticeref_numbers,omitempty"`
-}
+func (cp *CertificatePoliciesData) MarshalJSON() ([]byte, error) {
+	policies := CertificatePolicies{}
+	policyInformation := PolicyInformation{}
 
-func (cp *CertificatePolicies) MarshalJSON() ([]byte, error) {
-	policyIdentifiers := make([]string, len(cp.PolicyIdentifiers))
 	for idx, oid := range cp.PolicyIdentifiers {
-		policyIdentifiers[idx] = oid.String()
-	}
+		policyInformationData := PolicyInformationData{}
+		policyInformationData.PolicyIdentifier = oid.String()
 
-	qualifierIds := make([][]string, len(cp.QualifierId))
-	for i, oids := range cp.QualifierId {
-		for _, oid := range oids {
-			qualifierIds[i] = append(qualifierIds[i], oid.String())
+		iterateQualifierId := cp.QualifierId[idx]
+		policyQualifierInfo := PolicyQualifierInfo{}
+
+		for idx2, oid2 := range iterateQualifierId {
+
+			policyQualifierInfoData := PolicyQualifierInfoData{}
+			cpsURIOID := asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 2, 1}
+			userNoticeOID := asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 2, 2}
+
+			policyQualifierInfoData.QualifierId = oid2.String()
+
+			if oid2.Equal(cpsURIOID) {
+				policyQualifierInfoData.CPSUri = cp.CPSUri[idx][idx2]
+			} else if oid2.Equal(userNoticeOID) {
+				uNotice := UserNotice{}
+				iterateUserNotice := cp.ExplicitTexts[idx]
+
+				for _, explicitText := range iterateUserNotice {
+					uNoticeData := UserNoticeData{}
+					uNoticeData.ExplicitText = explicitText
+
+					noticeRef := NoticeReference{}
+					iterateNoticeRef := cp.NoticeRefOrganization[idx]
+
+					for _, noticeOrg := range iterateNoticeRef {
+						noticeRefData := NoticeReferenceData{}
+						noticeRefData.NoticeNumbers = cp.NoticeRefNumbers[idx]
+						noticeRefData.Organization = noticeOrg
+						noticeRef = append(noticeRef, noticeRefData)
+					}
+					uNoticeData.NoticeRef = noticeRef
+					uNotice = append(uNotice, uNoticeData)
+				}
+				policyQualifierInfoData.UserNotice = uNotice
+			}
+			policyQualifierInfo.PolicyQualifierInfo = append(policyQualifierInfo.PolicyQualifierInfo, policyQualifierInfoData)
 		}
+		policyInformationData.PolicyQualifierData = append(policyInformationData.PolicyQualifierData, policyQualifierInfo)
+		policyInformation.PolicyInformationData = append(policyInformation.PolicyInformationData, policyInformationData)
 	}
-
-	parsed := jsonCertificatePolicies{
-		PolicyIdentifiers:     policyIdentifiers,
-		QualifierId:           qualifierIds,
-		ExplicitTexts:         cp.ExplicitTexts,
-		NoticeRefOrganization: cp.NoticeRefOrganization,
-		NoticeRefNumbers:      cp.NoticeRefNumbers,
-		CPSUri:                cp.CPSUri,
-	}
-	return json.Marshal(parsed)
+	policies = append(policies, policyInformation)
+	return json.Marshal(policies)
 }
 
 type GeneralNames struct {
