@@ -802,6 +802,7 @@ func (hs *serverHandshakeState) clientHelloInfo() *ClientHelloInfo {
 		SupportedProtos:   hs.clientHello.alpnProtocols,
 		SupportedVersions: supportedVersions,
 		Conn:              hs.c.conn,
+		HandshakeLog:      hs.c.handshakeLog,
 	}
 
 	return hs.cachedClientHelloInfo
