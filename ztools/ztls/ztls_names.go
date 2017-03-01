@@ -13,6 +13,7 @@ var compressionNames map[uint8]string
 var curveNames map[uint16]string
 var pointFormatNames map[uint8]string
 var clientAuthTypeNames map[int]string
+var signatureSchemeNames map[uint16]string
 
 func init() {
 	signatureNames = make(map[uint8]string, 8)
@@ -444,6 +445,21 @@ func init() {
 	clientAuthTypeNames[2] = "RequireAnyClientCert"
 	clientAuthTypeNames[3] = "VerifyClientCertIfGiven"
 	clientAuthTypeNames[4] = "RequireAndVerifyClientCert"
+
+	// https://tools.ietf.org/html/draft-ietf-tls-tls13-18#section-4.2.3
+	signatureSchemeNames = make(map[uint16]string)
+	signatureSchemeNames[uint16(PKCS1WithSHA1)] = "rsa_pkcs1_sha1"
+	signatureSchemeNames[uint16(PKCS1WithSHA256)] = "rsa_pkcs1_sha256"
+	signatureSchemeNames[uint16(PKCS1WithSHA384)] = "rsa_pkcs1_sha384"
+	signatureSchemeNames[uint16(PKCS1WithSHA512)] = "rsa_pkcs1_sha512"
+	signatureSchemeNames[uint16(PSSWithSHA256)] = "rsa_pss_sha256"
+	signatureSchemeNames[uint16(PSSWithSHA384)] = "rsa_pss_sha384"
+	signatureSchemeNames[uint16(PSSWithSHA512)] = "rsa_pss_sha512"
+	signatureSchemeNames[uint16(ECDSAWithP256AndSHA256)] = "ecdsa_secp256r1_sha256"
+	signatureSchemeNames[uint16(ECDSAWithP384AndSHA384)] = "ecdsa_secp384r1_sha384"
+	signatureSchemeNames[uint16(ECDSAWithP521AndSHA512)] = "ecdsa_secp521r1_sha512"
+	signatureSchemeNames[uint16(EdDSAWithEd25519)] = "ed25519"
+	signatureSchemeNames[uint16(EdDSAWithEd448)] = "ed448"
 }
 
 func nameForSignature(s uint8) string {
@@ -530,4 +546,20 @@ func (v TLSVersion) String() string {
 	default:
 		return "unknown"
 	}
+}
+
+func nameForSignatureScheme(scheme uint16) string {
+	sigScheme := SignatureScheme(scheme)
+	return sigScheme.String()
+}
+
+func (sigScheme *SignatureScheme) String() string {
+	if name, ok := signatureSchemeNames[uint16(*sigScheme)]; ok {
+		return name
+	}
+	return "unknown"
+}
+
+func (sigScheme *SignatureScheme) Bytes() []byte {
+	return []byte{byte(*sigScheme >> 8), byte(*sigScheme)}
 }

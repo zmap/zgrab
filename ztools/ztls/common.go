@@ -12,6 +12,7 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -919,7 +920,42 @@ const (
 	ECDSAWithP256AndSHA256 SignatureScheme = 0x0403
 	ECDSAWithP384AndSHA384 SignatureScheme = 0x0503
 	ECDSAWithP521AndSHA512 SignatureScheme = 0x0603
+
+	EdDSAWithEd25519 SignatureScheme = 0x0807
+	EdDSAWithEd448   SignatureScheme = 0x0808
 )
+
+func (sigScheme *SignatureScheme) MarshalJSON() ([]byte, error) {
+	buf := sigScheme.Bytes()
+	enc := strings.ToUpper(hex.EncodeToString(buf))
+	aux := struct {
+		Hex   string `json:"hex"`
+		Name  string `json:"name"`
+		Value uint16 `json:"value"`
+	}{
+		Hex:   fmt.Sprintf("0x%s", enc),
+		Name:  sigScheme.String(),
+		Value: uint16(*sigScheme),
+	}
+
+	return json.Marshal(aux)
+}
+
+func (sigScheme *SignatureScheme) UnmarshalJSON(b []byte) error {
+	aux := struct {
+		Hex   string `json:"hex"`
+		Name  string `json:"name"`
+		Value uint16 `json:"value"`
+	}{}
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	if expectedName := nameForSignatureScheme(aux.Value); expectedName != aux.Name {
+		return fmt.Errorf("mismatched signature scheme and name, signature scheme: %d, name: %s, expected name: %s", aux.Value, aux.Name, expectedName)
+	}
+	*sigScheme = SignatureScheme(aux.Value)
+	return nil
+}
 
 // ClientHelloInfo contains information from a ClientHello message in order to
 // guide certificate selection in the GetCertificate callback.
@@ -971,6 +1007,160 @@ type ClientHelloInfo struct {
 	// from, or write to, this connection; that will cause the TLS
 	// connection to fail.
 	Conn net.Conn
+}
+
+func (info *ClientHelloInfo) MarshalJSON() ([]byte, error) {
+	aux := struct {
+		CipherSuites      []CipherSuite     `json:"cipher_suites"`
+		ServerName        string            `json:"server_name,omitempty"`
+		SupportedCurves   []CurveID         `json:"supported_curves,omitempty"`
+		SupportedPoints   []PointFormat     `json:"supported_point_formats,omitempty"`
+		SignatureSchemes  []SignatureScheme `json:"signature_schemes,omitempty"`
+		SupportedProtos   []string          `json:"supported_protocols,omitempty"`
+		SupportedVersions []TLSVersion      `json:"supported_versions,omitempty"`
+		LocalAddr         string            `json:"local_address,omitempty"`
+		RemoteAddr        string            `json:"remote_address,omitempty"`
+	}{
+		ServerName:       info.ServerName,
+		SupportedCurves:  info.SupportedCurves,
+		SignatureSchemes: info.SignatureSchemes,
+		SupportedProtos:  info.SupportedProtos,
+	}
+
+	aux.CipherSuites = make([]CipherSuite, len(info.CipherSuites))
+	for i, cipher := range info.CipherSuites {
+		aux.CipherSuites[i] = CipherSuite(cipher)
+	}
+
+	aux.SupportedPoints = make([]PointFormat, len(info.SupportedPoints))
+	for i, format := range info.SupportedPoints {
+		aux.SupportedPoints[i] = PointFormat(format)
+	}
+
+	aux.SupportedVersions = make([]TLSVersion, len(info.SupportedVersions))
+	for i, version := range info.SupportedVersions {
+		aux.SupportedVersions[i] = TLSVersion(version)
+	}
+
+	aux.LocalAddr = fmt.Sprintf("%s+%s", info.Conn.LocalAddr().String(), info.Conn.LocalAddr().Network())
+	aux.RemoteAddr = fmt.Sprintf("%s+%s", info.Conn.RemoteAddr().String(), info.Conn.RemoteAddr().Network())
+
+	return json.Marshal(aux)
+}
+
+func (info *ClientHelloInfo) UnmarshalJSON(b []byte) error {
+	aux := struct {
+		CipherSuites      []CipherSuite     `json:"cipher_suites"`
+		ServerName        string            `json:"server_name,omitempty"`
+		SupportedCurves   []CurveID         `json:"supported_curves,omitempty"`
+		SupportedPoints   []PointFormat     `json:"supported_point_formats,omitempty"`
+		SignatureSchemes  []SignatureScheme `json:"signature_schemes,omitempty"`
+		SupportedProtos   []string          `json:"supported_protocols,omitempty"`
+		SupportedVersions []TLSVersion      `json:"supported_versions,omitempty"`
+		LocalAddr         string            `json:"local_address,omitempty"`
+		RemoteAddr        string            `json:"remote_address,omitempty"`
+	}{}
+
+	err := json.Unmarshal(b, &aux)
+	if err != nil {
+		return err
+	}
+
+	splitLocalAddr := strings.Split(aux.LocalAddr, "+")
+	if len(splitLocalAddr) != 2 {
+		return errors.New("local_address is not unmarshalable")
+	}
+	splitRemoteAddr := strings.Split(aux.RemoteAddr, "+")
+	if len(splitRemoteAddr) != 2 {
+		return errors.New("remote_address is not unmarshalable")
+	}
+
+	info.Conn = FakeConn{
+		localAddr: FakeAddr{
+			stringStr:  splitLocalAddr[0],
+			networkStr: splitLocalAddr[1],
+		},
+		remoteAddr: FakeAddr{
+			stringStr:  splitRemoteAddr[0],
+			networkStr: splitLocalAddr[1],
+		},
+	}
+
+	info.ServerName = aux.ServerName
+	info.SupportedCurves = aux.SupportedCurves
+	info.SignatureSchemes = aux.SignatureSchemes
+	info.SupportedProtos = aux.SupportedProtos
+
+	info.CipherSuites = make([]uint16, len(aux.CipherSuites))
+	for i, cipher := range aux.CipherSuites {
+		info.CipherSuites[i] = uint16(cipher)
+	}
+
+	info.SupportedPoints = make([]uint8, len(aux.SupportedPoints))
+	for i, format := range aux.SupportedPoints {
+		info.SupportedPoints[i] = uint8(format)
+	}
+
+	info.SupportedVersions = make([]uint16, len(aux.SupportedVersions))
+	for i, version := range aux.SupportedVersions {
+		info.SupportedVersions[i] = uint16(version)
+	}
+
+	return nil
+}
+
+// FakeConn and FakeAddr are to allow unmarshaling of ztls objects that contain
+// net.Conn objects
+// With the exeption of recovering the net.Addr strings contained in the JSON,
+// any attempt to use these objects will result in a runtime panic()
+type FakeConn struct {
+	localAddr  FakeAddr
+	remoteAddr FakeAddr
+}
+
+func (fConn FakeConn) Read(b []byte) (int, error) {
+	panic("Read() on FakeConn")
+}
+
+func (fConn FakeConn) Write(b []byte) (int, error) {
+	panic("Write() on FakeConn")
+}
+
+func (fConn FakeConn) Close() error {
+	panic("Close() on FakeConn")
+}
+
+func (fConn FakeConn) LocalAddr() net.Addr {
+	return fConn.localAddr
+}
+
+func (fConn FakeConn) RemoteAddr() net.Addr {
+	return fConn.remoteAddr
+}
+
+func (fConn FakeConn) SetDeadline(t time.Time) error {
+	panic("SetDeadline() on FakeConn")
+}
+
+func (fConn FakeConn) SetReadDeadline(t time.Time) error {
+	panic("SetReadDeadline() on FakeConn")
+}
+
+func (fConn FakeConn) SetWriteDeadline(t time.Time) error {
+	panic("SetWriteDeadline() on FakeConn")
+}
+
+type FakeAddr struct {
+	networkStr string
+	stringStr  string
+}
+
+func (fAddr FakeAddr) String() string {
+	return fAddr.stringStr
+}
+
+func (fAddr FakeAddr) Network() string {
+	return fAddr.networkStr
 }
 
 type ConfigJSON struct {
