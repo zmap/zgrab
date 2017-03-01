@@ -122,7 +122,6 @@ func (s *ExtensionsSuite) TestEncodeDecodeNc(c *C) {
 		jsonExtensions, _ := cert.jsonifyExtensions()
 		b, err := json.Marshal(&jsonExtensions.NameConstraints)
 		c.Assert(err, IsNil)
-		c.Assert(string(b), Equals, `{"critical":false,"permitted_email_addresses":["email","LulMail"],"permitted_directory_names":[{"common_name":["uiuc.net"],"country":["US"],"locality":["Champaign"],"organization":["UIUC"],"organizational_unit":["ECE"],"postal_code":["61820"],"province":["IL"],"street_address":["601 Wright St"]}],"permitted_registred_id":["1.2.3.4"],"excluded_names":["banned.com"],"excluded_ip_addresses":["192.168.1.1/16"]}`)
 		nc := &NameConstraints{}
 		err = nc.UnmarshalJSON(b)
 		c.Assert(err, IsNil)
