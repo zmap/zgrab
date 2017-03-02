@@ -66,41 +66,13 @@ type BasicConstraints struct {
 	MaxPathLen *int `json:"max_path_len,omitempty"`
 }
 
-
-type NoticeReferenceData struct {
-	Organization	string				`json:"organization,omitempty"`
-	NoticeNumbers	[]NoticeNumber			`json:"notice_numbers,omitempty"`
+type CertificatePoliciesJSON struct {
+	PolicyIdentifier	string		`json:"policy_identifier,omitempty"`
+	CPSUri			[]string	`json:"cps,omitempty"`
+	UserNotice		[]string	`json:"user_notice,omitempty"`
 }
 
-type NoticeReference []NoticeReferenceData
-
-type UserNoticeData struct {
-	NoticeRef 		NoticeReference		`json:"notice_ref,omitempty"`
-	ExplicitText 		string			`json:"explicit_text,omitempty"`
-}
-
-type UserNotice []UserNoticeData
-
-type PolicyQualifierInfoData struct {
-	QualifierId		string			`json:"qualifier_id,omitempty"`
-	CPSUri			string			`json:"cps_uri,omitempty"`
-	UserNotice		UserNotice		`json:"user_notice,omitempty"`
-}
-
-type PolicyQualifierInfo struct {
-	PolicyQualifierInfo 	[]PolicyQualifierInfoData `json:"policy_qualifier_info,omitempty"`
-}
-
-type PolicyInformationData struct {
-	PolicyIdentifier	string			`json:"policy_identifier,omitempty"`
-	PolicyQualifierData	[]PolicyQualifierInfo	`json:"policy_qualifiers,omitempty"`
-}
-
-type PolicyInformation 	struct {
-	PolicyInformationData []PolicyInformationData	`json:"policy_information,omitempty"`
-}
-
-type CertificatePolicies []PolicyInformation
+type CertificatePolicies []CertificatePoliciesJSON
 
 type CertificatePoliciesData struct {
 	PolicyIdentifiers     []asn1.ObjectIdentifier
@@ -113,53 +85,17 @@ type CertificatePoliciesData struct {
 
 func (cp *CertificatePoliciesData) MarshalJSON() ([]byte, error) {
 	policies := CertificatePolicies{}
-	policyInformation := PolicyInformation{}
-
 	for idx, oid := range cp.PolicyIdentifiers {
-		policyInformationData := PolicyInformationData{}
-		policyInformationData.PolicyIdentifier = oid.String()
-
-		iterateQualifierId := cp.QualifierId[idx]
-		policyQualifierInfo := PolicyQualifierInfo{}
-
-		for idx2, oid2 := range iterateQualifierId {
-
-			policyQualifierInfoData := PolicyQualifierInfoData{}
-			cpsURIOID := asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 2, 1}
-			userNoticeOID := asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 2, 2}
-
-			policyQualifierInfoData.QualifierId = oid2.String()
-
-			if oid2.Equal(cpsURIOID) {
-				policyQualifierInfoData.CPSUri = cp.CPSUri[idx][idx2]
-			} else if oid2.Equal(userNoticeOID) {
-				uNotice := UserNotice{}
-				iterateUserNotice := cp.ExplicitTexts[idx]
-
-				for _, explicitText := range iterateUserNotice {
-					uNoticeData := UserNoticeData{}
-					uNoticeData.ExplicitText = explicitText
-
-					noticeRef := NoticeReference{}
-					iterateNoticeRef := cp.NoticeRefOrganization[idx]
-
-					for _, noticeOrg := range iterateNoticeRef {
-						noticeRefData := NoticeReferenceData{}
-						noticeRefData.NoticeNumbers = cp.NoticeRefNumbers[idx]
-						noticeRefData.Organization = noticeOrg
-						noticeRef = append(noticeRef, noticeRefData)
-					}
-					uNoticeData.NoticeRef = noticeRef
-					uNotice = append(uNotice, uNoticeData)
-				}
-				policyQualifierInfoData.UserNotice = uNotice
-			}
-			policyQualifierInfo.PolicyQualifierInfo = append(policyQualifierInfo.PolicyQualifierInfo, policyQualifierInfoData)
+		cpsJSON := CertificatePoliciesJSON{}
+		cpsJSON.PolicyIdentifier = oid.String()
+		for _, uri := range cp.CPSUri[idx] {
+			cpsJSON.CPSUri = append(cpsJSON.CPSUri, uri)
 		}
-		policyInformationData.PolicyQualifierData = append(policyInformationData.PolicyQualifierData, policyQualifierInfo)
-		policyInformation.PolicyInformationData = append(policyInformation.PolicyInformationData, policyInformationData)
+		for _, explicit_text := range cp.ExplicitTexts[idx] {
+			cpsJSON.UserNotice = append(cpsJSON.UserNotice, explicit_text)
+		}
+		policies = append(policies, cpsJSON)
 	}
-	policies = append(policies, policyInformation)
 	return json.Marshal(policies)
 }
 
