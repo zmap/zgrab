@@ -66,10 +66,20 @@ type BasicConstraints struct {
 	MaxPathLen *int `json:"max_path_len,omitempty"`
 }
 
+type NoticeReference struct {
+	Organization		string			`json:"organization,omitempty"`
+	NoticeNumbers		NoticeNumber		`json:"notice_numbers,omitempty"`
+}
+
+type UserNoticeData struct {
+	ExplicitText		string			`json:"explicit_text,omitempty"`
+	NoticeReference		[]NoticeReference	`json:"notice_reference,omitempty"`
+}
+
 type CertificatePoliciesJSON struct {
-	PolicyIdentifier	string		`json:"policy_identifier,omitempty"`
-	CPSUri			[]string	`json:"cps,omitempty"`
-	UserNotice		[]string	`json:"user_notice,omitempty"`
+	PolicyIdentifier	string			`json:"id,omitempty"`
+	CPSUri			[]string		`json:"cps,omitempty"`
+	UserNotice		[]UserNoticeData	`json:"user_notice,omitempty"`
 }
 
 type CertificatePolicies []CertificatePoliciesJSON
@@ -91,9 +101,19 @@ func (cp *CertificatePoliciesData) MarshalJSON() ([]byte, error) {
 		for _, uri := range cp.CPSUri[idx] {
 			cpsJSON.CPSUri = append(cpsJSON.CPSUri, uri)
 		}
+
 		for _, explicit_text := range cp.ExplicitTexts[idx] {
-			cpsJSON.UserNotice = append(cpsJSON.UserNotice, explicit_text)
+			uNoticeData := UserNoticeData{}
+			uNoticeData.ExplicitText = explicit_text
+			for _, organization := range cp.NoticeRefOrganization[idx] {
+				noticeRef := NoticeReference{}
+				noticeRef.Organization = organization
+				noticeRef.NoticeNumbers = cp.NoticeRefNumbers[idx][0]
+				uNoticeData.NoticeReference = append(uNoticeData.NoticeReference, noticeRef)
+			}
+			cpsJSON.UserNotice = append(cpsJSON.UserNotice, uNoticeData)
 		}
+
 		policies = append(policies, cpsJSON)
 	}
 	return json.Marshal(policies)
