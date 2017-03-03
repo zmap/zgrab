@@ -67,7 +67,8 @@ func main() {
 }
 
 func runZlint(x509Cert *x509.Certificate) (map[string]string, error) {
-	zlintReport, err := zlint.ParsedTestHandler(x509Cert)
+	m := make(map[string]int)
+	zlintReport, err := zlint.ParsedTestHandler(x509Cert, m)
 	if err != nil {
 		return nil, err
 	}
@@ -76,12 +77,13 @@ func runZlint(x509Cert *x509.Certificate) (map[string]string, error) {
 
 func appendZlintToCertificate(x509Cert *x509.Certificate, lintResult map[string]string) ([]byte, error) {
 	return json.Marshal(struct {
-		Raw      []byte            `json:"raw"`
-		CertData *x509.Certificate `json:"parsed"`
-		Zlint    map[string]string `json:"zlint"`
+		Raw []byte			`json:"raw"`
+		CertData *x509.Certificate	`json:"parsed"`
+		Zlint map[string]string 	`json:"zlint"`
+
 	}{
-		Raw:      x509Cert.Raw,
-		CertData: x509Cert,
-		Zlint:    lintResult,
+		Raw: 		x509Cert.Raw,
+		CertData: 	x509Cert,
+		Zlint:          lintResult,
 	})
 }
