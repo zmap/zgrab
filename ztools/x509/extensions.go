@@ -106,10 +106,12 @@ func (cp *CertificatePoliciesData) MarshalJSON() ([]byte, error) {
 			uNoticeData := UserNoticeData{}
 			uNoticeData.ExplicitText = explicit_text
 			noticeRef := NoticeReference{}
-			organization := cp.NoticeRefOrganization[idx][idx2]
-			noticeRef.Organization = organization
-			noticeRef.NoticeNumbers = cp.NoticeRefNumbers[idx][idx2]
-			uNoticeData.NoticeReference = append(uNoticeData.NoticeReference, noticeRef)
+			if len(cp.NoticeRefOrganization[idx]) > 0 {
+				organization := cp.NoticeRefOrganization[idx][idx2]
+				noticeRef.Organization = organization
+				noticeRef.NoticeNumbers = cp.NoticeRefNumbers[idx][idx2]
+				uNoticeData.NoticeReference = append(uNoticeData.NoticeReference, noticeRef)
+			}
 			cpsJSON.UserNotice = append(cpsJSON.UserNotice, uNoticeData)
 		}
 
