@@ -45,7 +45,7 @@ type CertificateExtensions struct {
 	AuthKeyID                      SubjAuthKeyId                    `json:"authority_key_id,omitempty"`
 	SubjectKeyID                   SubjAuthKeyId                    `json:"subject_key_id,omitempty"`
 	ExtendedKeyUsage               ExtendedKeyUsage                 `json:"extended_key_usage,omitempty"`
-	CertificatePolicies            CertificatePolicies              `json:"certificate_policies,omitmepty"`
+	CertificatePolicies            CertificatePoliciesData          `json:"certificate_policies,omitmepty"`
 	AuthorityInfoAccess            *AuthorityInfoAccess             `json:"authority_info_access,omitempty"`
 	IsPrecert                      IsPrecert                        `json:"ct_poison,omitempty"`
 	SignedCertificateTimestampList []*ct.SignedCertificateTimestamp `json:"signed_certificate_timestamps,omitempty"`
@@ -64,6 +64,58 @@ type IsPrecert bool
 type BasicConstraints struct {
 	IsCA       bool `json:"is_ca"`
 	MaxPathLen *int `json:"max_path_len,omitempty"`
+}
+
+type NoticeReference struct {
+	Organization		string			`json:"organization,omitempty"`
+	NoticeNumbers		NoticeNumber		`json:"notice_numbers,omitempty"`
+}
+
+type UserNoticeData struct {
+	ExplicitText		string			`json:"explicit_text,omitempty"`
+	NoticeReference		[]NoticeReference	`json:"notice_reference,omitempty"`
+}
+
+type CertificatePoliciesJSON struct {
+	PolicyIdentifier	string			`json:"id,omitempty"`
+	CPSUri			[]string		`json:"cps,omitempty"`
+	UserNotice		[]UserNoticeData	`json:"user_notice,omitempty"`
+}
+
+type CertificatePolicies []CertificatePoliciesJSON
+
+type CertificatePoliciesData struct {
+	PolicyIdentifiers     []asn1.ObjectIdentifier
+	QualifierId           [][]asn1.ObjectIdentifier
+	CPSUri                [][]string
+	ExplicitTexts         [][]string
+	NoticeRefOrganization [][]string
+	NoticeRefNumbers      [][]NoticeNumber
+}
+
+func (cp *CertificatePoliciesData) MarshalJSON() ([]byte, error) {
+	policies := CertificatePolicies{}
+	for idx, oid := range cp.PolicyIdentifiers {
+		cpsJSON := CertificatePoliciesJSON{}
+		cpsJSON.PolicyIdentifier = oid.String()
+		for _, uri := range cp.CPSUri[idx] {
+			cpsJSON.CPSUri = append(cpsJSON.CPSUri, uri)
+		}
+
+		for idx2, explicit_text := range cp.ExplicitTexts[idx] {
+			uNoticeData := UserNoticeData{}
+			uNoticeData.ExplicitText = explicit_text
+			noticeRef := NoticeReference{}
+			organization := cp.NoticeRefOrganization[idx][idx2]
+			noticeRef.Organization = organization
+			noticeRef.NoticeNumbers = cp.NoticeRefNumbers[idx][idx2]
+			uNoticeData.NoticeReference = append(uNoticeData.NoticeReference, noticeRef)
+			cpsJSON.UserNotice = append(cpsJSON.UserNotice, uNoticeData)
+		}
+
+		policies = append(policies, cpsJSON)
+	}
+	return json.Marshal(policies)
 }
 
 type GeneralNames struct {
@@ -292,8 +344,6 @@ func (kid SubjAuthKeyId) MarshalJSON() ([]byte, error) {
 
 type ExtendedKeyUsage []ExtKeyUsage
 
-type CertificatePolicies []asn1.ObjectIdentifier
-
 // The string functions for CertValidationLevel are auto-generated via
 // `go generate <full_path_to_x509_package>` or running `go generate` in the package directory
 //go:generate stringer -type=CertValidationLevel -output=generated_certvalidationlevel_string.go
@@ -486,14 +536,6 @@ var OrganizationValidationOIDs = map[string]interface{}{
 	"2.16.792.3.0.3.1.1.2": nil,
 }
 
-func (cp CertificatePolicies) MarshalJSON() ([]byte, error) {
-	out := make([]string, len(cp))
-	for idx, oid := range cp {
-		out[idx] = oid.String()
-	}
-	return json.Marshal(out)
-}
-
 // TODO pull out other types
 type AuthorityInfoAccess struct {
 	OCSPServer            []string `json:"ocsp_urls,omitempty"`
@@ -557,7 +599,13 @@ func (c *Certificate) jsonifyExtensions() (*CertificateExtensions, UnknownCertif
 		} else if e.Id.Equal(oidExtExtendedKeyUsage) {
 			exts.ExtendedKeyUsage = c.ExtKeyUsage
 		} else if e.Id.Equal(oidExtCertificatePolicy) {
-			exts.CertificatePolicies = c.PolicyIdentifiers
+			exts.CertificatePolicies.PolicyIdentifiers = c.PolicyIdentifiers
+			exts.CertificatePolicies.NoticeRefNumbers = c.NoticeRefNumbers
+			exts.CertificatePolicies.NoticeRefOrganization = c.ParsedNoticeRefOrganization
+			exts.CertificatePolicies.ExplicitTexts = c.ParsedExplicitTexts
+			exts.CertificatePolicies.QualifierId = c.QualifierId
+			exts.CertificatePolicies.CPSUri = c.CPSuri
+
 		} else if e.Id.Equal(oidExtAuthorityInfoAccess) {
 			exts.AuthorityInfoAccess = new(AuthorityInfoAccess)
 			exts.AuthorityInfoAccess.OCSPServer = c.OCSPServer
