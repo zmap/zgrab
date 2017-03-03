@@ -10,6 +10,7 @@ import (
 	"crypto/rsa"
 	"encoding/asn1"
 	"encoding/json"
+	"net"
 
 	"strings"
 	"time"
@@ -361,4 +362,85 @@ func isValidName(name string) (ret bool) {
 		ret = govalidator.IsURL(name)
 	}
 	return
+}
+
+func orMask(ip net.IP, mask net.IPMask) net.IP {
+	if len(ip) == 0 || len(mask) == 0 {
+		return nil
+	}
+	if len(ip) != net.IPv4len && len(ip) != net.IPv6len {
+		return nil
+	}
+	if len(ip) != len(mask) {
+		return nil
+	}
+	out := make([]byte, len(ip))
+	for idx, _ := range ip {
+		out[idx] = ip[idx] | mask[idx]
+	}
+	return out
+}
+
+func invertMask(mask net.IPMask) net.IPMask {
+	if mask == nil {
+		return nil
+	}
+	out := make([]byte, len(mask))
+	for idx, _ := range mask {
+		out[idx] = ^mask[idx]
+	}
+	return out
+}
+
+type auxGeneralSubtreeIP struct {
+	CIDR  string `json:"cidr,omitempty"`
+	Begin string `json:"begin,omitempty"`
+	End   string `json:"end,omitempty"`
+	Mask  string `json:"mask,omitempty"`
+}
+
+func (g *GeneralSubtreeIP) MarshalJSON() ([]byte, error) {
+	aux := auxGeneralSubtreeIP{}
+	aux.CIDR = g.Data.String()
+	// Check to see if the subnet is valid. An invalid subnet will return 0,0
+	// from Size(). If the subnet is invalid, only output the CIDR.
+	ones, bits := g.Data.Mask.Size()
+	if ones == 0 && bits == 0 {
+		return json.Marshal(&aux)
+	}
+	// The first IP in the range should be `ip & mask`.
+	begin := g.Data.IP.Mask(g.Data.Mask)
+	if begin != nil {
+		aux.Begin = begin.String()
+	}
+	// The last IP (inclusive) is `ip & (^mask)`.
+	inverseMask := invertMask(g.Data.Mask)
+	end := orMask(g.Data.IP, inverseMask)
+	if end != nil {
+		aux.End = end.String()
+	}
+	// Output the mask as an IP, but enforce it can be formatted correctly.
+	// net.IP.String() only works on byte arrays of the correct length.
+	maskLen := len(g.Data.Mask)
+	if maskLen == net.IPv4len || maskLen == net.IPv6len {
+		maskAsIP := net.IP(g.Data.Mask)
+		aux.Mask = maskAsIP.String()
+	}
+	return json.Marshal(&aux)
+}
+
+func (g *GeneralSubtreeIP) UnmarshalJSON(b []byte) error {
+	aux := auxGeneralSubtreeIP{}
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	ip, ipNet, err := net.ParseCIDR(aux.CIDR)
+	if err != nil {
+		return err
+	}
+	g.Data.IP = ip
+	g.Data.Mask = ipNet.Mask
+	g.Min = 0
+	g.Max = 0
+	return nil
 }
