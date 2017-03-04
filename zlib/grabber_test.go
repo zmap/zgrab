@@ -6,7 +6,7 @@ import (
 	. "github.com/zmap/zgrab/ztools/http"
 	"github.com/zmap/zgrab/ztools/http/httptest"
 	"github.com/zmap/zgrab/ztools/zlog"
-	"github.com/zmap/ztls/ztls"
+	"github.com/zmap/ztls"
 	"net"
 	"net/url"
 	"os"

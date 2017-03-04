@@ -11,7 +11,7 @@ import (
 	"fmt"
 	. "github.com/zmap/zgrab/ztools/http"
 	"github.com/zmap/zgrab/ztools/http/httptest"
-	"github.com/zmap/ztls/ztls"
+	"github.com/zmap/ztls"
 	"io"
 	"io/ioutil"
 	"net"

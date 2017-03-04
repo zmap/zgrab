@@ -14,7 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/zmap/ztls/ztls"
+	"github.com/zmap/ztls"
 	"io"
 	"io/ioutil"
 	"mime"

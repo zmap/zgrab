@@ -15,7 +15,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/zmap/ztls/ztls"
+	"github.com/zmap/ztls"
 	"io"
 	"io/ioutil"
 	"net"
