@@ -27,7 +27,7 @@ import (
 	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/telnet"
 	"github.com/zmap/zgrab/ztools/xssh"
-	"github.com/zmap/zgrab/ztools/ztls"
+	"github.com/zmap/ztls/ztls"
 )
 
 type Grab struct {

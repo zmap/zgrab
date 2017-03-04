@@ -31,7 +31,7 @@ import (
 	"github.com/zmap/zgrab/ztools/processing"
 	"github.com/zmap/zgrab/ztools/x509"
 	"github.com/zmap/zgrab/ztools/zlog"
-	"github.com/zmap/zgrab/ztools/ztls"
+	"github.com/zmap/ztls/ztls"
 )
 
 // Command-line flags
