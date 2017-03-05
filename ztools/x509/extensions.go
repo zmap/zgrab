@@ -35,6 +35,10 @@ var (
 
 type encodedUnknownExtensions []encodedUnknownExtension
 
+type ExtendedKeyUsageExtension struct {
+	Value ExtendedKeyUsage `json:"value,omitempty"`
+}
+
 type CertificateExtensions struct {
 	KeyUsage                       KeyUsage                         `json:"key_usage,omitempty"`
 	BasicConstraints               *BasicConstraints                `json:"basic_constraints,omitempty"`
@@ -44,7 +48,7 @@ type CertificateExtensions struct {
 	CRLDistributionPoints          CRLDistributionPoints            `json:"crl_distribution_points,omitempty"`
 	AuthKeyID                      SubjAuthKeyId                    `json:"authority_key_id,omitempty"`
 	SubjectKeyID                   SubjAuthKeyId                    `json:"subject_key_id,omitempty"`
-	ExtendedKeyUsage               ExtendedKeyUsage                 `json:"extended_key_usage,omitempty"`
+	ExtendedKeyUsage               *ExtendedKeyUsageExtension       `json:"extended_key_usage,omitempty"`
 	CertificatePolicies            CertificatePoliciesData          `json:"certificate_policies,omitmepty"`
 	AuthorityInfoAccess            *AuthorityInfoAccess             `json:"authority_info_access,omitempty"`
 	IsPrecert                      IsPrecert                        `json:"ct_poison,omitempty"`
@@ -67,19 +71,19 @@ type BasicConstraints struct {
 }
 
 type NoticeReference struct {
-	Organization		string			`json:"organization,omitempty"`
-	NoticeNumbers		NoticeNumber		`json:"notice_numbers,omitempty"`
+	Organization  string       `json:"organization,omitempty"`
+	NoticeNumbers NoticeNumber `json:"notice_numbers,omitempty"`
 }
 
 type UserNoticeData struct {
-	ExplicitText		string			`json:"explicit_text,omitempty"`
-	NoticeReference		[]NoticeReference	`json:"notice_reference,omitempty"`
+	ExplicitText    string            `json:"explicit_text,omitempty"`
+	NoticeReference []NoticeReference `json:"notice_reference,omitempty"`
 }
 
 type CertificatePoliciesJSON struct {
-	PolicyIdentifier	string			`json:"id,omitempty"`
-	CPSUri			[]string		`json:"cps,omitempty"`
-	UserNotice		[]UserNoticeData	`json:"user_notice,omitempty"`
+	PolicyIdentifier string           `json:"id,omitempty"`
+	CPSUri           []string         `json:"cps,omitempty"`
+	UserNotice       []UserNoticeData `json:"user_notice,omitempty"`
 }
 
 type CertificatePolicies []CertificatePoliciesJSON
@@ -599,7 +603,8 @@ func (c *Certificate) jsonifyExtensions() (*CertificateExtensions, UnknownCertif
 		} else if e.Id.Equal(oidExtAuthKeyId) {
 			exts.AuthKeyID = c.AuthorityKeyId
 		} else if e.Id.Equal(oidExtExtendedKeyUsage) {
-			exts.ExtendedKeyUsage = c.ExtKeyUsage
+			exts.ExtendedKeyUsage = new(ExtendedKeyUsageExtension)
+			exts.ExtendedKeyUsage.Value = c.ExtKeyUsage
 		} else if e.Id.Equal(oidExtCertificatePolicy) {
 			exts.CertificatePolicies.PolicyIdentifiers = c.PolicyIdentifiers
 			exts.CertificatePolicies.NoticeRefNumbers = c.NoticeRefNumbers
