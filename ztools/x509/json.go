@@ -78,6 +78,20 @@ func (k *KeyUsage) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+type auxExtendedKeyUsage struct {
+	Value           []int `json:"value,omitempty"`
+	ServerAuth      bool  `json:"server_auth,omitempty"`
+	ClientAuth      bool  `json:"client_auth,omitempty"`
+	CodeSigning     bool  `json:"code_signing,omitempty"`
+	EmailProtection bool  `json:"email_protection,omitempty"`
+	TimeStamping    bool  `json:"time_stamping,omitempty"`
+	OCSPSigning     bool  `json:"ocsp_signing,omitempty"`
+}
+
+func (eku ExtendedKeyUsage) MarshalJSON() ([]byte, error) {
+	return nil, nil
+}
+
 type auxSignatureAlgorithm struct {
 	Name string      `json:"name,omitempty"`
 	OID  pkix.AuxOID `json:"oid"`

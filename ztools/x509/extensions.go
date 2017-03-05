@@ -302,6 +302,7 @@ func (kid SubjAuthKeyId) MarshalJSON() ([]byte, error) {
 	return json.Marshal(enc)
 }
 
+//go:generate go run gen_extended_key_usage.go
 type ExtendedKeyUsage []ExtKeyUsage
 
 type CertificatePolicies []asn1.ObjectIdentifier
@@ -535,7 +536,7 @@ func (c *Certificate) jsonifyExtensions() (*CertificateExtensions, UnknownCertif
 			exts.SubjectAltName.OtherNames = c.OtherNames
 			exts.SubjectAltName.RegisteredIDs = c.RegisteredIDs
 			exts.SubjectAltName.URIs = c.URIs
-		} else if e.Id.Equal(oidExtIssuerAltName){
+		} else if e.Id.Equal(oidExtIssuerAltName) {
 			exts.IssuerAltName = new(GeneralNames)
 			exts.IssuerAltName.DirectoryNames = c.IANDirectoryNames
 			exts.IssuerAltName.DNSNames = c.IANDNSNames
