@@ -20,6 +20,55 @@ const (
 	COLUMN_IDX_SHORT_NAME = 2
 )
 
+const (
+	GO_PREFIX    = "oidExtKeyUsage"
+	CONST_PREFIX = "OID_EKU"
+)
+
+type OID struct {
+	OID       string
+	ShortName string
+}
+
+func (o *OID) OIDDecl() string {
+	parts := strings.Split(o.OID, ".")
+	buffer := bytes.Buffer{}
+	buffer.WriteString("asn1.ObjectIdentifier{")
+	for idx, p := range parts {
+		buffer.WriteString(p)
+		if idx != len(parts)-1 {
+			buffer.WriteString(", ")
+		}
+	}
+	buffer.WriteString("}")
+	return buffer.String()
+}
+
+func (o *OID) GoName(prefix string) string {
+	parts := strings.Split(o.ShortName, "-")
+	for idx, p := range parts {
+		if prefix == "" && idx == 0 {
+			continue
+		}
+		parts[idx] = strings.Title(p)
+	}
+	return prefix + strings.Join(parts, "")
+}
+
+func (o *OID) GoConstant(prefix string) string {
+	parts := strings.Split(o.ShortName, "-")
+	buffer := bytes.Buffer{}
+	if prefix != "" {
+		buffer.WriteString(strings.ToUpper(prefix))
+		buffer.WriteString("_")
+	}
+	for _, p := range parts {
+		buffer.WriteString(strings.ToUpper(p))
+		buffer.WriteString("_")
+	}
+	return buffer.String()
+}
+
 func writeHeader(out io.Writer) {
 	s := `// Created by extended_key_usage_gen; DO NOT EDIT
 
@@ -38,46 +87,48 @@ import (
 	out.Write([]byte(s))
 }
 
-func goNameFromShortName(shortName, prefix string) string {
-	parts := strings.Split(shortName, "-")
-	for idx, p := range parts {
-		if prefix == "" && idx == 0 {
-			continue
-		}
-		parts[idx] = strings.Title(p)
-	}
-	return prefix + strings.Join(parts, "")
-}
-
-func oidDeclFromString(oid string) string {
-	parts := strings.Split(oid, ".")
+func generateASN1(oidToName map[string]OID) []byte {
 	buffer := bytes.Buffer{}
-	buffer.WriteString("asn1.ObjectIdentifier{")
-	for idx, p := range parts {
-		buffer.WriteString(p)
-		if idx != len(parts)-1 {
-			buffer.WriteString(", ")
-		}
-	}
-	buffer.WriteString("}")
-	return buffer.String()
-}
-
-func generateASN1(oidToName map[string]string) string {
-	buffer := bytes.Buffer{}
-	for oid, shortName := range oidToName {
-		goName := goNameFromShortName(shortName, "oid")
-		oidDecl := oidDeclFromString(oid)
+	for _, oid := range oidToName {
+		goName := oid.GoName(GO_PREFIX)
+		oidDecl := oid.OIDDecl()
 		buffer.WriteString(goName)
 		buffer.WriteString(" = ")
 		buffer.WriteString(oidDecl)
 		buffer.WriteString("\n")
 	}
-	return buffer.String()
+	return buffer.Bytes()
+}
+
+func generateNameConstants(oidToName map[string]OID) []byte {
+	buffer := bytes.Buffer{}
+	for _, oid := range oidToName {
+		constantName := oid.GoConstant(CONST_PREFIX)
+		buffer.WriteString(constantName)
+		buffer.WriteString(" = \"")
+		buffer.WriteString(oid.OID)
+		buffer.WriteString("\"\n")
+	}
+	return buffer.Bytes()
+}
+
+func generateOIDMap(oidToName map[string]OID, mapName string) []byte {
+	buffer := bytes.Buffer{}
+	for _, oid := range oidToName {
+		constantName := oid.GoConstant(CONST_PREFIX)
+		goName := oid.GoName(GO_PREFIX)
+		buffer.WriteString(mapName)
+		buffer.WriteString("[")
+		buffer.WriteString(constantName)
+		buffer.WriteString("] = ")
+		buffer.WriteString(goName)
+		buffer.WriteString("\n")
+	}
+	return buffer.Bytes()
 }
 
 func main() {
-	out, err := os.Create("herp.go")
+	out, err := os.Create("extended_key_usage.go")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -90,7 +141,7 @@ func main() {
 	}
 	defer resp.Body.Close()
 
-	oidToName := make(map[string]string)
+	oidToName := make(map[string]OID)
 	r := csv.NewReader(resp.Body)
 	for lines := 0; ; lines++ {
 		record, err := r.Read()
@@ -106,10 +157,26 @@ func main() {
 		}
 		oid := record[COLUMN_IDX_OID]
 		shortName := record[COLUMN_IDX_SHORT_NAME]
-		oidToName[oid] = shortName
+		oidToName[oid] = OID{
+			OID:       oid,
+			ShortName: shortName,
+		}
 	}
+
+	out.Write([]byte("const (\n"))
+	constants := generateNameConstants(oidToName)
+	out.Write(constants)
+	out.Write([]byte(")\n"))
+
 	out.Write([]byte("var (\n"))
 	oidDecls := generateASN1(oidToName)
-	out.Write([]byte(oidDecls))
+	out.Write(oidDecls)
 	out.Write([]byte(")\n"))
+
+	out.Write([]byte("\nvar ekuOIDs map[string]asn1.ObjectIdentifier\n\n"))
+
+	out.Write([]byte("func init() {\n"))
+	mapEntries := generateOIDMap(oidToName, "ekuOIDs")
+	out.Write(mapEntries)
+	out.Write([]byte("}\n"))
 }

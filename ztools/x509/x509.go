@@ -466,7 +466,7 @@ const (
 )
 
 // extKeyUsageOIDs contains the mapping between an ExtKeyUsage and its OID.
-var extKeyUsageOIDs = []struct {
+var nativeExtKeyUsageOIDs = []struct {
 	extKeyUsage ExtKeyUsage
 	oid         asn1.ObjectIdentifier
 }{
@@ -475,17 +475,17 @@ var extKeyUsageOIDs = []struct {
 	{ExtKeyUsageClientAuth, oidExtKeyUsageClientAuth},
 	{ExtKeyUsageCodeSigning, oidExtKeyUsageCodeSigning},
 	{ExtKeyUsageEmailProtection, oidExtKeyUsageEmailProtection},
-	{ExtKeyUsageIPSECEndSystem, oidExtKeyUsageIPSECEndSystem},
-	{ExtKeyUsageIPSECTunnel, oidExtKeyUsageIPSECTunnel},
-	{ExtKeyUsageIPSECUser, oidExtKeyUsageIPSECUser},
+	{ExtKeyUsageIPSECEndSystem, oidExtKeyUsageIpsecEndSystem},
+	{ExtKeyUsageIPSECTunnel, oidExtKeyUsageIpsecTunnel},
+	{ExtKeyUsageIPSECUser, oidExtKeyUsageIpsecUser},
 	{ExtKeyUsageTimeStamping, oidExtKeyUsageTimeStamping},
-	{ExtKeyUsageOCSPSigning, oidExtKeyUsageOCSPSigning},
+	{ExtKeyUsageOCSPSigning, oidExtKeyUsageOcspSigning},
 	{ExtKeyUsageMicrosoftServerGatedCrypto, oidExtKeyUsageMicrosoftServerGatedCrypto},
 	{ExtKeyUsageNetscapeServerGatedCrypto, oidExtKeyUsageNetscapeServerGatedCrypto},
 }
 
 func extKeyUsageFromOID(oid asn1.ObjectIdentifier) (eku ExtKeyUsage, ok bool) {
-	for _, pair := range extKeyUsageOIDs {
+	for _, pair := range nativeExtKeyUsageOIDs {
 		if oid.Equal(pair.oid) {
 			return pair.extKeyUsage, true
 		}
@@ -494,7 +494,7 @@ func extKeyUsageFromOID(oid asn1.ObjectIdentifier) (eku ExtKeyUsage, ok bool) {
 }
 
 func oidFromExtKeyUsage(eku ExtKeyUsage) (oid asn1.ObjectIdentifier, ok bool) {
-	for _, pair := range extKeyUsageOIDs {
+	for _, pair := range nativeExtKeyUsageOIDs {
 		if eku == pair.extKeyUsage {
 			return pair.oid, true
 		}
