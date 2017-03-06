@@ -348,6 +348,7 @@ func (kid SubjAuthKeyId) MarshalJSON() ([]byte, error) {
 	return json.Marshal(enc)
 }
 
+//go:generate go run gen_extended_key_usage.go
 type ExtendedKeyUsage []ExtKeyUsage
 
 // The string functions for CertValidationLevel are auto-generated via
