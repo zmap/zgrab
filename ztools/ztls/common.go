@@ -418,6 +418,10 @@ type Config struct {
 	// be used.
 	CurvePreferences []CurveID
 
+	// If enabled, empty CurvePreferences indicates that there are no curves
+	// supported for ECDHE key exchanges
+	ExplicitCurvePreferences bool
+
 	serverInitOnce sync.Once // guards calling (*Config).serverInit
 
 	// Add all ciphers in CipherSuites to Client Hello even if unimplemented
@@ -544,6 +548,7 @@ func (c *Config) Clone() *Config {
 		MinVersion:                     c.MinVersion,
 		MaxVersion:                     c.MaxVersion,
 		CurvePreferences:               c.CurvePreferences,
+		ExplicitCurvePreferences:       c.ExplicitCurvePreferences,
 		sessionTicketKeys:              sessionTicketKeys,
 		ClientFingerprintConfiguration: c.ClientFingerprintConfiguration,
 		// originalConfig is deliberately not duplicated.
@@ -643,6 +648,9 @@ func (c *Config) maxVersion() uint16 {
 var defaultCurvePreferences = []CurveID{CurveP256, CurveP384, CurveP521}
 
 func (c *Config) curvePreferences() []CurveID {
+	if c.ExplicitCurvePreferences {
+		return c.CurvePreferences
+	}
 	if c == nil || len(c.CurvePreferences) == 0 {
 		return defaultCurvePreferences
 	}
@@ -1187,6 +1195,7 @@ type ConfigJSON struct {
 	MinVersion                     TLSVersion                      `json:"min_tls_version,omitempty"`
 	MaxVersion                     TLSVersion                      `json:"max_tls_version,omitempty"`
 	CurvePreferences               []CurveID                       `json:"curve_preferences,omitempty"`
+	ExplicitCurvePreferences       bool                            `json:"explicit_curve_preferences"`
 	ForceSuites                    bool                            `json:"force_cipher_suites"1`
 	ExportRSAKey                   *rsa.PrivateKey                 `json:"export_rsa_key,omitempty"`
 	HeartbeatEnabled               bool                            `json:"heartbeat_enabled"`
@@ -1224,6 +1233,7 @@ func (config *Config) MarshalJSON() ([]byte, error) {
 	aux.MinVersion = TLSVersion(config.minVersion())
 	aux.MaxVersion = TLSVersion(config.maxVersion())
 	aux.CurvePreferences = config.curvePreferences()
+	aux.ExplicitCurvePreferences = config.ExplicitCurvePreferences
 	aux.ForceSuites = config.ForceSuites
 	aux.ExportRSAKey = config.ExportRSAKey
 	aux.HeartbeatEnabled = config.HeartbeatEnabled
