@@ -12,8 +12,8 @@ package http
 import (
 	"bufio"
 	"bytes"
-    "crypto/tls"
-    "errors"
+	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
