@@ -37,7 +37,7 @@ import (
 	"github.com/zmap/zgrab/ztools/telnet"
 	"github.com/zmap/zgrab/ztools/xssh"
 	"github.com/zmap/zgrab/ztools/zlog"
-	"github.com/zmap/zgrab/ztools/ztls"
+	"github.com/zmap/zcrypto/tls"
 )
 
 type GrabTarget struct {
@@ -142,45 +142,45 @@ func makeNetDialer(c *Config) func(string, string) (net.Conn, error) {
 	}
 }
 
-func makeTLSConfig(config *Config, urlHost string) *ztls.Config {
-	tlsConfig := new(ztls.Config)
+func makeTLSConfig(config *Config, urlHost string) *tls.Config {
+	tlsConfig := new(tls.Config)
 	tlsConfig.InsecureSkipVerify = true
-	tlsConfig.MinVersion = ztls.VersionSSL30
+	tlsConfig.MinVersion = tls.VersionSSL30
 	tlsConfig.MaxVersion = config.TLSVersion
 	tlsConfig.RootCAs = config.RootCAPool
 	tlsConfig.HeartbeatEnabled = true
 	tlsConfig.ClientDSAEnabled = true
 	if config.DHEOnly {
-		tlsConfig.CipherSuites = ztls.DHECiphers
+		tlsConfig.CipherSuites = tls.DHECiphers
 	}
 	if config.ECDHEOnly {
-		tlsConfig.CipherSuites = ztls.ECDHECiphers
+		tlsConfig.CipherSuites = tls.ECDHECiphers
 	}
 	if config.ExportsOnly {
-		tlsConfig.CipherSuites = ztls.RSA512ExportCiphers
+		tlsConfig.CipherSuites = tls.RSA512ExportCiphers
 	}
 	if config.ExportsDHOnly {
-		tlsConfig.CipherSuites = ztls.DHEExportCiphers
+		tlsConfig.CipherSuites = tls.DHEExportCiphers
 	}
 	if config.ChromeOnly {
-		tlsConfig.CipherSuites = ztls.ChromeCiphers
+		tlsConfig.CipherSuites = tls.ChromeCiphers
 	}
 	if config.ChromeNoDHE {
-		tlsConfig.CipherSuites = ztls.ChromeNoDHECiphers
+		tlsConfig.CipherSuites = tls.ChromeNoDHECiphers
 	}
 	if config.FirefoxOnly {
-		tlsConfig.CipherSuites = ztls.FirefoxCiphers
+		tlsConfig.CipherSuites = tls.FirefoxCiphers
 	}
 	if config.FirefoxNoDHE {
-		tlsConfig.CipherSuites = ztls.FirefoxNoDHECiphers
+		tlsConfig.CipherSuites = tls.FirefoxNoDHECiphers
 	}
 
 	if config.SafariOnly {
-		tlsConfig.CipherSuites = ztls.SafariCiphers
+		tlsConfig.CipherSuites = tls.SafariCiphers
 		tlsConfig.ForceSuites = true
 	}
 	if config.SafariNoDHE {
-		tlsConfig.CipherSuites = ztls.SafariNoDHECiphers
+		tlsConfig.CipherSuites = tls.SafariNoDHECiphers
 		tlsConfig.ForceSuites = true
 	}
 	if config.TLSExtendedRandom {
@@ -215,7 +215,7 @@ func containsPort(host string) bool {
 func makeHTTPGrabber(config *Config, grabData *GrabData) func(string, string, string) error {
 	g := func(urlHost, endpoint, httpHost string) (err error) {
 
-		var tlsConfig *ztls.Config
+		var tlsConfig *tls.Config
 		if config.TLS {
 			tlsConfig = makeTLSConfig(config, httpHost)
 		}
@@ -333,35 +333,35 @@ func makeGrabber(config *Config) func(*Conn) error {
 		response := make([]byte, 65536)
 		c.SetCAPool(config.RootCAPool)
 		if config.DHEOnly {
-			c.CipherSuites = ztls.DHECiphers
+			c.CipherSuites = tls.DHECiphers
 		}
 		if config.ECDHEOnly {
-			c.CipherSuites = ztls.ECDHECiphers
+			c.CipherSuites = tls.ECDHECiphers
 		}
 		if config.ExportsOnly {
-			c.CipherSuites = ztls.RSA512ExportCiphers
+			c.CipherSuites = tls.RSA512ExportCiphers
 		}
 		if config.ExportsDHOnly {
-			c.CipherSuites = ztls.DHEExportCiphers
+			c.CipherSuites = tls.DHEExportCiphers
 		}
 		if config.ChromeOnly {
-			c.CipherSuites = ztls.ChromeCiphers
+			c.CipherSuites = tls.ChromeCiphers
 		}
 		if config.ChromeNoDHE {
-			c.CipherSuites = ztls.ChromeNoDHECiphers
+			c.CipherSuites = tls.ChromeNoDHECiphers
 		}
 		if config.FirefoxOnly {
-			c.CipherSuites = ztls.FirefoxCiphers
+			c.CipherSuites = tls.FirefoxCiphers
 		}
 		if config.FirefoxNoDHE {
-			c.CipherSuites = ztls.FirefoxNoDHECiphers
+			c.CipherSuites = tls.FirefoxNoDHECiphers
 		}
 		if config.SafariOnly {
-			c.CipherSuites = ztls.SafariCiphers
+			c.CipherSuites = tls.SafariCiphers
 			c.ForceSuites = true
 		}
 		if config.SafariNoDHE {
-			c.CipherSuites = ztls.SafariNoDHECiphers
+			c.CipherSuites = tls.SafariNoDHECiphers
 			c.ForceSuites = true
 		}
 		if config.NoSNI {

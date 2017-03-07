@@ -29,9 +29,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/zmap/zgrab/zlib"
 	"github.com/zmap/zgrab/ztools/processing"
-	"github.com/zmap/zgrab/ztools/x509"
+	"github.com/zmap/zcrypto/x509"
 	"github.com/zmap/zgrab/ztools/zlog"
-	"github.com/zmap/zgrab/ztools/ztls"
+	"github.com/zmap/zcrypto/tls"
 )
 
 // Command-line flags
@@ -197,16 +197,16 @@ func init() {
 
 		switch tv {
 		case "SSLV3", "SSLV30", "SSLV3.0":
-			config.TLSVersion = ztls.VersionSSL30
+			config.TLSVersion = tls.VersionSSL30
 			tlsVersion = "SSLv3"
 		case "TLSV1", "TLSV10", "TLSV1.0":
-			config.TLSVersion = ztls.VersionTLS10
+			config.TLSVersion = tls.VersionTLS10
 			tlsVersion = "TLSv1.0"
 		case "TLSV11", "TLSV1.1":
-			config.TLSVersion = ztls.VersionTLS11
+			config.TLSVersion = tls.VersionTLS11
 			tlsVersion = "TLSv1.1"
 		case "", "TLSV12", "TLSV1.2":
-			config.TLSVersion = ztls.VersionTLS12
+			config.TLSVersion = tls.VersionTLS12
 			tlsVersion = "TLSv1.2"
 		default:
 			zlog.Fatal("Invalid SSL/TLS versions")

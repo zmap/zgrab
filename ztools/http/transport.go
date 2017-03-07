@@ -15,7 +15,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/zmap/zgrab/ztools/ztls"
+	"github.com/zmap/zcrypto/tls"
 	"io"
 	"io/ioutil"
 	"net"
@@ -61,7 +61,7 @@ type Transport struct {
 
 	// TLSClientConfig specifies the TLS configuration to use with
 	// tls.Client. If nil, the default configuration is used.
-	TLSClientConfig *ztls.Config
+	TLSClientConfig *tls.Config
 
 	DisableKeepAlives  bool
 	DisableCompression bool
@@ -158,7 +158,7 @@ func (t *Transport) RoundTrip(req *Request) (resp *Response, err error) {
 	}
 
 	if cm.targetScheme == "https" {
-		req.TLSHandshake = pconn.conn.(*ztls.Conn).GetHandshakeLog()
+		req.TLSHandshake = pconn.conn.(*tls.Conn).GetHandshakeLog()
 	}
 
 	return pconn.roundTrip(treq)
@@ -369,13 +369,13 @@ func (t *Transport) getConn(cm *connectMethod) (*persistConn, error) {
 
 	if cm.targetScheme == "https" {
 		// Initiate TLS and check remote host name against certificate.
-		conn = ztls.Client(conn, t.TLSClientConfig)
-		if err = conn.(*ztls.Conn).Handshake(); err != nil {
+		conn = tls.Client(conn, t.TLSClientConfig)
+		if err = conn.(*tls.Conn).Handshake(); err != nil {
 			return nil, err
 		}
 
 		if t.TLSClientConfig == nil || !t.TLSClientConfig.InsecureSkipVerify {
-			if err = conn.(*ztls.Conn).VerifyHostname(cm.tlsHost()); err != nil {
+			if err = conn.(*tls.Conn).VerifyHostname(cm.tlsHost()); err != nil {
 				return nil, err
 			}
 		}

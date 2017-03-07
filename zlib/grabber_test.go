@@ -6,7 +6,7 @@ import (
 	. "github.com/zmap/zgrab/ztools/http"
 	"github.com/zmap/zgrab/ztools/http/httptest"
 	"github.com/zmap/zgrab/ztools/zlog"
-	"github.com/zmap/zgrab/ztools/ztls"
+	"github.com/zmap/zgrab/ztools/tls"
 	"net"
 	"net/url"
 	"os"
@@ -56,7 +56,7 @@ func TestHTTP(t *testing.T) {
 		Port:               port,
 		Timeout:            time.Duration(3) * time.Second,
 		TLS:                false,
-		TLSVersion:         ztls.VersionTLS12,
+		TLSVersion:         tls.VersionTLS12,
 		Senders:            1,
 		ConnectionsPerHost: 1,
 		HTTP: zlib.HTTPConfig{
@@ -139,7 +139,7 @@ func TestHTTPToHTTPSRedirect(t *testing.T) {
 		Port:               redirectServerPort,
 		Timeout:            time.Duration(3) * time.Second,
 		TLS:                false,
-		TLSVersion:         ztls.VersionTLS12,
+		TLSVersion:         tls.VersionTLS12,
 		Senders:            1,
 		ConnectionsPerHost: 1,
 		HTTP: zlib.HTTPConfig{

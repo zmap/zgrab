@@ -22,7 +22,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/zmap/zgrab/ztools/x509"
+	"github.com/zmap/zcrypto/x509"
 	"github.com/zmap/zlint/zlint"
 )
 

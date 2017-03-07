@@ -9,12 +9,11 @@ package http
 import (
 	"bufio"
 	"bytes"
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/zmap/zgrab/ztools/ztls"
+	"github.com/zmap/zcrypto/tls"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -199,7 +198,7 @@ type Request struct {
 	TLS *tls.ConnectionState `json:"tls,omitempty"`
 
 	// TLS handshake details
-	TLSHandshake *ztls.ServerHandshake `json:"tls_handshake,omitempty"`
+	TLSHandshake *tls.ServerHandshake `json:"tls_handshake,omitempty"`
 }
 
 // ProtoAtLeast returns whether the HTTP protocol used
