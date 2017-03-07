@@ -12,7 +12,8 @@ package http
 import (
 	"bufio"
 	"bytes"
-	"errors"
+    "crypto/tls"
+    "errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -25,8 +26,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-    "github.com/zmap/zcrypto/tls"
 )
 
 // Errors introduced by the HTTP server.
