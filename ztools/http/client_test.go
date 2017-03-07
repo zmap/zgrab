@@ -11,7 +11,7 @@ import (
 	"fmt"
 	. "github.com/zmap/zgrab/ztools/http"
 	"github.com/zmap/zgrab/ztools/http/httptest"
-	"github.com/zmap/zgrab/ztools/ztls"
+	"github.com/zmap/zcrypto/tls"
 	"io"
 	"io/ioutil"
 	"net"
@@ -428,7 +428,7 @@ func TestClientInsecureTransport(t *testing.T) {
 	// redundant with these tests.
 	for _, insecure := range []bool{true, false} {
 		tr := &Transport{
-			TLSClientConfig: &ztls.Config{
+			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: insecure,
 			},
 		}

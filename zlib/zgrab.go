@@ -27,7 +27,7 @@ import (
 	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/telnet"
 	"github.com/zmap/zgrab/ztools/xssh"
-	"github.com/zmap/zgrab/ztools/ztls"
+	"github.com/zmap/zcrypto/tls"
 )
 
 type Grab struct {
@@ -55,9 +55,9 @@ type GrabData struct {
 	EHLO         string                `json:"ehlo,omitempty"`
 	SMTPHelp     *SMTPHelpEvent        `json:"smtp_help,omitempty"`
 	StartTLS     string                `json:"starttls,omitempty"`
-	TLSHandshake *ztls.ServerHandshake `json:"tls,omitempty"`
+	TLSHandshake *tls.ServerHandshake `json:"tls,omitempty"`
 	HTTP         *HTTP                 `json:"http,omitempty"`
-	Heartbleed   *ztls.Heartbleed      `json:"heartbleed,omitempty"`
+	Heartbleed   *tls.Heartbleed      `json:"heartbleed,omitempty"`
 	Modbus       *ModbusEvent          `json:"modbus,omitempty"`
 	SSH          *ssh.HandshakeLog     `json:"ssh,omitempty"`
 	XSSH         *xssh.HandshakeLog    `json:"xssh,omitempty"`

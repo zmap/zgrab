@@ -32,8 +32,8 @@ import (
 	"github.com/zmap/zgrab/ztools/scada/bacnet"
 	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/util"
-	"github.com/zmap/zgrab/ztools/x509"
-	"github.com/zmap/zgrab/ztools/ztls"
+	"github.com/zmap/zcrypto/x509"
+	"github.com/zmap/zcrypto/tls"
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:^\d\d\d\s.*\r\n$)|(?:^\d\d\d-[\s\S]*\r\n\d\d\d\s.*\r\n$)`)
@@ -50,7 +50,7 @@ const (
 type Conn struct {
 	// Underlying network connection
 	conn    net.Conn
-	tlsConn *ztls.Conn
+	tlsConn *tls.Conn
 	isTls   bool
 
 	grabData GrabData
@@ -291,9 +291,9 @@ func (c *Conn) TLSHandshake() error {
 			"Attempted repeat handshake with remote host %s",
 			c.RemoteAddr().String())
 	}
-	tlsConfig := new(ztls.Config)
+	tlsConfig := new(tls.Config)
 	tlsConfig.InsecureSkipVerify = true
-	tlsConfig.MinVersion = ztls.VersionSSL30
+	tlsConfig.MinVersion = tls.VersionSSL30
 	tlsConfig.MaxVersion = c.maxTlsVersion
 	tlsConfig.RootCAs = c.caPool
 	tlsConfig.HeartbeatEnabled = true
@@ -319,12 +319,12 @@ func (c *Conn) TLSHandshake() error {
 		tlsConfig.ExternalClientHello = c.ExternalClientHello
 	}
 
-	c.tlsConn = ztls.Client(c.conn, tlsConfig)
+	c.tlsConn = tls.Client(c.conn, tlsConfig)
 	c.tlsConn.SetReadDeadline(c.readDeadline)
 	c.tlsConn.SetWriteDeadline(c.writeDeadline)
 	c.isTls = true
 	err := c.tlsConn.Handshake()
-	if tlsConfig.ForceSuites && err == ztls.ErrUnimplementedCipher {
+	if tlsConfig.ForceSuites && err == tls.ErrUnimplementedCipher {
 		err = nil
 	}
 	hl := c.tlsConn.GetHandshakeLog()
@@ -508,7 +508,7 @@ func (c *Conn) CheckHeartbleed(b []byte) (int, error) {
 	}
 	n, err := c.tlsConn.CheckHeartbleed(b)
 	hb := c.tlsConn.GetHeartbleedLog()
-	if err == ztls.HeartbleedError {
+	if err == tls.HeartbleedError {
 		err = nil
 	}
 	c.grabData.Heartbleed = hb
