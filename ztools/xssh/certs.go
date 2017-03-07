@@ -62,6 +62,7 @@ type Certificate struct {
 	Reserved     []byte
 	SignatureKey PublicKey
 	Signature    *Signature
+	SignatureRaw []byte
 }
 
 type JsonValidity struct {
@@ -82,6 +83,11 @@ type JsonPubKeyWrapper struct {
 	Algorithm   string `json:"algorithm"`
 }
 
+type JsonSignature struct {
+	Parsed *Signature `json:"parsed,omitempty"`
+	Raw    []byte     `json:"raw,omitempty"`
+}
+
 type JsonCertificate struct {
 	Nonce           []byte               `json:"nonce,omitempty"`
 	Key             *JsonPubKeyWrapper   `json:"key,omitempty"`
@@ -92,7 +98,7 @@ type JsonCertificate struct {
 	Validity        *JsonValidity        `json:"validity,omitempty"`
 	Reserved        []byte               `json:"reserved,omitempty"`
 	SignatureKey    *JsonPubKeyWrapper   `json:"signature_key"`
-	Signature       *Signature           `json:"signature,omitempty"`
+	Signature       *JsonSignature       `json:"signature,omitempty"`
 	ParseError      string               `json:"parse_error,omitempty"`
 	Extensions      *JsonExtensions      `json:"extensions,omitempty"`
 	CriticalOptions *JsonCriticalOptions `json:"critical_options,omitempty"`
@@ -105,8 +111,11 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		KeyId:           c.KeyId,
 		ValidPrincipals: c.ValidPrincipals,
 		Reserved:        c.Reserved,
-		Signature:       c.Signature,
 	}
+
+	temp.Signature = new(JsonSignature)
+	temp.Signature.Raw = c.SignatureRaw
+	temp.Signature.Parsed = c.Signature
 
 	temp.Key = new(JsonPubKeyWrapper)
 
@@ -312,6 +321,7 @@ func parseCert(in []byte, privAlgo string) (*Certificate, error) {
 		return nil, err
 	}
 
+	c.SignatureRaw = g.Signature
 	c.SignatureKey = k
 	c.Signature, rest, ok = parseSignatureBody(g.Signature)
 	if !ok || len(rest) > 0 {

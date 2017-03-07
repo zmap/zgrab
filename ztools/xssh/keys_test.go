@@ -45,6 +45,12 @@ func TestKeyMarshalParse(t *testing.T) {
 			t.Errorf("ParsePublicKey(%T): %v", pub, err)
 		}
 
+		if cert, ok := roundtrip.(*Certificate); ok {
+			// Certificate.SignatureRaw is an attribute added
+			// explicitly to smuggle out data for zgrab logging.
+			cert.SignatureRaw = nil
+		}
+
 		k1 := rawKey(pub)
 		k2 := rawKey(roundtrip)
 

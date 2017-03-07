@@ -166,7 +166,7 @@ type dhGroup struct {
 }
 type dhGroupJsonLog struct {
 	Parameters      *ztoolsKeys.DHParams  `json:"parameters,omitempty"`
-	ServerSignature []byte                `json:"server_signature,omitempty"`
+	ServerSignature *JsonSignature        `json:"server_signature,omitempty"`
 	ServerHostKey   *ServerHostKeyJsonLog `json:"server_host_key,omitempty"`
 }
 
@@ -245,7 +245,9 @@ func (group *dhGroup) Client(c packetConn, randSource io.Reader, magics *handsha
 	}
 
 	group.JsonLog.Parameters.ServerPublic = kexDHReply.Y
-	group.JsonLog.ServerSignature = kexDHReply.Signature
+	group.JsonLog.ServerSignature = new(JsonSignature)
+	group.JsonLog.ServerSignature.Raw = kexDHReply.Signature
+	group.JsonLog.ServerSignature.Parsed, _, _ = parseSignatureBody(kexDHReply.Signature)
 	group.JsonLog.ServerHostKey = LogServerHostKey(kexDHReply.HostKey)
 
 	kInt, err := group.diffieHellman(kexDHReply.Y, x)
@@ -345,7 +347,7 @@ type ecdh struct {
 
 type ecdhJsonLog struct {
 	Parameters      *ztoolsKeys.ECDHParams `json:"parameters,omitempty"`
-	ServerSignature []byte                 `json:"server_signature,omitempty"`
+	ServerSignature *JsonSignature         `json:"server_signature,omitempty"`
 	ServerHostKey   *ServerHostKeyJsonLog  `json:"server_host_key,omitempty"`
 }
 
@@ -419,7 +421,9 @@ func (kex *ecdh) Client(c packetConn, rand io.Reader, magics *handshakeMagics) (
 	kex.JsonLog.Parameters.ServerPublic.X = x
 	kex.JsonLog.Parameters.ServerPublic.Y = y
 	kex.JsonLog.ServerHostKey = LogServerHostKey(reply.HostKey)
-	kex.JsonLog.ServerSignature = reply.Signature
+	kex.JsonLog.ServerSignature = new(JsonSignature)
+	kex.JsonLog.ServerSignature.Raw = reply.Signature
+	kex.JsonLog.ServerSignature.Parsed, _, _ = parseSignatureBody(reply.Signature)
 	if err != nil {
 		return nil, err
 	}
@@ -596,7 +600,7 @@ type curve25519sha256 struct {
 
 type curve25519sha256JsonLog struct {
 	Parameters      curve25519sha256JsonLogParameters `json:"parameters"`
-	ServerSignature []byte                            `json:"server_signature,omitempty"`
+	ServerSignature *JsonSignature                    `json:"server_signature,omitempty"`
 	ServerHostKey   *ServerHostKeyJsonLog             `json:"server_host_key,omitempty"`
 }
 
@@ -659,7 +663,9 @@ func (kex *curve25519sha256) Client(c packetConn, rand io.Reader, magics *handsh
 
 	kex.JsonLog.Parameters.ServerPublic = reply.EphemeralPubKey
 	kex.JsonLog.ServerHostKey = LogServerHostKey(reply.HostKey)
-	kex.JsonLog.ServerSignature = reply.Signature
+	kex.JsonLog.ServerSignature = new(JsonSignature)
+	kex.JsonLog.ServerSignature.Raw = reply.Signature
+	kex.JsonLog.ServerSignature.Parsed, _, _ = parseSignatureBody(reply.Signature)
 	if len(reply.EphemeralPubKey) != 32 {
 		return nil, errors.New("ssh: peer's curve25519 public value has wrong length")
 	}
