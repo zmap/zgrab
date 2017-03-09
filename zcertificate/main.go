@@ -23,6 +23,7 @@ import (
 	"os"
 
 	"github.com/zmap/zcrypto/x509"
+	"github.com/zmap/zlint/lints"
 	"github.com/zmap/zlint/zlint"
 )
 
@@ -66,7 +67,7 @@ func main() {
 	fmt.Println(string(finalJson))
 }
 
-func runZlint(x509Cert *x509.Certificate) (map[string]string, error) {
+func runZlint(x509Cert *x509.Certificate) (map[string]lints.FinalResult, error) {
 	zlintReport, err := zlint.ParsedTestHandler(x509Cert)
 	if err != nil {
 		return nil, err
@@ -74,11 +75,11 @@ func runZlint(x509Cert *x509.Certificate) (map[string]string, error) {
 	return zlintReport, nil
 }
 
-func appendZlintToCertificate(x509Cert *x509.Certificate, lintResult map[string]string) ([]byte, error) {
+func appendZlintToCertificate(x509Cert *x509.Certificate, lintResult map[string]lints.FinalResult) ([]byte, error) {
 	return json.Marshal(struct {
-		Raw      []byte            `json:"raw"`
-		CertData *x509.Certificate `json:"parsed"`
-		Zlint    map[string]string `json:"zlint"`
+		Raw      []byte                       `json:"raw"`
+		CertData *x509.Certificate            `json:"parsed"`
+		Zlint    map[string]lints.FinalResult `json:"zlint"`
 	}{
 		Raw:      x509Cert.Raw,
 		CertData: x509Cert,
