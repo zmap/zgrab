@@ -216,7 +216,6 @@ func (c *Client) doFollowingRedirects(ireq *Request) (r *Response, err error) {
 		redirectChecker = defaultCheckRedirect
 	}
 	var via []*Request
-	var currentResponse *Response
 
 	if ireq.URL == nil {
 		return nil, errors.New("http: nil Request.URL")
@@ -245,7 +244,7 @@ func (c *Client) doFollowingRedirects(ireq *Request) (r *Response, err error) {
 					req.Headers.Set("Referer", lastReq.URL.String())
 				}
 
-				err = redirectChecker(req, currentResponse, via)
+				err = redirectChecker(req, r, via)
 				if err != nil {
 					break
 				}
@@ -263,8 +262,8 @@ func (c *Client) doFollowingRedirects(ireq *Request) (r *Response, err error) {
 		req.Headers.Set("User-Agent", c.UserAgent)
 
 		if r, err = send(req, c.Transport); err != nil {
-			if currentResponse != nil && currentResponse.Body != nil {
-				currentResponse.Body.Close()
+			if r != nil && r.Body != nil {
+				r.Body.Close()
 			}
 			break
 		}
@@ -273,10 +272,9 @@ func (c *Client) doFollowingRedirects(ireq *Request) (r *Response, err error) {
 		}
 
 		if shouldRedirect(r.StatusCode) {
-			if currentResponse != nil && currentResponse.Body != nil {
-				currentResponse.Body.Close()
+			if r != nil && r.Body != nil {
+				r.Body.Close()
 			}
-			currentResponse = r
 			if urlStr = r.Headers.Get("Location"); urlStr == "" {
 				err = errors.New(fmt.Sprintf("%d response missing Location header", r.StatusCode))
 				break
