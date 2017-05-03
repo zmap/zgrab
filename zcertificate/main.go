@@ -15,55 +15,116 @@
 package main
 
 import (
-	"bytes"
+	"bufio"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"flag"
 	"fmt"
-	"io"
 	"os"
+	"strings"
 
 	"github.com/zmap/zcrypto/x509"
 	"github.com/zmap/zlint/zlint"
+
+	log "github.com/Sirupsen/logrus"
 )
 
-func exitErr(a ...interface{}) {
-	fmt.Fprint(os.Stderr, "FATAL: ")
-	fmt.Fprintln(os.Stderr, a...)
-	os.Exit(1)
+type InputFormatType int
+
+const (
+	InputFormatBase64 InputFormatType = iota
+	InputFormatPEM    InputFormatType = iota
+)
+
+var inputFormatArg string
+
+func scannerSplitPEM(data []byte, atEOF bool) (int, []byte, error) {
+	block, rest := pem.Decode(data)
+	if block != nil {
+		size := len(data) - len(rest)
+		return size, data[:size], nil
+	}
+	return 0, nil, nil
 }
 
 func main() {
+	flag.StringVar(&inputFormatArg, "format", "pem", "one of {pem, base64}")
+	flag.Parse()
 
-	if len(os.Args) != 2 {
-		exitErr("No path to certificate provided")
+	inputFormatArg = strings.ToLower(inputFormatArg)
+	log.SetLevel(log.InfoLevel)
+
+	var inputFormat InputFormatType
+	var splitter bufio.SplitFunc
+	switch inputFormatArg {
+	case "pem":
+		inputFormat = InputFormatPEM
+		splitter = scannerSplitPEM
+	case "base64":
+		inputFormat = InputFormatBase64
+		splitter = bufio.ScanLines
+	default:
+		log.Fatalf("invalid --format: provided %s", inputFormatArg)
 	}
-	f, err := os.Open(os.Args[1])
+
+	if flag.NArg() != 1 {
+		log.Fatal("no path to certificate provided")
+	}
+
+	filename := flag.Arg(0)
+	f, err := os.Open(filename)
 	if err != nil {
-		exitErr("Could not open specified certificate:", err)
+		log.Fatalf("could not open file %s: %s", filename, err)
 	}
-	buf := bytes.NewBuffer(nil)
-	io.Copy(buf, f)
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	scanner.Split(splitter)
 
-	p, _ := pem.Decode(buf.Bytes())
-	if p == nil {
-		exitErr("Unable to parse PEM file: ", err)
-	}
-	x509Cert, err := x509.ParseCertificate(p.Bytes)
-	if err != nil {
-		exitErr("Unable to parse certificate: ", err)
+	for scanner.Scan() {
+		var certBytes []byte
+		switch inputFormat {
+		case InputFormatPEM:
+			p, _ := pem.Decode(scanner.Bytes())
+			if p == nil {
+				log.Warnf("could not parse pem")
+				continue
+			}
+			certBytes = p.Bytes
+		case InputFormatBase64:
+			b := scanner.Bytes()
+			certBytes = make([]byte, base64.StdEncoding.DecodedLen(len(b)))
+			n, err := base64.StdEncoding.Decode(certBytes, b)
+			if err != nil {
+				log.Warnf("could not decode base64: %s", err)
+				continue
+			}
+			certBytes = certBytes[0:n]
+		default:
+			panic("unreachable")
+		}
+
+		x509Cert, err := x509.ParseCertificate(certBytes)
+		if err != nil {
+			log.Warnf("unable to parse certificate: %s", err)
+			continue
+		}
+
+		zlintReport, err := runZlint(x509Cert)
+		if err != nil {
+			log.Warnf("unable to run zlint: %s", err)
+			continue
+		}
+
+		finalJSON, err := appendZlintToCertificate(x509Cert, zlintReport)
+
+		if err != nil {
+			log.Warnf("unable to append Zlint to certificate: %s", err)
+			continue
+		}
+		fmt.Println(string(finalJSON))
 	}
 
-	zlintReport, err := runZlint(x509Cert)
-	if err != nil {
-		exitErr("Unable to run zlint: ", err)
-	}
-
-	finalJson, err := appendZlintToCertificate(x509Cert, zlintReport)
-
-	if err != nil {
-		exitErr("Unable to append Zlint to Certificate: ", err)
-	}
-	fmt.Println(string(finalJson))
 }
 
 func runZlint(x509Cert *x509.Certificate) (map[string]string, error) {
