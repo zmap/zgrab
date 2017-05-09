@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -39,6 +38,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/zmap/zcrypto/tls"
 )
 
 type dummyAddr string

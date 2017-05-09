@@ -10,7 +10,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -29,6 +28,7 @@ import (
 	"time"
 
 	"golang.org/x/net/lex/httplex"
+	"github.com/zmap/zcrypto/tls"
 )
 
 // Errors used by the HTTP server.
@@ -1008,12 +1008,12 @@ func (c *conn) readRequest(ctx context.Context) (w *response, err error) {
 // http1ServerSupportsRequest reports whether Go's HTTP/1.x server
 // supports the given request.
 func http1ServerSupportsRequest(req *Request) bool {
-	if req.ProtoMajor == 1 {
+	if req.Protocol.Major == 1 {
 		return true
 	}
 	// Accept "PRI * HTTP/2.0" upgrade requests, so Handlers can
 	// wire up their own HTTP/2 upgrades.
-	if req.ProtoMajor == 2 && req.ProtoMinor == 0 &&
+	if req.Protocol.Major == 2 && req.Protocol.Minor == 0 &&
 		req.Method == "PRI" && req.RequestURI == "*" {
 		return true
 	}
@@ -2851,7 +2851,7 @@ func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
 		config.NextProtos = append(config.NextProtos, "http/1.1")
 	}
 
-	configHasCert := len(config.Certificates) > 0 || config.GetCertificate != nil
+	configHasCert := len(config.Certificates) > 0
 	if !configHasCert || certFile != "" || keyFile != "" {
 		var err error
 		config.Certificates = make([]tls.Certificate, 1)

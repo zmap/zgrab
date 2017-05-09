@@ -21,8 +21,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zcrypto/x509"
+	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/zlog"
 )
 

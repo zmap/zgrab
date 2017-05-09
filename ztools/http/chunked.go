@@ -4,7 +4,7 @@
 
 // The wire protocol for HTTP's "chunked" Transfer-Encoding.
 
-package http 
+package http
 
 import (
 	"bufio"

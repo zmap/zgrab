@@ -9,7 +9,7 @@ package http
 import (
 	"bufio"
 	"bytes"
-	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -17,22 +17,73 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/zmap/zcrypto/tls"
 )
 
 var respExcludeHeader = map[string]bool{
-	"Content-Length":    true,
-	"Transfer-Encoding": true,
-	"Trailer":           true,
+	"Trailer": true,
+}
+
+var knownHeaders = map[string]bool{
+	"access_control_allow_origin": true,
+	"accept_patch":                true,
+	"accept_ranges":               true,
+	"age":                         true,
+	"allow":                       true,
+	"alt_svc":                     true,
+	"alternate_protocol":          true,
+	"cache_control":               true,
+	"connection":                  true,
+	"content_disposition":         true,
+	"content_encoding":            true,
+	"content_language":            true,
+	"content_length":              true,
+	"content_location":            true,
+	"content_md5":                 true,
+	"content_range":               true,
+	"content_type":                true,
+	"expires":                     true,
+	"last_modified":               true,
+	"link":                        true,
+	"location":                    true,
+	"p3p":                         true,
+	"pragma":                      true,
+	"proxy_agent":                 true,
+	"proxy_authenticate":          true,
+	"public_key_pins":             true,
+	"refresh":                     true,
+	"retry_after":                 true,
+	"server":                      true,
+	"set_cookie":                  true,
+	"status":                      true,
+	"strict_transport_security":   true,
+	"trailer":                     true,
+	"transfer_encoding":           true,
+	"upgrade":                     true,
+	"vary":                        true,
+	"via":                         true,
+	"warning":                     true,
+	"www_authenticate":            true,
+	"x_frame_options":             true,
+	"x_xss_protection":            true,
+	"content_security_policy":     true,
+	"x_content_security_policy":   true,
+	"x_webkit_csp":                true,
+	"x_content_type_options":      true,
+	"x_powered_by":                true,
+	"x_ua_compatible":             true,
+	"x_content_duration":          true,
+	"x_real_ip":                   true,
+	"x_forwarded_for":             true,
 }
 
 // Response represents the response from an HTTP request.
 //
 type Response struct {
-	Status     string // e.g. "200 OK"
-	StatusCode int    // e.g. 200
-	Proto      string // e.g. "HTTP/1.0"
-	ProtoMajor int    // e.g. 1
-	ProtoMinor int    // e.g. 0
+	Status     string   `json:"status_line,omitempty"` // e.g. "200 OK"
+	StatusCode int      `json:"status_code,omitempty"` // e.g. 200
+	Protocol   Protocol `json:"protocol,omitempty"`
 
 	// Header maps header keys to values. If the response had multiple
 	// headers with the same key, they may be concatenated, with comma
@@ -42,7 +93,7 @@ type Response struct {
 	// omitted from Header.
 	//
 	// Keys in the map are canonicalized (see CanonicalHeaderKey).
-	Header Header
+	Header Header `json:"header,omitempty"`
 
 	// Body represents the response body.
 	//
@@ -56,22 +107,24 @@ type Response struct {
 	//
 	// The Body is automatically dechunked if the server replied
 	// with a "chunked" Transfer-Encoding.
-	Body io.ReadCloser
+	Body       io.ReadCloser `json:"-"`
+	BodyText   string        `json:"body,omitempty"`
+	BodySHA256 []byte        `json:"body_sha256,omitempty"`
 
 	// ContentLength records the length of the associated content. The
 	// value -1 indicates that the length is unknown. Unless Request.Method
 	// is "HEAD", values >= 0 indicate that the given number of bytes may
 	// be read from Body.
-	ContentLength int64
+	ContentLength int64 `json:"content_length,omitempty"`
 
 	// Contains transfer encodings from outer-most to inner-most. Value is
 	// nil, means that "identity" encoding is used.
-	TransferEncoding []string
+	TransferEncoding []string `json:"transfer_encoding,omitempty"`
 
 	// Close records whether the header directed that the connection be
 	// closed after reading Body. The value is advice for clients: neither
 	// ReadResponse nor Response.Write ever closes a connection.
-	Close bool
+	Close bool `json:"-"`
 
 	// Uncompressed reports whether the response was sent compressed but
 	// was decompressed by the http package. When true, reading from
@@ -80,7 +133,7 @@ type Response struct {
 	// and the "Content-Length" and "Content-Encoding" fields are deleted
 	// from the responseHeader. To get the original response from
 	// the server, set Transport.DisableCompression to true.
-	Uncompressed bool
+	Uncompressed bool `json:"-"`
 
 	// Trailer maps trailer keys to values in the same
 	// format as Header.
@@ -94,18 +147,18 @@ type Response struct {
 	//
 	// After Body.Read has returned io.EOF, Trailer will contain
 	// any trailer values sent by the server.
-	Trailer Header
+	Trailer Header `json:"trailers,omitempty"`
 
 	// Request is the request that was sent to obtain this Response.
 	// Request's Body is nil (having already been consumed).
 	// This is only populated for Client requests.
-	Request *Request
+	Request *Request `json:"request,omitempty"`
 
 	// TLS contains information about the TLS connection on which the
 	// response was received. It is nil for unencrypted responses.
 	// The pointer is shared between responses and should not be
 	// modified.
-	TLS *tls.ConnectionState
+	TLS *tls.ConnectionState `json:"-"`
 }
 
 // Cookies parses and returns the cookies set in the Set-Cookie headers.
@@ -150,28 +203,29 @@ func ReadResponse(r *bufio.Reader, req *Request) (*Response, error) {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
-		return nil, err
+		return resp, err
 	}
 	f := strings.SplitN(line, " ", 3)
 	if len(f) < 2 {
-		return nil, &badStringError{"malformed HTTP response", line}
+		return resp, &badStringError{"malformed HTTP response", line}
 	}
 	reasonPhrase := ""
 	if len(f) > 2 {
 		reasonPhrase = f[2]
 	}
 	if len(f[1]) != 3 {
-		return nil, &badStringError{"malformed HTTP status code", f[1]}
+		return resp, &badStringError{"malformed HTTP status code", f[1]}
 	}
 	resp.StatusCode, err = strconv.Atoi(f[1])
 	if err != nil || resp.StatusCode < 0 {
-		return nil, &badStringError{"malformed HTTP status code", f[1]}
+		return resp, &badStringError{"malformed HTTP status code", f[1]}
 	}
 	resp.Status = f[1] + " " + reasonPhrase
-	resp.Proto = f[0]
+	resp.Protocol = *(new(Protocol))
+	resp.Protocol.Name = f[0]
 	var ok bool
-	if resp.ProtoMajor, resp.ProtoMinor, ok = ParseHTTPVersion(resp.Proto); !ok {
-		return nil, &badStringError{"malformed HTTP version", resp.Proto}
+	if resp.Protocol.Major, resp.Protocol.Minor, ok = ParseHTTPVersion(resp.Protocol.Name); !ok {
+		return resp, &badStringError{"malformed HTTP version", resp.Protocol.Name}
 	}
 
 	// Parse the response headers.
@@ -180,15 +234,17 @@ func ReadResponse(r *bufio.Reader, req *Request) (*Response, error) {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
-		return nil, err
+		return resp, err
 	}
 	resp.Header = Header(mimeHeader)
+
+	filterHeaders(resp.Header)
 
 	fixPragmaCacheControl(resp.Header)
 
 	err = readTransfer(resp, r)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
 
 	return resp, nil
@@ -206,11 +262,30 @@ func fixPragmaCacheControl(header Header) {
 	}
 }
 
+func filterHeaders(h Header) {
+	var unknownHeaders []UnknownHeader
+	for header, values := range h {
+		if _, ok := knownHeaders[FormatHeaderName(header)]; !ok {
+			unk := UnknownHeader{
+				Key:    FormatHeaderName(header),
+				Values: values,
+			}
+			unknownHeaders = append(unknownHeaders, unk)
+			h.Del(header)
+		}
+	}
+	if len(unknownHeaders) > 0 {
+		if unknownHeaderStr, err := json.Marshal(unknownHeaders); err == nil {
+			h["Unknown"] = []string{string(unknownHeaderStr)}
+		}
+	}
+}
+
 // ProtoAtLeast reports whether the HTTP protocol used
 // in the response is at least major.minor.
 func (r *Response) ProtoAtLeast(major, minor int) bool {
-	return r.ProtoMajor > major ||
-		r.ProtoMajor == major && r.ProtoMinor >= minor
+	return r.Protocol.Major > major ||
+		r.Protocol.Major == major && r.Protocol.Minor >= minor
 }
 
 // Write writes r to w in the HTTP/1.x server response format,
@@ -244,7 +319,7 @@ func (r *Response) Write(w io.Writer) error {
 		text = strings.TrimPrefix(text, strconv.Itoa(r.StatusCode)+" ")
 	}
 
-	if _, err := fmt.Fprintf(w, "HTTP/%d.%d %03d %s\r\n", r.ProtoMajor, r.ProtoMinor, r.StatusCode, text); err != nil {
+	if _, err := fmt.Fprintf(w, "HTTP/%d.%d %03d %s\r\n", r.Protocol.Major, r.Protocol.Minor, r.StatusCode, text); err != nil {
 		return err
 	}
 

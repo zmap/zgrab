@@ -22,7 +22,6 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/rand"
-	"crypto/tls"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -46,6 +45,7 @@ import (
 	"golang.org/x/net/http2/hpack"
 	"golang.org/x/net/idna"
 	"golang.org/x/net/lex/httplex"
+	"github.com/zmap/zcrypto/tls"
 )
 
 // ClientConnPool manages a pool of HTTP/2 client connections.
@@ -4532,13 +4532,15 @@ func (sc *http2serverConn) newWriterAndRequestNoBody(st *http2stream, rp http2re
 		RemoteAddr: sc.remoteAddrStr,
 		Header:     rp.header,
 		RequestURI: requestURI,
-		Proto:      "HTTP/2.0",
-		ProtoMajor: 2,
-		ProtoMinor: 0,
-		TLS:        tlsState,
-		Host:       rp.authority,
-		Body:       body,
-		Trailer:    trailer,
+		Protocol: Protocol{
+			Name:  "HTTP/2.0",
+			Major: 2,
+			Minor: 0,
+		},
+		TLS:     tlsState,
+		Host:    rp.authority,
+		Body:    body,
+		Trailer: trailer,
 	}
 	req = http2requestWithContext(req, st.ctx)
 
@@ -6762,8 +6764,11 @@ func (rl *http2clientConnReadLoop) handleResponse(cs *http2clientStream, f *http
 
 	header := make(Header)
 	res := &Response{
-		Proto:      "HTTP/2.0",
-		ProtoMajor: 2,
+		Protocol: Protocol{
+			Name:  "HTTP/2.0",
+			Major: 2,
+			Minor: 0,
+		},
 		Header:     header,
 		StatusCode: statusCode,
 		Status:     status + " " + StatusText(statusCode),
