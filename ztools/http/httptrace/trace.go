@@ -8,11 +8,12 @@ package httptrace
 
 import (
 	"context"
-	"crypto/tls"
-	"internal/nettrace"
 	"net"
 	"reflect"
 	"time"
+	
+	"github.com/zmap/zgrab/ztools/http/nettrace"
+	"github.com/zmap/zcrypto/tls"
 )
 
 // unique type to prevent assignment.

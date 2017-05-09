@@ -17,7 +17,7 @@ import (
 	"strings"
 	"sync"
 	"time"
-	
+
 	"golang.org/x/net/lex/httplex"
 )
 
@@ -410,8 +410,8 @@ func readTransfer(msg interface{}, r *bufio.Reader) (err error) {
 	case *Response:
 		t.Header = rr.Header
 		t.StatusCode = rr.StatusCode
-		t.ProtoMajor = rr.ProtoMajor
-		t.ProtoMinor = rr.ProtoMinor
+		t.ProtoMajor = rr.Protocol.Major
+		t.ProtoMinor = rr.Protocol.Minor
 		t.Close = shouldClose(t.ProtoMajor, t.ProtoMinor, t.Header, true)
 		isResponse = true
 		if rr.Request != nil {
@@ -420,8 +420,8 @@ func readTransfer(msg interface{}, r *bufio.Reader) (err error) {
 	case *Request:
 		t.Header = rr.Header
 		t.RequestMethod = rr.Method
-		t.ProtoMajor = rr.ProtoMajor
-		t.ProtoMinor = rr.ProtoMinor
+		t.ProtoMajor = rr.Protocol.Major
+		t.ProtoMinor = rr.Protocol.Minor
 		// Transfer semantics for Requests are exactly like those for
 		// Responses with status code 200, responding to a GET method
 		t.StatusCode = 200

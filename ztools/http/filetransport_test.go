@@ -33,7 +33,8 @@ func TestFileTransport(t *testing.T) {
 
 	tr := &Transport{}
 	tr.RegisterProtocol("file", NewFileTransport(Dir(dname)))
-	c := &Client{Transport: tr}
+	c := MakeNewClient()
+	c.Transport = tr
 
 	fooURLs := []string{"file:///foo.txt", "file://../foo.txt"}
 	for _, urlstr := range fooURLs {

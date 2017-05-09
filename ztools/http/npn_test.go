@@ -7,7 +7,6 @@ package http_test
 import (
 	"bufio"
 	"bytes"
-	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,6 +14,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/zmap/zcrypto/tls"
 )
 
 func TestNextProtoUpgrade(t *testing.T) {

@@ -14,13 +14,11 @@ import (
 	"compress/gzip"
 	"container/list"
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net"
-	"net/http/httptrace"
 	"net/url"
 	"os"
 	"strings"
@@ -28,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/zmap/zgrab/ztools/http/httptrace"
+	"github.com/zmap/zcrypto/tls"
 	"golang.org/x/net/lex/httplex"
 )
 
@@ -380,6 +380,10 @@ func (t *Transport) RoundTrip(req *Request) (*Response, error) {
 			t.setReqCanceler(req, nil)
 			req.closeBody()
 			return nil, err
+		}
+
+		if cm.targetScheme == "https" {
+			req.TLSHandshake = pconn.conn.(*tls.Conn).GetHandshakeLog()
 		}
 
 		var resp *Response

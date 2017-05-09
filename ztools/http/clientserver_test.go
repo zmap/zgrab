@@ -9,7 +9,6 @@ package http_test
 import (
 	"bytes"
 	"compress/gzip"
-	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -28,6 +27,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/zmap/zcrypto/tls"
 )
 
 type clientServerTest struct {

@@ -10,7 +10,6 @@
 package http
 
 import (
-	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -73,7 +72,7 @@ type Client struct {
 	//
 	// If CheckRedirect is nil, the Client uses its default policy,
 	// which is to stop after 10 consecutive requests.
-	CheckRedirect func(req *Request, via []*Request) error
+	CheckRedirect func(req *Request, res *Response, via []*Request) error
 
 	// Jar specifies the cookie jar.
 	//
@@ -104,10 +103,13 @@ type Client struct {
 	// RoundTripper implementations should use Request.Cancel
 	// instead of implementing CancelRequest.
 	Timeout time.Duration
+
+	// HTTP User Agent header for an instantiated client
+	UserAgent string
 }
 
 // DefaultClient is the default Client and is used by Get, Head, and Post.
-var DefaultClient = &Client{}
+var DefaultClient = MakeNewClient()
 
 // RoundTripper is an interface representing the ability to execute a
 // single HTTP transaction, obtaining the Response for a given Request.
@@ -137,6 +139,10 @@ type RoundTripper interface {
 	//
 	// The Request's URL and Header fields must be initialized.
 	RoundTrip(*Request) (*Response, error)
+}
+
+func MakeNewClient() *Client {
+	return &Client{UserAgent: "Mozilla/5.0 zgrab/0.x"}
 }
 
 // refererForURL returns a referer without any authentication info or
@@ -252,14 +258,6 @@ func send(ireq *Request, rt RoundTripper, deadline time.Time) (resp *Response, d
 		if resp != nil {
 			log.Printf("RoundTripper returned a response & error; ignoring response")
 		}
-		if tlsErr, ok := err.(tls.RecordHeaderError); ok {
-			// If we get a bad TLS record header, check to see if the
-			// response looks like HTTP and give a more helpful error.
-			// See golang.org/issue/11111.
-			if string(tlsErr.RecordHeader[:]) == "HTTP/" {
-				err = errors.New("http: server gave HTTP response to HTTPS client")
-			}
-		}
 		return nil, didTimeout, err
 	}
 	if !deadline.IsZero() {
@@ -367,6 +365,10 @@ func Get(url string) (resp *Response, err error) {
 	return DefaultClient.Get(url)
 }
 
+func (c *Client) Get(url string) (r *Response, err error) {
+	return c.GetWithHost(url, "")
+}
+
 // Get issues a GET to the specified URL. If the response is one of the
 // following redirect codes, Get follows the redirect after calling the
 // Client's CheckRedirect function:
@@ -385,8 +387,8 @@ func Get(url string) (resp *Response, err error) {
 // Caller should close resp.Body when done reading from it.
 //
 // To make a request with custom headers, use NewRequest and Client.Do.
-func (c *Client) Get(url string) (resp *Response, err error) {
-	req, err := NewRequest("GET", url, nil)
+func (c *Client) GetWithHost(url, host string) (resp *Response, err error) {
+	req, err := NewRequestWithHost("GET", url, host, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -403,12 +405,12 @@ var ErrUseLastResponse = errors.New("net/http: use last response")
 
 // checkRedirect calls either the user's configured CheckRedirect
 // function, or the default.
-func (c *Client) checkRedirect(req *Request, via []*Request) error {
+func (c *Client) checkRedirect(req *Request, res *Response, via []*Request) error {
 	fn := c.CheckRedirect
 	if fn == nil {
 		fn = defaultCheckRedirect
 	}
-	return fn(req, via)
+	return fn(req, res, via)
 }
 
 // redirectBehavior describes what should happen when the
@@ -476,7 +478,7 @@ func redirectBehavior(reqMethod string, resp *Response, ireq *Request) (redirect
 // non-nil error only occurs when CheckRedirect fails, and even then
 // the returned Response.Body is already closed.
 //
-// Generally Get, Post, or PostForm will be used instead of Do.
+// Generally Get, ost, or PostForm will be used instead of Do.
 //
 // If the server replies with a redirect, the Client first uses the
 // CheckRedirect function to determine whether the redirect should be
@@ -487,7 +489,18 @@ func redirectBehavior(reqMethod string, resp *Response, ireq *Request) (redirect
 // provided that the Request.GetBody function is defined.
 // The NewRequest function automatically sets GetBody for common
 // standard library body types.
-func (c *Client) Do(req *Request) (*Response, error) {
+func (c *Client) Do(req *Request) (resp *Response, err error) {
+	if c.UserAgent == "" {
+		err = errors.New("http: no client.UserAgent set")
+		return
+	}
+
+	if req.Header == nil {
+		req.Header = make(Header)
+	}
+
+	req.Header.Set("User-Agent", c.UserAgent)
+
 	if req.URL == nil {
 		req.closeBody()
 		return nil, errors.New("http: nil Request.URL")
@@ -496,7 +509,6 @@ func (c *Client) Do(req *Request) (*Response, error) {
 	var (
 		deadline    = c.deadline()
 		reqs        []*Request
-		resp        *Response
 		copyHeaders = c.makeHeadersCopier(req)
 
 		// Redirect behavior:
@@ -558,7 +570,7 @@ func (c *Client) Do(req *Request) (*Response, error) {
 			if ref := refererForURL(reqs[len(reqs)-1].URL, req.URL); ref != "" {
 				req.Header.Set("Referer", ref)
 			}
-			err = c.checkRedirect(req, reqs)
+			err = c.checkRedirect(req, resp, reqs)
 
 			// Sentinel error to let users select the
 			// previous response, without closing its
@@ -676,7 +688,7 @@ func (c *Client) makeHeadersCopier(ireq *Request) func(*Request) {
 	}
 }
 
-func defaultCheckRedirect(req *Request, via []*Request) error {
+func defaultCheckRedirect(req *Request, res *Response, via []*Request) error {
 	if len(via) >= 10 {
 		return errors.New("stopped after 10 redirects")
 	}
@@ -776,12 +788,16 @@ func Head(url string) (resp *Response, err error) {
 //    303 (See Other)
 //    307 (Temporary Redirect)
 //    308 (Permanent Redirect)
-func (c *Client) Head(url string) (resp *Response, err error) {
-	req, err := NewRequest("HEAD", url, nil)
+func (c *Client) HeadWithHost(url, host string) (resp *Response, err error) {
+	req, err := NewRequestWithHost("HEAD", url, host, nil)
 	if err != nil {
 		return nil, err
 	}
 	return c.Do(req)
+}
+
+func (c *Client) Head(url string) (resp *Response, err error) {
+        return c.HeadWithHost(url, "")
 }
 
 // cancelTimerBody is an io.ReadCloser that wraps rc with two features:

@@ -9,7 +9,6 @@ package http_test
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"errors"
@@ -29,6 +28,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/zmap/zcrypto/ztls"
 )
 
 var robotsTxtHandler = HandlerFunc(func(w ResponseWriter, r *Request) {
@@ -72,8 +73,8 @@ func TestClient(t *testing.T) {
 	defer afterTest(t)
 	ts := httptest.NewServer(robotsTxtHandler)
 	defer ts.Close()
-
-	c := &Client{Transport: &Transport{DisableKeepAlives: true}}
+	c := MakeNewClient()
+	c.Transport = &Transport{DisableKeepAlives: true}
 	r, err := c.Get(ts.URL)
 	var b []byte
 	if err == nil {
@@ -117,7 +118,8 @@ func TestGetRequestFormat(t *testing.T) {
 	setParallel(t)
 	defer afterTest(t)
 	tr := &recordingTransport{}
-	client := &Client{Transport: tr}
+	client := MakeNewClient()
+	client.transport = tr
 	url := "http://dummy.faketld/"
 	client.Get(url) // Note: doesn't hit network
 	if tr.req.Method != "GET" {
@@ -134,7 +136,8 @@ func TestGetRequestFormat(t *testing.T) {
 func TestPostRequestFormat(t *testing.T) {
 	defer afterTest(t)
 	tr := &recordingTransport{}
-	client := &Client{Transport: tr}
+	client := MakeNewClient()
+	client.transport = tr
 
 	url := "http://dummy.faketld/"
 	json := `{"key":"value"}`
@@ -161,7 +164,8 @@ func TestPostRequestFormat(t *testing.T) {
 func TestPostFormRequestFormat(t *testing.T) {
 	defer afterTest(t)
 	tr := &recordingTransport{}
-	client := &Client{Transport: tr}
+	client := MakeNewClient()
+	client.transport = tr
 
 	urlStr := "http://dummy.faketld/"
 	form := make(url.Values)
@@ -223,7 +227,9 @@ func TestClientRedirects(t *testing.T) {
 	tr := &Transport{}
 	defer tr.CloseIdleConnections()
 
-	c := &Client{Transport: tr}
+	client := MakeNewClient()
+	client.transport = tr
+
 	_, err := c.Get(ts.URL)
 	if e, g := "Get /?n=10: stopped after 10 redirects", fmt.Sprintf("%v", err); e != g {
 		t.Errorf("with default client Get, expected error %q, got %q", e, g)
@@ -252,14 +258,14 @@ func TestClientRedirects(t *testing.T) {
 	var checkErr error
 	var lastVia []*Request
 	var lastReq *Request
-	c = &Client{
-		Transport: tr,
-		CheckRedirect: func(req *Request, via []*Request) error {
+
+	c = MakeNewClient()
+	c.Transport = tr
+	c.CheckRedirect = func(req *Request, via []*Request) error {
 			lastReq = req
 			lastVia = via
 			return checkErr
-		},
-	}
+		}
 	res, err := c.Get(ts.URL)
 	if err != nil {
 		t.Fatalf("Get error: %v", err)
@@ -316,16 +322,15 @@ func TestClientRedirectContext(t *testing.T) {
 	defer tr.CloseIdleConnections()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	c := &Client{
-		Transport: tr,
-		CheckRedirect: func(req *Request, via []*Request) error {
+	c := MakeNewClient()
+	c.Transport = tr
+	c.CheckRedirect = func(req *Request, via []*Request) error {
 			cancel()
 			if len(via) > 2 {
 				return errors.New("too many redirects")
 			}
 			return nil
-		},
-	}
+		}
 	req, _ := NewRequest("GET", ts.URL, nil)
 	req = req.WithContext(ctx)
 	_, err := c.Do(req)
@@ -518,16 +523,14 @@ func TestClientRedirectUseResponse(t *testing.T) {
 
 	tr := &Transport{}
 	defer tr.CloseIdleConnections()
-
-	c := &Client{
-		Transport: tr,
-		CheckRedirect: func(req *Request, via []*Request) error {
+	c := MakeNewClient()
+	c.Transport = tr
+	c.CheckRedirect = func(req *Request, via []*Request) error {
 			if req.Response == nil {
 				t.Error("expected non-nil Request.Response")
 			}
 			return ErrUseLastResponse
-		},
-	}
+		}
 	res, err := c.Get(ts.URL)
 	if err != nil {
 		t.Fatal(err)
@@ -618,7 +621,8 @@ var echoCookiesRedirectHandler = HandlerFunc(func(w ResponseWriter, r *Request) 
 func TestClientSendsCookieFromJar(t *testing.T) {
 	defer afterTest(t)
 	tr := &recordingTransport{}
-	client := &Client{Transport: tr}
+	client := MakeNewClient()
+	client.transport = tr
 	client.Jar = &TestJar{perURL: make(map[string][]*Cookie)}
 	us := "http://dummy.faketld/"
 	u, _ := url.Parse(us)
@@ -675,10 +679,9 @@ func TestRedirectCookiesJar(t *testing.T) {
 	defer ts.Close()
 	tr := &Transport{}
 	defer tr.CloseIdleConnections()
-	c := &Client{
-		Transport: tr,
-		Jar:       new(TestJar),
-	}
+	c := MakeNewClient()
+	c.Transport = tr
+	c.Jar = new(TestJar)
 	u, _ := url.Parse(ts.URL)
 	c.Jar.SetCookies(u, []*Cookie{expectedCookies[0]})
 	resp, err := c.Get(ts.URL)
@@ -722,14 +725,13 @@ func TestJarCalls(t *testing.T) {
 	}))
 	defer ts.Close()
 	jar := new(RecordingJar)
-	c := &Client{
-		Jar: jar,
-		Transport: &Transport{
+	c := MakeNewClient()
+	c.Jar = jar
+	c.Transport = &Transport{
 			Dial: func(_ string, _ string) (net.Conn, error) {
 				return net.Dial("tcp", ts.Listener.Addr().String())
 			},
 		},
-	}
 	_, err := c.Get("http://firsthost.fake/")
 	if err != nil {
 		t.Fatal(err)
@@ -840,7 +842,8 @@ func TestClientWrites(t *testing.T) {
 		}
 		return c, err
 	}
-	c := &Client{Transport: &Transport{Dial: dialer}}
+	c := MakeNewClient()
+	c.Transport =  &Transport{Dial: dialer}
 
 	_, err := c.Get(ts.URL)
 	if err != nil {
@@ -875,12 +878,14 @@ func TestClientInsecureTransport(t *testing.T) {
 	// redundant with these tests.
 	for _, insecure := range []bool{true, false} {
 		tr := &Transport{
-			TLSClientConfig: &tls.Config{
+			TLSClientConfig: &ztls.Config{
 				InsecureSkipVerify: insecure,
 			},
 		}
 		defer tr.CloseIdleConnections()
-		c := &Client{Transport: tr}
+		client := MakeNewClient()
+		client.transport = tr
+
 		res, err := c.Get(ts.URL)
 		if (err == nil) != insecure {
 			t.Errorf("insecure=%v: got unexpected err=%v", insecure, err)
@@ -926,7 +931,7 @@ func newTLSTransport(t *testing.T, ts *httptest.Server) *Transport {
 		}
 	}
 	return &Transport{
-		TLSClientConfig: &tls.Config{RootCAs: certs},
+		TLSClientConfig: &ztls.Config{RootCAs: certs},
 	}
 }
 
@@ -943,7 +948,8 @@ func TestClientWithCorrectTLSServerName(t *testing.T) {
 
 	trans := newTLSTransport(t, ts)
 	trans.TLSClientConfig.ServerName = serverName
-	c := &Client{Transport: trans}
+	c := MakeNewClient()
+	c.Transport = trans
 	if _, err := c.Get(ts.URL); err != nil {
 		t.Fatalf("expected successful TLS connection, got error: %v", err)
 	}
@@ -958,7 +964,8 @@ func TestClientWithIncorrectTLSServerName(t *testing.T) {
 
 	trans := newTLSTransport(t, ts)
 	trans.TLSClientConfig.ServerName = "badserver"
-	c := &Client{Transport: trans}
+	c := MakeNewClient()
+	c.Transport = tr
 	_, err := c.Get(ts.URL)
 	if err == nil {
 		t.Fatalf("expected an error")
@@ -998,7 +1005,9 @@ func TestTransportUsesTLSConfigServerName(t *testing.T) {
 		return net.Dial(netw, ts.Listener.Addr().String())
 	}
 	defer tr.CloseIdleConnections()
-	c := &Client{Transport: tr}
+	client := MakeNewClient()
+	client.transport = tr
+
 	res, err := c.Get("https://some-other-host.tld/")
 	if err != nil {
 		t.Fatal(err)
@@ -1019,7 +1028,8 @@ func TestResponseSetsTLSConnectionState(t *testing.T) {
 		return net.Dial(netw, ts.Listener.Addr().String())
 	}
 	defer tr.CloseIdleConnections()
-	c := &Client{Transport: tr}
+	client := MakeNewClient()
+	client.transport = tr
 	res, err := c.Get("https://example.com/")
 	if err != nil {
 		t.Fatal(err)
@@ -1114,9 +1124,12 @@ func TestEmptyPasswordAuth(t *testing.T) {
 		}
 	}))
 	defer ts.Close()
-	tr := &Transport{}
+	client := MakeNewClient()
+	client.transport = tr
 	defer tr.CloseIdleConnections()
-	c := &Client{Transport: tr}
+	client := MakeNewClient()
+	client.transport = tr
+
 	req, err := NewRequest("GET", ts.URL, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -1132,7 +1145,8 @@ func TestEmptyPasswordAuth(t *testing.T) {
 func TestBasicAuth(t *testing.T) {
 	defer afterTest(t)
 	tr := &recordingTransport{}
-	client := &Client{Transport: tr}
+	client := MakeNewClient()
+	client.transport = tr
 
 	url := "http://My%20User:My%20Pass@dummy.faketld/"
 	expected := "My User:My Pass"
@@ -1166,7 +1180,8 @@ func TestBasicAuth(t *testing.T) {
 func TestBasicAuthHeadersPreserved(t *testing.T) {
 	defer afterTest(t)
 	tr := &recordingTransport{}
-	client := &Client{Transport: tr}
+	client := MakeNewClient()
+	client.transport = tr
 
 	// If Authorization header is provided, username in URL should not override it
 	url := "http://My%20User@dummy.faketld/"
@@ -1460,10 +1475,9 @@ func (issue15577Tripper) RoundTrip(*Request) (*Response, error) {
 
 // Issue 15577: don't assume the roundtripper's response populates its Request field.
 func TestClientRedirectResponseWithoutRequest(t *testing.T) {
-	c := &Client{
-		CheckRedirect: func(*Request, []*Request) error { return fmt.Errorf("no redirects!") },
-		Transport:     issue15577Tripper{},
-	}
+	c := MakeNewClient()
+	c.CheckRedirect = func(*Request, []*Request) error { return fmt.Errorf("no redirects!") }
+	c.Transport = issue15577Tripper{}
 	// Check that this doesn't crash:
 	c.Get("http://dummy.tld")
 }
@@ -1500,9 +1514,9 @@ func TestClientCopyHeadersOnRedirect(t *testing.T) {
 
 	tr := &Transport{}
 	defer tr.CloseIdleConnections()
-	c := &Client{
-		Transport: tr,
-		CheckRedirect: func(r *Request, via []*Request) error {
+	c := MakeNewClient()
+	c.Transport = tr
+	c.CheckRedirect = func(r *Request, via []*Request) error {
 			want := Header{
 				"User-Agent": []string{ua},
 				"X-Foo":      []string{xfoo},
@@ -1512,8 +1526,7 @@ func TestClientCopyHeadersOnRedirect(t *testing.T) {
 				t.Errorf("CheckRedirect Request.Header = %#v; want %#v", r.Header, want)
 			}
 			return nil
-		},
-	}
+		}
 
 	req, _ := NewRequest("GET", ts2.URL, nil)
 	req.Header.Add("User-Agent", ua)
@@ -1604,10 +1617,9 @@ func TestClientAltersCookiesOnRedirect(t *testing.T) {
 	tr := &Transport{}
 	defer tr.CloseIdleConnections()
 	jar, _ := cookiejar.New(nil)
-	c := &Client{
-		Transport: tr,
-		Jar:       jar,
-	}
+	c := MakeNewClient()
+	c.Transport = tr
+	c.Jar = jar
 
 	u, _ := url.Parse(ts.URL)
 	req, _ := NewRequest("GET", ts.URL, nil)
@@ -1740,7 +1752,8 @@ func TestClientRedirectTypes(t *testing.T) {
 			continue
 		}
 
-		c := &Client{Transport: tr}
+		c := MakeNewClient()
+		c.transport = tr
 		c.CheckRedirect = func(req *Request, via []*Request) error {
 			if got, want := req.Method, tt.wantMethod; got != want {
 				return fmt.Errorf("#%d: got next method %q; want %q", i, got, want)
@@ -1796,7 +1809,8 @@ func TestTransportBodyReadError(t *testing.T) {
 	defer ts.Close()
 	tr := &Transport{}
 	defer tr.CloseIdleConnections()
-	c := &Client{Transport: tr}
+	c := MakeNewClient()
+	c.transport = tr
 
 	// Do one initial successful request to create an idle TCP connection
 	// for the subsequent request to reuse. (The Transport only retries

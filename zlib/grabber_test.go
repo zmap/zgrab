@@ -2,11 +2,11 @@ package zlib_test
 
 import (
 	"fmt"
+	"github.com/zmap/zcrypto/tls"
 	"github.com/zmap/zgrab/zlib"
 	. "github.com/zmap/zgrab/ztools/http"
 	"github.com/zmap/zgrab/ztools/http/httptest"
 	"github.com/zmap/zgrab/ztools/zlog"
-	"github.com/zmap/zcrypto/tls"
 	"net"
 	"net/url"
 	"os"

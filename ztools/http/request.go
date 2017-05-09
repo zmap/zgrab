@@ -10,8 +10,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -29,6 +29,8 @@ import (
 	"golang.org/x/net/idna"
 	"golang.org/x/text/unicode/norm"
 	"golang.org/x/text/width"
+
+	"github.com/zmap/zcrypto/tls"
 )
 
 const (
@@ -38,6 +40,16 @@ const (
 // ErrMissingFile is returned by FormFile when the provided file field name
 // is either not present in the request or not a file field.
 var ErrMissingFile = errors.New("http: no such file")
+
+type URLWrapper struct {
+	Scheme   string `json:"scheme,omitempty"`
+	Opaque   string `json:"opaque,omitempty"`
+	Host     string `json:"host,omitempty"`
+	Path     string `json:"path,omitempty"`
+	RawPath  string `json:"raw_path,omitempty"`
+	RawQuery string `json:"raw_query,omitempty"`
+	Fragment string `json:"fragment,omitempty"`
+}
 
 // ProtocolError represents an HTTP protocol error.
 //
@@ -100,7 +112,7 @@ var reqWriteExcludeHeader = map[string]bool{
 type Request struct {
 	// Method specifies the HTTP method (GET, POST, PUT, etc.).
 	// For client requests an empty string means GET.
-	Method string
+	Method string `json:"method,omitempty"`
 
 	// URL specifies either the URI being requested (for server
 	// requests) or the URL to access (for client requests).
@@ -114,16 +126,14 @@ type Request struct {
 	// connect to, while the Request's Host field optionally
 	// specifies the Host header value to send in the HTTP
 	// request.
-	URL *url.URL
+	URL *url.URL `json:"-"`
 
 	// The protocol version for incoming server requests.
 	//
 	// For client requests these fields are ignored. The HTTP
 	// client code always uses either HTTP/1.1 or HTTP/2.
 	// See the docs on Transport for details.
-	Proto      string // "HTTP/1.0"
-	ProtoMajor int    // 1
-	ProtoMinor int    // 0
+	Protocol Protocol `json:"-"`
 
 	// Header contains the request header fields either received
 	// by the server or to be sent by the client.
@@ -156,7 +166,7 @@ type Request struct {
 	// and Connection are automatically written when needed and
 	// values in Header may be ignored. See the documentation
 	// for the Request.Write method.
-	Header Header
+	Header Header `json:"header,omitempty"`
 
 	// Body is the request's body.
 	//
@@ -168,7 +178,7 @@ type Request struct {
 	// but will return EOF immediately when no body is present.
 	// The Server will close the request body. The ServeHTTP
 	// Handler does not need to.
-	Body io.ReadCloser
+	Body io.ReadCloser `json:"body,omitempty"`
 
 	// GetBody defines an optional func to return a new copy of
 	// Body. It is used for client requests when a redirect requires
@@ -176,7 +186,7 @@ type Request struct {
 	// requires setting Body.
 	//
 	// For server requests it is unused.
-	GetBody func() (io.ReadCloser, error)
+	GetBody func() (io.ReadCloser, error) `json:"-"`
 
 	// ContentLength records the length of the associated content.
 	// The value -1 indicates that the length is unknown.
@@ -184,14 +194,14 @@ type Request struct {
 	// be read from Body.
 	// For client requests, a value of 0 with a non-nil Body is
 	// also treated as unknown.
-	ContentLength int64
+	ContentLength int64 `json:"content_length,omitempty"`
 
 	// TransferEncoding lists the transfer encodings from outermost to
 	// innermost. An empty list denotes the "identity" encoding.
 	// TransferEncoding can usually be ignored; chunked encoding is
 	// automatically added and removed as necessary when sending and
 	// receiving requests.
-	TransferEncoding []string
+	TransferEncoding []string `json:"transfer_encoding,omitempty"`
 
 	// Close indicates whether to close the connection after
 	// replying to this request (for servers) or after sending this
@@ -203,7 +213,7 @@ type Request struct {
 	// For client requests, setting this field prevents re-use of
 	// TCP connections between requests to the same hosts, as if
 	// Transport.DisableKeepAlives were set.
-	Close bool
+	Close bool `json:"close,omitempty"`
 
 	// For server requests Host specifies the host on which the
 	// URL is sought. Per RFC 2616, this is either the value of
@@ -217,25 +227,25 @@ type Request struct {
 	// header to send. If empty, the Request.Write method uses
 	// the value of URL.Host. Host may contain an international
 	// domain name.
-	Host string
+	Host string `json:"host,omitempty"`
 
 	// Form contains the parsed form data, including both the URL
 	// field's query parameters and the POST or PUT form data.
 	// This field is only available after ParseForm is called.
 	// The HTTP client ignores Form and uses Body instead.
-	Form url.Values
+	Form url.Values `json:"form,omitempty"`
 
 	// PostForm contains the parsed form data from POST, PATCH,
 	// or PUT body parameters.
 	//
 	// This field is only available after ParseForm is called.
 	// The HTTP client ignores PostForm and uses Body instead.
-	PostForm url.Values
+	PostForm url.Values `json:"post_form,omitempty"`
 
 	// MultipartForm is the parsed multipart form, including file uploads.
 	// This field is only available after ParseMultipartForm is called.
 	// The HTTP client ignores MultipartForm and uses Body instead.
-	MultipartForm *multipart.Form
+	MultipartForm *multipart.Form `json:"multipart_form,omitempty"`
 
 	// Trailer specifies additional headers that are sent after the request
 	// body.
@@ -255,7 +265,7 @@ type Request struct {
 	// not mutate Trailer.
 	//
 	// Few HTTP clients, servers, or proxies support HTTP trailers.
-	Trailer Header
+	Trailer Header `json:"trailer,omitempty"`
 
 	// RemoteAddr allows HTTP servers and other software to record
 	// the network address that sent the request, usually for
@@ -264,13 +274,13 @@ type Request struct {
 	// sets RemoteAddr to an "IP:port" address before invoking a
 	// handler.
 	// This field is ignored by the HTTP client.
-	RemoteAddr string
+	RemoteAddr string `json:"-"`
 
 	// RequestURI is the unmodified Request-URI of the
 	// Request-Line (RFC 2616, Section 5.1) as sent by the client
 	// to a server. Usually the URL field should be used instead.
 	// It is an error to set this field in an HTTP client request.
-	RequestURI string
+	RequestURI string `json:"-"`
 
 	// TLS allows HTTP servers and other software to record
 	// information about the TLS connection on which the request
@@ -279,7 +289,10 @@ type Request struct {
 	// TLS-enabled connections before invoking a handler;
 	// otherwise it leaves the field nil.
 	// This field is ignored by the HTTP client.
-	TLS *tls.ConnectionState
+	TLS *tls.ConnectionState `json:"tls,omitempty"`
+
+	// TLS handshake details
+	TLSHandshake *tls.ServerHandshake `json:"tls_handshake,omitempty"`
 
 	// Cancel is an optional channel whose closure indicates that the client
 	// request should be regarded as canceled. Not all implementations of
@@ -290,19 +303,40 @@ type Request struct {
 	// Deprecated: Use the Context and WithContext methods
 	// instead. If a Request's Cancel field and context are both
 	// set, it is undefined whether Cancel is respected.
-	Cancel <-chan struct{}
+	Cancel <-chan struct{} `json:"-"`
 
 	// Response is the redirect response which caused this request
 	// to be created. This field is only populated during client
 	// redirects.
-	Response *Response
+	Response *Response `json:"-"`
 
 	// ctx is either the client or server context. It should only
 	// be modified via copying the whole Request using WithContext.
 	// It is unexported to prevent people from using Context wrong
 	// and mutating the contexts held by callers of the same request.
-	ctx context.Context
+	ctx context.Context `json:"-"`
 }
+
+
+func (request *Request) MarshalJSON() ([]byte, error) {
+	type Alias Request
+	return json.Marshal(&struct {
+		URL URLWrapper `json:"url,omitempty"`
+		*Alias
+	}{
+		URL: URLWrapper{
+			Scheme:   request.URL.Scheme,
+			Opaque:   request.URL.Opaque,
+			Host:     request.URL.Host,
+			Path:     request.URL.Path,
+			RawPath:  request.URL.RawPath,
+			RawQuery: request.URL.RawQuery,
+			Fragment: request.URL.Fragment,
+		},
+		Alias: (*Alias)(request),
+	})
+}
+
 
 // Context returns the request's context. To change the context, use
 // WithContext.
@@ -337,8 +371,8 @@ func (r *Request) WithContext(ctx context.Context) *Request {
 // ProtoAtLeast reports whether the HTTP protocol used
 // in the request is at least major.minor.
 func (r *Request) ProtoAtLeast(major, minor int) bool {
-	return r.ProtoMajor > major ||
-		r.ProtoMajor == major && r.ProtoMinor >= minor
+	return r.Protocol.Major > major ||
+		r.Protocol.Major == major && r.Protocol.Minor >= minor
 }
 
 // protoAtLeastOutgoing is like ProtoAtLeast, but is for outgoing
@@ -347,7 +381,7 @@ func (r *Request) ProtoAtLeast(major, minor int) bool {
 // matching HTTP/1.1 or HTTP/1.0.  Only HTTP/1.1 is used.
 // TODO(bradfitz): ideally remove this whole method. It shouldn't be used.
 func (r *Request) protoAtLeastOutgoing(major, minor int) bool {
-	if r.ProtoMajor == 0 && r.ProtoMinor == 0 && major == 1 && minor <= 1 {
+	if r.Protocol.Major == 0 && r.Protocol.Minor == 0 && major == 1 && minor <= 1 {
 		return true
 	}
 	return r.ProtoAtLeast(major, minor)
@@ -444,7 +478,7 @@ func (r *Request) multipartReader() (*multipart.Reader, error) {
 // isH2Upgrade reports whether r represents the http2 "client preface"
 // magic string.
 func (r *Request) isH2Upgrade() bool {
-	return r.Method == "PRI" && len(r.Header) == 0 && r.URL.Path == "*" && r.Proto == "HTTP/2.0"
+	return r.Method == "PRI" && len(r.Header) == 0 && r.URL.Path == "*" && r.Protocol.Name == "HTTP/2.0"
 }
 
 // Return value if nonempty, def otherwise.
@@ -459,7 +493,7 @@ func valueOrDefault(value, def string) string {
 // It was changed at the time of Go 1.1 release because the former User-Agent
 // had ended up on a blacklist for some intrusion detection systems.
 // See https://codereview.appspot.com/7532043.
-const defaultUserAgent = "Go-http-client/1.1"
+const defaultUserAgent = "Mozilla/5.0 zgrab/0.x"
 
 // Write writes an HTTP/1.1 request, which is the header and body, in wire format.
 // This method consults the following fields of the request:
@@ -737,6 +771,10 @@ func validMethod(method string) bool {
 	return len(method) > 0 && strings.IndexFunc(method, isNotToken) == -1
 }
 
+func NewRequest(method, urlStr string, body io.Reader) (*Request, error) {
+	return NewRequestWithHost(method, urlStr, "", body)
+}
+
 // NewRequest returns a new Request given a method, URL, and optional body.
 //
 // If the provided body is also an io.Closer, the returned
@@ -755,7 +793,7 @@ func validMethod(method string) bool {
 // exact value (instead of -1), GetBody is populated (so 307 and 308
 // redirects can replay the body), and Body is set to NoBody if the
 // ContentLength is 0.
-func NewRequest(method, urlStr string, body io.Reader) (*Request, error) {
+func NewRequestWithHost(method, urlStr string, host string,body io.Reader) (*Request, error) {
 	if method == "" {
 		// We document that "" means "GET" for Request.Method, and people have
 		// relied on that from NewRequest, so keep that working.
@@ -773,17 +811,22 @@ func NewRequest(method, urlStr string, body io.Reader) (*Request, error) {
 	if !ok && body != nil {
 		rc = ioutil.NopCloser(body)
 	}
+	if host == "" {
+		host = u.Host
+	}
 	// The host's colon:port should be normalized. See Issue 14836.
-	u.Host = removeEmptyPort(u.Host)
+	host = removeEmptyPort(host)
 	req := &Request{
-		Method:     method,
-		URL:        u,
-		Proto:      "HTTP/1.1",
-		ProtoMajor: 1,
-		ProtoMinor: 1,
-		Header:     make(Header),
-		Body:       rc,
-		Host:       u.Host,
+		Method: method,
+		URL:    u,
+		Protocol: Protocol{
+			Name:  "HTTP/1.1",
+			Major: 1,
+			Minor: 1,
+		},
+		Header: make(Header),
+		Body:   rc,
+		Host:   host,
 	}
 	if body != nil {
 		switch v := body.(type) {
@@ -926,13 +969,13 @@ func readRequest(b *bufio.Reader, deleteHostHeader bool) (req *Request, err erro
 	}()
 
 	var ok bool
-	req.Method, req.RequestURI, req.Proto, ok = parseRequestLine(s)
+	req.Method, req.RequestURI, req.Protocol.Name, ok = parseRequestLine(s)
 	if !ok {
 		return nil, &badStringError{"malformed HTTP request", s}
 	}
 	rawurl := req.RequestURI
-	if req.ProtoMajor, req.ProtoMinor, ok = ParseHTTPVersion(req.Proto); !ok {
-		return nil, &badStringError{"malformed HTTP version", req.Proto}
+	if req.Protocol.Major, req.Protocol.Minor, ok = ParseHTTPVersion(req.Protocol.Name); !ok {
+		return nil, &badStringError{"malformed HTTP version", req.Protocol.Name}
 	}
 
 	// CONNECT requests are used two different ways, and neither uses a full URL:
@@ -982,7 +1025,7 @@ func readRequest(b *bufio.Reader, deleteHostHeader bool) (req *Request, err erro
 
 	fixPragmaCacheControl(req.Header)
 
-	req.Close = shouldClose(req.ProtoMajor, req.ProtoMinor, req.Header, false)
+	req.Close = shouldClose(req.Protocol.Major, req.Protocol.Minor, req.Header, false)
 
 	err = readTransfer(req, b)
 	if err != nil {
@@ -1280,7 +1323,7 @@ func (r *Request) expectsContinue() bool {
 }
 
 func (r *Request) wantsHttp10KeepAlive() bool {
-	if r.ProtoMajor != 1 || r.ProtoMinor != 0 {
+	if r.Protocol.Major != 1 || r.Protocol.Minor != 0 {
 		return false
 	}
 	return hasToken(r.Header.get("Connection"), "keep-alive")
