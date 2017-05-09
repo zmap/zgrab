@@ -42,10 +42,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/zmap/zcrypto/tls"
 	"golang.org/x/net/http2/hpack"
 	"golang.org/x/net/idna"
 	"golang.org/x/net/lex/httplex"
-	"github.com/zmap/zcrypto/tls"
 )
 
 // ClientConnPool manages a pool of HTTP/2 client connections.

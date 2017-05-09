@@ -262,10 +262,10 @@ func TestClientRedirects(t *testing.T) {
 	c = MakeNewClient()
 	c.Transport = tr
 	c.CheckRedirect = func(req *Request, via []*Request) error {
-			lastReq = req
-			lastVia = via
-			return checkErr
-		}
+		lastReq = req
+		lastVia = via
+		return checkErr
+	}
 	res, err := c.Get(ts.URL)
 	if err != nil {
 		t.Fatalf("Get error: %v", err)
@@ -325,12 +325,12 @@ func TestClientRedirectContext(t *testing.T) {
 	c := MakeNewClient()
 	c.Transport = tr
 	c.CheckRedirect = func(req *Request, via []*Request) error {
-			cancel()
-			if len(via) > 2 {
-				return errors.New("too many redirects")
-			}
-			return nil
+		cancel()
+		if len(via) > 2 {
+			return errors.New("too many redirects")
 		}
+		return nil
+	}
 	req, _ := NewRequest("GET", ts.URL, nil)
 	req = req.WithContext(ctx)
 	_, err := c.Do(req)
@@ -526,11 +526,11 @@ func TestClientRedirectUseResponse(t *testing.T) {
 	c := MakeNewClient()
 	c.Transport = tr
 	c.CheckRedirect = func(req *Request, via []*Request) error {
-			if req.Response == nil {
-				t.Error("expected non-nil Request.Response")
-			}
-			return ErrUseLastResponse
+		if req.Response == nil {
+			t.Error("expected non-nil Request.Response")
 		}
+		return ErrUseLastResponse
+	}
 	res, err := c.Get(ts.URL)
 	if err != nil {
 		t.Fatal(err)
@@ -728,10 +728,10 @@ func TestJarCalls(t *testing.T) {
 	c := MakeNewClient()
 	c.Jar = jar
 	c.Transport = &Transport{
-			Dial: func(_ string, _ string) (net.Conn, error) {
-				return net.Dial("tcp", ts.Listener.Addr().String())
-			},
+		Dial: func(_ string, _ string) (net.Conn, error) {
+			return net.Dial("tcp", ts.Listener.Addr().String())
 		},
+	}
 	_, err := c.Get("http://firsthost.fake/")
 	if err != nil {
 		t.Fatal(err)
@@ -843,7 +843,7 @@ func TestClientWrites(t *testing.T) {
 		return c, err
 	}
 	c := MakeNewClient()
-	c.Transport =  &Transport{Dial: dialer}
+	c.Transport = &Transport{Dial: dialer}
 
 	_, err := c.Get(ts.URL)
 	if err != nil {
@@ -1517,16 +1517,16 @@ func TestClientCopyHeadersOnRedirect(t *testing.T) {
 	c := MakeNewClient()
 	c.Transport = tr
 	c.CheckRedirect = func(r *Request, via []*Request) error {
-			want := Header{
-				"User-Agent": []string{ua},
-				"X-Foo":      []string{xfoo},
-				"Referer":    []string{ts2URL},
-			}
-			if !reflect.DeepEqual(r.Header, want) {
-				t.Errorf("CheckRedirect Request.Header = %#v; want %#v", r.Header, want)
-			}
-			return nil
+		want := Header{
+			"User-Agent": []string{ua},
+			"X-Foo":      []string{xfoo},
+			"Referer":    []string{ts2URL},
 		}
+		if !reflect.DeepEqual(r.Header, want) {
+			t.Errorf("CheckRedirect Request.Header = %#v; want %#v", r.Header, want)
+		}
+		return nil
+	}
 
 	req, _ := NewRequest("GET", ts2.URL, nil)
 	req.Header.Add("User-Agent", ua)

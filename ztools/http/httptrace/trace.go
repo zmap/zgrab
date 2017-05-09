@@ -11,9 +11,9 @@ import (
 	"net"
 	"reflect"
 	"time"
-	
-	"github.com/zmap/zgrab/ztools/http/nettrace"
+
 	"github.com/zmap/zcrypto/tls"
+	"github.com/zmap/zgrab/ztools/http/nettrace"
 )
 
 // unique type to prevent assignment.
