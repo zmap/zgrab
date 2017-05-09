@@ -29,7 +29,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zmap/zcrypto/ztls"
+	"github.com/zmap/zcrypto/tls"
 )
 
 var robotsTxtHandler = HandlerFunc(func(w ResponseWriter, r *Request) {

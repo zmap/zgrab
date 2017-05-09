@@ -13,7 +13,6 @@ import (
 	"go/ast"
 	"io"
 	"io/ioutil"
-	"net/http/internal"
 	"net/url"
 	"reflect"
 	"regexp"
@@ -32,7 +31,11 @@ func dummyReq(method string) *Request {
 }
 
 func dummyReq11(method string) *Request {
-	return &Request{Method: method, Proto: "HTTP/1.1", ProtoMajor: 1, ProtoMinor: 1}
+	return &Request{Method: method, Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},}
 }
 
 var respTests = []respTest{
@@ -46,9 +49,11 @@ var respTests = []respTest{
 		Response{
 			Status:     "200 OK",
 			StatusCode: 200,
-			Proto:      "HTTP/1.0",
-			ProtoMajor: 1,
-			ProtoMinor: 0,
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 			Request:    dummyReq("GET"),
 			Header: Header{
 				"Connection": {"close"}, // TODO(rsc): Delete?
@@ -70,9 +75,11 @@ var respTests = []respTest{
 		Response{
 			Status:        "200 OK",
 			StatusCode:    200,
-			Proto:         "HTTP/1.1",
-			ProtoMajor:    1,
-			ProtoMinor:    1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Header:        Header{},
 			Request:       dummyReq("GET"),
 			Close:         true,
@@ -91,9 +98,11 @@ var respTests = []respTest{
 		Response{
 			Status:        "204 No Content",
 			StatusCode:    204,
-			Proto:         "HTTP/1.1",
-			ProtoMajor:    1,
-			ProtoMinor:    1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Header:        Header{},
 			Request:       dummyReq("GET"),
 			Close:         false,
@@ -114,9 +123,11 @@ var respTests = []respTest{
 		Response{
 			Status:     "200 OK",
 			StatusCode: 200,
-			Proto:      "HTTP/1.0",
-			ProtoMajor: 1,
-			ProtoMinor: 0,
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 			Request:    dummyReq("GET"),
 			Header: Header{
 				"Connection":     {"close"},
@@ -144,9 +155,11 @@ var respTests = []respTest{
 		Response{
 			Status:           "200 OK",
 			StatusCode:       200,
-			Proto:            "HTTP/1.1",
-			ProtoMajor:       1,
-			ProtoMinor:       1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Request:          dummyReq("GET"),
 			Header:           Header{},
 			Close:            false,
@@ -171,9 +184,11 @@ var respTests = []respTest{
 		Response{
 			Status:           "200 OK",
 			StatusCode:       200,
-			Proto:            "HTTP/1.1",
-			ProtoMajor:       1,
-			ProtoMinor:       1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Request:          dummyReq("GET"),
 			Header:           Header{},
 			Close:            false,
@@ -193,9 +208,11 @@ var respTests = []respTest{
 		Response{
 			Status:           "200 OK",
 			StatusCode:       200,
-			Proto:            "HTTP/1.1",
-			ProtoMajor:       1,
-			ProtoMinor:       1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Request:          dummyReq("HEAD"),
 			Header:           Header{},
 			TransferEncoding: []string{"chunked"},
@@ -215,9 +232,11 @@ var respTests = []respTest{
 		Response{
 			Status:           "200 OK",
 			StatusCode:       200,
-			Proto:            "HTTP/1.0",
-			ProtoMajor:       1,
-			ProtoMinor:       0,
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 			Request:          dummyReq("HEAD"),
 			Header:           Header{"Content-Length": {"256"}},
 			TransferEncoding: nil,
@@ -237,9 +256,11 @@ var respTests = []respTest{
 		Response{
 			Status:           "200 OK",
 			StatusCode:       200,
-			Proto:            "HTTP/1.1",
-			ProtoMajor:       1,
-			ProtoMinor:       1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Request:          dummyReq("HEAD"),
 			Header:           Header{"Content-Length": {"256"}},
 			TransferEncoding: nil,
@@ -258,9 +279,11 @@ var respTests = []respTest{
 		Response{
 			Status:           "200 OK",
 			StatusCode:       200,
-			Proto:            "HTTP/1.0",
-			ProtoMajor:       1,
-			ProtoMinor:       0,
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 			Request:          dummyReq("HEAD"),
 			Header:           Header{},
 			TransferEncoding: nil,
@@ -280,9 +303,11 @@ var respTests = []respTest{
 		Response{
 			Status:     "200 OK",
 			StatusCode: 200,
-			Proto:      "HTTP/1.1",
-			ProtoMajor: 1,
-			ProtoMinor: 1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Request:    dummyReq("GET"),
 			Header: Header{
 				"Content-Length": {"0"},
@@ -301,9 +326,11 @@ var respTests = []respTest{
 		Response{
 			Status:        "303 ",
 			StatusCode:    303,
-			Proto:         "HTTP/1.0",
-			ProtoMajor:    1,
-			ProtoMinor:    0,
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 			Request:       dummyReq("GET"),
 			Header:        Header{},
 			Close:         true,
@@ -320,9 +347,11 @@ var respTests = []respTest{
 		Response{
 			Status:        "303 ",
 			StatusCode:    303,
-			Proto:         "HTTP/1.0",
-			ProtoMajor:    1,
-			ProtoMinor:    0,
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 			Request:       dummyReq("GET"),
 			Header:        Header{},
 			Close:         true,
@@ -342,9 +371,11 @@ some body`,
 		Response{
 			Status:     "206 Partial Content",
 			StatusCode: 206,
-			Proto:      "HTTP/1.1",
-			ProtoMajor: 1,
-			ProtoMinor: 1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Request:    dummyReq("GET"),
 			Header: Header{
 				"Content-Type": []string{"multipart/byteranges; boundary=18a75608c8f47cef"},
@@ -366,9 +397,11 @@ some body`,
 		Response{
 			Status:     "200 OK",
 			StatusCode: 200,
-			Proto:      "HTTP/1.0",
-			ProtoMajor: 1,
-			ProtoMinor: 0,
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 			Header: Header{
 				"Connection": {"close"}, // TODO(rsc): Delete?
 			},
@@ -391,9 +424,11 @@ some body`,
 		Response{
 			Status:     "206 Partial Content",
 			StatusCode: 206,
-			Proto:      "HTTP/1.1",
-			ProtoMajor: 1,
-			ProtoMinor: 1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Request:    dummyReq("GET"),
 			Header: Header{
 				"Accept-Ranges":  []string{"bytes"},
@@ -417,9 +452,11 @@ some body`,
 		Response{
 			Status:     "200 OK",
 			StatusCode: 200,
-			Proto:      "HTTP/1.1",
-			ProtoMajor: 1,
-			ProtoMinor: 1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Request:    dummyReq("HEAD"),
 			Header: Header{
 				"Content-Length": {"256"},
@@ -443,9 +480,11 @@ some body`,
 		Response{
 			Status:     "200 OK",
 			StatusCode: 200,
-			Proto:      "HTTP/1.1",
-			ProtoMajor: 1,
-			ProtoMinor: 1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Request:    dummyReq("HEAD"),
 			Header: Header{
 				"Content-Length": {"256"},
@@ -469,9 +508,11 @@ some body`,
 		Response{
 			Status:        "200 OK",
 			StatusCode:    200,
-			Proto:         "HTTP/1.0",
-			ProtoMajor:    1,
-			ProtoMinor:    0,
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 			Request:       dummyReq("GET"),
 			Header:        Header{},
 			Close:         true,
@@ -493,9 +534,11 @@ some body`,
 		Response{
 			Status:     "200 OK",
 			StatusCode: 200,
-			Proto:      "HTTP/1.0",
-			ProtoMajor: 1,
-			ProtoMinor: 0,
+			Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 			Request:    dummyReq("GET"),
 			Header: Header{
 				"Content-Length": {"10"},
@@ -517,9 +560,11 @@ some body`,
 		Response{
 			Status:     "200 OK",
 			StatusCode: 200,
-			Proto:      "HTTP/1.1",
-			ProtoMajor: 1,
-			ProtoMinor: 1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Request:    dummyReq("GET"),
 			Header: Header{
 				"Content-Length":   {"23"},
@@ -610,7 +655,7 @@ func TestReadResponseCloseInMiddle(t *testing.T) {
 		}
 		var wr io.Writer = &buf
 		if test.chunked {
-			wr = internal.NewChunkedWriter(wr)
+			wr = NewChunkedWriter(wr)
 		}
 		if test.compressed {
 			buf.WriteString("Content-Encoding: gzip\r\n")
@@ -750,8 +795,11 @@ func TestResponseStatusStutter(t *testing.T) {
 	r := &Response{
 		Status:     "123 some status",
 		StatusCode: 123,
-		ProtoMajor: 1,
-		ProtoMinor: 3,
+		Protocol: Protocol{
+				Name:  "HTTP/1.3",
+				Major: 1,
+				Minor: 3,
+		},
 	}
 	var buf bytes.Buffer
 	r.Write(&buf)
