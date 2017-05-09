@@ -9,8 +9,9 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net/http"
-	"net/http/httptest"
+	
+	"github.com/zmap/zgrab/ztools/http"
+	"github.com/zmap/zgrab/ztools/http/httptest"
 )
 
 func ExampleResponseRecorder() {

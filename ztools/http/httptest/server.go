@@ -13,11 +13,11 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"net/http"
-	"net/http/internal"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/zmap/zgrab/ztools/http"
 )
 
 // A Server is an HTTP server listening on a system-chosen port on the
@@ -107,7 +107,7 @@ func (s *Server) StartTLS() {
 	if s.URL != "" {
 		panic("Server already started")
 	}
-	cert, err := tls.X509KeyPair(internal.LocalhostCert, internal.LocalhostKey)
+	cert, err := tls.X509KeyPair(http.LocalhostCert, http.LocalhostKey)
 	if err != nil {
 		panic(fmt.Sprintf("httptest: NewTLSServer: %v", err))
 	}

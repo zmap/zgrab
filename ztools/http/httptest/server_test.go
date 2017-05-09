@@ -8,8 +8,9 @@ import (
 	"bufio"
 	"io/ioutil"
 	"net"
-	"net/http"
 	"testing"
+
+	"github.com/zmap/zgrab/ztools/http"
 )
 
 func TestServer(t *testing.T) {

@@ -22,8 +22,11 @@ func TestResponseWrite(t *testing.T) {
 		{
 			Response{
 				StatusCode:    503,
-				ProtoMajor:    1,
-				ProtoMinor:    0,
+				Protocol: Protocol{
+					Name:  "HTTP/1.0",
+					Major: 1,
+					Minor: 0,
+				},
 				Request:       dummyReq("GET"),
 				Header:        Header{},
 				Body:          ioutil.NopCloser(strings.NewReader("abcdef")),
@@ -38,8 +41,11 @@ func TestResponseWrite(t *testing.T) {
 		{
 			Response{
 				StatusCode:    200,
-				ProtoMajor:    1,
-				ProtoMinor:    0,
+				Protocol: Protocol{
+					Name:  "HTTP/1.0",
+					Major: 1,
+					Minor: 0,
+				},
 				Request:       dummyReq("GET"),
 				Header:        Header{},
 				Body:          ioutil.NopCloser(strings.NewReader("abcdef")),
@@ -53,8 +59,11 @@ func TestResponseWrite(t *testing.T) {
 		{
 			Response{
 				StatusCode:    200,
-				ProtoMajor:    1,
-				ProtoMinor:    1,
+				Protocol: Protocol{
+					Name:  "HTTP/1.1",
+					Major: 1,
+					Minor: 1,
+				},
 				Request:       dummyReq("GET"),
 				Header:        Header{},
 				Body:          ioutil.NopCloser(strings.NewReader("abcdef")),
@@ -70,8 +79,11 @@ func TestResponseWrite(t *testing.T) {
 		{
 			Response{
 				StatusCode:    200,
-				ProtoMajor:    1,
-				ProtoMinor:    1,
+				Protocol: Protocol{
+					Name:  "HTTP/1.1",
+					Major: 1,
+					Minor: 1,
+				},
 				Request:       dummyReq11("GET"),
 				Header:        Header{},
 				Body:          ioutil.NopCloser(strings.NewReader("abcdef")),
@@ -88,8 +100,11 @@ func TestResponseWrite(t *testing.T) {
 		{
 			Response{
 				StatusCode:       200,
-				ProtoMajor:       1,
-				ProtoMinor:       1,
+				Protocol: Protocol{
+					Name:  "HTTP/1.1",
+					Major: 1,
+					Minor: 1,
+				},
 				Request:          dummyReq11("GET"),
 				Header:           Header{},
 				Body:             ioutil.NopCloser(strings.NewReader("abcdef")),
@@ -105,8 +120,11 @@ func TestResponseWrite(t *testing.T) {
 		{
 			Response{
 				StatusCode:    200,
-				ProtoMajor:    1,
-				ProtoMinor:    1,
+				Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 				Request:       dummyReq11("GET"),
 				Header:        Header{},
 				Body:          nil,
@@ -121,8 +139,11 @@ func TestResponseWrite(t *testing.T) {
 		{
 			Response{
 				StatusCode:    200,
-				ProtoMajor:    1,
-				ProtoMinor:    1,
+				Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 				Request:       dummyReq11("GET"),
 				Header:        Header{},
 				Body:          ioutil.NopCloser(strings.NewReader("")),
@@ -137,8 +158,11 @@ func TestResponseWrite(t *testing.T) {
 		{
 			Response{
 				StatusCode:    200,
-				ProtoMajor:    1,
-				ProtoMinor:    1,
+				Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 				Request:       dummyReq11("GET"),
 				Header:        Header{},
 				Body:          ioutil.NopCloser(strings.NewReader("foo")),
@@ -153,8 +177,11 @@ func TestResponseWrite(t *testing.T) {
 		{
 			Response{
 				StatusCode:       200,
-				ProtoMajor:       1,
-				ProtoMinor:       1,
+				Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 				Request:          dummyReq("GET"),
 				Header:           Header{},
 				Body:             ioutil.NopCloser(strings.NewReader("abcdef")),
@@ -174,8 +201,11 @@ func TestResponseWrite(t *testing.T) {
 		{
 			Response{
 				StatusCode: 204,
-				ProtoMajor: 1,
-				ProtoMinor: 1,
+				Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 				Request:    dummyReq("GET"),
 				Header: Header{
 					"Foo": []string{" Bar\nBaz "},
@@ -197,8 +227,11 @@ func TestResponseWrite(t *testing.T) {
 		{
 			Response{
 				StatusCode:       StatusOK,
-				ProtoMajor:       1,
-				ProtoMinor:       1,
+				Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 				Request:          &Request{Method: "POST"},
 				Header:           Header{},
 				ContentLength:    0,
@@ -213,8 +246,11 @@ func TestResponseWrite(t *testing.T) {
 		{
 			Response{
 				StatusCode:    StatusOK,
-				ProtoMajor:    1,
-				ProtoMinor:    1,
+				Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 				Request:       &Request{Method: "POST"},
 				Header:        Header{},
 				ContentLength: -1,
@@ -231,8 +267,11 @@ func TestResponseWrite(t *testing.T) {
 			Response{
 				StatusCode: 7,
 				Status:     "license to violate specs",
-				ProtoMajor: 1,
-				ProtoMinor: 0,
+				Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 				Request:    dummyReq("GET"),
 				Header:     Header{},
 				Body:       nil,
@@ -247,8 +286,11 @@ func TestResponseWrite(t *testing.T) {
 			Response{
 				StatusCode: 123,
 				Status:     "123 Sesame Street",
-				ProtoMajor: 1,
-				ProtoMinor: 0,
+				Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 				Request:    dummyReq("GET"),
 				Header:     Header{},
 				Body:       nil,
@@ -263,8 +305,11 @@ func TestResponseWrite(t *testing.T) {
 			Response{
 				StatusCode: 204,
 				Status:     "No Content",
-				ProtoMajor: 1,
-				ProtoMinor: 0,
+				Protocol: Protocol{
+				Name:  "HTTP/1.0",
+				Major: 1,
+				Minor: 0,
+			},
 				Request:    dummyReq("GET"),
 				Header:     Header{},
 				Body:       nil,

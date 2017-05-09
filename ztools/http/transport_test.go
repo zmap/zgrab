@@ -17,17 +17,10 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"internal/nettrace"
-	"internal/testenv"
 	"io"
 	"io/ioutil"
 	"log"
 	"net"
-	. "net/http"
-	"net/http/httptest"
-	"net/http/httptrace"
-	"net/http/httputil"
-	"net/http/internal"
 	"net/url"
 	"os"
 	"reflect"
@@ -40,6 +33,9 @@ import (
 	"time"
 
 	"github.com/zmap/zcrypto/tls"
+	"github.com/zmap/zgrab/ztools/http/httptest"
+	"github.com/zmap/zgrab/ztools/http"
+	"github.com/zmap/zgrab/ztools/http/httptrace"
 )
 
 // TODO: test 5 pipelined requests with responses: 1) OK, 2) OK, Connection: Close

@@ -446,8 +446,11 @@ var reqWriteTests = []reqWriteTest{
 				Host:   "",
 				Path:   "/search",
 			},
-			ProtoMajor: 1,
-			ProtoMinor: 1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Header: Header{
 				"Host": []string{"bad.example.com"},
 			},
@@ -467,8 +470,11 @@ var reqWriteTests = []reqWriteTest{
 				Host:   "www.google.com",
 				Opaque: "/%2F/%2F/",
 			},
-			ProtoMajor: 1,
-			ProtoMinor: 1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Header:     Header{},
 		},
 
@@ -486,8 +492,11 @@ var reqWriteTests = []reqWriteTest{
 				Host:   "x.google.com",
 				Opaque: "//y.google.com/%2F/%2F/",
 			},
-			ProtoMajor: 1,
-			ProtoMinor: 1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Header:     Header{},
 		},
 
@@ -505,9 +514,11 @@ var reqWriteTests = []reqWriteTest{
 				Host:   "www.google.com",
 				Path:   "/",
 			},
-			Proto:      "HTTP/1.1",
-			ProtoMajor: 1,
-			ProtoMinor: 1,
+			Protocol: Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+			},
 			Header: Header{
 				"ALL-CAPS": {"x"},
 			},

@@ -7,9 +7,10 @@ package httptest
 import (
 	"bytes"
 	"io/ioutil"
-	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/zmap/zgrab/ztools/http"
 )
 
 // ResponseRecorder is an implementation of http.ResponseWriter that
@@ -166,9 +167,11 @@ func (rw *ResponseRecorder) Result() *http.Response {
 		rw.snapHeader = cloneHeader(rw.HeaderMap)
 	}
 	res := &http.Response{
-		Proto:      "HTTP/1.1",
-		ProtoMajor: 1,
-		ProtoMinor: 1,
+		Protocol: http.Protocol{
+				Name:  "HTTP/1.1",
+				Major: 1,
+				Minor: 1,
+		},
 		StatusCode: rw.Code,
 		Header:     rw.snapHeader,
 	}
