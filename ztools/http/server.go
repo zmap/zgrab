@@ -27,8 +27,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"golang.org/x/net/lex/httplex"
 	"github.com/zmap/zcrypto/tls"
+	"golang.org/x/net/lex/httplex"
 )
 
 // Errors used by the HTTP server.

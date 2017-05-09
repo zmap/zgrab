@@ -797,7 +797,7 @@ func (c *Client) HeadWithHost(url, host string) (resp *Response, err error) {
 }
 
 func (c *Client) Head(url string) (resp *Response, err error) {
-        return c.HeadWithHost(url, "")
+	return c.HeadWithHost(url, "")
 }
 
 // cancelTimerBody is an io.ReadCloser that wraps rc with two features:

@@ -317,7 +317,6 @@ type Request struct {
 	ctx context.Context `json:"-"`
 }
 
-
 func (request *Request) MarshalJSON() ([]byte, error) {
 	type Alias Request
 	return json.Marshal(&struct {
@@ -336,7 +335,6 @@ func (request *Request) MarshalJSON() ([]byte, error) {
 		Alias: (*Alias)(request),
 	})
 }
-
 
 // Context returns the request's context. To change the context, use
 // WithContext.
@@ -793,7 +791,7 @@ func NewRequest(method, urlStr string, body io.Reader) (*Request, error) {
 // exact value (instead of -1), GetBody is populated (so 307 and 308
 // redirects can replay the body), and Body is set to NoBody if the
 // ContentLength is 0.
-func NewRequestWithHost(method, urlStr string, host string,body io.Reader) (*Request, error) {
+func NewRequestWithHost(method, urlStr string, host string, body io.Reader) (*Request, error) {
 	if method == "" {
 		// We document that "" means "GET" for Request.Method, and people have
 		// relied on that from NewRequest, so keep that working.
