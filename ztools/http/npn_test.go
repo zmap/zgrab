@@ -10,12 +10,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	. "net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/zmap/zcrypto/tls"
+	. "github.com/zmap/zgrab/ztools/http"
+	"github.com/zmap/zgrab/ztools/http/httptest"
 )
 
 func TestNextProtoUpgrade(t *testing.T) {
@@ -46,7 +46,8 @@ func TestNextProtoUpgrade(t *testing.T) {
 	{
 		tr := newTLSTransport(t, ts)
 		defer tr.CloseIdleConnections()
-		c := &Client{Transport: tr}
+		c := MakeNewClient()
+		c.Transport = tr
 
 		res, err := c.Get(ts.URL)
 		if err != nil {
@@ -112,9 +113,11 @@ func handleTLSProtocol09(srv *Server, conn *tls.Conn, h Handler) {
 		return
 	}
 	req, _ := NewRequest("GET", path, nil)
-	req.Proto = "HTTP/0.9"
-	req.ProtoMajor = 0
-	req.ProtoMinor = 9
+	req.Protocol = Protocol{
+		Name:  "HTTP/0.9",
+				Major: 0,
+				Minor: 9,
+			}
 	rw := &http09Writer{conn, make(Header)}
 	h.ServeHTTP(rw, req)
 }

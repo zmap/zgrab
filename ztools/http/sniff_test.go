@@ -10,11 +10,12 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	. "net/http"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
+	
+	. "github.com/zmap/zgrab/ztools/http"
 )
 
 var sniffTests = []struct {
@@ -63,7 +64,7 @@ func TestDetectContentType(t *testing.T) {
 }
 
 func TestServerContentType_h1(t *testing.T) { testServerContentType(t, h1Mode) }
-func TestServerContentType_h2(t *testing.T) { testServerContentType(t, h2Mode) }
+//func TestServerContentType_h2(t *testing.T) { testServerContentType(t, h2Mode) }
 
 func testServerContentType(t *testing.T, h2 bool) {
 	setParallel(t)
@@ -100,7 +101,7 @@ func testServerContentType(t *testing.T, h2 bool) {
 // Issue 5953: shouldn't sniff if the handler set a Content-Type header,
 // even if it's the empty string.
 func TestServerIssue5953_h1(t *testing.T) { testServerIssue5953(t, h1Mode) }
-func TestServerIssue5953_h2(t *testing.T) { testServerIssue5953(t, h2Mode) }
+//func TestServerIssue5953_h2(t *testing.T) { testServerIssue5953(t, h2Mode) }
 func testServerIssue5953(t *testing.T, h2 bool) {
 	defer afterTest(t)
 	cst := newClientServerTest(t, h2, HandlerFunc(func(w ResponseWriter, r *Request) {
@@ -123,7 +124,7 @@ func testServerIssue5953(t *testing.T, h2 bool) {
 }
 
 func TestContentTypeWithCopy_h1(t *testing.T) { testContentTypeWithCopy(t, h1Mode) }
-func TestContentTypeWithCopy_h2(t *testing.T) { testContentTypeWithCopy(t, h2Mode) }
+//func TestContentTypeWithCopy_h2(t *testing.T) { testContentTypeWithCopy(t, h2Mode) }
 func testContentTypeWithCopy(t *testing.T, h2 bool) {
 	defer afterTest(t)
 
@@ -159,7 +160,7 @@ func testContentTypeWithCopy(t *testing.T, h2 bool) {
 }
 
 func TestSniffWriteSize_h1(t *testing.T) { testSniffWriteSize(t, h1Mode) }
-func TestSniffWriteSize_h2(t *testing.T) { testSniffWriteSize(t, h2Mode) }
+//func TestSniffWriteSize_h2(t *testing.T) { testSniffWriteSize(t, h2Mode) }
 func testSniffWriteSize(t *testing.T, h2 bool) {
 	setParallel(t)
 	defer afterTest(t)
