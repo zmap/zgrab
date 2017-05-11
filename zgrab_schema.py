@@ -867,3 +867,11 @@ zgrab_xssh = Record({
 }, extends=zgrab_base)
 
 zschema.registry.register_schema("zgrab-xssh", zgrab_xssh)
+
+if __name__ == '__main__':
+    from subprocess import call
+    schema_types = ['bigquery', 'elasticsearch', 'json', 'text', 'flat']
+    for name in zschema.registry.all_schemas():
+        for schema_type in schema_types:
+            cmd = ["zschema", schema_type, __file__ + ":" + name] 
+            call(cmd)
