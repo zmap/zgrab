@@ -15,7 +15,7 @@ import (
 	"os"
 	"sync"
 	"time"
-	
+
 	"github.com/zmap/zcrypto/tls"
 	"github.com/zmap/zgrab/ztools/http"
 )

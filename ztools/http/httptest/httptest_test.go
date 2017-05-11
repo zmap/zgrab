@@ -11,9 +11,9 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	
-	"github.com/zmap/zgrab/ztools/http"
+
 	"github.com/zmap/zcrypto/tls"
+	"github.com/zmap/zgrab/ztools/http"
 )
 
 func TestNewRequest(t *testing.T) {
@@ -30,10 +30,10 @@ func TestNewRequest(t *testing.T) {
 			uri:    "/",
 			body:   nil,
 			want: &http.Request{
-				Method:     "GET",
-				Host:       "example.com",
-				URL:        &url.URL{Path: "/"},
-				Header:     http.Header{},
+				Method: "GET",
+				Host:   "example.com",
+				URL:    &url.URL{Path: "/"},
+				Header: http.Header{},
 				Protocol: http.Protocol{
 					Name:  "HTTP/1.1",
 					Major: 1,
@@ -59,7 +59,7 @@ func TestNewRequest(t *testing.T) {
 					RawPath: "/path/%2f/bar/",
 					Host:    "foo.com",
 				},
-				Header:     http.Header{},
+				Header: http.Header{},
 				Protocol: http.Protocol{
 					Name:  "HTTP/1.1",
 					Major: 1,
@@ -84,7 +84,7 @@ func TestNewRequest(t *testing.T) {
 					Path:   "/path/",
 					Host:   "foo.com",
 				},
-				Header:     http.Header{},
+				Header: http.Header{},
 				Protocol: http.Protocol{
 					Name:  "HTTP/1.1",
 					Major: 1,
@@ -107,10 +107,10 @@ func TestNewRequest(t *testing.T) {
 			uri:    "/",
 			body:   strings.NewReader("foo"),
 			want: &http.Request{
-				Method:        "POST",
-				Host:          "example.com",
-				URL:           &url.URL{Path: "/"},
-				Header:        http.Header{},
+				Method: "POST",
+				Host:   "example.com",
+				URL:    &url.URL{Path: "/"},
+				Header: http.Header{},
 				Protocol: http.Protocol{
 					Name:  "HTTP/1.1",
 					Major: 1,
@@ -129,10 +129,10 @@ func TestNewRequest(t *testing.T) {
 			uri:    "/",
 			body:   struct{ io.Reader }{strings.NewReader("foo")},
 			want: &http.Request{
-				Method:        "POST",
-				Host:          "example.com",
-				URL:           &url.URL{Path: "/"},
-				Header:        http.Header{},
+				Method: "POST",
+				Host:   "example.com",
+				URL:    &url.URL{Path: "/"},
+				Header: http.Header{},
 				Protocol: http.Protocol{
 					Name:  "HTTP/1.1",
 					Major: 1,
@@ -150,10 +150,10 @@ func TestNewRequest(t *testing.T) {
 			method: "OPTIONS",
 			uri:    "*",
 			want: &http.Request{
-				Method:     "OPTIONS",
-				Host:       "example.com",
-				URL:        &url.URL{Path: "*"},
-				Header:     http.Header{},
+				Method: "OPTIONS",
+				Host:   "example.com",
+				URL:    &url.URL{Path: "*"},
+				Header: http.Header{},
 				Protocol: http.Protocol{
 					Name:  "HTTP/1.1",
 					Major: 1,

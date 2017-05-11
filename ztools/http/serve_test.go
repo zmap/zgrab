@@ -34,10 +34,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zmap/zgrab/ztools/http/httputil"
 	"github.com/zmap/zcrypto/tls"
 	. "github.com/zmap/zgrab/ztools/http"
 	"github.com/zmap/zgrab/ztools/http/httptest"
+	"github.com/zmap/zgrab/ztools/http/httputil"
 )
 
 type dummyAddr string
@@ -534,6 +534,7 @@ func TestServerTimeouts(t *testing.T) {
 		}
 	}
 }
+
 /*
 // Test that the HTTP/2 server handles Server.WriteTimeout (Issue 18437)
 func TestHTTP2WriteDeadlineExtendedOnNewRequest(t *testing.T) {
@@ -884,6 +885,7 @@ func TestKeepAliveFinalChunkWithEOF(t *testing.T) {
 }
 
 func TestSetsRemoteAddr_h1(t *testing.T) { testSetsRemoteAddr(t, h1Mode) }
+
 //func TestSetsRemoteAddr_h2(t *testing.T) { testSetsRemoteAddr(t, h2Mode) }
 
 func testSetsRemoteAddr(t *testing.T, h2 bool) {
@@ -934,6 +936,7 @@ type blockingRemoteAddrConn struct {
 func (c *blockingRemoteAddrConn) RemoteAddr() net.Addr {
 	return <-c.addrs
 }
+
 /*
 // Issue 12943
 func TestServerAllowsBlockingRemoteAddr(t *testing.T) {
@@ -1047,6 +1050,7 @@ func TestIdentityResponseHeaders(t *testing.T) {
 // TestHeadResponses verifies that all MIME type sniffing and Content-Length
 // counting of GET requests also happens on HEAD requests.
 func TestHeadResponses_h1(t *testing.T) { testHeadResponses(t, h1Mode) }
+
 //func TestHeadResponses_h2(t *testing.T) { testHeadResponses(t, h2Mode) }
 
 func testHeadResponses(t *testing.T, h2 bool) {
@@ -1900,6 +1904,7 @@ func TestRequestBodyTimeoutClosesConnection(t *testing.T) {
 }
 
 func TestTimeoutHandler_h1(t *testing.T) { testTimeoutHandler(t, h1Mode) }
+
 //func TestTimeoutHandler_h2(t *testing.T) { testTimeoutHandler(t, h2Mode) }
 func testTimeoutHandler(t *testing.T, h2 bool) {
 	setParallel(t)
@@ -2217,7 +2222,7 @@ func TestRedirect(t *testing.T) {
 // as the client would then see http.ErrBodyReadAfterClose and not 0, io.EOF.
 func TestZeroLengthPostAndResponse_h1(t *testing.T) {
 	testZeroLengthPostAndResponse(t, h1Mode)
-}/*
+} /*
 func TestZeroLengthPostAndResponse_h2(t *testing.T) {
 	testZeroLengthPostAndResponse(t, h2Mode)
 }*/
@@ -2263,11 +2268,12 @@ func testZeroLengthPostAndResponse(t *testing.T, h2 bool) {
 }
 
 func TestHandlerPanicNil_h1(t *testing.T) { testHandlerPanic(t, false, h1Mode, nil) }
+
 //func TestHandlerPanicNil_h2(t *testing.T) { testHandlerPanic(t, false, h2Mode, nil) }
 
 func TestHandlerPanic_h1(t *testing.T) {
 	testHandlerPanic(t, false, h1Mode, "intentional death for testing")
-}/*
+} /*
 func TestHandlerPanic_h2(t *testing.T) {
 	testHandlerPanic(t, false, h2Mode, "intentional death for testing")
 }*/
@@ -2389,9 +2395,11 @@ func TestServerWriteHijackZeroBytes(t *testing.T) {
 	}
 }
 
-func TestServerNoDate_h1(t *testing.T)        { testServerNoHeader(t, h1Mode, "Date") }
+func TestServerNoDate_h1(t *testing.T) { testServerNoHeader(t, h1Mode, "Date") }
+
 //func TestServerNoDate_h2(t *testing.T)        { testServerNoHeader(t, h2Mode, "Date") }
 func TestServerNoContentType_h1(t *testing.T) { testServerNoHeader(t, h1Mode, "Content-Type") }
+
 //func TestServerNoContentType_h2(t *testing.T) { testServerNoHeader(t, h2Mode, "Content-Type") }
 
 func testServerNoHeader(t *testing.T, h2 bool, header string) {
@@ -2445,6 +2453,7 @@ func TestStripPrefix(t *testing.T) {
 }
 
 func TestRequestLimit_h1(t *testing.T) { testRequestLimit(t, h1Mode) }
+
 //func TestRequestLimit_h2(t *testing.T) { testRequestLimit(t, h2Mode) }
 func testRequestLimit(t *testing.T, h2 bool) {
 	setParallel(t)
@@ -2492,6 +2501,7 @@ func (cr countReader) Read(p []byte) (n int, err error) {
 }
 
 func TestRequestBodyLimit_h1(t *testing.T) { testRequestBodyLimit(t, h1Mode) }
+
 //func TestRequestBodyLimit_h2(t *testing.T) { testRequestBodyLimit(t, h2Mode) }
 func testRequestBodyLimit(t *testing.T, h2 bool) {
 	setParallel(t)
@@ -2634,6 +2644,7 @@ func TestServerGracefulClose(t *testing.T) {
 }
 
 func TestCaseSensitiveMethod_h1(t *testing.T) { testCaseSensitiveMethod(t, h1Mode) }
+
 //func TestCaseSensitiveMethod_h2(t *testing.T) { testCaseSensitiveMethod(t, h2Mode) }
 func testCaseSensitiveMethod(t *testing.T, h2 bool) {
 	defer afterTest(t)
@@ -3311,6 +3322,7 @@ func TestHTTP10ConnectionHeader(t *testing.T) {
 
 // See golang.org/issue/5660
 func TestServerReaderFromOrder_h1(t *testing.T) { testServerReaderFromOrder(t, h1Mode) }
+
 //func TestServerReaderFromOrder_h2(t *testing.T) { testServerReaderFromOrder(t, h2Mode) }
 func testServerReaderFromOrder(t *testing.T, h2 bool) {
 	setParallel(t)
@@ -3413,7 +3425,7 @@ func TestContentTypeOkayOn204(t *testing.T) {
 // Therefore, all incoming server requests Bodies need to be thread-safe.
 func TestTransportAndServerSharedBodyRace_h1(t *testing.T) {
 	testTransportAndServerSharedBodyRace(t, h1Mode)
-}/*
+} /*
 func TestTransportAndServerSharedBodyRace_h2(t *testing.T) {
 	testTransportAndServerSharedBodyRace(t, h2Mode)
 }*/
@@ -3790,6 +3802,7 @@ func TestServerKeepAlivesEnabled(t *testing.T) {
 
 // golang.org/issue/7856
 func TestServerEmptyBodyRace_h1(t *testing.T) { testServerEmptyBodyRace(t, h1Mode) }
+
 //func TestServerEmptyBodyRace_h2(t *testing.T) { testServerEmptyBodyRace(t, h2Mode) }
 func testServerEmptyBodyRace(t *testing.T, h2 bool) {
 	setParallel(t)
@@ -4120,6 +4133,7 @@ func TestHandlerFinishSkipBigContentLengthRead(t *testing.T) {
 }
 
 func TestHandlerSetsBodyNil_h1(t *testing.T) { testHandlerSetsBodyNil(t, h1Mode) }
+
 //func TestHandlerSetsBodyNil_h2(t *testing.T) { testHandlerSetsBodyNil(t, h2Mode) }
 func testHandlerSetsBodyNil(t *testing.T, h2 bool) {
 	defer afterTest(t)
@@ -4300,7 +4314,7 @@ func TestServerValidatesHeaders(t *testing.T) {
 
 func TestServerRequestContextCancel_ServeHTTPDone_h1(t *testing.T) {
 	testServerRequestContextCancel_ServeHTTPDone(t, h1Mode)
-}/*
+} /*
 func TestServerRequestContextCancel_ServeHTTPDone_h2(t *testing.T) {
 	testServerRequestContextCancel_ServeHTTPDone(t, h2Mode)
 }*/
@@ -4372,7 +4386,7 @@ func TestServerRequestContextCancel_ConnClose(t *testing.T) {
 
 func TestServerContext_ServerContextKey_h1(t *testing.T) {
 	testServerContext_ServerContextKey(t, h1Mode)
-}/*
+} /*
 func TestServerContext_ServerContextKey_h2(t *testing.T) {
 	testServerContext_ServerContextKey(t, h2Mode)
 }*/
@@ -5004,7 +5018,7 @@ func TestServerSetKeepAlivesEnabledClosesConns(t *testing.T) {
 	tr := &Transport{}
 	defer tr.CloseIdleConnections()
 	c := MakeNewClient()
-	c.Transport = tr	
+	c.Transport = tr
 	get := func() string { return get(t, c, ts.URL) }
 
 	a1, a2 := get(), get()
@@ -5036,6 +5050,7 @@ func TestServerSetKeepAlivesEnabledClosesConns(t *testing.T) {
 }
 
 func TestServerShutdown_h1(t *testing.T) { testServerShutdown(t, h1Mode) }
+
 //func TestServerShutdown_h2(t *testing.T) { testServerShutdown(t, h2Mode) }
 
 func testServerShutdown(t *testing.T, h2 bool) {
@@ -5080,6 +5095,7 @@ func TestServerCloseDeadlock(t *testing.T) {
 // Issue 17717: tests that Server.SetKeepAlivesEnabled is respected by
 // both HTTP/1 and HTTP/2.
 func TestServerKeepAlivesEnabled_h1(t *testing.T) { testServerKeepAlivesEnabled(t, h1Mode) }
+
 //func TestServerKeepAlivesEnabled_h2(t *testing.T) { testServerKeepAlivesEnabled(t, h2Mode) }
 func testServerKeepAlivesEnabled(t *testing.T, h2 bool) {
 	setParallel(t)

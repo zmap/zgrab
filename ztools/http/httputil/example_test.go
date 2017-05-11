@@ -10,10 +10,10 @@ import (
 	"log"
 	"net/url"
 	"strings"
-	
-	"github.com/zmap/zgrab/ztools/http/httputil"
+
 	"github.com/zmap/zgrab/ztools/http"
 	"github.com/zmap/zgrab/ztools/http/httptest"
+	"github.com/zmap/zgrab/ztools/http/httputil"
 )
 
 func ExampleDumpRequest() {

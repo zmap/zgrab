@@ -494,7 +494,7 @@ func (c *Client) Do(req *Request) (resp *Response, err error) {
 		err = errors.New("http: no client.UserAgent set")
 		return
 	}
-	
+
 	if req.Header == nil {
 		req.Header = make(Header)
 	}

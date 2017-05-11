@@ -15,7 +15,7 @@ import (
 	"strings"
 	"sync"
 	"time"
-	
+
 	"github.com/zmap/zgrab/ztools/http"
 )
 

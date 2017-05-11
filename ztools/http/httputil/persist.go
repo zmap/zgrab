@@ -11,7 +11,7 @@ import (
 	"net"
 	"net/textproto"
 	"sync"
-	
+
 	"github.com/zmap/zgrab/ztools/http"
 )
 

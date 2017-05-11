@@ -475,7 +475,7 @@ var reqWriteTests = []reqWriteTest{
 				Major: 1,
 				Minor: 1,
 			},
-			Header:     Header{},
+			Header: Header{},
 		},
 
 		WantWrite: "GET /%2F/%2F/ HTTP/1.1\r\n" +
@@ -497,7 +497,7 @@ var reqWriteTests = []reqWriteTest{
 				Major: 1,
 				Minor: 1,
 			},
-			Header:     Header{},
+			Header: Header{},
 		},
 
 		WantWrite: "GET http://y.google.com/%2F/%2F/ HTTP/1.1\r\n" +

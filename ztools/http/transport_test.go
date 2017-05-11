@@ -32,11 +32,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zmap/zgrab/ztools/http/httputil"	
+	"github.com/zmap/zgrab/ztools/http/httputil"
 	//"github.com/zmap/zgrab/ztools/http/nettrace"
 	"github.com/zmap/zcrypto/tls"
-	"github.com/zmap/zgrab/ztools/http/httptest"
 	. "github.com/zmap/zgrab/ztools/http"
+	"github.com/zmap/zgrab/ztools/http/httptest"
 	"github.com/zmap/zgrab/ztools/http/httptrace"
 )
 
@@ -1962,6 +1962,7 @@ func TestTransportEmptyMethod(t *testing.T) {
 		t.Fatalf("expected substring 'GET '; got: %s", got)
 	}
 }
+
 /*
 func TestTransportSocketLateBinding(t *testing.T) {
 	setParallel(t)
@@ -3584,6 +3585,7 @@ func TestTLSHandshakeTrace(t *testing.T) {
 		t.Fatal("Expected TLSHandshakeDone to be called, but wasnt't")
 	}
 }
+
 /*
 func TestTransportMaxIdleConns(t *testing.T) {
 	defer afterTest(t)
@@ -3642,6 +3644,7 @@ func TestTransportMaxIdleConns(t *testing.T) {
 }*/
 
 func TestTransportIdleConnTimeout_h1(t *testing.T) { testTransportIdleConnTimeout(t, h1Mode) }
+
 //func TestTransportIdleConnTimeout_h2(t *testing.T) { testTransportIdleConnTimeout(t, h2Mode) }
 func testTransportIdleConnTimeout(t *testing.T, h2 bool) {
 	if testing.Short() {
@@ -3662,7 +3665,7 @@ func testTransportIdleConnTimeout(t *testing.T, h2 bool) {
 	c.Transport = tr
 	idleConns := func() []string {
 		if h2 {
-			return nil//tr.IdleConnStrsForTesting_h2()
+			return nil //tr.IdleConnStrsForTesting_h2()
 		} else {
 			return tr.IdleConnStrsForTesting()
 		}
@@ -3809,6 +3812,7 @@ func TestTransportReturnsPeekError(t *testing.T) {
 		t.Errorf("error = %#v; want %v", err, errValue)
 	}
 }
+
 /*
 // Issue 13835: international domain names should work
 func TestTransportIDNA_h1(t *testing.T) { testTransportIDNA(t, h1Mode) }

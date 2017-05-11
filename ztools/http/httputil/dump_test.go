@@ -58,8 +58,8 @@ var dumpTests = []dumpTest{
 	// and doesn't add a User-Agent.
 	{
 		Req: http.Request{
-			Method:     "GET",
-			URL:        mustParseURL("/foo"),
+			Method: "GET",
+			URL:    mustParseURL("/foo"),
 			Protocol: http.Protocol{
 				Name:  "HTTP/1.0",
 				Major: 1,
@@ -300,8 +300,8 @@ var dumpResTests = []struct {
 }{
 	{
 		res: &http.Response{
-			Status:        "200 OK",
-			StatusCode:    200,
+			Status:     "200 OK",
+			StatusCode: 200,
 			Protocol: http.Protocol{
 				Name:  "HTTP/1.1",
 				Major: 1,
@@ -321,8 +321,8 @@ Foo: Bar`,
 
 	{
 		res: &http.Response{
-			Status:        "200 OK",
-			StatusCode:    200,
+			Status:     "200 OK",
+			StatusCode: 200,
 			Protocol: http.Protocol{
 				Name:  "HTTP/1.1",
 				Major: 1,
@@ -340,8 +340,8 @@ foo`,
 
 	{
 		res: &http.Response{
-			Status:           "200 OK",
-			StatusCode:       200,
+			Status:     "200 OK",
+			StatusCode: 200,
 			Protocol: http.Protocol{
 				Name:  "HTTP/1.1",
 				Major: 1,
@@ -361,8 +361,8 @@ foo
 	},
 	{
 		res: &http.Response{
-			Status:        "200 OK",
-			StatusCode:    200,
+			Status:     "200 OK",
+			StatusCode: 200,
 			Protocol: http.Protocol{
 				Name:  "HTTP/1.1",
 				Major: 1,

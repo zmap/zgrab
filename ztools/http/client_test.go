@@ -25,11 +25,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/zmap/zcrypto/tls"
+	"github.com/zmap/zcrypto/x509"
+	. "github.com/zmap/zgrab/ztools/http"
 	"github.com/zmap/zgrab/ztools/http/cookiejar"
 	"github.com/zmap/zgrab/ztools/http/httptest"
-	"github.com/zmap/zcrypto/x509"
-	"github.com/zmap/zcrypto/tls"
-	. "github.com/zmap/zgrab/ztools/http"
 )
 
 var robotsTxtHandler = HandlerFunc(func(w ResponseWriter, r *Request) {
@@ -89,6 +89,7 @@ func TestClient(t *testing.T) {
 }
 
 func TestClientHead_h1(t *testing.T) { testClientHead(t, h1Mode) }
+
 //func TestClientHead_h2(t *testing.T) { testClientHead(t, h2Mode) }
 
 func testClientHead(t *testing.T, h2 bool) {
@@ -525,7 +526,7 @@ func TestClientRedirectUseResponse(t *testing.T) {
 	defer tr.CloseIdleConnections()
 	c := MakeNewClient()
 	c.Transport = tr
-	c.CheckRedirect = func(req *Request, _ *Response,  via []*Request) error {
+	c.CheckRedirect = func(req *Request, _ *Response, via []*Request) error {
 		if req.Response == nil {
 			t.Error("expected non-nil Request.Response")
 		}
@@ -775,6 +776,7 @@ func (j *RecordingJar) logf(format string, args ...interface{}) {
 }
 
 func TestStreamingGet_h1(t *testing.T) { testStreamingGet(t, h1Mode) }
+
 //func TestStreamingGet_h2(t *testing.T) { testStreamingGet(t, h2Mode) }
 
 func testStreamingGet(t *testing.T, h2 bool) {
@@ -877,7 +879,7 @@ func TestClientInsecureTransport(t *testing.T) {
 	// TODO(bradfitz): add tests for skipping hostname checks too?
 	// would require a new cert for testing, and probably
 	// redundant with these tests.
-	for _, insecure := range []bool{true,false} { 
+	for _, insecure := range []bool{true,false} {
 		tr := &Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: insecure,
@@ -966,7 +968,7 @@ func TestClientWithIncorrectTLSServerName(t *testing.T) {
 	trans := newTLSTransport(t, ts)
 	trans.TLSClientConfig.ServerName = "badserver"
 	c := MakeNewClient()
-	c.Transport = trans 
+	c.Transport = trans
 	_, err := c.Get(ts.URL)
 	if err == nil {
 		t.Fatalf("expected an error")
@@ -1063,6 +1065,7 @@ func TestHTTPSClientDetectsHTTPServer(t *testing.T) {
 func TestClientHeadContentLength_h1(t *testing.T) {
 	testClientHeadContentLength(t, h1Mode)
 }
+
 /*
 func TestClientHeadContentLength_h2(t *testing.T) {
 	testClientHeadContentLength(t, h2Mode)
@@ -1220,6 +1223,7 @@ func TestBasicAuthHeadersPreserved(t *testing.T) {
 }
 
 func TestClientTimeout_h1(t *testing.T) { testClientTimeout(t, h1Mode) }
+
 //func TestClientTimeout_h2(t *testing.T) { testClientTimeout(t, h2Mode) }
 
 func testClientTimeout(t *testing.T, h2 bool) {
@@ -1301,6 +1305,7 @@ func testClientTimeout(t *testing.T, h2 bool) {
 }
 
 func TestClientTimeout_Headers_h1(t *testing.T) { testClientTimeout_Headers(t, h1Mode) }
+
 //func TestClientTimeout_Headers_h2(t *testing.T) { testClientTimeout_Headers(t, h2Mode) }
 
 // Client.Timeout firing before getting to the body
@@ -1373,6 +1378,7 @@ func TestClientTimeoutCancel(t *testing.T) {
 }
 
 func TestClientRedirectEatsBody_h1(t *testing.T) { testClientRedirectEatsBody(t, h1Mode) }
+
 //func TestClientRedirectEatsBody_h2(t *testing.T) { testClientRedirectEatsBody(t, h2Mode) }
 func testClientRedirectEatsBody(t *testing.T, h2 bool) {
 	setParallel(t)
@@ -1467,7 +1473,7 @@ type issue15577Tripper struct{}
 func (issue15577Tripper) RoundTrip(*Request) (*Response, error) {
 	resp := &Response{
 		StatusCode: 303,
-		Header:	Header{"Location":[]string {"http://www.example.com/"}}, 
+		Header:     Header{"Location": []string{"http://www.example.com/"}},
 		Body:       ioutil.NopCloser(strings.NewReader("")),
 	}
 	return resp, nil
