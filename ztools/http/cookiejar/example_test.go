@@ -9,8 +9,8 @@ import (
 	"log"
 	"net/url"
 
-	"github.com/zmap/zgrab/ztools/http/cookiejar"
 	"github.com/zmap/zgrab/ztools/http"
+	"github.com/zmap/zgrab/ztools/http/cookiejar"
 	"github.com/zmap/zgrab/ztools/http/httptest"
 )
 

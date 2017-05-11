@@ -172,7 +172,7 @@ func TestHTTPToHTTPSRedirect(t *testing.T) {
 
 	redirectResponse := httpData.RedirectResponseChain[0]
 	if redirectResponse.Header.Get("location") != "https://"+tlsServerHostString+"/" {
-		t.Errorf("Wrong location header - Expected: %s, got: %s", "https://"+tlsServerHostString+"/", redirectResponse.Header.Get("location")
+		t.Errorf("Wrong location header - Expected: %s, got: %s", "https://"+tlsServerHostString+"/", redirectResponse.Header.Get("location"))
 	}
 }
 

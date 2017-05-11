@@ -17,56 +17,56 @@ import (
 var raceEnabled = false // set by race.go
 
 var knownHeaders = map[string]bool{
-        "access_control_allow_origin": true,
-        "accept_patch":                true,
-        "accept_ranges":               true,
-        "age":                         true,
-        "allow":                       true,
-        "alt_svc":                     true,
-        "alternate_protocol":          true,
-        "cache_control":               true,
-        "connection":                  true,
-        "content_disposition":         true,
-        "content_encoding":            true,
-        "content_language":            true,
-        "content_length":              true,
-        "content_location":            true,
-        "content_md5":                 true,
-        "content_range":               true,
-        "content_type":                true,
-        "expires":                     true,
-        "last_modified":               true,
-        "link":                        true,
-        "location":                    true,
-        "p3p":                         true,
-        "pragma":                      true,
-        "proxy_agent":                 true,
-        "proxy_authenticate":          true,
-        "public_key_pins":             true,
-        "refresh":                     true,
-        "retry_after":                 true,
-        "server":                      true,
-        "set_cookie":                  true,
-        "status":                      true,
-        "strict_transport_security":   true,
-        "trailer":                     true,
-        "transfer_encoding":           true,
-        "upgrade":                     true,
-        "vary":                        true,
-        "via":                         true,
-        "warning":                     true,
-        "www_authenticate":            true,
-        "x_frame_options":             true,
-        "x_xss_protection":            true,
-        "content_security_policy":     true,
-        "x_content_security_policy":   true,
-        "x_webkit_csp":                true,
-        "x_content_type_options":      true,
-        "x_powered_by":                true,
-        "x_ua_compatible":             true,
-        "x_content_duration":          true,
-        "x_real_ip":                   true,
-        "x_forwarded_for":             true,
+	"access_control_allow_origin": true,
+	"accept_patch":                true,
+	"accept_ranges":               true,
+	"age":                         true,
+	"allow":                       true,
+	"alt_svc":                     true,
+	"alternate_protocol":          true,
+	"cache_control":               true,
+	"connection":                  true,
+	"content_disposition":         true,
+	"content_encoding":            true,
+	"content_language":            true,
+	"content_length":              true,
+	"content_location":            true,
+	"content_md5":                 true,
+	"content_range":               true,
+	"content_type":                true,
+	"expires":                     true,
+	"last_modified":               true,
+	"link":                        true,
+	"location":                    true,
+	"p3p":                         true,
+	"pragma":                      true,
+	"proxy_agent":                 true,
+	"proxy_authenticate":          true,
+	"public_key_pins":             true,
+	"refresh":                     true,
+	"retry_after":                 true,
+	"server":                      true,
+	"set_cookie":                  true,
+	"status":                      true,
+	"strict_transport_security":   true,
+	"trailer":                     true,
+	"transfer_encoding":           true,
+	"upgrade":                     true,
+	"vary":                        true,
+	"via":                         true,
+	"warning":                     true,
+	"www_authenticate":            true,
+	"x_frame_options":             true,
+	"x_xss_protection":            true,
+	"content_security_policy":     true,
+	"x_content_security_policy":   true,
+	"x_webkit_csp":                true,
+	"x_content_type_options":      true,
+	"x_powered_by":                true,
+	"x_ua_compatible":             true,
+	"x_content_duration":          true,
+	"x_real_ip":                   true,
+	"x_forwarded_for":             true,
 }
 
 // A Header represents the key-value pairs in an HTTP header.
@@ -296,22 +296,22 @@ func formatHeaderValues(v []string) {
 }
 
 func filterHeaders(h Header) {
-        var unknownHeaders []UnknownHeader
-        for header, values := range h {
-                if _, ok := knownHeaders[FormatHeaderName(header)]; !ok {
-                        unk := UnknownHeader{
-                                Key:    FormatHeaderName(header),
-                                Values: values,
-                        }
-                        unknownHeaders = append(unknownHeaders, unk)
-                        h.Del(header)
-                }
-        }
-        if len(unknownHeaders) > 0 {
-                if unknownHeaderStr, err := json.Marshal(unknownHeaders); err == nil {
-                        h["Unknown"] = []string{string(unknownHeaderStr)}
-                }
-        }
+	var unknownHeaders []UnknownHeader
+	for header, values := range h {
+		if _, ok := knownHeaders[FormatHeaderName(header)]; !ok {
+			unk := UnknownHeader{
+				Key:    FormatHeaderName(header),
+				Values: values,
+			}
+			unknownHeaders = append(unknownHeaders, unk)
+			h.Del(header)
+		}
+	}
+	if len(unknownHeaders) > 0 {
+		if unknownHeaderStr, err := json.Marshal(unknownHeaders); err == nil {
+			h["Unknown"] = []string{string(unknownHeaderStr)}
+		}
+	}
 }
 
 // Custom JSON Marshaller to comply with snake_case header names

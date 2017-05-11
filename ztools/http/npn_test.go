@@ -115,9 +115,9 @@ func handleTLSProtocol09(srv *Server, conn *tls.Conn, h Handler) {
 	req, _ := NewRequest("GET", path, nil)
 	req.Protocol = Protocol{
 		Name:  "HTTP/0.9",
-				Major: 0,
-				Minor: 9,
-			}
+		Major: 0,
+		Minor: 9,
+	}
 	rw := &http09Writer{conn, make(Header)}
 	h.ServeHTTP(rw, req)
 }

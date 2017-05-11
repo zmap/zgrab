@@ -231,6 +231,7 @@ func TestParseMultipartForm(t *testing.T) {
 }
 
 func TestRedirect_h1(t *testing.T) { testRedirect(t, h1Mode) }
+
 //func TestRedirect_h2(t *testing.T) { testRedirect(t, h2Mode) }
 func testRedirect(t *testing.T, h2 bool) {
 	defer afterTest(t)

@@ -21,7 +21,7 @@ func TestResponseWrite(t *testing.T) {
 		// HTTP/1.0, identity coding; no trailer
 		{
 			Response{
-				StatusCode:    503,
+				StatusCode: 503,
 				Protocol: Protocol{
 					Name:  "HTTP/1.0",
 					Major: 1,
@@ -40,7 +40,7 @@ func TestResponseWrite(t *testing.T) {
 		// Unchunked response without Content-Length.
 		{
 			Response{
-				StatusCode:    200,
+				StatusCode: 200,
 				Protocol: Protocol{
 					Name:  "HTTP/1.0",
 					Major: 1,
@@ -58,7 +58,7 @@ func TestResponseWrite(t *testing.T) {
 		// HTTP/1.1 response with unknown length and Connection: close
 		{
 			Response{
-				StatusCode:    200,
+				StatusCode: 200,
 				Protocol: Protocol{
 					Name:  "HTTP/1.1",
 					Major: 1,
@@ -78,7 +78,7 @@ func TestResponseWrite(t *testing.T) {
 		// HTTP/1.1 response with unknown length and not setting connection: close
 		{
 			Response{
-				StatusCode:    200,
+				StatusCode: 200,
 				Protocol: Protocol{
 					Name:  "HTTP/1.1",
 					Major: 1,
@@ -99,7 +99,7 @@ func TestResponseWrite(t *testing.T) {
 		// setting chunked.
 		{
 			Response{
-				StatusCode:       200,
+				StatusCode: 200,
 				Protocol: Protocol{
 					Name:  "HTTP/1.1",
 					Major: 1,
@@ -119,12 +119,12 @@ func TestResponseWrite(t *testing.T) {
 		// HTTP/1.1 response 0 content-length, and nil body
 		{
 			Response{
-				StatusCode:    200,
+				StatusCode: 200,
 				Protocol: Protocol{
-				Name:  "HTTP/1.1",
-				Major: 1,
-				Minor: 1,
-			},
+					Name:  "HTTP/1.1",
+					Major: 1,
+					Minor: 1,
+				},
 				Request:       dummyReq11("GET"),
 				Header:        Header{},
 				Body:          nil,
@@ -138,12 +138,12 @@ func TestResponseWrite(t *testing.T) {
 		// HTTP/1.1 response 0 content-length, and non-nil empty body
 		{
 			Response{
-				StatusCode:    200,
+				StatusCode: 200,
 				Protocol: Protocol{
-				Name:  "HTTP/1.1",
-				Major: 1,
-				Minor: 1,
-			},
+					Name:  "HTTP/1.1",
+					Major: 1,
+					Minor: 1,
+				},
 				Request:       dummyReq11("GET"),
 				Header:        Header{},
 				Body:          ioutil.NopCloser(strings.NewReader("")),
@@ -157,12 +157,12 @@ func TestResponseWrite(t *testing.T) {
 		// HTTP/1.1 response 0 content-length, and non-nil non-empty body
 		{
 			Response{
-				StatusCode:    200,
+				StatusCode: 200,
 				Protocol: Protocol{
-				Name:  "HTTP/1.1",
-				Major: 1,
-				Minor: 1,
-			},
+					Name:  "HTTP/1.1",
+					Major: 1,
+					Minor: 1,
+				},
 				Request:       dummyReq11("GET"),
 				Header:        Header{},
 				Body:          ioutil.NopCloser(strings.NewReader("foo")),
@@ -176,12 +176,12 @@ func TestResponseWrite(t *testing.T) {
 		// HTTP/1.1, chunked coding; empty trailer; close
 		{
 			Response{
-				StatusCode:       200,
+				StatusCode: 200,
 				Protocol: Protocol{
-				Name:  "HTTP/1.1",
-				Major: 1,
-				Minor: 1,
-			},
+					Name:  "HTTP/1.1",
+					Major: 1,
+					Minor: 1,
+				},
 				Request:          dummyReq("GET"),
 				Header:           Header{},
 				Body:             ioutil.NopCloser(strings.NewReader("abcdef")),
@@ -202,11 +202,11 @@ func TestResponseWrite(t *testing.T) {
 			Response{
 				StatusCode: 204,
 				Protocol: Protocol{
-				Name:  "HTTP/1.1",
-				Major: 1,
-				Minor: 1,
-			},
-				Request:    dummyReq("GET"),
+					Name:  "HTTP/1.1",
+					Major: 1,
+					Minor: 1,
+				},
+				Request: dummyReq("GET"),
 				Header: Header{
 					"Foo": []string{" Bar\nBaz "},
 				},
@@ -226,12 +226,12 @@ func TestResponseWrite(t *testing.T) {
 		// there were two.
 		{
 			Response{
-				StatusCode:       StatusOK,
+				StatusCode: StatusOK,
 				Protocol: Protocol{
-				Name:  "HTTP/1.1",
-				Major: 1,
-				Minor: 1,
-			},
+					Name:  "HTTP/1.1",
+					Major: 1,
+					Minor: 1,
+				},
 				Request:          &Request{Method: "POST"},
 				Header:           Header{},
 				ContentLength:    0,
@@ -245,12 +245,12 @@ func TestResponseWrite(t *testing.T) {
 		// write the Content-Length as -1.
 		{
 			Response{
-				StatusCode:    StatusOK,
+				StatusCode: StatusOK,
 				Protocol: Protocol{
-				Name:  "HTTP/1.1",
-				Major: 1,
-				Minor: 1,
-			},
+					Name:  "HTTP/1.1",
+					Major: 1,
+					Minor: 1,
+				},
 				Request:       &Request{Method: "POST"},
 				Header:        Header{},
 				ContentLength: -1,
@@ -268,13 +268,13 @@ func TestResponseWrite(t *testing.T) {
 				StatusCode: 7,
 				Status:     "license to violate specs",
 				Protocol: Protocol{
-				Name:  "HTTP/1.0",
-				Major: 1,
-				Minor: 0,
-			},
-				Request:    dummyReq("GET"),
-				Header:     Header{},
-				Body:       nil,
+					Name:  "HTTP/1.0",
+					Major: 1,
+					Minor: 0,
+				},
+				Request: dummyReq("GET"),
+				Header:  Header{},
+				Body:    nil,
 			},
 
 			"HTTP/1.0 007 license to violate specs\r\nContent-Length: 0\r\n\r\n",
@@ -287,13 +287,13 @@ func TestResponseWrite(t *testing.T) {
 				StatusCode: 123,
 				Status:     "123 Sesame Street",
 				Protocol: Protocol{
-				Name:  "HTTP/1.0",
-				Major: 1,
-				Minor: 0,
-			},
-				Request:    dummyReq("GET"),
-				Header:     Header{},
-				Body:       nil,
+					Name:  "HTTP/1.0",
+					Major: 1,
+					Minor: 0,
+				},
+				Request: dummyReq("GET"),
+				Header:  Header{},
+				Body:    nil,
 			},
 
 			"HTTP/1.0 123 Sesame Street\r\n\r\n",
@@ -306,13 +306,13 @@ func TestResponseWrite(t *testing.T) {
 				StatusCode: 204,
 				Status:     "No Content",
 				Protocol: Protocol{
-				Name:  "HTTP/1.0",
-				Major: 1,
-				Minor: 0,
-			},
-				Request:    dummyReq("GET"),
-				Header:     Header{},
-				Body:       nil,
+					Name:  "HTTP/1.0",
+					Major: 1,
+					Minor: 0,
+				},
+				Request: dummyReq("GET"),
+				Header:  Header{},
+				Body:    nil,
 			},
 
 			"HTTP/1.0 204 No Content\r\n\r\n",

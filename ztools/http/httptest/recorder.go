@@ -168,9 +168,9 @@ func (rw *ResponseRecorder) Result() *http.Response {
 	}
 	res := &http.Response{
 		Protocol: http.Protocol{
-				Name:  "HTTP/1.1",
-				Major: 1,
-				Minor: 1,
+			Name:  "HTTP/1.1",
+			Major: 1,
+			Minor: 1,
 		},
 		StatusCode: rw.Code,
 		Header:     rw.snapHeader,

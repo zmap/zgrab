@@ -32,10 +32,10 @@ func dummyReq(method string) *Request {
 
 func dummyReq11(method string) *Request {
 	return &Request{Method: method, Protocol: Protocol{
-				Name:  "HTTP/1.1",
-				Major: 1,
-				Minor: 1,
-			},}
+		Name:  "HTTP/1.1",
+		Major: 1,
+		Minor: 1,
+	}}
 }
 
 var respTests = []respTest{
@@ -54,7 +54,7 @@ var respTests = []respTest{
 				Major: 1,
 				Minor: 0,
 			},
-			Request:    dummyReq("GET"),
+			Request: dummyReq("GET"),
 			Header: Header{
 				"Connection": {"close"}, // TODO(rsc): Delete?
 			},
@@ -73,8 +73,8 @@ var respTests = []respTest{
 			"Body here\n",
 
 		Response{
-			Status:        "200 OK",
-			StatusCode:    200,
+			Status:     "200 OK",
+			StatusCode: 200,
 			Protocol: Protocol{
 				Name:  "HTTP/1.1",
 				Major: 1,
@@ -96,8 +96,8 @@ var respTests = []respTest{
 			"Body should not be read!\n",
 
 		Response{
-			Status:        "204 No Content",
-			StatusCode:    204,
+			Status:     "204 No Content",
+			StatusCode: 204,
 			Protocol: Protocol{
 				Name:  "HTTP/1.1",
 				Major: 1,
@@ -128,7 +128,7 @@ var respTests = []respTest{
 				Major: 1,
 				Minor: 0,
 			},
-			Request:    dummyReq("GET"),
+			Request: dummyReq("GET"),
 			Header: Header{
 				"Connection":     {"close"},
 				"Content-Length": {"10"},
@@ -153,8 +153,8 @@ var respTests = []respTest{
 			"\r\n",
 
 		Response{
-			Status:           "200 OK",
-			StatusCode:       200,
+			Status:     "200 OK",
+			StatusCode: 200,
 			Protocol: Protocol{
 				Name:  "HTTP/1.1",
 				Major: 1,
@@ -182,8 +182,8 @@ var respTests = []respTest{
 			"\r\n",
 
 		Response{
-			Status:           "200 OK",
-			StatusCode:       200,
+			Status:     "200 OK",
+			StatusCode: 200,
 			Protocol: Protocol{
 				Name:  "HTTP/1.1",
 				Major: 1,
@@ -206,8 +206,8 @@ var respTests = []respTest{
 			"\r\n",
 
 		Response{
-			Status:           "200 OK",
-			StatusCode:       200,
+			Status:     "200 OK",
+			StatusCode: 200,
 			Protocol: Protocol{
 				Name:  "HTTP/1.1",
 				Major: 1,
@@ -230,8 +230,8 @@ var respTests = []respTest{
 			"\r\n",
 
 		Response{
-			Status:           "200 OK",
-			StatusCode:       200,
+			Status:     "200 OK",
+			StatusCode: 200,
 			Protocol: Protocol{
 				Name:  "HTTP/1.0",
 				Major: 1,
@@ -254,8 +254,8 @@ var respTests = []respTest{
 			"\r\n",
 
 		Response{
-			Status:           "200 OK",
-			StatusCode:       200,
+			Status:     "200 OK",
+			StatusCode: 200,
 			Protocol: Protocol{
 				Name:  "HTTP/1.1",
 				Major: 1,
@@ -277,8 +277,8 @@ var respTests = []respTest{
 			"\r\n",
 
 		Response{
-			Status:           "200 OK",
-			StatusCode:       200,
+			Status:     "200 OK",
+			StatusCode: 200,
 			Protocol: Protocol{
 				Name:  "HTTP/1.0",
 				Major: 1,
@@ -308,7 +308,7 @@ var respTests = []respTest{
 				Major: 1,
 				Minor: 0,
 			},
-			Request:    dummyReq("GET"),
+			Request: dummyReq("GET"),
 			Header: Header{
 				"Content-Length": {"0"},
 			},
@@ -324,8 +324,8 @@ var respTests = []respTest{
 	{
 		"HTTP/1.0 303 \r\n\r\n",
 		Response{
-			Status:        "303 ",
-			StatusCode:    303,
+			Status:     "303 ",
+			StatusCode: 303,
 			Protocol: Protocol{
 				Name:  "HTTP/1.0",
 				Major: 1,
@@ -345,8 +345,8 @@ var respTests = []respTest{
 	{
 		"HTTP/1.0 303\r\n\r\n",
 		Response{
-			Status:        "303 ",
-			StatusCode:    303,
+			Status:     "303 ",
+			StatusCode: 303,
 			Protocol: Protocol{
 				Name:  "HTTP/1.0",
 				Major: 1,
@@ -376,7 +376,7 @@ some body`,
 				Major: 1,
 				Minor: 1,
 			},
-			Request:    dummyReq("GET"),
+			Request: dummyReq("GET"),
 			Header: Header{
 				"Content-Type": []string{"multipart/byteranges; boundary=18a75608c8f47cef"},
 			},
@@ -429,7 +429,7 @@ some body`,
 				Major: 1,
 				Minor: 1,
 			},
-			Request:    dummyReq("GET"),
+			Request: dummyReq("GET"),
 			Header: Header{
 				"Accept-Ranges":  []string{"bytes"},
 				"Content-Length": []string{"6"},
@@ -457,7 +457,7 @@ some body`,
 				Major: 1,
 				Minor: 1,
 			},
-			Request:    dummyReq("HEAD"),
+			Request: dummyReq("HEAD"),
 			Header: Header{
 				"Content-Length": {"256"},
 			},
@@ -485,7 +485,7 @@ some body`,
 				Major: 1,
 				Minor: 1,
 			},
-			Request:    dummyReq("HEAD"),
+			Request: dummyReq("HEAD"),
 			Header: Header{
 				"Content-Length": {"256"},
 			},
@@ -506,8 +506,8 @@ some body`,
 			"Body here\n",
 
 		Response{
-			Status:        "200 OK",
-			StatusCode:    200,
+			Status:     "200 OK",
+			StatusCode: 200,
 			Protocol: Protocol{
 				Name:  "HTTP/1.0",
 				Major: 1,
@@ -539,7 +539,7 @@ some body`,
 				Major: 1,
 				Minor: 0,
 			},
-			Request:    dummyReq("GET"),
+			Request: dummyReq("GET"),
 			Header: Header{
 				"Content-Length": {"10"},
 			},
@@ -796,9 +796,9 @@ func TestResponseStatusStutter(t *testing.T) {
 		Status:     "123 some status",
 		StatusCode: 123,
 		Protocol: Protocol{
-				Name:  "HTTP/1.3",
-				Major: 1,
-				Minor: 3,
+			Name:  "HTTP/1.3",
+			Major: 1,
+			Minor: 3,
 		},
 	}
 	var buf bytes.Buffer

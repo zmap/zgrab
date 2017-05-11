@@ -24,7 +24,6 @@ var respExcludeHeader = map[string]bool{
 	"Trailer": true,
 }
 
-
 // Response represents the response from an HTTP request.
 //
 type Response struct {

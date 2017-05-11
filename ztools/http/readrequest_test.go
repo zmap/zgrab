@@ -362,7 +362,7 @@ var reqTests = []reqTest{
 				// keep this:
 				"Connection": []string{"close"},
 			},
-			Host:       "issue8261.com",
+			Host: "issue8261.com",
 			Protocol: Protocol{
 				Name:  "HTTP/1.1",
 				Major: 1,
@@ -390,7 +390,7 @@ var reqTests = []reqTest{
 				"Connection":     []string{"close"},
 				"Content-Length": []string{"0"},
 			},
-			Host:       "issue8261.com",
+			Host: "issue8261.com",
 			Protocol: Protocol{
 				Name:  "HTTP/1.1",
 				Major: 1,
@@ -413,7 +413,7 @@ var reqTests = []reqTest{
 			URL: &url.URL{
 				Path: "*",
 			},
-			Header:        Header{},
+			Header: Header{},
 			Protocol: Protocol{
 				Name:  "HTTP/2.0",
 				Major: 2,

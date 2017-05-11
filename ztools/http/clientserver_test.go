@@ -25,10 +25,10 @@ import (
 	//"sync/atomic"
 	"testing"
 	"time"
-	
-	"github.com/zmap/zgrab/ztools/http/httptest"
-	. "github.com/zmap/zgrab/ztools/http"
+
 	"github.com/zmap/zcrypto/tls"
+	. "github.com/zmap/zgrab/ztools/http"
+	"github.com/zmap/zgrab/ztools/http/httptest"
 )
 
 type clientServerTest struct {
@@ -113,6 +113,7 @@ func newClientServerTest(t *testing.T, h2 bool, h Handler, opts ...interface{}) 
 	}
 	return cst
 }
+
 /*
 // Testing the newClientServerTest helper itself.
 func TestNewClientServerTest(t *testing.T) {
@@ -139,6 +140,7 @@ func TestNewClientServerTest(t *testing.T) {
 }*/
 
 func TestChunkedResponseHeaders_h1(t *testing.T) { testChunkedResponseHeaders(t, h1Mode) }
+
 //func TestChunkedResponseHeaders_h2(t *testing.T) { testChunkedResponseHeaders(t, h2Mode) }
 
 func testChunkedResponseHeaders(t *testing.T, h2 bool) {
@@ -173,6 +175,7 @@ func testChunkedResponseHeaders(t *testing.T, h2 bool) {
 }
 
 type reqFunc func(c *Client, url string) (*Response, error)
+
 /*
 // h12Compare is a test that compares HTTP/1 and HTTP/2 behavior
 // against each other.
@@ -250,7 +253,6 @@ type slurpResult struct {
 }
 
 func (sr slurpResult) String() string { return fmt.Sprintf("body %q; err %v", sr.body, sr.err) }
-
 
 /*
 func (tt h12Compare) normalizeRes(t *testing.T, res *Response, wantProto string) {
@@ -451,6 +453,7 @@ func TestH12_AutoGzip_Disabled(t *testing.T) {
 // chunking in their response headers and aren't allowed to produce
 // output.
 func Test304Responses_h1(t *testing.T) { test304Responses(t, h1Mode) }
+
 //func Test304Responses_h2(t *testing.T) { test304Responses(t, h2Mode) }
 
 func test304Responses(t *testing.T, h2 bool) {
@@ -478,6 +481,7 @@ func test304Responses(t *testing.T, h2 bool) {
 		t.Errorf("got unexpected body %q", string(body))
 	}
 }
+
 /*
 func TestH12_ServerEmptyContentLength(t *testing.T) {
 	h12Compare{
@@ -520,6 +524,7 @@ func h12requestContentLength(t *testing.T, bodyfn func() io.Reader, wantLen int6
 // Tests that closing the Request.Cancel channel also while still
 // reading the response body. Issue 13159.
 func TestCancelRequestMidBody_h1(t *testing.T) { testCancelRequestMidBody(t, h1Mode) }
+
 //func TestCancelRequestMidBody_h2(t *testing.T) { testCancelRequestMidBody(t, h2Mode) }
 func testCancelRequestMidBody(t *testing.T, h2 bool) {
 	defer afterTest(t)
@@ -569,6 +574,7 @@ func testCancelRequestMidBody(t *testing.T, h2 bool) {
 
 // Tests that clients can send trailers to a server and that the server can read them.
 func TestTrailersClientToServer_h1(t *testing.T) { testTrailersClientToServer(t, h1Mode) }
+
 //func TestTrailersClientToServer_h2(t *testing.T) { testTrailersClientToServer(t, h2Mode) }
 
 func testTrailersClientToServer(t *testing.T, h2 bool) {
@@ -623,9 +629,11 @@ func testTrailersClientToServer(t *testing.T, h2 bool) {
 }
 
 // Tests that servers send trailers to a client and that the client can read them.
-func TestTrailersServerToClient_h1(t *testing.T)       { testTrailersServerToClient(t, h1Mode, false) }
+func TestTrailersServerToClient_h1(t *testing.T) { testTrailersServerToClient(t, h1Mode, false) }
+
 //func TestTrailersServerToClient_h2(t *testing.T)       { testTrailersServerToClient(t, h2Mode, false) }
 func TestTrailersServerToClient_Flush_h1(t *testing.T) { testTrailersServerToClient(t, h1Mode, true) }
+
 //func TestTrailersServerToClient_Flush_h2(t *testing.T) { testTrailersServerToClient(t, h2Mode, true) }
 
 func testTrailersServerToClient(t *testing.T, h2, flush bool) {
@@ -700,6 +708,7 @@ func testTrailersServerToClient(t *testing.T, h2, flush bool) {
 
 // Don't allow a Body.Read after Body.Close. Issue 13648.
 func TestResponseBodyReadAfterClose_h1(t *testing.T) { testResponseBodyReadAfterClose(t, h1Mode) }
+
 //func TestResponseBodyReadAfterClose_h2(t *testing.T) { testResponseBodyReadAfterClose(t, h2Mode) }
 
 func testResponseBodyReadAfterClose(t *testing.T, h2 bool) {
@@ -721,6 +730,7 @@ func testResponseBodyReadAfterClose(t *testing.T, h2 bool) {
 }
 
 func TestConcurrentReadWriteReqBody_h1(t *testing.T) { testConcurrentReadWriteReqBody(t, h1Mode) }
+
 //func TestConcurrentReadWriteReqBody_h2(t *testing.T) { testConcurrentReadWriteReqBody(t, h2Mode) }
 func testConcurrentReadWriteReqBody(t *testing.T, h2 bool) {
 	defer afterTest(t)
@@ -774,6 +784,7 @@ func testConcurrentReadWriteReqBody(t *testing.T, h2 bool) {
 }
 
 func TestConnectRequest_h1(t *testing.T) { testConnectRequest(t, h1Mode) }
+
 //func TestConnectRequest_h2(t *testing.T) { testConnectRequest(t, h2Mode) }
 func testConnectRequest(t *testing.T, h2 bool) {
 	defer afterTest(t)
@@ -796,7 +807,7 @@ func testConnectRequest(t *testing.T, h2 bool) {
 			req: &Request{
 				Method: "CONNECT",
 				//Header: Header{},
-				URL:    u,
+				URL: u,
 			},
 			want: u.Host,
 		},
@@ -804,8 +815,8 @@ func testConnectRequest(t *testing.T, h2 bool) {
 			req: &Request{
 				Method: "CONNECT",
 				//Header: Header{},
-				URL:    u,
-				Host:   "example.com:123",
+				URL:  u,
+				Host: "example.com:123",
 			},
 			want: "example.com:123",
 		},
@@ -832,6 +843,7 @@ func testConnectRequest(t *testing.T, h2 bool) {
 }
 
 func TestTransportUserAgent_h1(t *testing.T) { testTransportUserAgent(t, h1Mode) }
+
 //func TestTransportUserAgent_h2(t *testing.T) { testTransportUserAgent(t, h2Mode) }
 func testTransportUserAgent(t *testing.T, h2 bool) {
 	defer afterTest(t)
@@ -892,9 +904,11 @@ func testTransportUserAgent(t *testing.T, h2 bool) {
 	}
 }
 
-func TestStarRequestFoo_h1(t *testing.T)     { testStarRequest(t, "FOO", h1Mode) }
+func TestStarRequestFoo_h1(t *testing.T) { testStarRequest(t, "FOO", h1Mode) }
+
 //func TestStarRequestFoo_h2(t *testing.T)     { testStarRequest(t, "FOO", h2Mode) }
 func TestStarRequestOptions_h1(t *testing.T) { testStarRequest(t, "OPTIONS", h1Mode) }
+
 //func TestStarRequestOptions_h2(t *testing.T) { testStarRequest(t, "OPTIONS", h2Mode) }
 func testStarRequest(t *testing.T, method string, h2 bool) {
 	defer afterTest(t)
@@ -960,6 +974,7 @@ func testStarRequest(t *testing.T, method string, h2 bool) {
 		t.Errorf("RequestURI = %q; want *", req.RequestURI)
 	}
 }
+
 /*
 // Issue 13957
 func TestTransportDiscardsUnneededConns(t *testing.T) {
@@ -1044,9 +1059,11 @@ func TestTransportDiscardsUnneededConns(t *testing.T) {
 }*/
 
 // tests that Transport doesn't retain a pointer to the provided request.
-func TestTransportGCRequest_Body_h1(t *testing.T)   { testTransportGCRequest(t, h1Mode, true) }
+func TestTransportGCRequest_Body_h1(t *testing.T) { testTransportGCRequest(t, h1Mode, true) }
+
 //func TestTransportGCRequest_Body_h2(t *testing.T)   { testTransportGCRequest(t, h2Mode, true) }
 func TestTransportGCRequest_NoBody_h1(t *testing.T) { testTransportGCRequest(t, h1Mode, false) }
+
 //func TestTransportGCRequest_NoBody_h2(t *testing.T) { testTransportGCRequest(t, h2Mode, false) }
 func testTransportGCRequest(t *testing.T, h2, body bool) {
 	setParallel(t)
@@ -1091,7 +1108,7 @@ func testTransportGCRequest(t *testing.T, h2, body bool) {
 
 func TestTransportRejectsInvalidHeaders_h1(t *testing.T) {
 	testTransportRejectsInvalidHeaders(t, h1Mode)
-}/*
+} /*
 func TestTransportRejectsInvalidHeaders_h2(t *testing.T) {
 	testTransportRejectsInvalidHeaders(t, h2Mode)
 }*/
@@ -1150,6 +1167,7 @@ func testTransportRejectsInvalidHeaders(t *testing.T, h2 bool) {
 // Tests that we support bogus under-100 HTTP statuses, because we historically
 // have. This might change at some point, but not yet in Go 1.6.
 func TestBogusStatusWorks_h1(t *testing.T) { testBogusStatusWorks(t, h1Mode) }
+
 //func TestBogusStatusWorks_h2(t *testing.T) { testBogusStatusWorks(t, h2Mode) }
 func testBogusStatusWorks(t *testing.T, h2 bool) {
 	defer afterTest(t)
@@ -1168,13 +1186,15 @@ func testBogusStatusWorks(t *testing.T, h2 bool) {
 	}
 }
 
-func TestInterruptWithPanic_h1(t *testing.T)     { testInterruptWithPanic(t, h1Mode, "boom") }
+func TestInterruptWithPanic_h1(t *testing.T) { testInterruptWithPanic(t, h1Mode, "boom") }
+
 //func TestInterruptWithPanic_h2(t *testing.T)     { testInterruptWithPanic(t, h2Mode, "boom") }
 func TestInterruptWithPanic_nil_h1(t *testing.T) { testInterruptWithPanic(t, h1Mode, nil) }
+
 //func TestInterruptWithPanic_nil_h2(t *testing.T) { testInterruptWithPanic(t, h2Mode, nil) }
 func TestInterruptWithPanic_ErrAbortHandler_h1(t *testing.T) {
 	testInterruptWithPanic(t, h1Mode, ErrAbortHandler)
-}/*
+} /*
 func TestInterruptWithPanic_ErrAbortHandler_h2(t *testing.T) {
 	testInterruptWithPanic(t, h2Mode, ErrAbortHandler)
 }*/
@@ -1251,6 +1271,7 @@ func (b *lockedBytesBuffer) Write(p []byte) (int, error) {
 	defer b.Unlock()
 	return b.Buffer.Write(p)
 }
+
 /*
 // Issue 15366
 func TestH12_AutoGzipWithDumpResponse(t *testing.T) {
@@ -1283,6 +1304,7 @@ func TestH12_AutoGzipWithDumpResponse(t *testing.T) {
 */
 // Issue 14607
 func TestCloseIdleConnections_h1(t *testing.T) { testCloseIdleConnections(t, h1Mode) }
+
 //func TestCloseIdleConnections_h2(t *testing.T) { testCloseIdleConnections(t, h2Mode) }
 func testCloseIdleConnections(t *testing.T, h2 bool) {
 	setParallel(t)
@@ -1329,6 +1351,7 @@ func (r testErrorReader) Read(p []byte) (n int, err error) {
 }
 
 func TestNoSniffExpectRequestBody_h1(t *testing.T) { testNoSniffExpectRequestBody(t, h1Mode) }
+
 //func TestNoSniffExpectRequestBody_h2(t *testing.T) { testNoSniffExpectRequestBody(t, h2Mode) }
 
 func testNoSniffExpectRequestBody(t *testing.T, h2 bool) {
@@ -1358,6 +1381,7 @@ func testNoSniffExpectRequestBody(t *testing.T, h2 bool) {
 }
 
 func TestServerUndeclaredTrailers_h1(t *testing.T) { testServerUndeclaredTrailers(t, h1Mode) }
+
 //func TestServerUndeclaredTrailers_h2(t *testing.T) { testServerUndeclaredTrailers(t, h2Mode) }
 func testServerUndeclaredTrailers(t *testing.T, h2 bool) {
 	defer afterTest(t)
