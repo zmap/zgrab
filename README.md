@@ -41,7 +41,7 @@ zgrab requires go version of at least 1.6. Please note that this is newer than t
 
 ## ZGrab as a library / dependency
 
-If you are using ZGrab code in another Go program, import ZGrab using [gopkg.in](http://gopkg.in). ZGrab tends to be very unstable, API's may break at any time, so be sure to vendor ZGrab.
+ZGrab tends to be very unstable, API's may break at any time, so be sure to vendor ZGrab.
 
 ## License
 
