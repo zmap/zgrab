@@ -494,12 +494,14 @@ func (c *Client) Do(req *Request) (resp *Response, err error) {
 		err = errors.New("http: no client.UserAgent set")
 		return
 	}
-
+	
 	if req.Header == nil {
 		req.Header = make(Header)
 	}
 
-	req.Header.Set("User-Agent", c.UserAgent)
+	if u := req.Header.Get("User-Agent"); u == "" {
+		req.Header.Set("User-Agent", c.UserAgent)
+	}
 
 	if req.URL == nil {
 		req.closeBody()

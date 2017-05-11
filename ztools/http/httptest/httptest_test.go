@@ -5,14 +5,15 @@
 package httptest
 
 import (
-	"crypto/tls"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"reflect"
 	"strings"
 	"testing"
+	
+	"github.com/zmap/zgrab/ztools/http"
+	"github.com/zmap/zcrypto/tls"
 )
 
 func TestNewRequest(t *testing.T) {

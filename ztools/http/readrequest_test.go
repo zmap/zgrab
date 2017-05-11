@@ -305,9 +305,9 @@ var reqTests = []reqTest{
 				Path: "*",
 			},
 			Protocol: Protocol{
-				Name:  "HTTP/1.0",
+				Name:  "HTTP/1.1",
 				Major: 1,
-				Minor: 0,
+				Minor: 1,
 			},
 			Header: Header{
 				"Server": []string{"foo"},

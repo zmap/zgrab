@@ -30,8 +30,8 @@ func TestHTTP(t *testing.T) {
 		if r.Protocol.Name != "HTTP/1.1" {
 			t.Errorf("Wrong Protocol - expected: %s, got: %s", "HTTP/1.1", r.Protocol.Name)
 		}
-		if len(r.Headers) != 2 || r.Headers.Get("User-Agent") != "test UA" || r.Headers.Get("Accept-Encoding") != "gzip" {
-			t.Errorf("Wrong headers: Expected User-Agent and Accept-Encoding, Got %s", r.Headers)
+		if len(r.Header) != 2 || r.Header.Get("User-Agent") != "test UA" || r.Header.Get("Accept-Encoding") != "gzip" {
+			t.Errorf("Wrong headers: Expected User-Agent and Accept-Encoding, Got %s", r.Header)
 		}
 		fmt.Fprintf(w, TEST_SERVER_BODY)
 	}))
@@ -171,8 +171,8 @@ func TestHTTPToHTTPSRedirect(t *testing.T) {
 	}
 
 	redirectResponse := httpData.RedirectResponseChain[0]
-	if redirectResponse.Headers.Get("location") != "https://"+tlsServerHostString+"/" {
-		t.Errorf("Wrong location header - Expected: %s, got: %s", "https://"+tlsServerHostString+"/", redirectResponse.Headers.Get("location"))
+	if redirectResponse.Header.Get("location") != "https://"+tlsServerHostString+"/" {
+		t.Errorf("Wrong location header - Expected: %s, got: %s", "https://"+tlsServerHostString+"/", redirectResponse.Header.Get("location")
 	}
 }
 

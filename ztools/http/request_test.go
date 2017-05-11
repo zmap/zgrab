@@ -12,13 +12,14 @@ import (
 	"io"
 	"io/ioutil"
 	"mime/multipart"
-	. "net/http"
 	"net/url"
 	"os"
 	"reflect"
 	"regexp"
 	"strings"
 	"testing"
+
+	. "github.com/zmap/zgrab/ztools/http"
 )
 
 func TestQuery(t *testing.T) {
@@ -230,7 +231,7 @@ func TestParseMultipartForm(t *testing.T) {
 }
 
 func TestRedirect_h1(t *testing.T) { testRedirect(t, h1Mode) }
-func TestRedirect_h2(t *testing.T) { testRedirect(t, h2Mode) }
+//func TestRedirect_h2(t *testing.T) { testRedirect(t, h2Mode) }
 func testRedirect(t *testing.T, h2 bool) {
 	defer afterTest(t)
 	cst := newClientServerTest(t, h2, HandlerFunc(func(w ResponseWriter, r *Request) {

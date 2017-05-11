@@ -14,8 +14,6 @@ import (
 	"mime"
 	"mime/multipart"
 	"net"
-	. "net/http"
-	"net/http/httptest"
 	"net/url"
 	"os"
 	"os/exec"
@@ -27,6 +25,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	. "github.com/zmap/zgrab/ztools/http"
+	"github.com/zmap/zgrab/ztools/http/httptest"
 )
 
 const (
@@ -528,7 +529,7 @@ func TestServeDirWithoutTrailingSlash(t *testing.T) {
 // Tests that ServeFile doesn't add a Content-Length if a Content-Encoding is
 // specified.
 func TestServeFileWithContentEncoding_h1(t *testing.T) { testServeFileWithContentEncoding(t, h1Mode) }
-func TestServeFileWithContentEncoding_h2(t *testing.T) { testServeFileWithContentEncoding(t, h2Mode) }
+//func TestServeFileWithContentEncoding_h2(t *testing.T) { testServeFileWithContentEncoding(t, h2Mode) }
 func testServeFileWithContentEncoding(t *testing.T, h2 bool) {
 	defer afterTest(t)
 	cst := newClientServerTest(t, h2, HandlerFunc(func(w ResponseWriter, r *Request) {
