@@ -93,8 +93,7 @@ func ExampleDumpResponse() {
 	fmt.Printf("%q", dump)
 
 	// Output:
-	// "HTTP/1.1 200 OK\r\nContent-Length: 76\r\nContent-Length: 76\r\nContent-Type: text/plain; charset=utf-8\r\nUnknown: [{\"key\":\"date\",\"value\":[\"Wed, 19 Jul 1972 19:00:00 GMT\"]}]\r\n\r\nGo is a general-purpose language designed with systems programming in mind.\n"
-
+    // "HTTP/1.1 200 OK\r\nContent-Length: 76\r\nContent-Length: 76\r\nContent-Type: text/plain; charset=utf-8\r\nDate: Wed, 19 Jul 1972 19:00:00 GMT\r\n\r\nGo is a general-purpose language designed with systems programming in mind.\n"
 }
 
 func ExampleReverseProxy() {
