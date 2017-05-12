@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zmap/zcrypto/tls"
 	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/http"
 	"github.com/zmap/zgrab/ztools/processing"
@@ -37,7 +38,6 @@ import (
 	"github.com/zmap/zgrab/ztools/telnet"
 	"github.com/zmap/zgrab/ztools/xssh"
 	"github.com/zmap/zgrab/ztools/zlog"
-	"github.com/zmap/zcrypto/tls"
 )
 
 type GrabTarget struct {
@@ -114,7 +114,8 @@ func makeDialer(c *Config) func(string) (*Conn, error) {
 	return func(addr string) (*Conn, error) {
 		deadline := time.Now().Add(timeout)
 		d := Dialer{
-			Deadline: deadline,
+			Deadline:  deadline,
+			LocalAddr: c.LocalAddr,
 		}
 		conn, err := d.Dial(proto, addr)
 		conn.maxTlsVersion = c.TLSVersion

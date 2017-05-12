@@ -20,6 +20,7 @@ import (
 	"flag"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"runtime"
@@ -27,11 +28,11 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/zmap/zcrypto/tls"
+	"github.com/zmap/zcrypto/x509"
 	"github.com/zmap/zgrab/zlib"
 	"github.com/zmap/zgrab/ztools/processing"
-	"github.com/zmap/zcrypto/x509"
 	"github.com/zmap/zgrab/ztools/zlog"
-	"github.com/zmap/zcrypto/tls"
 )
 
 // Command-line flags
@@ -48,6 +49,7 @@ var (
 	rootCAFileName                string
 	prometheusAddress             string
 	clientHelloFileName           string
+	localAddressString            string
 )
 
 // Module configurations
@@ -65,6 +67,7 @@ func init() {
 
 	flag.StringVar(&outputFileName, "output-file", "-", "Output filename, use - for stdout")
 	flag.StringVar(&inputFileName, "input-file", "-", "Input filename, use - for stdin")
+	flag.StringVar(&localAddressString, "local-tcp-address", "", "Source address to use for banner grabbing in TCP")
 	flag.StringVar(&metadataFileName, "metadata-file", "-", "File to record banner-grab metadata, use - for stdout")
 	flag.StringVar(&logFileName, "log-file", "-", "File to log to, use - for stderr")
 	flag.StringVar(&prometheusAddress, "prometheus", "", "Address to use for Prometheus server (e.g. localhost:8080). If empty, Prometheus is disabled.")
@@ -147,6 +150,15 @@ func init() {
 	// Stop the lowliest idiot from using this to DoS people
 	if config.ConnectionsPerHost > 50 || config.ConnectionsPerHost < 1 {
 		zlog.Fatalf("--connections-per-host must be in the range [0,50]")
+	}
+
+	// Parse LocalAddr
+	var err error
+	if localAddressString != "" {
+		config.LocalAddr, err = net.ResolveTCPAddr("tcp", localAddressString)
+		if err != nil {
+			zlog.Fatalf("Failed to resolve local address %s: %s", localAddressString, err.Error())
+		}
 	}
 
 	// Validate SSH related flags
@@ -275,7 +287,6 @@ func init() {
 	}
 
 	// Check the network interface
-	var err error
 
 	// Look at CA file
 	if rootCAFileName != "" {

@@ -15,6 +15,7 @@
 package zlib
 
 import (
+	"github.com/jbenet/go-reuseport"
 	"net"
 	"time"
 )
@@ -35,7 +36,14 @@ func (d *Dialer) Dial(network, address string) (*Conn, error) {
 		LocalAddr: d.LocalAddr,
 		KeepAlive: d.KeepAlive,
 	}
-	var err error
-	c.conn, err = netDialer.Dial(network, address)
-	return c, err
+	if d.LocalAddr.String() == "<nil>" {
+		var err error
+		c.conn, err = netDialer.Dial(network, address)
+		return c, err
+	} else {
+		reuseDialer := reuseport.Dialer{D: netDialer}
+		var err error
+		c.conn, err = reuseDialer.Dial(network, address)
+		return c, err
+	}
 }

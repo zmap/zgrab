@@ -18,11 +18,12 @@ import (
 	"encoding/csv"
 	"errors"
 	"io"
+	"net"
 	"strings"
 	"time"
 
-	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zcrypto/x509"
+	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/zlog"
 )
 
@@ -102,6 +103,7 @@ type Config struct {
 	Timeout            time.Duration
 	Senders            uint
 	ConnectionsPerHost uint
+	LocalAddr          *net.TCPAddr
 
 	// DNS
 	LookupDomain bool
