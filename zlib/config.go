@@ -21,8 +21,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zcrypto/x509"
+	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/zlog"
 )
 
@@ -135,7 +135,7 @@ type Config struct {
 	// Banners and Data
 	Banners  bool
 	SendData bool
-	Data     []byte
+	Data     [][]byte
 	Raw      bool
 
 	// Mail

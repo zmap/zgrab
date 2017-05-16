@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zmap/zcrypto/tls"
 	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/http"
 	"github.com/zmap/zgrab/ztools/processing"
@@ -37,7 +38,6 @@ import (
 	"github.com/zmap/zgrab/ztools/telnet"
 	"github.com/zmap/zgrab/ztools/xssh"
 	"github.com/zmap/zgrab/ztools/zlog"
-	"github.com/zmap/zcrypto/tls"
 )
 
 type GrabTarget struct {
@@ -477,15 +477,17 @@ func makeGrabber(config *Config) func(*Conn) error {
 
 		if config.SendData {
 			host, _, _ := net.SplitHostPort(c.RemoteAddr().String())
-			msg := bytes.Replace(config.Data, []byte("%s"), []byte(host), -1)
-			msg = bytes.Replace(msg, []byte("%d"), []byte(c.domain), -1)
-			if _, err := c.Write(msg); err != nil {
-				c.erroredComponent = "write"
-				return err
-			}
-			if _, err := c.Read(response); err != nil {
-				c.erroredComponent = "read"
-				return err
+			for _, data := range config.Data {
+				msg := bytes.Replace(data, []byte("%s"), []byte(host), -1)
+				msg = bytes.Replace(msg, []byte("%d"), []byte(c.domain), -1)
+				if _, err := c.Write(msg); err != nil {
+					c.erroredComponent = "write"
+					return err
+				}
+				if _, err := c.Read(response); err != nil {
+					c.erroredComponent = "read"
+					return err
+				}
 			}
 		}
 

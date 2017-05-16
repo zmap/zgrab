@@ -28,12 +28,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zmap/zcrypto/tls"
+	"github.com/zmap/zcrypto/x509"
 	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/scada/bacnet"
 	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/util"
-	"github.com/zmap/zcrypto/x509"
-	"github.com/zmap/zcrypto/tls"
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:^\d\d\d\s.*\r\n$)|(?:^\d\d\d-[\s\S]*\r\n\d\d\d\s.*\r\n$)`)
@@ -154,7 +154,7 @@ func (c *Conn) SetWriteDeadline(t time.Time) error {
 // Delegate here, but record all the things
 func (c *Conn) Write(b []byte) (int, error) {
 	n, err := c.getUnderlyingConn().Write(b)
-	c.grabData.Write = string(b[0:n])
+	c.grabData.Write = append(c.grabData.Write, string(b[0:n]))
 	return n, err
 }
 
@@ -167,7 +167,7 @@ func (c *Conn) BasicBanner() (string, error) {
 
 func (c *Conn) Read(b []byte) (int, error) {
 	n, err := c.getUnderlyingConn().Read(b)
-	c.grabData.Read = string(b[0:n])
+	c.grabData.Read = append(c.grabData.Read, string(b[0:n]))
 	return n, err
 }
 

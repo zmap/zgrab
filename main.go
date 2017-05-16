@@ -27,11 +27,11 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/zmap/zcrypto/tls"
+	"github.com/zmap/zcrypto/x509"
 	"github.com/zmap/zgrab/zlib"
 	"github.com/zmap/zgrab/ztools/processing"
-	"github.com/zmap/zcrypto/x509"
 	"github.com/zmap/zgrab/ztools/zlog"
-	"github.com/zmap/zcrypto/tls"
 )
 
 // Command-line flags
@@ -315,17 +315,20 @@ func init() {
 
 	// Open message file, if applicable
 	if messageFileName != "" {
-		if messageFile, err := os.Open(messageFileName); err != nil {
-			zlog.Fatal(err)
-		} else {
-			buf := make([]byte, 1024)
-			n, err := messageFile.Read(buf)
-			config.SendData = true
-			config.Data = buf[0:n]
-			if err != nil && err != io.EOF {
+		files := strings.Split(messageFileName, ",")
+		for _, file := range files {
+			if messageFile, err := os.Open(file); err != nil {
 				zlog.Fatal(err)
+			} else {
+				buf := make([]byte, 1024)
+				n, err := messageFile.Read(buf)
+				config.SendData = true
+				config.Data = append(config.Data, buf[0:n])
+				if err != nil && err != io.EOF {
+					zlog.Fatal(err)
+				}
+				messageFile.Close()
 			}
-			messageFile.Close()
 		}
 	}
 
