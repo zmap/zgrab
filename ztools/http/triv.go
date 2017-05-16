@@ -13,11 +13,12 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
 	"sync"
+
+	"github.com/zmap/zgrab/ztools/http"
 )
 
 // hello world, the web server
@@ -134,8 +135,5 @@ func main() {
 	http.HandleFunc("/args", ArgServer)
 	http.HandleFunc("/go/hello", HelloServer)
 	http.HandleFunc("/date", DateServer)
-	err := http.ListenAndServe(":12345", nil)
-	if err != nil {
-		log.Panicln("ListenAndServe:", err)
-	}
+	log.Fatal(http.ListenAndServe(":12345", nil))
 }

@@ -55,4 +55,3 @@ func Crc16(bs []byte) (crc uint16) {
 
 	return crc ^ uint16(0xFFFF)
 }
-

@@ -27,11 +27,11 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/zmap/zcrypto/tls"
+	"github.com/zmap/zcrypto/x509"
 	"github.com/zmap/zgrab/zlib"
 	"github.com/zmap/zgrab/ztools/processing"
-	"github.com/zmap/zcrypto/x509"
 	"github.com/zmap/zgrab/ztools/zlog"
-	"github.com/zmap/zcrypto/tls"
 )
 
 // Command-line flags

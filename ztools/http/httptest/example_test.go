@@ -6,27 +6,34 @@ package httptest_test
 
 import (
 	"fmt"
-	"github.com/zmap/zgrab/ztools/http"
-	"github.com/zmap/zgrab/ztools/http/httptest"
+	"io"
 	"io/ioutil"
 	"log"
+
+	"github.com/zmap/zgrab/ztools/http"
+	"github.com/zmap/zgrab/ztools/http/httptest"
 )
 
 func ExampleResponseRecorder() {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "something failed", http.StatusInternalServerError)
+		io.WriteString(w, "<html><body>Hello World!</body></html>")
 	}
 
-	req, err := http.NewRequest("GET", "http://example.com/foo", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	req := httptest.NewRequest("GET", "http://example.com/foo", nil)
 	w := httptest.NewRecorder()
 	handler(w, req)
 
-	fmt.Printf("%d - %s", w.Code, w.Body.String())
-	// Output: 500 - something failed
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	fmt.Println(resp.StatusCode)
+	fmt.Println(resp.Header.Get("Content-Type"))
+	fmt.Println(string(body))
+
+	// Output:
+	// 200
+	// text/html; charset=utf-8
+	// <html><body>Hello World!</body></html>
 }
 
 func ExampleServer() {

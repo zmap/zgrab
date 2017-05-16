@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package http_test
+package http
 
 import (
-	"github.com/zmap/zgrab/ztools/http"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -32,9 +31,9 @@ func TestFileTransport(t *testing.T) {
 	defer os.Remove(dname)
 	defer os.Remove(fname)
 
-	tr := &http.Transport{}
-	tr.RegisterProtocol("file", http.NewFileTransport(http.Dir(dname)))
-	c := http.MakeNewClient()
+	tr := &Transport{}
+	tr.RegisterProtocol("file", NewFileTransport(Dir(dname)))
+	c := MakeNewClient()
 	c.Transport = tr
 
 	fooURLs := []string{"file:///foo.txt", "file://../foo.txt"}
@@ -63,4 +62,5 @@ func TestFileTransport(t *testing.T) {
 	if res.StatusCode != 404 {
 		t.Errorf("for %s, StatusCode = %d, want 404", badURL, res.StatusCode)
 	}
+	res.Body.Close()
 }

@@ -4,133 +4,180 @@
 
 package http
 
+import (
+	"strings"
+	"unicode/utf8"
+)
+
 // This file deals with lexical matters of HTTP
 
-func isSeparator(c byte) bool {
-	switch c {
-	case '(', ')', '<', '>', '@', ',', ';', ':', '\\', '"', '/', '[', ']', '?', '=', '{', '}', ' ', '\t':
-		return true
+var isTokenTable = [127]bool{
+	'!':  true,
+	'#':  true,
+	'$':  true,
+	'%':  true,
+	'&':  true,
+	'\'': true,
+	'*':  true,
+	'+':  true,
+	'-':  true,
+	'.':  true,
+	'0':  true,
+	'1':  true,
+	'2':  true,
+	'3':  true,
+	'4':  true,
+	'5':  true,
+	'6':  true,
+	'7':  true,
+	'8':  true,
+	'9':  true,
+	'A':  true,
+	'B':  true,
+	'C':  true,
+	'D':  true,
+	'E':  true,
+	'F':  true,
+	'G':  true,
+	'H':  true,
+	'I':  true,
+	'J':  true,
+	'K':  true,
+	'L':  true,
+	'M':  true,
+	'N':  true,
+	'O':  true,
+	'P':  true,
+	'Q':  true,
+	'R':  true,
+	'S':  true,
+	'T':  true,
+	'U':  true,
+	'W':  true,
+	'V':  true,
+	'X':  true,
+	'Y':  true,
+	'Z':  true,
+	'^':  true,
+	'_':  true,
+	'`':  true,
+	'a':  true,
+	'b':  true,
+	'c':  true,
+	'd':  true,
+	'e':  true,
+	'f':  true,
+	'g':  true,
+	'h':  true,
+	'i':  true,
+	'j':  true,
+	'k':  true,
+	'l':  true,
+	'm':  true,
+	'n':  true,
+	'o':  true,
+	'p':  true,
+	'q':  true,
+	'r':  true,
+	's':  true,
+	't':  true,
+	'u':  true,
+	'v':  true,
+	'w':  true,
+	'x':  true,
+	'y':  true,
+	'z':  true,
+	'|':  true,
+	'~':  true,
+}
+
+func isToken(r rune) bool {
+	i := int(r)
+	return i < len(isTokenTable) && isTokenTable[i]
+}
+
+func isNotToken(r rune) bool {
+	return !isToken(r)
+}
+
+// headerValuesContainsToken reports whether any string in values
+// contains the provided token, ASCII case-insensitively.
+func headerValuesContainsToken(values []string, token string) bool {
+	for _, v := range values {
+		if headerValueContainsToken(v, token) {
+			return true
+		}
 	}
 	return false
 }
 
-func isCtl(c byte) bool { return (0 <= c && c <= 31) || c == 127 }
+// isOWS reports whether b is an optional whitespace byte, as defined
+// by RFC 7230 section 3.2.3.
+func isOWS(b byte) bool { return b == ' ' || b == '\t' }
 
-func isChar(c byte) bool { return 0 <= c && c <= 127 }
-
-func isAnyText(c byte) bool { return !isCtl(c) }
-
-func isQdText(c byte) bool { return isAnyText(c) && c != '"' }
-
-func isToken(c byte) bool { return isChar(c) && !isCtl(c) && !isSeparator(c) }
-
-// Valid escaped sequences are not specified in RFC 2616, so for now, we assume
-// that they coincide with the common sense ones used by GO. Malformed
-// characters should probably not be treated as errors by a robust (forgiving)
-// parser, so we replace them with the '?' character.
-func httpUnquotePair(b byte) byte {
-	// skip the first byte, which should always be '\'
-	switch b {
-	case 'a':
-		return '\a'
-	case 'b':
-		return '\b'
-	case 'f':
-		return '\f'
-	case 'n':
-		return '\n'
-	case 'r':
-		return '\r'
-	case 't':
-		return '\t'
-	case 'v':
-		return '\v'
-	case '\\':
-		return '\\'
-	case '\'':
-		return '\''
-	case '"':
-		return '"'
+// trimOWS returns x with all optional whitespace removes from the
+// beginning and end.
+func trimOWS(x string) string {
+	// TODO: consider using strings.Trim(x, " \t") instead,
+	// if and when it's fast enough. See issue 10292.
+	// But this ASCII-only code will probably always beat UTF-8
+	// aware code.
+	for len(x) > 0 && isOWS(x[0]) {
+		x = x[1:]
 	}
-	return '?'
+	for len(x) > 0 && isOWS(x[len(x)-1]) {
+		x = x[:len(x)-1]
+	}
+	return x
 }
 
-// raw must begin with a valid quoted string. Only the first quoted string is
-// parsed and is unquoted in result. eaten is the number of bytes parsed, or -1
-// upon failure.
-func httpUnquote(raw []byte) (eaten int, result string) {
-	buf := make([]byte, len(raw))
-	if raw[0] != '"' {
-		return -1, ""
+// headerValueContainsToken reports whether v (assumed to be a
+// 0#element, in the ABNF extension described in RFC 7230 section 7)
+// contains token amongst its comma-separated tokens, ASCII
+// case-insensitively.
+func headerValueContainsToken(v string, token string) bool {
+	v = trimOWS(v)
+	if comma := strings.IndexByte(v, ','); comma != -1 {
+		return tokenEqual(trimOWS(v[:comma]), token) || headerValueContainsToken(v[comma+1:], token)
 	}
-	eaten = 1
-	j := 0 // # of bytes written in buf
-	for i := 1; i < len(raw); i++ {
-		switch b := raw[i]; b {
-		case '"':
-			eaten++
-			buf = buf[0:j]
-			return i + 1, string(buf)
-		case '\\':
-			if len(raw) < i+2 {
-				return -1, ""
-			}
-			buf[j] = httpUnquotePair(raw[i+1])
-			eaten += 2
-			j++
-			i++
-		default:
-			if isQdText(b) {
-				buf[j] = b
-			} else {
-				buf[j] = '?'
-			}
-			eaten++
-			j++
-		}
-	}
-	return -1, ""
+	return tokenEqual(v, token)
 }
 
-// This is a best effort parse, so errors are not returned, instead not all of
-// the input string might be parsed. result is always non-nil.
-func httpSplitFieldValue(fv string) (eaten int, result []string) {
-	result = make([]string, 0, len(fv))
-	raw := []byte(fv)
-	i := 0
-	chunk := ""
-	for i < len(raw) {
-		b := raw[i]
-		switch {
-		case b == '"':
-			eaten, unq := httpUnquote(raw[i:len(raw)])
-			if eaten < 0 {
-				return i, result
-			} else {
-				i += eaten
-				chunk += unq
-			}
-		case isSeparator(b):
-			if chunk != "" {
-				result = result[0 : len(result)+1]
-				result[len(result)-1] = chunk
-				chunk = ""
-			}
-			i++
-		case isToken(b):
-			chunk += string(b)
-			i++
-		case b == '\n' || b == '\r':
-			i++
-		default:
-			chunk += "?"
-			i++
+// lowerASCII returns the ASCII lowercase version of b.
+func lowerASCII(b byte) byte {
+	if 'A' <= b && b <= 'Z' {
+		return b + ('a' - 'A')
+	}
+	return b
+}
+
+// tokenEqual reports whether t1 and t2 are equal, ASCII case-insensitively.
+func tokenEqual(t1, t2 string) bool {
+	if len(t1) != len(t2) {
+		return false
+	}
+	for i, b := range t1 {
+		if b >= utf8.RuneSelf {
+			// No UTF-8 or non-ASCII allowed in tokens.
+			return false
+		}
+		if lowerASCII(byte(b)) != lowerASCII(t2[i]) {
+			return false
 		}
 	}
-	if chunk != "" {
-		result = result[0 : len(result)+1]
-		result[len(result)-1] = chunk
-		chunk = ""
-	}
-	return i, result
+	return true
+}
+
+// isLWS reports whether b is linear white space, according
+// to http://www.w3.org/Protocols/rfc2616/rfc2616-sec2.html#sec2.2
+//      LWS            = [CRLF] 1*( SP | HT )
+func isLWS(b byte) bool { return b == ' ' || b == '\t' }
+
+// isCTL reports whether b is a control byte, according
+// to http://www.w3.org/Protocols/rfc2616/rfc2616-sec2.html#sec2.2
+//      CTL            = <any US-ASCII control character
+//                       (octets 0 - 31) and DEL (127)>
+func isCTL(b byte) bool {
+	const del = 0x7f // a CTL
+	return b < ' ' || b == del
 }

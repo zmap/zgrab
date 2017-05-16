@@ -33,7 +33,7 @@ func NewFileTransport(fs FileSystem) RoundTripper {
 
 func (t fileTransport) RoundTrip(req *Request) (resp *Response, err error) {
 	// We start ServeHTTP in a goroutine, which may take a long
-	// time if the file is large.  The newPopulateResponseWriter
+	// time if the file is large. The newPopulateResponseWriter
 	// call returns a channel which either ServeHTTP or finish()
 	// sends our *Response on, once the *Response itself has been
 	// populated (even if the body itself is still being
@@ -57,9 +57,9 @@ func newPopulateResponseWriter() (*populateResponse, <-chan *Response) {
 				Major: 1,
 				Minor: 0,
 			},
-			Headers: make(Header),
-			Close:   true,
-			Body:    pr,
+			Header: make(Header),
+			Close:  true,
+			Body:   pr,
 		},
 	}
 	return rw, rw.ch
@@ -101,7 +101,7 @@ func (pr *populateResponse) sendResponse() {
 }
 
 func (pr *populateResponse) Header() Header {
-	return pr.res.Headers
+	return pr.res.Header
 }
 
 func (pr *populateResponse) WriteHeader(code int) {

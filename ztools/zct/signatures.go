@@ -17,7 +17,7 @@ import (
 )
 
 var allowVerificationWithNonCompliantKeys = false //flag.Bool("allow_verification_with_non_compliant_keys", false,
-	//"Allow a SignatureVerifier to use keys which are technically non-compliant with RFC6962.")
+//"Allow a SignatureVerifier to use keys which are technically non-compliant with RFC6962.")
 
 // PublicKeyFromPEM parses a PEM formatted block and returns the public key contained within and any remaining unread bytes, or an error.
 func PublicKeyFromPEM(b []byte) (crypto.PublicKey, SHA256Hash, []byte, error) {
