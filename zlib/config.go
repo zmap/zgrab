@@ -133,10 +133,11 @@ type Config struct {
 	SSH SSHScanConfig
 
 	// Banners and Data
-	Banners  bool
-	SendData bool
-	Data     [][]byte
-	Raw      bool
+	Banners   bool
+	SendData  bool
+	Data      [][]byte
+	DataPause uint
+	Raw       bool
 
 	// Mail
 	SMTP       bool

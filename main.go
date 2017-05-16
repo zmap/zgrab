@@ -78,6 +78,7 @@ func init() {
 	flag.UintVar(&config.ConnectionsPerHost, "connections-per-host", 1, "Number of times to connect to each host (results in more output)")
 	flag.BoolVar(&config.Banners, "banners", false, "Read banner upon connection creation")
 	flag.StringVar(&messageFileName, "data", "", "Send a message and read response (%s will be replaced with destination IP)")
+	flag.UintVar(&config.DataPause, "data-pause", 0, "Seconds to pause after receiveing last data from server, before shutting down")
 	flag.StringVar(&config.HTTP.Endpoint, "http", "", "Send an HTTP request to an endpoint")
 	flag.StringVar(&config.HTTP.Method, "http-method", "GET", "Set HTTP request method type")
 	flag.StringVar(&config.HTTP.UserAgent, "http-user-agent", "Mozilla/5.0 zgrab/0.x", "Set a custom HTTP user agent")

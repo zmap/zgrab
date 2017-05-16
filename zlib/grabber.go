@@ -489,6 +489,9 @@ func makeGrabber(config *Config) func(*Conn) error {
 					return err
 				}
 			}
+			if config.DataPause > 0 {
+				time.Sleep(time.Duration(config.DataPause) * time.Second)
+			}
 		}
 
 		if config.EHLO {
