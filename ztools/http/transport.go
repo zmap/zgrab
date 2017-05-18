@@ -1630,7 +1630,6 @@ func (pc *persistConn) readLoopPeekFailLocked(peekErr error) {
 		return
 	}
 	if n := pc.br.Buffered(); n > 0 {
-		buf, _ := pc.br.Peek(n)
 	}
 	if peekErr == io.EOF {
 		// common case.
