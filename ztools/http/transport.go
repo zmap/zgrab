@@ -1631,7 +1631,6 @@ func (pc *persistConn) readLoopPeekFailLocked(peekErr error) {
 	}
 	if n := pc.br.Buffered(); n > 0 {
 		buf, _ := pc.br.Peek(n)
-		log.Printf("Unsolicited response received on idle HTTP channel starting with %q; err=%v", buf, peekErr)
 	}
 	if peekErr == io.EOF {
 		// common case.
