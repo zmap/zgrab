@@ -91,7 +91,7 @@ func BenchmarkEndToEnd(b *testing.B) {
 		if err != nil {
 			b.Fatalf("Client: %v", err)
 		}
-		ch, incoming, err := newCh.Accept()
+		ch, incoming, _ := newCh.Accept()
 		go DiscardRequests(incoming)
 		for i := 0; i < b.N; i++ {
 			if _, err := io.ReadFull(ch, output); err != nil {
