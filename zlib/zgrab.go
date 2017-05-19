@@ -25,7 +25,8 @@ import (
 	"github.com/zmap/zgrab/ztools/scada/dnp3"
 	"github.com/zmap/zgrab/ztools/scada/fox"
 	"github.com/zmap/zgrab/ztools/scada/siemens"
-	"github.com/zmap/zgrab/ztools/ssh"
+	"github.com/zmap/zgrab/ztools/smb"
+    "github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/telnet"
 	"github.com/zmap/zgrab/ztools/xssh"
 )
@@ -60,7 +61,8 @@ type GrabData struct {
 	Heartbleed   *tls.Heartbleed      `json:"heartbleed,omitempty"`
 	Modbus       *ModbusEvent         `json:"modbus,omitempty"`
 	SSH          *ssh.HandshakeLog    `json:"ssh,omitempty"`
-	XSSH         *xssh.HandshakeLog   `json:"xssh,omitempty"`
+    SMB          *smb.SMBLog          `json:"smb,omitempty"`
+    XSSH         *xssh.HandshakeLog   `json:"xssh,omitempty"`
 	FTP          *ftp.FTPLog          `json:"ftp,omitempty"`
 	BACNet       *bacnet.Log          `json:"bacnet,omitempty"`
 	Fox          *fox.FoxLog          `json:"fox,omitempty"`
