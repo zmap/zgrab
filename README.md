@@ -2,6 +2,7 @@ zgrab
 ==================
 
 [![Build Status](https://travis-ci.org/zmap/zgrab.svg?branch=master)](https://travis-ci.org/zmap/zgrab)
+[![Go Report Card](https://goreportcard.com/badge/github.com/zmap/zgrab)](https://goreportcard.com/report/github.com/zmap/zgrab)
 
 A TLS Banner Grabber, in Go
 

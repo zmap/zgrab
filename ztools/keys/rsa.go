@@ -47,7 +47,7 @@ func (rp *RSAPublicKey) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&aux)
 }
 
-// UnmarshalJSON implements teh json.Unmarshal interface
+// UnmarshalJSON implements the json.Unmarshal interface
 func (rp *RSAPublicKey) UnmarshalJSON(b []byte) error {
 	var aux auxRSAPublicKey
 	if err := json.Unmarshal(b, &aux); err != nil {

@@ -737,7 +737,7 @@ func init() {
 	oidDotNotationToNames["0.3.4401.5.3.1.9.23"] = OIDName{ShortName: "CAMELLIA-192-OFB", LongName: "camellia-192-ofb"}
 	oidDotNotationToNames["0.3.4401.5.3.1.9.43"] = OIDName{ShortName: "CAMELLIA-256-OFB", LongName: "camellia-256-ofb"}
 	oidDotNotationToNames["2.5.29.9"] = OIDName{ShortName: "subjectDirectoryAttributes", LongName: "X509v3 Subject Directory Attributes"}
-	oidDotNotationToNames["2.5.29.28"] = OIDName{ShortName: "issuingDistributionPoint", LongName: "X509v3 Issuing Distrubution Point"}
+	oidDotNotationToNames["2.5.29.28"] = OIDName{ShortName: "issuingDistributionPoint", LongName: "X509v3 Issuing Distribution Point"}
 	oidDotNotationToNames["2.5.29.29"] = OIDName{ShortName: "certificateIssuer", LongName: "X509v3 Certificate Issuer"}
 	oidDotNotationToNames["1.2.410.200004"] = OIDName{ShortName: "KISA", LongName: "kisa"}
 	oidDotNotationToNames["1.2.410.200004.1.3"] = OIDName{ShortName: "SEED-ECB", LongName: "seed-ecb"}
