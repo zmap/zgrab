@@ -577,8 +577,8 @@ func Marshal(val interface{}) ([]byte, error) {
 		return nil, err
 	}
 	_, err = f.writeTo(&out)
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 	return out.Bytes(), nil
 }
