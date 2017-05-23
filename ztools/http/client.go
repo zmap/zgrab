@@ -618,7 +618,6 @@ func (c *Client) Do(req *Request) (resp *Response, err error) {
 			}
 
 			return nil, uerr(err)
-
 		}
 
 		var shouldRedirect bool
