@@ -613,7 +613,12 @@ func (c *Client) Do(req *Request) (resp *Response, err error) {
 					timeout: true,
 				}
 			}
+			if err == io.EOF {
+				return nil, err
+			}
+
 			return nil, uerr(err)
+
 		}
 
 		var shouldRedirect bool

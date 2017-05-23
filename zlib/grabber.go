@@ -301,6 +301,10 @@ func makeHTTPGrabber(config *Config, grabData *GrabData) func(string, string, st
 		}
 		grabData.HTTP.Response = resp
 
+		if err.Error() == "EOF" {
+			return nil
+		}
+
 		if err != nil {
 			config.ErrorLog.Errorf("Could not connect to remote host %s: %s", fullURL, err.Error())
 			return err
