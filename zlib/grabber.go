@@ -301,7 +301,7 @@ func makeHTTPGrabber(config *Config, grabData *GrabData) func(string, string, st
 		}
 		grabData.HTTP.Response = resp
 
-		if err != nil && err.Error() == "EOF" {
+		if err != nil && err.Error()[len(err.Error())-3:] == "EOF" {
 			return nil
 		}
 
