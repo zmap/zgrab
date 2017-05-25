@@ -125,7 +125,7 @@ func init() {
 	flag.BoolVar(&config.FTP, "ftp", false, "Read FTP banners")
 	flag.BoolVar(&config.FTPAuthTLS, "ftp-authtls", false, "Collect FTPS certificates in addition to FTP banners")
 	flag.BoolVar(&config.DNP3, "dnp3", false, "Read DNP3 banners")
-    flag.BoolVar(&config.SSH.SSH, "ssh", false, "SSH scan")
+	flag.BoolVar(&config.SSH.SSH, "ssh", false, "SSH scan")
 	flag.StringVar(&config.SSH.Client, "ssh-client", "", "Mimic behavior of a specific SSH client")
 	flag.StringVar(&config.SSH.KexAlgorithms, "ssh-kex-algorithms", "", "Set SSH Key Exchange Algorithms")
 	flag.StringVar(&config.SSH.HostKeyAlgorithms, "ssh-host-key-algorithms", "", "Set SSH Host Key Algorithms")
@@ -138,10 +138,10 @@ func init() {
 	flag.BoolVar(&config.XSSH.XSSH, "xssh", false, "Use the x/crypto SSH scanner")
 
 	// Flags for SMB scanner
-    flag.BoolVar(&config.SMB.SMB, "smb", false, "Scan for SMB")
-    flag.IntVar(&config.SMB.Protocol, "smb-protocol", 1, "Specify which SMB protocol to scan for")
+	flag.BoolVar(&config.SMB.SMB, "smb", false, "Scan for SMB")
+	flag.IntVar(&config.SMB.Protocol, "smb-protocol", 1, "Specify which SMB protocol to scan for")
 
-    flag.Parse()
+	flag.Parse()
 
 	// Validate Go Runtime config
 	if config.GOMAXPROCS < 1 {
@@ -264,15 +264,15 @@ func init() {
 		zlog.Fatal("Must specify one of --tls or --starttls for --heartbleed")
 	}
 
-    // Validate SMB
-    if config.SMB.SMB { 
-        if config.SMB.Protocol == 0 {
-            zlog.Fatal("Must specify protocol version for an SMB scan")
-        }
-        if config.SMB.Protocol < 0 || config.SMB.Protocol > 3 {
-            zlog.Fatal("Invalid SMB Protocol version")
-        }
-    }
+	// Validate SMB
+	if config.SMB.SMB {
+		if config.SMB.Protocol == 0 {
+			zlog.Fatal("Must specify protocol version for an SMB scan")
+		}
+		if config.SMB.Protocol < 0 || config.SMB.Protocol > 3 {
+			zlog.Fatal("Invalid SMB Protocol version")
+		}
+	}
 
 	// Validate port
 	if portFlag > 65535 {

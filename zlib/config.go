@@ -50,8 +50,8 @@ type XSSHScanConfig struct {
 }
 
 type SMBScanConfig struct {
-    SMB bool
-    Protocol int
+	SMB      bool
+	Protocol int
 }
 
 func (sc *SSHScanConfig) GetClientImplementation() (*ssh.ClientImplementation, bool) {
@@ -187,6 +187,6 @@ type Config struct {
 	// x/crypto SSH
 	XSSH XSSHScanConfig
 
-    // SMB 
-    SMB SMBScanConfig
+	// SMB
+	SMB SMBScanConfig
 }

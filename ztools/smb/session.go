@@ -3,18 +3,18 @@ package smb
 import (
 	"bufio"
 	"bytes"
-//	"encoding/asn1"
+	//	"encoding/asn1"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
-//	"fmt"
+	//	"fmt"
 	"io"
 	"log"
 	"net"
 	"runtime/debug"
 
 	//"github.com/zmap/zgrab/ztools/smb/gss"
-//	"github.com/zmap/zgrab/ztools/smb/ntlmssp"
+	//	"github.com/zmap/zgrab/ztools/smb/ntlmssp"
 	"github.com/zmap/zgrab/ztools/smb/encoder"
 )
 
@@ -42,23 +42,23 @@ type Options struct {
 }
 
 func GetSMBBanner(logStruct *SMBLog, conn net.Conn) (err error) {
-    opt := Options{}
-    
-    s := &Session{
-        IsSigningRequired: false,
-        IsAuthenticated:   false, 
-        debug:             false,
-        securityMode:       0,
-        messageID:  0,
-        sessionID: 0,
-        dialect: 0,
-        conn: conn,
-        options: opt,
-        trees: make(map[string]uint32),
-    }
+	opt := Options{}
 
-    err = s.NegotiateProtocol(logStruct)
-    return err
+	s := &Session{
+		IsSigningRequired: false,
+		IsAuthenticated:   false,
+		debug:             false,
+		securityMode:      0,
+		messageID:         0,
+		sessionID:         0,
+		dialect:           0,
+		conn:              conn,
+		options:           opt,
+		trees:             make(map[string]uint32),
+	}
+
+	err = s.NegotiateProtocol(logStruct)
+	return err
 
 }
 
@@ -73,10 +73,10 @@ func (s *Session) Debug(msg string, err error) {
 
 func (s *Session) NegotiateProtocol(logStruct *SMBLog) error {
 	negReq := s.NewNegotiateReq()
-//	s.Debug("Sending NegotiateProtocol request", nil)
+	//	s.Debug("Sending NegotiateProtocol request", nil)
 	buf, err := s.send(negReq, logStruct)
 	if err != nil {
-        //s.Debug("", err)
+		//s.Debug("", err)
 		return err
 	}
 
@@ -84,160 +84,159 @@ func (s *Session) NegotiateProtocol(logStruct *SMBLog) error {
 	//s.Debug("Unmarshalling NegotiateProtocol response", nil)
 	if err := encoder.Unmarshal(buf, &negRes); err != nil {
 		s.Debug("Raw:\n"+hex.Dump(buf), err)
-        if logStruct.IsSMB {
-        //log.Fatal(hex.Dump(buf), err)
-    }
-        //return err
+		if logStruct.IsSMB {
+			//log.Fatal(hex.Dump(buf), err)
+		}
+		//return err
 	}
 
 	if negRes.Header.Status != StatusOk {
 		//logStruct.IsSMB = false
-        return nil 
+		return nil
 	}
 
-	
-    /*
-    // Check SPNEGO security blob
-	spnegoOID, err := gss.ObjectIDStrToInt(gss.SpnegoOid)
-	if err != nil {
-		return err
-	}
-	oid := negRes.SecurityBlob.OID
-	if !oid.Equal(asn1.ObjectIdentifier(spnegoOID)) {
-		return errors.New(fmt.Sprintf(
-			"Unknown security type OID [expecting %s]: %s\n",
-			gss.SpnegoOid,
-			negRes.SecurityBlob.OID))
-	}
-
-	// Check for NTLMSSP support
-	ntlmsspOID, err := gss.ObjectIDStrToInt(gss.NtLmSSPMechTypeOid)
-	if err != nil {
-		s.Debug("", err)
-		return err
-	}
-
-	hasNTLMSSP := false
-	for _, mechType := range negRes.SecurityBlob.Data.MechTypes {
-		if mechType.Equal(asn1.ObjectIdentifier(ntlmsspOID)) {
-			hasNTLMSSP = true
-			break
+	/*
+	    // Check SPNEGO security blob
+		spnegoOID, err := gss.ObjectIDStrToInt(gss.SpnegoOid)
+		if err != nil {
+			return err
 		}
-	}
-	if !hasNTLMSSP {
-		return errors.New("Server does not support NTLMSSP")
-	}
+		oid := negRes.SecurityBlob.OID
+		if !oid.Equal(asn1.ObjectIdentifier(spnegoOID)) {
+			return errors.New(fmt.Sprintf(
+				"Unknown security type OID [expecting %s]: %s\n",
+				gss.SpnegoOid,
+				negRes.SecurityBlob.OID))
+		}
 
-	s.securityMode = negRes.SecurityMode
-	s.dialect = negRes.DialectRevision
+		// Check for NTLMSSP support
+		ntlmsspOID, err := gss.ObjectIDStrToInt(gss.NtLmSSPMechTypeOid)
+		if err != nil {
+			s.Debug("", err)
+			return err
+		}
 
-	// Determine whether signing is required
-	mode := uint16(s.securityMode)
-	if mode&SecurityModeSigningEnabled > 0 {
-		if mode&SecurityModeSigningRequired > 0 {
-			s.IsSigningRequired = true
+		hasNTLMSSP := false
+		for _, mechType := range negRes.SecurityBlob.Data.MechTypes {
+			if mechType.Equal(asn1.ObjectIdentifier(ntlmsspOID)) {
+				hasNTLMSSP = true
+				break
+			}
+		}
+		if !hasNTLMSSP {
+			return errors.New("Server does not support NTLMSSP")
+		}
+
+		s.securityMode = negRes.SecurityMode
+		s.dialect = negRes.DialectRevision
+
+		// Determine whether signing is required
+		mode := uint16(s.securityMode)
+		if mode&SecurityModeSigningEnabled > 0 {
+			if mode&SecurityModeSigningRequired > 0 {
+				s.IsSigningRequired = true
+			} else {
+				s.IsSigningRequired = false
+			}
 		} else {
 			s.IsSigningRequired = false
 		}
-	} else {
-		s.IsSigningRequired = false
-	}
 
-	s.Debug("Sending SessionSetup1 request", nil)
-	ssreq, err := s.NewSessionSetup1Req()
-	if err != nil {
-		s.Debug("", err)
-		return err
-	}
-	ssres, err := NewSessionSetup1Res()
-	if err != nil {
-		s.Debug("", err)
-		return err
-	}
-	buf, err = encoder.Marshal(ssreq)
-	if err != nil {
-		s.Debug("", err)
-		return err
-	}
+		s.Debug("Sending SessionSetup1 request", nil)
+		ssreq, err := s.NewSessionSetup1Req()
+		if err != nil {
+			s.Debug("", err)
+			return err
+		}
+		ssres, err := NewSessionSetup1Res()
+		if err != nil {
+			s.Debug("", err)
+			return err
+		}
+		buf, err = encoder.Marshal(ssreq)
+		if err != nil {
+			s.Debug("", err)
+			return err
+		}
 
-	buf, err = s.send(ssreq)
-	if err != nil {
-		s.Debug("Raw:\n"+hex.Dump(buf), err)
-		return err
-	}
+		buf, err = s.send(ssreq)
+		if err != nil {
+			s.Debug("Raw:\n"+hex.Dump(buf), err)
+			return err
+		}
 
-	s.Debug("Unmarshalling SessionSetup1 response", nil)
-	if err := encoder.Unmarshal(buf, &ssres); err != nil {
-		s.Debug("", err)
-		return err
-	}
+		s.Debug("Unmarshalling SessionSetup1 response", nil)
+		if err := encoder.Unmarshal(buf, &ssres); err != nil {
+			s.Debug("", err)
+			return err
+		}
 
-	challenge := ntlmssp.NewChallenge()
-	resp := ssres.SecurityBlob
-	if err := encoder.Unmarshal(resp.ResponseToken, &challenge); err != nil {
-		s.Debug("", err)
-		return err
-	}
+		challenge := ntlmssp.NewChallenge()
+		resp := ssres.SecurityBlob
+		if err := encoder.Unmarshal(resp.ResponseToken, &challenge); err != nil {
+			s.Debug("", err)
+			return err
+		}
 
-	if ssres.Header.Status != StatusMoreProcessingRequired {
-		status, _ := StatusMap[negRes.Header.Status]
-		return errors.New(fmt.Sprintf("NT Status Error: %s\n", status))
-	}
-	s.sessionID = ssres.Header.SessionID
+		if ssres.Header.Status != StatusMoreProcessingRequired {
+			status, _ := StatusMap[negRes.Header.Status]
+			return errors.New(fmt.Sprintf("NT Status Error: %s\n", status))
+		}
+		s.sessionID = ssres.Header.SessionID
 
-	s.Debug("Sending SessionSetup2 request", nil)
-	ss2req, err := s.NewSessionSetup2Req()
-	if err != nil {
-		s.Debug("", err)
-		return err
-	}
+		s.Debug("Sending SessionSetup2 request", nil)
+		ss2req, err := s.NewSessionSetup2Req()
+		if err != nil {
+			s.Debug("", err)
+			return err
+		}
 
-	var auth ntlmssp.Authenticate
-	if s.options.Hash != "" {
-		// Hash present, use it for auth
-		s.Debug("Performing hash-based authentication", nil)
-		auth = ntlmssp.NewAuthenticateHash(s.options.Domain, s.options.User, s.options.Workstation, s.options.Hash, challenge)
-	} else {
-		// No hash, use password
-		s.Debug("Performing password-based authentication", nil)
-		auth = ntlmssp.NewAuthenticatePass(s.options.Domain, s.options.User, s.options.Workstation, s.options.Password, challenge)
-	}
+		var auth ntlmssp.Authenticate
+		if s.options.Hash != "" {
+			// Hash present, use it for auth
+			s.Debug("Performing hash-based authentication", nil)
+			auth = ntlmssp.NewAuthenticateHash(s.options.Domain, s.options.User, s.options.Workstation, s.options.Hash, challenge)
+		} else {
+			// No hash, use password
+			s.Debug("Performing password-based authentication", nil)
+			auth = ntlmssp.NewAuthenticatePass(s.options.Domain, s.options.User, s.options.Workstation, s.options.Password, challenge)
+		}
 
-	responseToken, err := encoder.Marshal(auth)
-	if err != nil {
-		s.Debug("", err)
-		return err
-	}
-	resp2 := ss2req.SecurityBlob
-	resp2.ResponseToken = responseToken
-	ss2req.SecurityBlob = resp2
-	ss2req.Header.Credits = 127
-	buf, err = encoder.Marshal(ss2req)
-	if err != nil {
-		s.Debug("", err)
-		return err
-	}
+		responseToken, err := encoder.Marshal(auth)
+		if err != nil {
+			s.Debug("", err)
+			return err
+		}
+		resp2 := ss2req.SecurityBlob
+		resp2.ResponseToken = responseToken
+		ss2req.SecurityBlob = resp2
+		ss2req.Header.Credits = 127
+		buf, err = encoder.Marshal(ss2req)
+		if err != nil {
+			s.Debug("", err)
+			return err
+		}
 
-	buf, err = s.send(ss2req)
-	if err != nil {
-		s.Debug("", err)
-		return err
-	}
-	s.Debug("Unmarshalling SessionSetup2 response", nil)
-	var authResp Header
-	if err := encoder.Unmarshal(buf, &authResp); err != nil {
-		s.Debug("Raw:\n"+hex.Dump(buf), err)
-		return err
-	}
-	if authResp.Status != StatusOk {
-		status, _ := StatusMap[authResp.Status]
-		return errors.New(fmt.Sprintf("NT Status Error: %s\n", status))
-	}
-	s.IsAuthenticated = true
+		buf, err = s.send(ss2req)
+		if err != nil {
+			s.Debug("", err)
+			return err
+		}
+		s.Debug("Unmarshalling SessionSetup2 response", nil)
+		var authResp Header
+		if err := encoder.Unmarshal(buf, &authResp); err != nil {
+			s.Debug("Raw:\n"+hex.Dump(buf), err)
+			return err
+		}
+		if authResp.Status != StatusOk {
+			status, _ := StatusMap[authResp.Status]
+			return errors.New(fmt.Sprintf("NT Status Error: %s\n", status))
+		}
+		s.IsAuthenticated = true
 
-	s.Debug("Completed NegotiateProtocol and SessionSetup", nil)
+		s.Debug("Completed NegotiateProtocol and SessionSetup", nil)
 	*/
-    return nil
+	return nil
 }
 
 func (s *Session) TreeConnect(name string, logStruct *SMBLog) error {
@@ -368,11 +367,11 @@ func (s *Session) send(req interface{}, logStruct *SMBLog) (res []byte, err erro
 	default:
 		return nil, errors.New("Protocol Not Implemented")
 	case ProtocolSmb2:
-        logStruct.IsSMB = true
-        logStruct.SupportV1 = false
-    case ProtocolSmb:
-        logStruct.IsSMB = true
-        logStruct.SupportV1 = true
+		logStruct.IsSMB = true
+		logStruct.SupportV1 = false
+	case ProtocolSmb:
+		logStruct.IsSMB = true
+		logStruct.SupportV1 = true
 	}
 
 	s.messageID++

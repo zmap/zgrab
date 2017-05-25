@@ -36,7 +36,7 @@ import (
 	"github.com/zmap/zgrab/ztools/scada/fox"
 	"github.com/zmap/zgrab/ztools/scada/siemens"
 	"github.com/zmap/zgrab/ztools/smb"
-    "github.com/zmap/zgrab/ztools/telnet"
+	"github.com/zmap/zgrab/ztools/telnet"
 	"github.com/zmap/zgrab/ztools/xssh"
 	"github.com/zmap/zgrab/ztools/zlog"
 )
@@ -476,14 +476,14 @@ func makeGrabber(config *Config) func(*Conn) error {
 			}
 		}
 
-        if config.SMB.SMB {
-            c.grabData.SMB = new(smb.SMBLog)
+		if config.SMB.SMB {
+			c.grabData.SMB = new(smb.SMBLog)
 
-            if err := smb.GetSMBBanner(c.grabData.SMB, c.getUnderlyingConn()); err != nil {
-                c.erroredComponent = "smb"
-                return err
-            }
-        }
+			if err := smb.GetSMBBanner(c.grabData.SMB, c.getUnderlyingConn()); err != nil {
+				c.erroredComponent = "smb"
+				return err
+			}
+		}
 
 		if config.SendData {
 			host, _, _ := net.SplitHostPort(c.RemoteAddr().String())
@@ -599,7 +599,7 @@ func makeXSSHGrabber(gblConfig *Config, grabData GrabData) func(string) error {
 }
 
 func GrabBanner(config *Config, target *GrabTarget) *Grab {
-    if config.XSSH.XSSH {
+	if config.XSSH.XSSH {
 		t := time.Now()
 
 		grabData := GrabData{XSSH: new(xssh.HandshakeLog)}

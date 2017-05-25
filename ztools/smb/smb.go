@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/zmap/zgrab/ztools/smb/encoder"
 	"github.com/zmap/zgrab/ztools/smb/gss"
 	"github.com/zmap/zgrab/ztools/smb/ntlmssp"
-	"github.com/zmap/zgrab/ztools/smb/encoder"
 )
 
 const ProtocolSmb = "\xFFSMB"
