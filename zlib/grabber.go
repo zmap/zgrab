@@ -301,13 +301,23 @@ func makeHTTPGrabber(config *Config, grabData *GrabData) func(string, string, st
 		}
 		grabData.HTTP.Response = resp
 
-		if err != nil && err.Error()[len(err.Error())-3:] == "EOF" {
-			return nil
+		if err != nil {
+			if urlError, ok := err.(*url.Error); ok {
+				if urlError.Err == io.EOF {
+					zlog.Errorf("yolo %v: %v", err, resp)
+					err = nil
+				}
+			}
 		}
 
 		if err != nil {
 			config.ErrorLog.Errorf("Could not connect to remote host %s: %s", fullURL, err.Error())
 			return err
+		}
+
+		if resp == nil || resp.ContentLength <= 0 {
+			// No body
+			return nil
 		}
 
 		b := new(bytes.Buffer)
