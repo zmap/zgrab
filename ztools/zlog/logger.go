@@ -97,7 +97,7 @@ func New(out io.Writer, prefix string) *Logger {
 	if ok {
 		stats, _ := file.Stat()
 		// Check to see if output is a terminal
-		if (stats.Mode() & os.ModeCharDevice) != 0 {
+		if stats != nil && (stats.Mode() & os.ModeCharDevice) != 0 {
 			useColor = true
 		}
 	}
