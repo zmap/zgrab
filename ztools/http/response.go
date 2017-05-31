@@ -39,7 +39,7 @@ type Response struct {
 	// omitted from Header.
 	//
 	// Keys in the map are canonicalized (see CanonicalHeaderKey).
-	Header Header `json:"header,omitempty"`
+	Header Header `json:"headers,omitempty"`
 
 	// Body represents the response body.
 	//
