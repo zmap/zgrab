@@ -166,7 +166,7 @@ type Request struct {
 	// and Connection are automatically written when needed and
 	// values in Header may be ignored. See the documentation
 	// for the Request.Write method.
-	Header Header `json:"header,omitempty"`
+	Header Header `json:"headers,omitempty"`
 
 	// Body is the request's body.
 	//
@@ -265,7 +265,7 @@ type Request struct {
 	// not mutate Trailer.
 	//
 	// Few HTTP clients, servers, or proxies support HTTP trailers.
-	Trailer Header `json:"trailer,omitempty"`
+	Trailer Header `json:"trailers,omitempty"`
 
 	// RemoteAddr allows HTTP servers and other software to record
 	// the network address that sent the request, usually for
