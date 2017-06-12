@@ -266,11 +266,8 @@ func init() {
 
 	// Validate SMB
 	if config.SMB.SMB {
-		if config.SMB.Protocol == 0 {
-			zlog.Fatal("Must specify protocol version for an SMB scan")
-		}
-		if config.SMB.Protocol < 0 || config.SMB.Protocol > 3 {
-			zlog.Fatal("Invalid SMB Protocol version")
+		if config.SMB.Protocol != 1 {
+			zlog.Fatal("Currently only smbv1 is supported")
 		}
 	}
 
