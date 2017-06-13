@@ -137,6 +137,10 @@ func init() {
 	// Flags for XSSH scanner
 	flag.BoolVar(&config.XSSH.XSSH, "xssh", false, "Use the x/crypto SSH scanner")
 
+	// Flags for SMB scanner
+	flag.BoolVar(&config.SMB.SMB, "smb", false, "Scan for SMB")
+	flag.IntVar(&config.SMB.Protocol, "smb-protocol", 1, "Specify which SMB protocol to scan for")
+
 	flag.Parse()
 
 	// Validate Go Runtime config
@@ -258,6 +262,13 @@ func init() {
 	// Heartbleed requires STARTTLS or TLS
 	if config.Heartbleed && !(config.StartTLS || config.TLS) {
 		zlog.Fatal("Must specify one of --tls or --starttls for --heartbleed")
+	}
+
+	// Validate SMB
+	if config.SMB.SMB {
+		if config.SMB.Protocol != 1 {
+			zlog.Fatal("Currently only smbv1 is supported")
+		}
 	}
 
 	// Validate port

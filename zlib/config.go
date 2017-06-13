@@ -49,6 +49,11 @@ type XSSHScanConfig struct {
 	XSSH bool
 }
 
+type SMBScanConfig struct {
+	SMB      bool
+	Protocol int
+}
+
 func (sc *SSHScanConfig) GetClientImplementation() (*ssh.ClientImplementation, bool) {
 	if sc.Client == "" {
 		return &ssh.OpenSSH_6_6p1, true
@@ -181,4 +186,7 @@ type Config struct {
 
 	// x/crypto SSH
 	XSSH XSSHScanConfig
+
+	// SMB
+	SMB SMBScanConfig
 }

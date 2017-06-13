@@ -35,6 +35,7 @@ import (
 	"github.com/zmap/zgrab/ztools/scada/dnp3"
 	"github.com/zmap/zgrab/ztools/scada/fox"
 	"github.com/zmap/zgrab/ztools/scada/siemens"
+	"github.com/zmap/zgrab/ztools/smb"
 	"github.com/zmap/zgrab/ztools/telnet"
 	"github.com/zmap/zgrab/ztools/xssh"
 	"github.com/zmap/zgrab/ztools/zlog"
@@ -471,6 +472,15 @@ func makeGrabber(config *Config) func(*Conn) error {
 		if config.SSH.SSH {
 			if err := c.SSHHandshake(); err != nil {
 				c.erroredComponent = "ssh"
+				return err
+			}
+		}
+
+		if config.SMB.SMB {
+			c.grabData.SMB = new(smb.SMBLog)
+
+			if err := smb.GetSMBBanner(c.grabData.SMB, c.getUnderlyingConn()); err != nil {
+				c.erroredComponent = "smb"
 				return err
 			}
 		}
