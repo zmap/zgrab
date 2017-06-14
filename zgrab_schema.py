@@ -670,6 +670,16 @@ zgrab_s7 = Record({
 
 zschema.registry.register_schema("zgrab-s7", zgrab_s7)
 
+zgrab_smb = Record({
+    "data":SubRecord({
+        "smb":SubRecord({
+           "smbv1":Boolean(), 
+        }),
+    }),
+}, extends=zgrab_base)
+
+zschema.registry.register_schema("zgrab-smb", zgrab_smb)
+
 zgrab_ssh_protocol_agreement = SubRecord({
     "raw_banner": AnalyzedString(),
     "protocol_version": String(),
