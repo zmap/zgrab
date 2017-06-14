@@ -673,7 +673,7 @@ zschema.registry.register_schema("zgrab-s7", zgrab_s7)
 zgrab_smb = Record({
     "data":SubRecord({
         "smb":SubRecord({
-           "smbv1":Boolean(), 
+           "smbv1_support":Boolean(), 
         }),
     }),
 }, extends=zgrab_base)
