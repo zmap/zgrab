@@ -773,7 +773,7 @@ zgrab_xssh = Record({
                 "client_to_server_languages":ListOf(String()),
                 "server_to_client_languages":ListOf(String()),
                 "first_kex_follows":Boolean(),
-                "reserved":Short(),
+                "reserved":Unsigned32BitInteger(),
             }),
             "userauth":ListOf(String()),
             "algorithm_selection":SubRecord({
@@ -820,7 +820,7 @@ zgrab_xssh = Record({
                         }),
                         "serial":String(),
                         "cert_type":SubRecord({
-                            "id":Integer(),
+                            "id":Unsigned32BitInteger(),
                             "name":String(),
                         }),
                         "key_id":String(),
@@ -828,7 +828,7 @@ zgrab_xssh = Record({
                         "validity":SubRecord({
                             "valid_after":DateTime(doc="Timestamp of when certificate is first valid. Timezone is UTC."),
                             "valid_before":DateTime(doc="Timestamp of when certificate expires. Timezone is UTC."),
-                            "length":Integer(),
+                            "length":Signed64BitInteger(),
                         }),
                         "reserved":Binary(),
                         "signature_key":SubRecord({
