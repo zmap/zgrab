@@ -673,7 +673,7 @@ zschema.registry.register_schema("zgrab-s7", zgrab_s7)
 zgrab_smb = Record({
     "data":SubRecord({
         "smb":SubRecord({
-           "smbv1_support":Boolean(), 
+           "smbv1_support":Boolean(),
         }),
     }),
 }, extends=zgrab_base)
@@ -883,5 +883,5 @@ if __name__ == '__main__':
     schema_types = ['bigquery', 'elasticsearch', 'json', 'text', 'flat']
     for name in zschema.registry.all_schemas():
         for schema_type in schema_types:
-            cmd = ["zschema", schema_type, __file__ + ":" + name] 
+            cmd = ["zschema", schema_type, __file__ + ":" + name]
             call(cmd)
