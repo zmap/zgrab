@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 )
 
 // The Permissions type holds fine-grained permissions that are
@@ -56,10 +57,11 @@ func (jOptions *JsonCriticalOptions) MarshalJSON() ([]byte, error) {
 			}
 		}
 
+		jsonSafeKey := strings.Replace(key, "-", "_", -1)
 		if isKnown {
-			knownOpt[key] = value
+			knownOpt[jsonSafeKey] = value
 		} else {
-			unknownOpt = append(unknownOpt, fmt.Sprintf("%s : %s", key, value))
+			unknownOpt = append(unknownOpt, fmt.Sprintf("%s : %s", jsonSafeKey, value))
 		}
 	}
 
@@ -91,10 +93,11 @@ func (ext *JsonExtensions) MarshalJSON() ([]byte, error) {
 			}
 		}
 
+		jsonSafeKey := strings.Replace(key, "-", "_", -1)
 		if isKnown {
-			knownExt[key] = value
+			knownExt[jsonSafeKey] = value
 		} else {
-			unknownExt = append(unknownExt, fmt.Sprintf("%s : %s", key, value))
+			unknownExt = append(unknownExt, fmt.Sprintf("%s : %s", jsonSafeKey, value))
 		}
 	}
 

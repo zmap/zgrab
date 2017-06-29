@@ -854,18 +854,18 @@ zgrab_xssh = Record({
                         "parse_error":String(),
                         "extensions":SubRecord({
                             "known":SubRecord({
-                                "permit-X11-forwarding":String(),
-                                "permit-agent-forwarding":String(),
-                                "permit-port-forwarding":String(),
-                                "permit-pty":String(),
-                                "permit-user-rc":String(),
+                                "permit_X11_forwarding":String(),
+                                "permit_agent_forwarding":String(),
+                                "permit_port_forwarding":String(),
+                                "permit_pty":String(),
+                                "permit_user_rc":String(),
                             }),
                             "unknown":ListOf(String()),
                         }),
                         "critical_options":SubRecord({
                             "known":SubRecord({
-                                "force-command":String(),
-                                "source-address":String(),
+                                "force_command":String(),
+                                "source_address":String(),
                             }),
                             "unknown":ListOf(String()),
                         })
