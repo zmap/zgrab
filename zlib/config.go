@@ -189,4 +189,6 @@ type Config struct {
 
 	// SMB
 	SMB SMBScanConfig
+
+	NoLocalhost bool
 }

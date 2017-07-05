@@ -140,6 +140,7 @@ func init() {
 	// Flags for SMB scanner
 	flag.BoolVar(&config.SMB.SMB, "smb", false, "Scan for SMB")
 	flag.IntVar(&config.SMB.Protocol, "smb-protocol", 1, "Specify which SMB protocol to scan for")
+	flag.BoolVar(&config.NoLocalhost, "no-redirect-localhost", false, "Follow redirect to localhost")
 
 	flag.Parse()
 
