@@ -230,9 +230,14 @@ func makeHTTPGrabber(config *Config, grabData *GrabData) func(string, string, st
 			TLSClientConfig:     tlsConfig,
 		}
 
+		var redirLocalhost = errors.New("Redirecting to Localhost")
+
 		client := http.MakeNewClient()
 		client.UserAgent = config.HTTP.UserAgent
 		client.CheckRedirect = func(req *http.Request, res *http.Response, via []*http.Request) error {
+			if req.URL.Hostname()[:3] == "127" {
+				return redirLocalhost
+			}
 			grabData.HTTP.RedirectResponseChain = append(grabData.HTTP.RedirectResponseChain, res)
 			b := new(bytes.Buffer)
 			maxReadLen := int64(config.HTTP.MaxSize) * 1024
@@ -301,6 +306,14 @@ func makeHTTPGrabber(config *Config, grabData *GrabData) func(string, string, st
 			defer resp.Body.Close()
 		}
 		grabData.HTTP.Response = resp
+
+		if err != nil {
+			if urlError, ok := err.(*url.Error); ok {
+				if urlError.Err == redirLocalhost {
+					err = nil
+				}
+			}
+		}
 
 		if err != nil {
 			config.ErrorLog.Errorf("Could not connect to remote host %s: %s", fullURL, err.Error())
