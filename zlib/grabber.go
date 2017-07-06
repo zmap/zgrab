@@ -216,8 +216,10 @@ func containsPort(host string) bool {
 }
 
 func redirectsToLocalhost(host string) bool {
-	if host[:3] == "127" || host[:3] == "::1" || host == "localhost" {
-		return true
+	if len(host) >= 3 {
+		if host[:3] == "127" || host[:3] == "::1" || host == "localhost" {
+			return true
+		}
 	}
 	return false
 }
