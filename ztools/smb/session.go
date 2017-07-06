@@ -127,7 +127,7 @@ func (s *Session) send(req interface{}, logStruct *SMBLog) (res []byte, err erro
 		return
 	}
 	if size > 0x00FFFFFF {
-		return nil, errors.New("Invalid NetBIOS Session message")
+		return nil, errors.New("invalid NetBIOS Session message")
 	}
 
 	data := make([]byte, size)
@@ -136,14 +136,16 @@ func (s *Session) send(req interface{}, logStruct *SMBLog) (res []byte, err erro
 		s.Debug("", err)
 		return nil, err
 	}
-	if uint32(l) != size {
-		return nil, errors.New("Message size invalid")
+
+	if uint32(l) != size || len(data) < 4 {
+		return nil, errors.New("message size invalid")
 	}
 
+	//First four bytes contain protocol ID
 	protID := data[0:4]
 	switch string(protID) {
 	default:
-		return nil, errors.New("Protocol Not Implemented")
+		return nil, errors.New("protocol not implemented")
 	case ProtocolSmb:
 		logStruct.SupportV1 = true
 	}
