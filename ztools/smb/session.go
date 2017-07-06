@@ -136,7 +136,7 @@ func (s *Session) send(req interface{}, logStruct *SMBLog) (res []byte, err erro
 		s.Debug("", err)
 		return nil, err
 	}
-	if uint32(l) != size {
+	if uint32(l) != size || len(data) < 4 {
 		return nil, errors.New("Message size invalid")
 	}
 
