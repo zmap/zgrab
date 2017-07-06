@@ -242,7 +242,7 @@ func makeHTTPGrabber(config *Config, grabData *GrabData) func(string, string, st
 		client := http.MakeNewClient()
 		client.UserAgent = config.HTTP.UserAgent
 		client.CheckRedirect = func(req *http.Request, res *http.Response, via []*http.Request) error {
-			if config.NoLocalhost && redirectsToLocalhost(req.URL.Hostname()) {
+			if !config.HTTP.FollowLocalhostRedirects && redirectsToLocalhost(req.URL.Hostname()) {
 				return ErrRedirLocalhost
 			}
 			grabData.HTTP.RedirectResponseChain = append(grabData.HTTP.RedirectResponseChain, res)
