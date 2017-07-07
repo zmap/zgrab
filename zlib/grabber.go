@@ -216,9 +216,25 @@ func containsPort(host string) bool {
 }
 
 func redirectsToLocalhost(host string) bool {
-	if len(host) >= 3 {
-		if host[:3] == "127" || host[:3] == "::1" || host == "localhost" {
+	if i := net.ParseIP(host); i != nil {
+		return i.IsLoopback() || i.Equal(net.IPv4zero)
+	} else {
+		if host == "localhost" {
 			return true
+		} else {
+			addrs, err := net.LookupHost(host)
+			if err != nil {
+				zlog.Error(host)
+			}
+			for i := 0; i < len(addrs); i++ {
+				ip := net.ParseIP(addrs[i])
+				if ip == nil {
+					zlog.Error(addrs[i])
+				}
+				if ip.IsLoopback() || ip.Equal(net.IPv4zero) {
+					return true
+				}
+			}
 		}
 	}
 	return false
