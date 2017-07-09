@@ -222,17 +222,13 @@ func redirectsToLocalhost(host string) bool {
 		if host == "localhost" {
 			return true
 		} else {
-			addrs, err := net.LookupHost(host)
-			if err != nil {
-				zlog.Error(host)
-			}
-			for i := 0; i < len(addrs); i++ {
-				ip := net.ParseIP(addrs[i])
-				if ip == nil {
-					zlog.Error(addrs[i])
-				}
-				if ip.IsLoopback() || ip.Equal(net.IPv4zero) {
-					return true
+			if addrs, err := net.LookupHost(host); err == nil {
+				for _, i := range addrs {
+					if ip := net.ParseIP(i); ip != nil {
+						if ip.IsLoopback() || ip.Equal(net.IPv4zero) {
+							return true
+						}
+					}
 				}
 			}
 		}
