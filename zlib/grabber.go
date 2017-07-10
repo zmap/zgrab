@@ -41,6 +41,8 @@ import (
 	"github.com/zmap/zgrab/ztools/zlog"
 )
 
+var ErrRedirLocalhost = errors.New("Redirecting to Localhost")
+
 type GrabTarget struct {
 	Addr   net.IP
 	Domain string
@@ -213,6 +215,27 @@ func containsPort(host string) bool {
 	return strings.LastIndex(host, ":") > strings.LastIndex(host, "]")
 }
 
+func redirectsToLocalhost(host string) bool {
+	if i := net.ParseIP(host); i != nil {
+		return i.IsLoopback() || i.Equal(net.IPv4zero)
+	} else {
+		if host == "localhost" {
+			return true
+		} else {
+			if addrs, err := net.LookupHost(host); err == nil {
+				for _, i := range addrs {
+					if ip := net.ParseIP(i); ip != nil {
+						if ip.IsLoopback() || ip.Equal(net.IPv4zero) {
+							return true
+						}
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
 func makeHTTPGrabber(config *Config, grabData *GrabData) func(string, string, string) error {
 	g := func(urlHost, endpoint, httpHost string) (err error) {
 
@@ -233,6 +256,9 @@ func makeHTTPGrabber(config *Config, grabData *GrabData) func(string, string, st
 		client := http.MakeNewClient()
 		client.UserAgent = config.HTTP.UserAgent
 		client.CheckRedirect = func(req *http.Request, res *http.Response, via []*http.Request) error {
+			if !config.HTTP.FollowLocalhostRedirects && redirectsToLocalhost(req.URL.Hostname()) {
+				return ErrRedirLocalhost
+			}
 			grabData.HTTP.RedirectResponseChain = append(grabData.HTTP.RedirectResponseChain, res)
 			b := new(bytes.Buffer)
 			maxReadLen := int64(config.HTTP.MaxSize) * 1024
@@ -301,6 +327,14 @@ func makeHTTPGrabber(config *Config, grabData *GrabData) func(string, string, st
 			defer resp.Body.Close()
 		}
 		grabData.HTTP.Response = resp
+
+		if err != nil {
+			if urlError, ok := err.(*url.Error); ok {
+				if urlError.Err == ErrRedirLocalhost {
+					err = nil
+				}
+			}
+		}
 
 		if err != nil {
 			config.ErrorLog.Errorf("Could not connect to remote host %s: %s", fullURL, err.Error())

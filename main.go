@@ -84,6 +84,7 @@ func init() {
 	flag.StringVar(&config.HTTP.ProxyDomain, "http-proxy-domain", "", "Send a CONNECT <domain> first")
 	flag.IntVar(&config.HTTP.MaxSize, "http-max-size", 256, "Max kilobytes to read in response to an HTTP request")
 	flag.IntVar(&config.HTTP.MaxRedirects, "http-max-redirects", 0, "Max number of redirects to follow")
+	flag.BoolVar(&config.HTTP.FollowLocalhostRedirects, "follow-localhost-redirects", true, "Follow HTTP redirects to localhost")
 	flag.BoolVar(&config.TLSExtendedRandom, "tls-extended-random", false, "send extended random extension")
 	flag.BoolVar(&config.SignedCertificateTimestampExt, "signed-certificate-timestamp", true, "request SCTs during TLS handshake")
 
