@@ -144,7 +144,7 @@ func ReadTimestampedEntryInto(r io.Reader, t *TimestampedEntry) error {
 	default:
 		return fmt.Errorf("unknown EntryType: %d", t.EntryType)
 	}
-	t.Extensions, err = readVarBytes(r, ExtensionsLengthBytes)
+	t.Extensions, _ = readVarBytes(r, ExtensionsLengthBytes)
 	return nil
 }
 

@@ -183,7 +183,7 @@ func (kxi *KeyExchangeInit) Marshal() ([]byte, error) {
 	if b, err = kxi.LanguageClientToServer.MarshalInto(b); err != nil {
 		return nil, err
 	}
-	if b, err = kxi.LanguageServerToClient.MarshalInto(b); err != nil {
+	if _, err = kxi.LanguageServerToClient.MarshalInto(b); err != nil {
 		return nil, err
 	}
 	return out, nil

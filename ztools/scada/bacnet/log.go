@@ -42,7 +42,7 @@ func (log *Log) queryStringProperty(c net.Conn, oid ObjectID, pid PropertyID) (v
 	if body, err, _ = log.sendReadProperty(c, oid, pid); err != nil {
 		return
 	}
-	body, value, err = readStringProperty(body)
+	_, value, err = readStringProperty(body)
 	return
 }
 
@@ -55,7 +55,7 @@ func (log *Log) QueryDeviceID(c net.Conn) (err error) {
 		return errNotBACNet
 	}
 	var instanceNumber uint32
-	body, instanceNumber, err = readInstanceNumber(body)
+	_, instanceNumber, err = readInstanceNumber(body)
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func (log *Log) QueryVendorNumber(c net.Conn) (err error) {
 		return
 	}
 	var vendorID uint16
-	body, vendorID, err = readVendorID(body)
+	_, vendorID, err = readVendorID(body)
 	if err != nil {
 		return err
 	}

@@ -2422,7 +2422,7 @@ func TestTLSServerClosesConnection(t *testing.T) {
 			errs = append(errs, err)
 			continue
 		}
-		slurp, err = ioutil.ReadAll(res.Body)
+		_, err = ioutil.ReadAll(res.Body)
 		if err != nil {
 			errs = append(errs, err)
 			continue

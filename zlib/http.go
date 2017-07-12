@@ -65,8 +65,8 @@ type HTTPRequest struct {
 }
 
 type HTTPResponse struct {
-	VersionMajor int         `json:"version_major",omitempty"`
-	VersionMinor int         `json:"version_minor",omitempty"`
+	VersionMajor int         `json:"version_major,omitempty"`
+	VersionMinor int         `json:"version_minor,omitempty"`
 	StatusCode   int         `json:"status_code,omitempty"`
 	StatusLine   string      `json:"status_line,omitempty"`
 	Headers      HTTPHeaders `json:"headers,omitempty"`
