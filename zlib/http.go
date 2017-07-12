@@ -84,11 +84,6 @@ type HTTP struct {
 	RedirectResponseChain []*http.Response `json:"redirect_response_chain,omitempty"`
 }
 
-type HTTPRequestResponse struct {
-	Request  *HTTPRequest  `json:"request,omitempty"`
-	Response *HTTPResponse `json:"response,omitempty"`
-}
-
 func init() {
 	dropHeaders = make(map[string]int, 8)
 	dropHeaders["cookie"] = 1
@@ -145,57 +140,4 @@ func init() {
 	knownHeaders["x_content_duration"] = 1
 	knownHeaders["x_real_ip"] = 1
 	knownHeaders["x_forwarded_for"] = 1
-}
-
-func (response HTTPResponse) isRedirect() bool {
-	if response.StatusCode >= 300 && response.StatusCode < 400 {
-		return true
-	}
-
-	return false
-}
-
-func (response HTTPResponse) canRedirectWithConn(conn *Conn) bool {
-
-	targetUrl, targetUrlError := url.Parse(conn.domain)
-	if targetUrlError != nil {
-		return false
-	}
-
-	locationHeaders, ok := response.Headers["location"]
-	if !ok || locationHeaders == nil {
-		return false
-	}
-
-	redirectUrl, redirectUrlError := url.Parse(locationHeaders.(string))
-	if redirectUrlError != nil {
-		return false
-	}
-
-	remoteIpAddress, _, remoteIpAddressErr := net.SplitHostPort(conn.RemoteAddr().String())
-	if remoteIpAddressErr != nil {
-		return false
-	}
-
-	targetHost := targetUrl.Host
-	if targetHost == "" {
-		targetHost = conn.domain
-	}
-	redirectHost := redirectUrl.Host
-
-	relativePath := redirectHost == ""
-	matchesHost := (strings.Contains(redirectHost, targetHost) && util.TLDMatches(redirectHost, targetHost)) ||
-		(redirectHost == remoteIpAddress)
-	matchesProto := (conn.isTls && redirectUrl.Scheme == "https") || (!conn.isTls && redirectUrl.Scheme == "http")
-
-	// Either explicit keep-alive or HTTP 1.1, which uses persistent connections by default
-	var keepAlive bool
-	if response.Headers["Connection"] != nil {
-		keepAlive = strings.EqualFold(response.Headers["Connection"].(string), "keep-alive")
-	} else {
-		keepAlive = response.VersionMajor == 1 && response.VersionMinor == 1
-
-	}
-
-	return (relativePath && keepAlive) || (!relativePath && keepAlive && matchesHost && matchesProto)
 }
