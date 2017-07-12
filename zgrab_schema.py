@@ -801,7 +801,7 @@ zgrab_xssh = Record({
                 }),
             }),
             "dh_key_exchange": SubRecord({
-                "parameters": SubRecord({
+                "params": SubRecord({
                     "prime": SubRecord({
                         "value":Binary(),
                         "length":Integer()

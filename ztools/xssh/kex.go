@@ -165,7 +165,7 @@ type dhGroup struct {
 	JsonLog       dhGroupJsonLog
 }
 type dhGroupJsonLog struct {
-	Parameters      *ztoolsKeys.DHParams  `json:"parameters,omitempty"`
+	Parameters      *ztoolsKeys.DHParams  `json:"params,omitempty"`
 	ServerSignature *JsonSignature        `json:"server_signature,omitempty"`
 	ServerHostKey   *ServerHostKeyJsonLog `json:"server_host_key,omitempty"`
 }
