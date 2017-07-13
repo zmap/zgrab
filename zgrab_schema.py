@@ -801,12 +801,27 @@ zgrab_xssh = Record({
                 }),
             }),
             "dh_key_exchange": SubRecord({
-                "parameters": SubRecord({
-                    "client_public":Binary(),
-                    "client_private":Binary(),
-                    "server_public":Binary(),
-                    "prime":Binary(),
-                    "generator":Binary(),
+                "params": SubRecord({
+                    "prime": SubRecord({
+                        "value":Binary(),
+                        "length":Integer()
+                    }),
+                    "generator": SubRecord({
+                        "value":Binary(),
+                        "length":Integer()
+                    }),
+                    "client_public": SubRecord({
+                        "value":Binary(),
+                        "length":Integer()
+                    }),
+                    "client_private": SubRecord({
+                        "value":Binary(),
+                        "length":Integer()
+                    }),
+                    "server_public": SubRecord({
+                        "value":Binary(),
+                        "length":Integer()
+                    }),
                 }),
                 "server_signature":xssh_signature,
                 "server_host_key":SubRecord({
