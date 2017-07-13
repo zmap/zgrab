@@ -145,10 +145,15 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		break
 	}
 
+	var validityLength uint64 = 0
+	if c.ValidBefore > c.ValidAfter {
+		validityLength = c.ValidBefore - c.ValidAfter
+	}
+
 	temp.Validity = &JsonValidity{
 		ValidAfter:  time.Unix(int64(c.ValidAfter), 0).UTC(),
 		ValidBefore: time.Unix(int64(c.ValidBefore), 0).UTC(),
-		Length:      c.ValidBefore - c.ValidAfter,
+		Length:      validityLength,
 	}
 
 	temp.SignatureKey = new(JsonPubKeyWrapper)
