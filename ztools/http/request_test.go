@@ -144,7 +144,7 @@ func TestMultipartReader(t *testing.T) {
 	}
 
 	req.Header = Header{"Content-Type": {"text/plain"}}
-	multipart, err = req.MultipartReader()
+	multipart, _ = req.MultipartReader()
 	if multipart != nil {
 		t.Error("unexpected multipart for text/plain")
 	}

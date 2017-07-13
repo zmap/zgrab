@@ -314,7 +314,7 @@ type Request struct {
 	// be modified via copying the whole Request using WithContext.
 	// It is unexported to prevent people from using Context wrong
 	// and mutating the contexts held by callers of the same request.
-	ctx context.Context `json:"-"`
+	ctx context.Context
 }
 
 func (request *Request) MarshalJSON() ([]byte, error) {

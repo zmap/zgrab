@@ -56,7 +56,7 @@ func (g *GrabWorker) Done() {
 	close(g.statuses)
 }
 
-func (g *GrabWorker) MakeHandler(id uint) processing.Handler {
+func (g *GrabWorker) MakeHandler() processing.Handler {
 	return func(v interface{}) interface{} {
 		target, ok := v.(GrabTarget)
 		if !ok {

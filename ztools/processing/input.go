@@ -29,7 +29,7 @@ type Marshaler interface {
 }
 
 type Worker interface {
-	MakeHandler(uint) Handler
+	MakeHandler() Handler
 	Success() uint
 	Failure() uint
 	Total() uint
@@ -63,7 +63,7 @@ func Process(in Decoder, out io.Writer, w Worker, m Marshaler, workers uint) {
 	}()
 	// Start all the workers
 	for i := uint(0); i < workers; i++ {
-		handler := w.MakeHandler(i)
+		handler := w.MakeHandler()
 		runCount := w.RunCount()
 		go func(handler Handler) {
 			for obj := range processQueue {
