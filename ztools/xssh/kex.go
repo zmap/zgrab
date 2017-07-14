@@ -165,7 +165,7 @@ type dhGroup struct {
 	JsonLog       dhGroupJsonLog
 }
 type dhGroupJsonLog struct {
-	Parameters      *ztoolsKeys.DHParams  `json:"params,omitempty"`
+	Parameters      *ztoolsKeys.DHParams  `json:"dh_params,omitempty"`
 	ServerSignature *JsonSignature        `json:"server_signature,omitempty"`
 	ServerHostKey   *ServerHostKeyJsonLog `json:"server_host_key,omitempty"`
 }
@@ -346,7 +346,7 @@ type ecdh struct {
 }
 
 type ecdhJsonLog struct {
-	Parameters      *ztoolsKeys.ECDHParams `json:"parameters,omitempty"`
+	Parameters      *ztoolsKeys.ECDHParams `json:"ecdh_params,omitempty"`
 	ServerSignature *JsonSignature         `json:"server_signature,omitempty"`
 	ServerHostKey   *ServerHostKeyJsonLog  `json:"server_host_key,omitempty"`
 }
@@ -599,7 +599,7 @@ type curve25519sha256 struct {
 }
 
 type curve25519sha256JsonLog struct {
-	Parameters      curve25519sha256JsonLogParameters `json:"parameters"`
+	Parameters      curve25519sha256JsonLogParameters `json:"curve25519sha256_params"`
 	ServerSignature *JsonSignature                    `json:"server_signature,omitempty"`
 	ServerHostKey   *ServerHostKeyJsonLog             `json:"server_host_key,omitempty"`
 }

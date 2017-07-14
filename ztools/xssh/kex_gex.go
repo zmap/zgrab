@@ -40,7 +40,7 @@ type kexDHGexRequestMsg struct {
 }
 
 type gexJsonLog struct {
-	Parameters      *ztoolsKeys.DHParams  `json:"parameters,omitempty"`
+	Parameters      *ztoolsKeys.DHParams  `json:"dh_params,omitempty"`
 	ServerSignature []byte                `json:"server_signature,omitempty"`
 	ServerHostKey   *ServerHostKeyJsonLog `json:"server_host_key,omitempty"`
 }
