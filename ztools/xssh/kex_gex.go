@@ -41,7 +41,7 @@ type kexDHGexRequestMsg struct {
 
 type gexJsonLog struct {
 	Parameters      *ztoolsKeys.DHParams  `json:"dh_params,omitempty"`
-	ServerSignature []byte                `json:"server_signature,omitempty"`
+	ServerSignature *JsonSignature        `json:"server_signature,omitempty"`
 	ServerHostKey   *ServerHostKeyJsonLog `json:"server_host_key,omitempty"`
 }
 
@@ -150,7 +150,9 @@ func (gex *dhGEXSHA) Client(c packetConn, randSource io.Reader, magics *handshak
 
 	if gex.JsonLog != nil {
 		gex.JsonLog.Parameters.ServerPublic = kexDHGexReply.Y
-		gex.JsonLog.ServerSignature = kexDHGexReply.Signature
+		gex.JsonLog.ServerSignature = new(JsonSignature)
+		gex.JsonLog.ServerSignature.Raw = kexDHGexReply.Signature
+		gex.JsonLog.ServerSignature.Parsed, _, _ = parseSignatureBody(kexDHGexReply.Signature)
 		gex.JsonLog.ServerHostKey = LogServerHostKey(kexDHGexReply.HostKey)
 	}
 
