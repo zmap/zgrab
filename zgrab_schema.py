@@ -818,8 +818,6 @@ zgrab_xssh = Record({
                 "dh_params": SubRecord({
                     "prime": golang_crypto_param,
                     "generator": golang_crypto_param,
-                    "client_public": golang_crypto_param,
-                    "client_private": golang_crypto_param,
                     "server_public": golang_crypto_param,
                 }),
                 "server_signature":xssh_signature,

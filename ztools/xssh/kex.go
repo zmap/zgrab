@@ -219,7 +219,10 @@ func (group *dhGroup) Client(c packetConn, randSource io.Reader, magics *handsha
 			break
 		}
 	}
-	group.JsonLog.Parameters.ClientPrivate = x
+
+	if pkgConfig.Verbose {
+		group.JsonLog.Parameters.ClientPrivate = x
+	}
 
 	X := new(big.Int).Exp(group.g, x, group.p)
 
