@@ -599,7 +599,7 @@ type curve25519sha256 struct {
 }
 
 type curve25519sha256JsonLog struct {
-	Parameters      curve25519sha256JsonLogParameters `json:"ed25519sha256_params"`
+	Parameters      curve25519sha256JsonLogParameters `json:"curve25519_sha256_params"`
 	ServerSignature *JsonSignature                    `json:"server_signature,omitempty"`
 	ServerHostKey   *ServerHostKeyJsonLog             `json:"server_host_key,omitempty"`
 }

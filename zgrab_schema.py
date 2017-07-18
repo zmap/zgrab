@@ -806,7 +806,7 @@ zgrab_xssh = Record({
                 }),
             }),
             "key_exchange": SubRecord({
-                "ed25519sha256_params": SubRecord({
+                "curve25519_sha256_params": SubRecord({
                     "server_public": Binary(),
                 }),
                 "ecdh_params": SubRecord({
