@@ -763,7 +763,7 @@ xssh_signature = SubRecord({
 
 golang_crypto_param = SubRecord({
     "value":Binary(),
-    "length":Integer()
+    "length":Unsigned32BitInteger()
 })
 
 zgrab_xssh = Record({
