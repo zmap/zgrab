@@ -22,7 +22,7 @@ type HandshakeLog struct {
 	ServerKex          *kexInitMsg  `json:"server_key_exchange,omitempty"`
 	ClientKex          *kexInitMsg  `json:"client_key_exchange,omitempty"`
 	AlgorithmSelection *algorithms  `json:"algorithm_selection,omitempty"`
-	DHKeyExchange      kexAlgorithm `json:"dh_key_exchange,omitempty"`
+	DHKeyExchange      kexAlgorithm `json:"key_exchange,omitempty"`
 	UserAuth           []string     `json:"userauth,omitempty"`
 	Crypto             *kexResult   `json:"crypto,omitempty"`
 }

@@ -147,7 +147,7 @@ func init() {
 		strings.Join(defaultCiphers, ","))
 	flag.Var(&pkgConfig.Ciphers, "xssh-ciphers", ciphersUsage)
 
-	flag.BoolVar(&pkgConfig.Verbose, "xssh-verbose", false, "Output additional information.")
+	flag.BoolVar(&pkgConfig.Verbose, "xssh-verbose", false, "Output additional information, including X/SSH client properties from the SSH handshake.")
 
 	flag.BoolVar(&pkgConfig.CollectUserAuth, "xssh-userauth", false, "Use the 'none' authentication request to see what userauth methods are allowed.")
 

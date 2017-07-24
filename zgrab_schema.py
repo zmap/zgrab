@@ -761,6 +761,11 @@ xssh_signature = SubRecord({
     "raw":Binary(),
 })
 
+golang_crypto_param = SubRecord({
+    "value":Binary(),
+    "length":Unsigned32BitInteger()
+})
+
 zgrab_xssh = Record({
     "data":SubRecord({
         "xssh":SubRecord({
@@ -800,28 +805,20 @@ zgrab_xssh = Record({
                     "compression":String(),
                 }),
             }),
-            "dh_key_exchange": SubRecord({
-                "params": SubRecord({
-                    "prime": SubRecord({
-                        "value":Binary(),
-                        "length":Integer()
-                    }),
-                    "generator": SubRecord({
-                        "value":Binary(),
-                        "length":Integer()
-                    }),
-                    "client_public": SubRecord({
-                        "value":Binary(),
-                        "length":Integer()
-                    }),
-                    "client_private": SubRecord({
-                        "value":Binary(),
-                        "length":Integer()
-                    }),
+            "key_exchange": SubRecord({
+                "curve25519_sha256_params": SubRecord({
+                    "server_public": Binary(),
+                }),
+                "ecdh_params": SubRecord({
                     "server_public": SubRecord({
-                        "value":Binary(),
-                        "length":Integer()
+                        "x": golang_crypto_param,
+                        "y": golang_crypto_param,
                     }),
+                }),
+                "dh_params": SubRecord({
+                    "prime": golang_crypto_param,
+                    "generator": golang_crypto_param,
+                    "server_public": golang_crypto_param,
                 }),
                 "server_signature":xssh_signature,
                 "server_host_key":SubRecord({
