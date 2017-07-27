@@ -32,7 +32,6 @@ import (
 	"github.com/zmap/zcrypto/x509"
 	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/scada/bacnet"
-	"github.com/zmap/zgrab/ztools/ssh"
 	"github.com/zmap/zgrab/ztools/util"
 )
 
@@ -75,9 +74,6 @@ type Conn struct {
 	SignedCertificateTimestampExt bool
 
 	domain string
-
-	// SSH
-	sshScan *SSHScanConfig
 
 	// Errored component
 	erroredComponent string
@@ -592,13 +588,4 @@ func (c *Conn) GetFTPSCertificates() error {
 	} else {
 		return nil
 	}
-}
-
-func (c *Conn) SSHHandshake() error {
-	config := c.sshScan.MakeConfig()
-	client := ssh.Client(c.conn, config)
-	err := client.ClientHandshake()
-	handshakeLog := client.HandshakeLog()
-	c.grabData.SSH = handshakeLog
-	return err
 }
