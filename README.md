@@ -123,18 +123,6 @@ Usage of ./zgrab:
     	Conform to SMTP when reading responses and sending STARTTLS
   -smtp-help
     	Send a SMTP help (implies --smtp)
-  -ssh
-    	SSH scan
-  -ssh-client string
-    	Mimic behavior of a specific SSH client
-  -ssh-host-key-algorithms string
-    	Set SSH Host Key Algorithms
-  -ssh-kex-algorithms string
-    	Set SSH Key Exchange Algorithms
-  -ssh-kex-value string
-    	Set SSH DH kex value in hexadecimal
-  -ssh-negative-one
-    	Set SSH DH kex value to -1 in the selected group
   -starttls
     	Send STARTTLS before negotiating
   -telnet
