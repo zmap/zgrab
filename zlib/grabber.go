@@ -421,9 +421,6 @@ func makeGrabber(config *Config) func(*Conn) error {
 			c.SetTLSVerbose()
 		}
 
-		if config.SSH.SSH {
-			c.sshScan = &config.SSH
-		}
 		if config.TLS {
 			if err := c.TLSHandshake(); err != nil {
 				c.erroredComponent = "tls"
@@ -501,13 +498,6 @@ func makeGrabber(config *Config) func(*Conn) error {
 		if config.DNP3 {
 			c.grabData.DNP3 = new(dnp3.DNP3Log)
 			dnp3.GetDNP3Banner(c.grabData.DNP3, c.getUnderlyingConn())
-		}
-
-		if config.SSH.SSH {
-			if err := c.SSHHandshake(); err != nil {
-				c.erroredComponent = "ssh"
-				return err
-			}
 		}
 
 		if config.SMB.SMB {
