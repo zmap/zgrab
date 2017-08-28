@@ -359,9 +359,15 @@ func main() {
 	decoder := zlib.NewGrabTargetDecoder(inputFile, config.LookupDomain)
 	marshaler := zlib.NewGrabMarshaler()
 	worker := zlib.NewGrabWorker(&config)
+
 	start := time.Now()
+	zlog.Infof("Started grab at %s", start.Format(time.RFC3339))
+
 	processing.Process(decoder, outputConfig.OutputFile, worker, marshaler, config.Senders)
+
 	end := time.Now()
+	zlog.Infof("Finished grab (%d success; %d failure) at %s", worker.Success(), worker.Failure(), end.Format(time.RFC3339))
+
 	s := Summary{
 		Port:       config.Port,
 		Success:    worker.Success(),
