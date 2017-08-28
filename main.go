@@ -366,7 +366,7 @@ func main() {
 	processing.Process(decoder, outputConfig.OutputFile, worker, marshaler, config.Senders)
 
 	end := time.Now()
-	zlog.Infof("sinished grab (%d success; %d failure) at %s", worker.Success(), worker.Failure(), end.Format(time.RFC3339))
+	zlog.Infof("finished grab (%d success; %d failure) at %s", worker.Success(), worker.Failure(), end.Format(time.RFC3339))
 
 	s := Summary{
 		Port:       config.Port,
