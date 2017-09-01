@@ -351,7 +351,7 @@ func main() {
 		go func() {
 			http.Handle("/metrics", promhttp.Handler())
 			if err := http.ListenAndServe(prometheusAddress, nil); err != nil {
-				zlog.Fatalf("could not run prometheus server: %s", err.Error())
+				config.ErrorLog.Fatalf("could not run prometheus server: %s", err.Error())
 			}
 		}()
 	}
@@ -361,12 +361,12 @@ func main() {
 	worker := zlib.NewGrabWorker(&config)
 
 	start := time.Now()
-	zlog.Infof("started grab at %s", start.Format(time.RFC3339))
+	config.ErrorLog.Infof("started grab at %s", start.Format(time.RFC3339))
 
 	processing.Process(decoder, outputConfig.OutputFile, worker, marshaler, config.Senders)
 
 	end := time.Now()
-	zlog.Infof("finished grab (%d success; %d failure) at %s", worker.Success(), worker.Failure(), end.Format(time.RFC3339))
+	config.ErrorLog.Infof("finished grab (%d success; %d failure) at %s", worker.Success(), worker.Failure(), end.Format(time.RFC3339))
 
 	s := Summary{
 		Port:       config.Port,
