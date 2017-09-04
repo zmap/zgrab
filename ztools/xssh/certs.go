@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"sort"
 	"strconv"
@@ -68,7 +69,7 @@ type Certificate struct {
 type JsonValidity struct {
 	ValidAfter  time.Time `json:"valid_after"`
 	ValidBefore time.Time `json:"valid_before"`
-	Length      uint64    `json:"length"`
+	Length      int64     `json:"length"`
 }
 
 type JsonCertType struct {
@@ -145,9 +146,14 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		break
 	}
 
-	var validityLength uint64 = 0
+	var validityLength int64
 	if c.ValidBefore > c.ValidAfter {
-		validityLength = c.ValidBefore - c.ValidAfter
+		// Needs to be int64 to fit into any reasonable data storage
+		validityLength = int64(c.ValidBefore - c.ValidAfter)
+	}
+	// A length < 0 really means length > 2^63. Clamp to max.
+	if validityLength < 0 {
+		validityLength = math.MaxInt64
 	}
 
 	temp.Validity = &JsonValidity{
