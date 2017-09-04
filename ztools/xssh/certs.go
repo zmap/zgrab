@@ -38,6 +38,10 @@ const (
 	HostCert = 2
 )
 
+const goUnixTimeOffset = 62135596800
+const goMaxUnixTime = math.MaxInt64 - goUnixTimeOffset
+const goMaxUnixTimeWithTZOffset = goMaxUnixTime - 60*60*24
+
 // Signature represents a cryptographic signature.
 type Signature struct {
 	Format string `json:"algorithm,omitempty"`
@@ -67,9 +71,9 @@ type Certificate struct {
 }
 
 type JsonValidity struct {
-	ValidAfter  time.Time `json:"valid_after"`
-	ValidBefore time.Time `json:"valid_before"`
-	Length      int64     `json:"length"`
+	ValidAfter  *time.Time `json:"valid_after,omitempty"`
+	ValidBefore *time.Time `json:"valid_before,omitempty"`
+	Length      int64      `json:"length,omitempty"`
 }
 
 type JsonCertType struct {
@@ -146,20 +150,22 @@ func (c *Certificate) MarshalJSON() ([]byte, error) {
 		break
 	}
 
-	var validityLength int64
+	// We have to coerce length to be a signed int64 from a uint64. Only output
+	// representable values.
+	temp.Validity = new(JsonValidity)
+	if c.ValidAfter < goMaxUnixTimeWithTZOffset {
+		validAfter := time.Unix(int64(c.ValidAfter), 0).UTC()
+		temp.Validity.ValidAfter = &validAfter
+	}
+	if c.ValidBefore < goMaxUnixTimeWithTZOffset {
+		validBefore := time.Unix(int64(c.ValidBefore), 0).UTC()
+		temp.Validity.ValidBefore = &validBefore
+	}
 	if c.ValidBefore > c.ValidAfter {
-		// Needs to be int64 to fit into any reasonable data storage
-		validityLength = int64(c.ValidBefore - c.ValidAfter)
-	}
-	// A length < 0 really means length > 2^63. Clamp to max.
-	if validityLength < 0 {
-		validityLength = math.MaxInt64
-	}
-
-	temp.Validity = &JsonValidity{
-		ValidAfter:  time.Unix(int64(c.ValidAfter), 0).UTC(),
-		ValidBefore: time.Unix(int64(c.ValidBefore), 0).UTC(),
-		Length:      validityLength,
+		unsignedLength := c.ValidBefore - c.ValidAfter
+		if unsignedLength <= math.MaxInt64 {
+			temp.Validity.Length = int64(unsignedLength)
+		}
 	}
 
 	temp.SignatureKey = new(JsonPubKeyWrapper)
