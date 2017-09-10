@@ -521,7 +521,7 @@ zgrab_http_response = SubRecord({
     "status_line":AnalyzedString(),
     "status_code":Integer(),
     "body":HTML(),
-    "body_sha256": Binary(),
+    "body_sha256":HexString(),
     "headers":zgrab_http_headers,
     "content_length":Integer(),
     "request":zgrab_http_request

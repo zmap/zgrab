@@ -9,6 +9,8 @@ package http
 import (
 	"bufio"
 	"bytes"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -23,6 +25,8 @@ import (
 var respExcludeHeader = map[string]bool{
 	"Trailer": true,
 }
+
+type PageFingerprint []byte
 
 // Response represents the response from an HTTP request.
 //
@@ -53,9 +57,9 @@ type Response struct {
 	//
 	// The Body is automatically dechunked if the server replied
 	// with a "chunked" Transfer-Encoding.
-	Body       io.ReadCloser `json:"-"`
-	BodyText   string        `json:"body,omitempty"`
-	BodySHA256 []byte        `json:"body_sha256,omitempty"`
+	Body       io.ReadCloser   `json:"-"`
+	BodyText   string          `json:"body,omitempty"`
+	BodySHA256 PageFingerprint `json:"body_sha256,omitempty"`
 
 	// ContentLength records the length of the associated content. The
 	// value -1 indicates that the length is unknown. Unless Request.Method
@@ -105,6 +109,17 @@ type Response struct {
 	// The pointer is shared between responses and should not be
 	// modified.
 	TLS *tls.ConnectionState `json:"-"`
+}
+
+// Hex returns the given fingerprint encoded as a hex string.
+func (f PageFingerprint) Hex() string {
+	return hex.EncodeToString(f)
+}
+
+// MarshalJSON implements the json.Marshaler interface, and marshals the
+// fingerprint as a hex string.
+func (f *PageFingerprint) MarshalJSON() ([]byte, error) {
+	return json.Marshal(f.Hex())
 }
 
 // Cookies parses and returns the cookies set in the Set-Cookie headers.
