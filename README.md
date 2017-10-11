@@ -173,7 +173,7 @@ $ zmap -p 443 --output-fields=* | ztee results.csv | zgrab --port 443 --tls --ht
 
 ## Requirements
 
-zgrab requires go version of at least 1.6. Please note that this is newer than the version included in Ubuntu 14.04 apt repository. You can install ztee from ZMap Github repository at https://github.com/zmap/zmap.
+zgrab requires go version of at least 1.8.1. Please note that this is newer than the version included in Ubuntu 14.04 apt repository. You can install ztee from ZMap Github repository at https://github.com/zmap/zmap.
 
 
 ## ZGrab as a library / dependency
