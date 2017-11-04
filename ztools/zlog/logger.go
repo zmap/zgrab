@@ -15,6 +15,7 @@
 package zlog
 
 import (
+	"compress/gzip"
 	"fmt"
 	"io"
 	"os"
@@ -23,9 +24,11 @@ import (
 )
 
 type Logger struct {
-	mu     sync.Mutex
-	out    io.Writer
-	prefix string
+	mu            sync.Mutex
+	out           io.Writer
+	compressedOut *gzip.Writer
+	prefix        string
+	compress      bool
 
 	// Color handling
 	useColor     bool
@@ -74,7 +77,7 @@ var (
 )
 
 var (
-	defaultLogger = New(os.Stderr, "log")
+	defaultLogger = New(os.Stderr, "log", false)
 )
 
 func (level LogLevel) String() string {
@@ -91,7 +94,7 @@ func (level LogLevel) Color() color {
 	return colors[level]
 }
 
-func New(out io.Writer, prefix string) *Logger {
+func New(out io.Writer, prefix string, compress bool) *Logger {
 	useColor := false
 	file, ok := out.(*os.File)
 	if ok {
@@ -99,12 +102,16 @@ func New(out io.Writer, prefix string) *Logger {
 		// Check to see if output is a terminal
 		if (stats.Mode() & os.ModeCharDevice) != 0 {
 			useColor = true
+			compress = false
 		}
 	}
+	compressedWriter := gzip.NewWriter(out)
 	logger := Logger{
-		out:      out,
-		prefix:   prefix,
-		useColor: useColor,
+		out:           out,
+		compressedOut: compressedWriter,
+		prefix:        prefix,
+		compress:      compress,
+		useColor:      useColor,
 	}
 	return &logger
 }
@@ -254,9 +261,16 @@ func (logger *Logger) doPrint(level LogLevel, v ...interface{}) {
 	}
 
 	// Write the line out
-	fmt.Fprintf(logger.out, prefixFormat, timestamp, level.String(), logger.prefix)
-	fmt.Fprint(logger.out, v...)
-	logger.out.Write([]byte{'\n'})
+	if logger.compress {
+		fmt.Fprintf(logger.compressedOut, prefixFormat, timestamp, level.String(), logger.prefix)
+		fmt.Fprint(logger.compressedOut, v...)
+		logger.compressedOut.Write([]byte{'\n'})
+		defer logger.compressedOut.Flush()
+	} else {
+		fmt.Fprintf(logger.out, prefixFormat, timestamp, level.String(), logger.prefix)
+		fmt.Fprint(logger.out, v...)
+		logger.out.Write([]byte{'\n'})
+	}
 }
 
 func (logger *Logger) doPrintf(level LogLevel, format string, v ...interface{}) {
@@ -269,7 +283,22 @@ func (logger *Logger) doPrintf(level LogLevel, format string, v ...interface{}) 
 		defer logger.out.Write(reset)
 	}
 	// Write the line out
-	fmt.Fprintf(logger.out, prefixFormat, timestamp, level.String(), logger.prefix)
-	fmt.Fprintf(logger.out, format, v...)
-	logger.out.Write([]byte{'\n'})
+	if logger.compress {
+		fmt.Fprintf(logger.compressedOut, prefixFormat, timestamp, level.String(), logger.prefix)
+		fmt.Fprintf(logger.compressedOut, format, v...)
+		logger.compressedOut.Write([]byte{'\n'})
+		defer logger.compressedOut.Flush()
+	} else {
+		fmt.Fprintf(logger.out, prefixFormat, timestamp, level.String(), logger.prefix)
+		fmt.Fprintf(logger.out, format, v...)
+		logger.out.Write([]byte{'\n'})
+	}
+}
+
+func (logger *Logger) Close() {
+	if logger.compress {
+		if err := logger.compressedOut.Close(); err != nil {
+			panic(err)
+		}
+	}
 }
