@@ -37,6 +37,8 @@ Usage of ./zgrab:
     	Send Chrome Ordered Cipher Suites
   -chrome-no-dhe-ciphers
     	Send chrome ciphers minus DHE suites
+  -compress
+    	Compress output and log using gzip
   -connections-per-host uint
     	Number of times to connect to each host (results in more output) (default 1)
   -data string

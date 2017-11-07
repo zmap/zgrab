@@ -15,6 +15,7 @@
 package processing
 
 import (
+	"compress/gzip"
 	"github.com/zmap/zgrab/ztools/zlog"
 	"io"
 	"sync"
@@ -39,9 +40,13 @@ type Worker interface {
 
 type Handler func(interface{}) interface{}
 
-func Process(in Decoder, out io.Writer, w Worker, m Marshaler, workers uint) {
+func Process(in Decoder, out io.Writer, compress bool, w Worker, m Marshaler, workers uint) {
 	processQueue := make(chan interface{}, workers*4)
 	outputQueue := make(chan []byte, workers*4)
+	gz := gzip.NewWriter(out)
+	if compress {
+		defer gz.Close()
+	}
 
 	// Create wait groups
 	var workerDone sync.WaitGroup
@@ -52,11 +57,23 @@ func Process(in Decoder, out io.Writer, w Worker, m Marshaler, workers uint) {
 	// Start the output encoder
 	go func() {
 		for result := range outputQueue {
-			if _, err := out.Write(result); err != nil {
-				panic(err.Error())
-			}
-			if _, err := out.Write([]byte("\n")); err != nil {
-				panic(err.Error())
+			if compress {
+				if _, err := gz.Write(result); err != nil {
+					panic(err.Error())
+				}
+				if _, err := gz.Write([]byte("\n")); err != nil {
+					panic(err.Error())
+				}
+				if err := gz.Flush(); err != nil {
+					panic(err.Error())
+				}
+			} else {
+				if _, err := out.Write(result); err != nil {
+					panic(err.Error())
+				}
+				if _, err := out.Write([]byte("\n")); err != nil {
+					panic(err.Error())
+				}
 			}
 		}
 		outputDone.Done()

@@ -38,6 +38,7 @@ var (
 	outputFileName, inputFileName string
 	logFileName, metadataFileName string
 	messageFileName               string
+	compressLogs                  bool
 	interfaceName                 string
 	ehlo                          string
 	portFlag                      uint
@@ -66,6 +67,7 @@ func init() {
 	flag.StringVar(&inputFileName, "input-file", "-", "Input filename, use - for stdin")
 	flag.StringVar(&metadataFileName, "metadata-file", "-", "File to record banner-grab metadata, use - for stdout")
 	flag.StringVar(&logFileName, "log-file", "-", "File to log to, use - for stderr")
+	flag.BoolVar(&compressLogs, "compress", false, "Compress output and log using gzip")
 	flag.StringVar(&prometheusAddress, "prometheus", "", "Address to use for Prometheus server (e.g. localhost:8080). If empty, Prometheus is disabled.")
 	flag.BoolVar(&config.LookupDomain, "lookup-domain", false, "Input contains only domain names")
 	flag.StringVar(&interfaceName, "interface", "", "Network interface to send on")
@@ -332,7 +334,7 @@ func init() {
 			zlog.Fatal(err)
 		}
 	}
-	logger := zlog.New(logFile, "banner-grab")
+	logger := zlog.New(logFile, "banner-grab", compressLogs)
 	config.ErrorLog = logger
 
 	// Open TLS ClientHello, if applicable
@@ -363,7 +365,7 @@ func main() {
 	start := time.Now()
 	config.ErrorLog.Infof("started grab at %s", start.Format(time.RFC3339))
 
-	processing.Process(decoder, outputConfig.OutputFile, worker, marshaler, config.Senders)
+	processing.Process(decoder, outputConfig.OutputFile, compressLogs, worker, marshaler, config.Senders)
 
 	end := time.Now()
 	config.ErrorLog.Infof("finished grab (%d success; %d failure) at %s", worker.Success(), worker.Failure(), end.Format(time.RFC3339))
@@ -387,4 +389,5 @@ func main() {
 	if err := enc.Encode(&s); err != nil {
 		config.ErrorLog.Errorf("Unable to write summary: %s", err.Error())
 	}
+	config.ErrorLog.Close()
 }

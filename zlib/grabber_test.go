@@ -66,7 +66,7 @@ func TestHTTP(t *testing.T) {
 			MaxSize:      256,
 			MaxRedirects: 0,
 		},
-		ErrorLog:   zlog.New(os.Stderr, "banner-grab"),
+		ErrorLog:   zlog.New(os.Stderr, "banner-grab", false),
 		GOMAXPROCS: 1,
 	}
 
@@ -150,7 +150,7 @@ func TestHTTPToHTTPSRedirect(t *testing.T) {
 			MaxRedirects:             1,
 			FollowLocalhostRedirects: true,
 		},
-		ErrorLog:   zlog.New(os.Stderr, "banner-grab"),
+		ErrorLog:   zlog.New(os.Stderr, "banner-grab", false),
 		GOMAXPROCS: 1,
 	}
 
