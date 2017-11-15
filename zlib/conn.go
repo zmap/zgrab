@@ -33,7 +33,6 @@ import (
 	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/scada/bacnet"
 	"github.com/zmap/zgrab/ztools/util"
-
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:^\d\d\d\s.*\r\n$)|(?:^\d\d\d-[\s\S]*\r\n\d\d\d\s.*\r\n$)`)
@@ -321,7 +320,6 @@ func (c *Conn) TLSHandshake() error {
 	if c.ExternalClientHello != nil {
 		tlsConfig.ExternalClientHello = c.ExternalClientHello
 	}
-
 
 	c.tlsConn = tls.Client(c.conn, tlsConfig)
 	c.tlsConn.SetReadDeadline(c.readDeadline)
