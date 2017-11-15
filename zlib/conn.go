@@ -33,6 +33,7 @@ import (
 	"github.com/zmap/zgrab/ztools/ftp"
 	"github.com/zmap/zgrab/ztools/scada/bacnet"
 	"github.com/zmap/zgrab/ztools/util"
+
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:^\d\d\d\s.*\r\n$)|(?:^\d\d\d-[\s\S]*\r\n\d\d\d\s.*\r\n$)`)
@@ -71,6 +72,7 @@ type Conn struct {
 	gatherSessionTicket           bool
 	offerExtendedMasterSecret     bool
 	tlsVerbose                    bool
+	tlsCertsOnly                  bool
 	SignedCertificateTimestampExt bool
 
 	domain string
@@ -120,6 +122,10 @@ func (c *Conn) SetSignedCertificateTimestampExt() {
 
 func (c *Conn) SetTLSVerbose() {
 	c.tlsVerbose = true
+}
+
+func (c *Conn) SetTLSCertsOnly() {
+    c.tlsCertsOnly = true
 }
 
 // Layer in the regular conn methods
@@ -288,6 +294,7 @@ func (c *Conn) TLSHandshake() error {
 			c.RemoteAddr().String())
 	}
 	tlsConfig := new(tls.Config)
+	tlsConfig.TLSCertsOnly = c.tlsCertsOnly
 	tlsConfig.InsecureSkipVerify = true
 	tlsConfig.MinVersion = tls.VersionSSL30
 	tlsConfig.MaxVersion = c.maxTlsVersion
@@ -314,6 +321,7 @@ func (c *Conn) TLSHandshake() error {
 	if c.ExternalClientHello != nil {
 		tlsConfig.ExternalClientHello = c.ExternalClientHello
 	}
+
 
 	c.tlsConn = tls.Client(c.conn, tlsConfig)
 	c.tlsConn.SetReadDeadline(c.readDeadline)
