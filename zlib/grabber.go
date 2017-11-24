@@ -644,7 +644,12 @@ func GrabBanner(config *Config, target *GrabTarget) *Grab {
 		dial := makeDialer(config)
 		grabber := makeGrabber(config)
 		port := strconv.FormatUint(uint64(config.Port), 10)
-		addr := target.Addr.String()
+		var addr string
+		if config.LookupDomain {
+			addr = target.Domain
+		} else {
+			addr = target.Addr.String()
+		}
 		rhost := net.JoinHostPort(addr, port)
 		t := time.Now()
 		conn, dialErr := dial(rhost)
