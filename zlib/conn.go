@@ -293,7 +293,7 @@ func (c *Conn) TLSHandshake() error {
 			c.RemoteAddr().String())
 	}
 	tlsConfig := new(tls.Config)
-	tlsConfig.TLSCertsOnly = c.tlsCertsOnly
+	tlsConfig.CertsOnly = c.tlsCertsOnly
 	tlsConfig.InsecureSkipVerify = true
 	tlsConfig.MinVersion = tls.VersionSSL30
 	tlsConfig.MaxVersion = c.maxTlsVersion
