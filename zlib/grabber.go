@@ -295,8 +295,6 @@ func makeHTTPGrabber(config *Config, grabData *GrabData) func(string, string, st
 			fullURL = "http://" + urlHost + endpoint
 		}
 
-		var resp *http.Response
-
 		u, err := url.Parse(fullURL)
 		if err != nil {
 			return err
@@ -314,7 +312,10 @@ func makeHTTPGrabber(config *Config, grabData *GrabData) func(string, string, st
 			}
 			httpHost = hostWithoutPort
 		}
+
 		var req *http.Request
+		var resp *http.Response
+
 		switch config.HTTP.Method {
 		case "GET":
 			req, err = http.NewRequestWithHost("GET", fullURL, httpHost, nil)
