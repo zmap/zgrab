@@ -329,6 +329,9 @@ func (c *Conn) TLSHandshake() error {
 	if tlsConfig.ForceSuites && err == tls.ErrUnimplementedCipher {
 		err = nil
 	}
+    if err == tls.ErrCertsOnly {
+        err = nil
+    }
 	hl := c.tlsConn.GetHandshakeLog()
 
 	if !c.tlsVerbose {
