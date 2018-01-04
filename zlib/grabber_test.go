@@ -30,8 +30,8 @@ func TestHTTP(t *testing.T) {
 		if r.Protocol.Name != "HTTP/1.1" {
 			t.Errorf("Wrong Protocol - expected: %s, got: %s", "HTTP/1.1", r.Protocol.Name)
 		}
-		if len(r.Header) != 2 || r.Header.Get("User-Agent") != "test UA" || r.Header.Get("Accept-Encoding") != "gzip" {
-			t.Errorf("Wrong headers: Expected User-Agent and Accept-Encoding, Got %s", r.Header)
+		if len(r.Header) != 3 || r.Header.Get("User-Agent") != "test UA" || r.Header.Get("Accept-Encoding") != "gzip" || r.Header.Get("Accept") != "*/*" {
+			t.Errorf("Wrong headers: Expected User-Agent, Accept, and Accept-Encoding, Got %s", r.Header)
 		}
 		fmt.Fprintf(w, TEST_SERVER_BODY)
 	}))
