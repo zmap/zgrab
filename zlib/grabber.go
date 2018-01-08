@@ -423,6 +423,9 @@ func makeGrabber(config *Config) func(*Conn) error {
 		if config.TLSCertsOnly {
 			c.SetTLSCertsOnly()
 		}
+		if config.TLSInsecureSkipValidation {
+			c.SetTLSInsecureSkipValidation()
+		}
 		if config.TLS {
 			if err := c.TLSHandshake(); err != nil {
 				c.erroredComponent = "tls"
