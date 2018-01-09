@@ -125,11 +125,11 @@ func (c *Conn) SetTLSVerbose() {
 }
 
 func (c *Conn) SetTLSInsecureSkipValidation() {
-    c.tlsInsecureSkipValidation = true
+	c.tlsInsecureSkipValidation = true
 }
 
 func (c *Conn) SetTLSCertsOnly() {
-    c.tlsCertsOnly = true
+	c.tlsCertsOnly = true
 }
 
 // Layer in the regular conn methods
@@ -335,9 +335,9 @@ func (c *Conn) TLSHandshake() error {
 	if tlsConfig.ForceSuites && err == tls.ErrUnimplementedCipher {
 		err = nil
 	}
-    if err == tls.ErrCertsOnly {
-        err = nil
-    }
+	if err == tls.ErrCertsOnly {
+		err = nil
+	}
 	hl := c.tlsConn.GetHandshakeLog()
 
 	if !c.tlsVerbose {
