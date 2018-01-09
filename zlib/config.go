@@ -72,7 +72,7 @@ type Config struct {
 	TLSVerbose                    bool
 	SignedCertificateTimestampExt bool
 	ExternalClientHello           []byte
-	TLSCertsOnly                   bool
+	TLSCertsOnly                  bool
 
 	// Banners and Data
 	Banners  bool
