@@ -24,7 +24,6 @@ import (
 	"io"
 	"net"
 	"net/url"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -637,7 +636,7 @@ func GrabBanner(config *Config, target *GrabTarget) *Grab {
 			if target.Addr != nil {
 				addr = target.Addr.String()
 			}
-			config.ErrorLog.Errorf("Panic when scanning addr = %s / domain = %s, port %d", addr, target.Domain, config.Port))
+			config.ErrorLog.Errorf("Panic when scanning addr = %s / domain = %s, port %d", addr, target.Domain, config.Port)
 			// Bubble out original error (with original stack) in lieu of explicitly logging the stack / error
 			panic(e)
 		}
