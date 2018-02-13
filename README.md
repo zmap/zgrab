@@ -69,6 +69,8 @@ Usage of ./zgrab:
     	Check if server is vulnerable to Heartbleed (implies --tls)
   -http string
     	Send an HTTP request to an endpoint
+  -http-headers
+      Send arbitrary http headers, e.g. "User-Agent:Mozilla/5.0 zgrab/0.x\r\nX-Ignore:test"
   -http-max-redirects int
     	Max number of redirects to follow
   -http-max-size int

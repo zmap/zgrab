@@ -324,6 +324,13 @@ func makeHTTPGrabber(config *Config, grabData *GrabData) func(string, string, st
 		default:
 			zlog.Fatalf("Bad HTTP Method: %s. Valid options are: GET, HEAD.", config.HTTP.Method)
 		}
+
+		for _, s := range strings.Split(config.HTTP.Headers, "\r\n") {
+			arr := strings.SplitN(s, ":", 2)
+			if len(arr) == 2 {
+				req.Header.Set(strings.TrimSpace(arr[0]), strings.TrimSpace(arr[1]))
+			}
+		}
 		if err == nil {
 			req.Header.Set("Accept", "*/*")
 			resp, err = client.Do(req)

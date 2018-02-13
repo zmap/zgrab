@@ -24,6 +24,7 @@ import (
 type HTTPConfig struct {
 	Method                   string
 	Endpoint                 string
+	Headers                  string
 	UserAgent                string
 	ProxyDomain              string
 	MaxSize                  int
