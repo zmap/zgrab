@@ -332,7 +332,9 @@ func makeHTTPGrabber(config *Config, grabData *GrabData) func(string, string, st
 			}
 		}
 		if err == nil {
-			req.Header.Set("Accept", "*/*")
+			if req.Header.Get("Accept") == "" {
+				req.Header.Set("Accept", "*/*")
+			}
 			resp, err = client.Do(req)
 		}
 		if resp != nil && resp.Body != nil {
