@@ -630,6 +630,18 @@ func makeXSSHGrabber(gblConfig *Config, grabData GrabData) func(string) error {
 }
 
 func GrabBanner(config *Config, target *GrabTarget) *Grab {
+	defer func() {
+		if e := recover(); e != nil {
+			addr := "<not set>"
+			if target.Addr != nil {
+				addr = target.Addr.String()
+			}
+			config.ErrorLog.Errorf("Panic when scanning addr = %s / domain = %s, port %d", addr, target.Domain, config.Port)
+			// Bubble out original error (with original stack) in lieu of explicitly logging the stack / error
+			panic(e)
+		}
+	}()
+
 	if config.XSSH.XSSH {
 		t := time.Now()
 
