@@ -72,6 +72,7 @@ type Conn struct {
 	offerExtendedMasterSecret     bool
 	tlsVerbose                    bool
 	tlsCertsOnly                  bool
+	tlsInsecureSkipValidation     bool
 	SignedCertificateTimestampExt bool
 
 	domain string
@@ -121,6 +122,10 @@ func (c *Conn) SetSignedCertificateTimestampExt() {
 
 func (c *Conn) SetTLSVerbose() {
 	c.tlsVerbose = true
+}
+
+func (c *Conn) SetTLSInsecureSkipValidation() {
+	c.tlsInsecureSkipValidation = true
 }
 
 func (c *Conn) SetTLSCertsOnly() {
@@ -294,6 +299,7 @@ func (c *Conn) TLSHandshake() error {
 	}
 	tlsConfig := new(tls.Config)
 	tlsConfig.CertsOnly = c.tlsCertsOnly
+	tlsConfig.InsecureSkipValidation = c.tlsInsecureSkipValidation
 	tlsConfig.InsecureSkipVerify = true
 	tlsConfig.MinVersion = tls.VersionSSL30
 	tlsConfig.MaxVersion = c.maxTlsVersion

@@ -73,6 +73,7 @@ type Config struct {
 	SignedCertificateTimestampExt bool
 	ExternalClientHello           []byte
 	TLSCertsOnly                  bool
+	TLSInsecureSkipValidation     bool
 
 	// Banners and Data
 	Banners  bool
