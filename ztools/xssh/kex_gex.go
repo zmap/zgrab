@@ -9,7 +9,7 @@ import (
 	"io"
 	"math/big"
 
-	ztoolsKeys "github.com/zmap/zgrab/ztools/keys"
+	zcryptoJSON "github.com/zmap/zcrypto/json"
 )
 
 const (
@@ -40,7 +40,7 @@ type kexDHGexRequestMsg struct {
 }
 
 type gexJsonLog struct {
-	Parameters      *ztoolsKeys.DHParams  `json:"dh_params,omitempty"`
+	Parameters      *zcryptoJSON.DHParams  `json:"dh_params,omitempty"`
 	ServerSignature *JsonSignature        `json:"server_signature,omitempty"`
 	ServerHostKey   *ServerHostKeyJsonLog `json:"server_host_key,omitempty"`
 }
@@ -57,14 +57,14 @@ func (gex *dhGEXSHA) GetNew(keyType string) kexAlgorithm {
 		ret := new(dhGEXSHA)
 		ret.hashFunc = crypto.SHA1
 		ret.JsonLog = new(gexJsonLog)
-		ret.JsonLog.Parameters = new(ztoolsKeys.DHParams)
+		ret.JsonLog.Parameters = new(zcryptoJSON.DHParams)
 		return ret
 
 	case kexAlgoDHGEXSHA256:
 		ret := new(dhGEXSHA)
 		ret.hashFunc = crypto.SHA256
 		ret.JsonLog = new(gexJsonLog)
-		ret.JsonLog.Parameters = new(ztoolsKeys.DHParams)
+		ret.JsonLog.Parameters = new(zcryptoJSON.DHParams)
 		return ret
 
 	default:

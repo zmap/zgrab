@@ -27,8 +27,8 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
-	ztoolsX509 "github.com/zmap/zcrypto/x509"
-	ztoolsKeys "github.com/zmap/zgrab/ztools/keys"
+	zcryptoX509 "github.com/zmap/zcrypto/x509"
+	zcryptoJSON "github.com/zmap/zcrypto/json"
 )
 
 // These constants represent the algorithm names for key types supported by this
@@ -314,7 +314,7 @@ func (r *rsaPublicKey) Type() string {
 }
 
 func (r *rsaPublicKey) MarshalJSON() ([]byte, error) {
-	ret := new(ztoolsKeys.RSAPublicKey)
+	ret := new(zcryptoJSON.RSAPublicKey)
 	ret.PublicKey = (*rsa.PublicKey)(r)
 	return json.Marshal(ret)
 }
@@ -382,7 +382,7 @@ func (r *dsaPublicKey) Type() string {
 
 func (r *dsaPublicKey) MarshalJSON() ([]byte, error) {
 	temp := make(map[string]interface{})
-	ztoolsX509.AddDSAPublicKeyToKeyMap(temp, (*dsa.PublicKey)(r))
+	zcryptoX509.AddDSAPublicKeyToKeyMap(temp, (*dsa.PublicKey)(r))
 	return json.Marshal(temp)
 }
 
@@ -490,7 +490,7 @@ func (key *ecdsaPublicKey) Type() string {
 
 func (key *ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 	temp := make(map[string]interface{})
-	ztoolsX509.AddECDSAPublicKeyToKeyMap(temp, (*ecdsa.PublicKey)(key))
+	zcryptoX509.AddECDSAPublicKeyToKeyMap(temp, (*ecdsa.PublicKey)(key))
 	return json.Marshal(temp)
 }
 
