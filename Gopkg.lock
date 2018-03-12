@@ -71,7 +71,7 @@
     "nfs",
     "xfs"
   ]
-  revision = "d274e363d5759d1c916232217be421f1cc89c5fe"
+  revision = "1c7ff3de94ae006f58cba483a4c9c6d7c61e1d98"
 
 [[projects]]
   name = "github.com/weppos/publicsuffix-go"
@@ -108,7 +108,7 @@
     "ed25519",
     "ed25519/internal/edwards25519"
   ]
-  revision = "91a49db82a88618983a78a06c1cbd4e00ab749ab"
+  revision = "c7dcf104e3a7a1417abc0230cb0d5240d764159d"
 
 [[projects]]
   branch = "master"
@@ -119,13 +119,13 @@
     "idna",
     "lex/httplex"
   ]
-  revision = "22ae77b79946ea320088417e4d50825671d82d57"
+  revision = "d0aafc73d5cdc42264b0af071c261abac580695e"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "dd2ff4accc098aceecb86b36eaa7829b2a17b1c9"
+  revision = "7dca6fe1f43775aa6d1334576870ff63f978f539"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -158,6 +158,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "144c90bcb14438d9225e0fdc0dff5ebb2be51612876b1902ec68a6ca95506e46"
+  inputs-digest = "61584f9b36a4bac4bf078bcf1f00eceda8a706a2659a29317b81d89f640464f9"
   solver-name = "gps-cdcl"
   solver-version = 1
