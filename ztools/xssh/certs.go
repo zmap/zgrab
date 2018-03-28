@@ -91,6 +91,7 @@ type JsonPubKeyWrapper struct {
 type JsonSignature struct {
 	Parsed *Signature `json:"parsed,omitempty"`
 	Raw    []byte     `json:"raw,omitempty"`
+	H      []byte     `json:"h,omitempty"`
 }
 
 type JsonCertificate struct {
