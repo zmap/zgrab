@@ -273,6 +273,7 @@ zgrab_tls = SubRecord({
                 "length":Integer(),
            }),
         }),
+        "digest": Binary(),
         "signature":SubRecord({
             "raw":Binary(),
             "type":String(),
