@@ -4,14 +4,14 @@
 [[projects]]
   name = "github.com/asaskevich/govalidator"
   packages = ["."]
-  revision = "521b25f4b05fd26bec69d9dedeb8f9c9a83939a8"
-  version = "v8"
+  revision = "ccb8e960c48f04d6935e72476ae4a51028f9e22f"
+  version = "v9"
 
 [[projects]]
   branch = "master"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
-  revision = "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9"
+  revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
   name = "github.com/golang/protobuf"
@@ -60,7 +60,7 @@
     "internal/bitbucket.org/ww/goautoneg",
     "model"
   ]
-  revision = "6fb6fce6f8b75884b92e1889c150403fc0872c5e"
+  revision = "38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a"
 
 [[projects]]
   branch = "master"
@@ -71,7 +71,7 @@
     "nfs",
     "xfs"
   ]
-  revision = "1c7ff3de94ae006f58cba483a4c9c6d7c61e1d98"
+  revision = "780932d4fbbe0e69b84c34c20f5c8d0981e109ea"
 
 [[projects]]
   name = "github.com/weppos/publicsuffix-go"
@@ -86,7 +86,7 @@
   revision = "24b9757f552165b15b95d4f9b096532fbc0fb950"
 
 [[projects]]
-  branch = "master"
+  branch = "release/0.1"
   name = "github.com/zmap/zcrypto"
   packages = [
     "ct",
@@ -98,7 +98,7 @@
     "x509",
     "x509/pkix"
   ]
-  revision = "8167395f9121e021113e1fb526262a763324ef54"
+  revision = "17ecf89a533a6d32e95a7ba948a900e36cae72dc"
 
 [[projects]]
   branch = "master"
@@ -108,7 +108,7 @@
     "ed25519",
     "ed25519/internal/edwards25519"
   ]
-  revision = "c7dcf104e3a7a1417abc0230cb0d5240d764159d"
+  revision = "88942b9c40a4c9d203b82b3731787b672d6e809b"
 
 [[projects]]
   branch = "master"
@@ -119,13 +119,13 @@
     "idna",
     "lex/httplex"
   ]
-  revision = "d0aafc73d5cdc42264b0af071c261abac580695e"
+  revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "7dca6fe1f43775aa6d1334576870ff63f978f539"
+  revision = "378d26f46672a356c46195c28f61bdb4c0a781dd"
 
 [[projects]]
   name = "golang.org/x/text"

@@ -88,6 +88,7 @@ type ServerKeyExchange struct {
 	RSAParams      *jsonKeys.RSAPublicKey `json:"rsa_params,omitempty"`
 	DHParams       *jsonKeys.DHParams     `json:"dh_params,omitempty"`
 	ECDHParams     *jsonKeys.ECDHParams   `json:"ecdh_params,omitempty"`
+	Digest         []byte                 `json:"digest,omitempty"`
 	Signature      *DigitalSignature      `json:"signature,omitempty"`
 	SignatureError string                 `json:"signature_error,omitempty"`
 }
@@ -403,6 +404,7 @@ func (m *serverKeyExchangeMsg) MakeLog(ka keyAgreement) *ServerKeyExchange {
 	var auth keyAgreementAuthentication
 	var errAuth error
 	copy(skx.Raw, m.key)
+	skx.Digest = append(make([]byte, 0), m.digest...)
 
 	// Write out parameters
 	switch ka := ka.(type) {
