@@ -1068,8 +1068,9 @@ func (m *certificateMsg) unmarshal(data []byte) bool {
 }
 
 type serverKeyExchangeMsg struct {
-	raw []byte
-	key []byte
+	raw    []byte
+	digest []byte
+	key    []byte
 }
 
 func (m *serverKeyExchangeMsg) equal(i interface{}) bool {

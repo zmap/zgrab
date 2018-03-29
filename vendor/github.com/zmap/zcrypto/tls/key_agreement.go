@@ -151,7 +151,7 @@ func (ka *rsaKeyAgreement) processServerKeyExchange(config *Config, clientHello 
 	serverRSAParams := skx.key[:paramsLen]
 	sig := skx.key[paramsLen:]
 
-	ka.verifyError = ka.auth.verifyParameters(config, clientHello, serverHello, cert, serverRSAParams, sig)
+	skx.digest, ka.verifyError = ka.auth.verifyParameters(config, clientHello, serverHello, cert, serverRSAParams, sig)
 	if config.InsecureSkipVerify {
 		return nil
 	}
@@ -330,7 +330,7 @@ func curveForCurveID(id CurveID) (elliptic.Curve, bool) {
 // to authenticate the ServerKeyExchange parameters.
 type keyAgreementAuthentication interface {
 	signParameters(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg, params []byte) (*serverKeyExchangeMsg, error)
-	verifyParameters(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, params []byte, sig []byte) error
+	verifyParameters(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, params []byte, sig []byte) ([]byte, error)
 }
 
 // nilKeyAgreementAuthentication does not authenticate the key
@@ -343,8 +343,8 @@ func (ka *nilKeyAgreementAuthentication) signParameters(config *Config, cert *Ce
 	return skx, nil
 }
 
-func (ka *nilKeyAgreementAuthentication) verifyParameters(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, params []byte, sig []byte) error {
-	return nil
+func (ka *nilKeyAgreementAuthentication) verifyParameters(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, params []byte, sig []byte) ([]byte, error) {
+	return nil, nil
 }
 
 // signedKeyAgreement signs the ServerKeyExchange parameters with the
@@ -371,7 +371,6 @@ func (ka *signedKeyAgreement) signParameters(config *Config, cert *Certificate, 
 	if err != nil {
 		return nil, err
 	}
-
 	var sig []byte
 	switch ka.sigType {
 	case signatureECDSA:
@@ -398,6 +397,7 @@ func (ka *signedKeyAgreement) signParameters(config *Config, cert *Certificate, 
 	}
 
 	skx := new(serverKeyExchangeMsg)
+	skx.digest = digest
 	sigAndHashLen := 0
 	if ka.version >= VersionTLS12 {
 		sigAndHashLen = 2
@@ -418,9 +418,9 @@ func (ka *signedKeyAgreement) signParameters(config *Config, cert *Certificate, 
 	return skx, nil
 }
 
-func (ka *signedKeyAgreement) verifyParameters(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, params []byte, sig []byte) error {
+func (ka *signedKeyAgreement) verifyParameters(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, cert *x509.Certificate, params []byte, sig []byte) ([]byte, error) {
 	if len(sig) < 2 {
-		return errServerKeyExchange
+		return nil, errServerKeyExchange
 	}
 
 	var tls12HashId uint8
@@ -432,73 +432,72 @@ func (ka *signedKeyAgreement) verifyParameters(config *Config, clientHello *clie
 		ka.sh.hash = tls12HashId
 		ka.sh.signature = sigAndHash[1]
 		if sigAndHash[1] != ka.sigType {
-			return errServerKeyExchange
+			return nil, errServerKeyExchange
 		}
 		if len(sig) < 2 {
-			return errServerKeyExchange
+			return nil, errServerKeyExchange
 		}
 
 		if !isSupportedSignatureAndHash(signatureAndHash{ka.sigType, tls12HashId}, config.signatureAndHashesForClient()) {
-			return errors.New("tls: unsupported hash function for ServerKeyExchange")
+			return nil, errors.New("tls: unsupported hash function for ServerKeyExchange")
 		}
 	}
 	sigLen := int(sig[0])<<8 | int(sig[1])
 	if sigLen+2 != len(sig) {
-		return errServerKeyExchange
+		return nil, errServerKeyExchange
 	}
 	sig = sig[2:]
 	ka.raw = sig
 
 	digest, hashFunc, err := hashForServerKeyExchange(ka.sigType, tls12HashId, ka.version, clientHello.random, serverHello.random, params)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
 	switch ka.sigType {
 	case signatureECDSA:
 		augECDSA, ok := cert.PublicKey.(*x509.AugmentedECDSA)
 		if !ok {
-			return errors.New("ECDHE ECDSA: could not covert cert.PublicKey to x509.AugmentedECDSA")
+			return nil, errors.New("ECDHE ECDSA: could not covert cert.PublicKey to x509.AugmentedECDSA")
 		}
 		pubKey := augECDSA.Pub
 		ecdsaSig := new(ecdsaSignature)
 		if _, err := asn1.Unmarshal(sig, ecdsaSig); err != nil {
-			return err
+			return nil, err
 		}
 		if ecdsaSig.R.Sign() <= 0 || ecdsaSig.S.Sign() <= 0 {
-			return errors.New("ECDSA signature contained zero or negative values")
+			return nil, errors.New("ECDSA signature contained zero or negative values")
 		}
 		if !ecdsa.Verify(pubKey, digest, ecdsaSig.R, ecdsaSig.S) {
-			return errors.New("ECDSA verification failure")
+			return nil, errors.New("ECDSA verification failure")
 		}
 	case signatureRSA:
 		pubKey, ok := cert.PublicKey.(*rsa.PublicKey)
 		if !ok {
-			return errors.New("ECDHE RSA requires a RSA server public key")
+			return nil, errors.New("ECDHE RSA requires a RSA server public key")
 		}
 		if err := rsa.VerifyPKCS1v15(pubKey, hashFunc, digest, sig); err != nil {
-			return err
+			return nil, err
 		}
 	case signatureDSA:
 		pubKey, ok := cert.PublicKey.(*dsa.PublicKey)
 		if !ok {
-			return errors.New("DSS ciphers require a DSA server public key")
+			return nil, errors.New("DSS ciphers require a DSA server public key")
 		}
 		dsaSig := new(dsaSignature)
 		if _, err := asn1.Unmarshal(sig, dsaSig); err != nil {
-			return err
+			return nil, err
 		}
 		if dsaSig.R.Sign() <= 0 || dsaSig.S.Sign() <= 0 {
-			return errors.New("DSA signature contained zero or negative values")
+			return nil, errors.New("DSA signature contained zero or negative values")
 		}
 		if !dsa.Verify(pubKey, digest, dsaSig.R, dsaSig.S) {
-			return errors.New("DSA verification failure")
+			return nil, errors.New("DSA verification failure")
 		}
 	default:
-		return errors.New("unknown ECDHE signature algorithm")
+		return nil, errors.New("unknown ECDHE signature algorithm")
 	}
 	ka.valid = true
-	return nil
+	return digest, nil
 }
 
 // ecdheRSAKeyAgreement implements a TLS key agreement where the server
@@ -606,7 +605,7 @@ func (ka *ecdheKeyAgreement) processServerKeyExchange(config *Config, clientHell
 	serverECDHParams := skx.key[:4+publicLen]
 
 	sig := skx.key[4+publicLen:]
-	ka.verifyError = ka.auth.verifyParameters(config, clientHello, serverHello, cert, serverECDHParams, sig)
+	skx.digest, ka.verifyError = ka.auth.verifyParameters(config, clientHello, serverHello, cert, serverECDHParams, sig)
 	if config.InsecureSkipVerify {
 		return nil
 	}
@@ -751,7 +750,7 @@ func (ka *dheKeyAgreement) processServerKeyExchange(config *Config, clientHello 
 
 	sig := k
 	serverDHParams := skx.key[:len(skx.key)-len(sig)]
-	ka.verifyError = ka.auth.verifyParameters(config, clientHello, serverHello, cert, serverDHParams, sig)
+	skx.digest, ka.verifyError = ka.auth.verifyParameters(config, clientHello, serverHello, cert, serverDHParams, sig)
 	if config.InsecureSkipVerify {
 		return nil
 	}
