@@ -15,8 +15,9 @@
 package zlib
 
 import (
-	"github.com/zmap/zgrab/ztools/http"
 	"strings"
+
+	"github.com/zmap/zgrab/ztools/http"
 )
 
 var knownHeaders map[string]int
@@ -65,13 +66,13 @@ type HTTPRequest struct {
 }
 
 type HTTPResponse struct {
-	VersionMajor int         `json:"version_major,omitempty"`
-	VersionMinor int         `json:"version_minor,omitempty"`
-	StatusCode   int         `json:"status_code,omitempty"`
-	StatusLine   string      `json:"status_line,omitempty"`
-	Headers      HTTPHeaders `json:"headers,omitempty"`
-	Body         string      `json:"body,omitempty"`
-	BodySHA256   []byte      `json:"body_sha256,omitempty"`
+	VersionMajor int                  `json:"version_major,omitempty"`
+	VersionMinor int                  `json:"version_minor,omitempty"`
+	StatusCode   int                  `json:"status_code,omitempty"`
+	StatusLine   string               `json:"status_line,omitempty"`
+	Headers      HTTPHeaders          `json:"headers,omitempty"`
+	Body         string               `json:"body,omitempty"`
+	BodySHA256   http.PageFingerprint `json:"body_sha256,omitempty"`
 }
 
 type HTTP struct {
