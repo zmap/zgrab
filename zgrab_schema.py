@@ -39,9 +39,9 @@ alternate_name = SubRecord({
 })
 
 rsa_public_key = SubRecord({
-    "exponent":Long(),
+    "exponent":Signed64BitInteger(),
     "modulus":Binary(),
-    "length":Integer(doc="Bit-length of modulus."),
+    "length":Unsigned32BitInteger(doc="Bit-length of modulus."),
 })
 
 dsa_public_key = SubRecord({
@@ -68,12 +68,12 @@ ecdsa_public_key = SubRecord({
 zgrab_parsed_certificate = SubRecord({
     "subject":zgrab_subj_issuer,
     "issuer":zgrab_subj_issuer,
-    "version":Integer(),
+    "version":Signed32BitInteger(),
     "serial_number":String(doc="Serial number as an unsigned decimal integer. Stored as string to support >uint lengths. Negative values are allowed."),
     "validity":SubRecord({
         "start":DateTime(doc="Timestamp of when certificate is first valid. Timezone is UTC."),
         "end":DateTime(doc="Timestamp of when certificate expires. Timezone is UTC."),
-        "length":Integer(),
+        "length":Signed32BitInteger(),
     }),
     "signature_algorithm":SubRecord({
         "name":String(),
@@ -95,7 +95,7 @@ zgrab_parsed_certificate = SubRecord({
             "crl_sign":Boolean(),
             "content_commitment":Boolean(),
             "key_encipherment":Boolean(),
-            "value":Integer(),
+            "value":Signed32BitInteger(),
             "data_encipherment":Boolean(),
             "key_agreement":Boolean(),
             "decipher_only":Boolean(),
@@ -103,14 +103,14 @@ zgrab_parsed_certificate = SubRecord({
         }),
         "basic_constraints":SubRecord({
             "is_ca":Boolean(),
-            "max_path_len":Integer(),
+            "max_path_len":Signed32BitInteger(),
         }),
         "subject_alt_name": alternate_name,
         "issuer_alt_name": alternate_name,
         "crl_distribution_points":ListOf(String()),
         "authority_key_id":Binary(), # is this actdually binary?
         "subject_key_id":Binary(),
-        "extended_key_usage":ListOf(Integer()),
+        "extended_key_usage":ListOf(Signed32BitInteger()),
         "certificate_policies":ListOf(String()),
         "authority_info_access":SubRecord({
             "ocsp_urls":ListOf(String()),
@@ -128,7 +128,7 @@ zgrab_parsed_certificate = SubRecord({
             "excluded_directory_names":ListOf(zgrab_subj_issuer)
         }),
         "signed_certificate_timestamps":ListOf(SubRecord({
-            "version":Integer(),
+            "version":Signed32BitInteger(),
             "log_id":Binary(es_index=True),
             "timestamp":DateTime(),
             "extensions":Binary(),
@@ -197,16 +197,16 @@ zgrab_tls = SubRecord({
     "server_hello":SubRecord({
         "version":SubRecord({
             "name":String(),
-            "value":Integer()
+            "value":Signed32BitInteger()
         }),
         "random":Binary(),
         "session_id": Binary(),
         "cipher_suite":SubRecord({
             "hex":String(),
             "name":String(),
-            "value":Integer(),
+            "value":Signed32BitInteger(),
         }),
-        "compression_method":Integer(),
+        "compression_method":Signed32BitInteger(),
         "ocsp_stapling":Boolean(),
         "ticket":Boolean(),
         "secure_renegotiation":Boolean(),
@@ -241,36 +241,36 @@ zgrab_tls = SubRecord({
         "ecdh_params":SubRecord({
             "curve_id":SubRecord({
                 "name":String(),
-                "id":Integer(),
+                "id":Signed32BitInteger(),
             }),
             "server_public":SubRecord({
                 "x":SubRecord({
                     "value":Binary(),
-                    "length":Integer(),
+                    "length":Signed32BitInteger(),
                 }),
                 "y":SubRecord({
                     "value":Binary(),
-                    "length":Integer(),
+                    "length":Signed32BitInteger(),
                 }),
             }),
         }),
         "rsa_params":SubRecord({
-            "exponent":Long(),
+            "exponent":Signed64BitInteger(),
             "modulus":Binary(),
-            "length":Integer(),
+            "length":Signed32BitInteger(),
         }),
         "dh_params":SubRecord({
             "prime":SubRecord({
                 "value":Binary(),
-                "length":Integer(),
+                "length":Signed32BitInteger(),
             }),
             "generator":SubRecord({
                 "value":Binary(),
-                "length":Integer(),
+                "length":Signed32BitInteger(),
             }),
             "server_public":SubRecord({
                 "value":Binary(),
-                "length":Integer(),
+                "length":Signed32BitInteger(),
            }),
         }),
         "digest": Binary(),
@@ -284,7 +284,7 @@ zgrab_tls = SubRecord({
             }),
             "tls_version":SubRecord({
                 "name":String(),
-                "value":Integer()
+                "value":Signed32BitInteger()
             }),
         }),
         "signature_error":String(),
@@ -294,17 +294,17 @@ zgrab_tls = SubRecord({
     }),
     "session_ticket":SubRecord({
         "value":Binary(),
-        "length":Integer(),
-        "lifetime_hint":Long()
+        "length":Signed32BitInteger(),
+        "lifetime_hint":Signed64BitInteger()
     }),
     "key_material":SubRecord({
         "pre_master_secret":SubRecord({
             "value":Binary(),
-            "length":Integer()
+            "length":Signed32BitInteger()
         }),
         "master_secret":SubRecord({
             "value":Binary(),
-            "length":Integer()
+            "length":Signed32BitInteger()
         }),
     }),
     "client_finished":SubRecord({
@@ -314,43 +314,43 @@ zgrab_tls = SubRecord({
         "dh_params":SubRecord({
             "prime":SubRecord({
                 "value":Binary(),
-                "length":Integer()
+                "length":Signed32BitInteger()
             }),
             "generator":SubRecord({
                 "value":Binary(),
-                "length":Integer()
+                "length":Signed32BitInteger()
             }),
             "client_public":SubRecord({
                 "value":Binary(),
-                "length":Integer()
+                "length":Signed32BitInteger()
             }),
             "client_private":SubRecord({
                 "value":Binary(),
-                "length":Integer()
+                "length":Signed32BitInteger()
             }),
         }),
         "ecdh_params":SubRecord({
             "curve_id":SubRecord({
                 "name":String(),
-                "id":Integer()
+                "id":Signed32BitInteger()
             }),
             "client_public":SubRecord({
                 "x":SubRecord({
                     "value":Binary(),
-                    "length":Integer()
+                    "length":Signed32BitInteger()
                 }),
                 "y":SubRecord({
                     "value":Binary(),
-                    "length":Integer()
+                    "length":Signed32BitInteger()
                 }),
             }),
             "client_private":SubRecord({
                 "value":Binary(),
-                "length":Integer()
+                "length":Signed32BitInteger()
             }),
         }),
         "rsa_params":SubRecord({
-            "length":Integer(),
+            "length":Signed32BitInteger(),
             "encrypted_pre_master_secret":Binary()
         }),
     }),
@@ -375,7 +375,7 @@ zschema.registry.register_schema("zgrab-ftp", zgrab_banner)
 
 caps_list = ListOf(SubRecord({
     "name":String(),
-    "value":Integer()
+    "value":Signed32BitInteger()
 }))
 
 zgrab_telnet = Record({
@@ -513,18 +513,18 @@ zgrab_http_request = SubRecord({
 
 zgrab_http_protocol = SubRecord({
     "name":String(),
-    "major":Integer(),
-    "minor":Integer()
+    "major":Signed32BitInteger(),
+    "minor":Signed32BitInteger()
 })
 
 zgrab_http_response = SubRecord({
     "protocol":zgrab_http_protocol,
     "status_line":AnalyzedString(),
-    "status_code":Integer(),
+    "status_code":Signed32BitInteger(),
     "body":HTML(),
     "body_sha256":HexString(),
     "headers":zgrab_http_headers,
-    "content_length":Integer(),
+    "content_length":Signed32BitInteger(),
     "request":zgrab_http_request
 })
 
@@ -562,8 +562,8 @@ zgrab_bacnet = Record({
     "data": SubRecord({
         "bacnet": SubRecord({
             "is_bacnet": Boolean(),
-            "instance_number": Integer(),
-            "vendor_id": Integer(),
+            "instance_number": Signed32BitInteger(),
+            "vendor_id": Signed32BitInteger(),
             "vendor_name": AnalyzedString(es_include_raw=True),
             "firmware_revision": String(),
             "application_software_revision": String(),
@@ -582,7 +582,7 @@ zgrab_fox = Record({
         "fox": SubRecord({
             "is_fox": Boolean(),
             "version": AnalyzedString(es_include_raw=True),
-            "id": Integer(),
+            "id": Signed32BitInteger(),
             "hostname": String(),
             "host_address": String(),
             "app_name": AnalyzedString(es_include_raw=True),
@@ -608,14 +608,14 @@ zschema.registry.register_schema("zgrab-fox", zgrab_fox)
 zgrab_modbus = Record({
     "data":SubRecord({
         "modbus":SubRecord({
-            "length":Integer(),
-            "unit_id":Integer(),
-            "function_code":Integer(),
+            "length":Signed32BitInteger(),
+            "unit_id":Signed32BitInteger(),
+            "function_code":Signed32BitInteger(),
             "raw_response":String(),
             "mei_response":SubRecord({
-                "conformity_level":Integer(),
+                "conformity_level":Signed32BitInteger(),
                 "more_follows":Boolean(),
-                "object_count":Integer(),
+                "object_count":Signed32BitInteger(),
                 "objects":SubRecord({
                     "product_code":String(),
                     "revision":String(),
@@ -627,8 +627,8 @@ zgrab_modbus = Record({
                 }),
             }),
             "exception_response":SubRecord({
-                "exception_function":Integer(),
-                "exception_type":Integer(),
+                "exception_function":Signed32BitInteger(),
+                "exception_type":Signed32BitInteger(),
             }),
         }),
     }),
