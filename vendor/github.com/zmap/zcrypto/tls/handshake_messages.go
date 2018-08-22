@@ -556,7 +556,7 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 			if length < 3 {
 				return false
 			}
-			exLen := int(data[0]<<8) | int(data[1])
+			exLen := int(data[0])<<8 | int(data[1])
 			if length != exLen+2 {
 				return false
 			}
@@ -931,7 +931,7 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 			if length < 3 {
 				return false
 			}
-			exRandLen := int(data[0]<<8) | int(data[1])
+			exRandLen := int(data[0])<<8 | int(data[1])
 			if length != exRandLen+2 {
 				return false
 			}

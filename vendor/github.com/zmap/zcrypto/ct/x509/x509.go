@@ -1044,13 +1044,20 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 
 				for _, dp := range cdp {
 					var n asn1.RawValue
-					_, err = asn1.Unmarshal(dp.DistributionPoint.FullName.Bytes, &n)
-					if err != nil {
-						return nil, err
-					}
-
-					if n.Tag == 6 {
-						out.CRLDistributionPoints = append(out.CRLDistributionPoints, string(n.Bytes))
+					dpName := dp.DistributionPoint.FullName.Bytes
+					// FullName is a GeneralNames, which is a SEQUENCE OF
+					// GeneralName, which in turn is a CHOICE.
+					// Per https://www.ietf.org/rfc/rfc5280.txt, multiple names
+					// for a single DistributionPoint give different pointers to
+					// the same CRL.
+					for len(dpName) > 0 {
+						dpName, err = asn1.Unmarshal(dpName, &n)
+						if err != nil {
+							return nil, err
+						}
+						if n.Tag == 6 {
+							out.CRLDistributionPoints = append(out.CRLDistributionPoints, string(n.Bytes))
+						}
 					}
 				}
 				continue
@@ -1130,7 +1137,7 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				}
 			}
 		} else if e.Id.Equal(oidExtensionCTPrecertificatePoison) {
-			if e.Value[0] == 5 && e.Value[1] == 0 {
+			if len(e.Value) >= 2 && e.Value[0] == 5 && e.Value[1] == 0 {
 				out.IsPrecert = true
 				continue
 			} else {
