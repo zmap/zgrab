@@ -2,91 +2,116 @@
 
 
 [[projects]]
+  digest = "1:320e7ead93de9fd2b0e59b50fd92a4d50c1f8ab455d96bc2eb083267453a9709"
   name = "github.com/asaskevich/govalidator"
   packages = ["."]
+  pruneopts = "UT"
   revision = "ccb8e960c48f04d6935e72476ae4a51028f9e22f"
   version = "v9"
 
 [[projects]]
   branch = "master"
+  digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
+  pruneopts = "UT"
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
+  digest = "1:ffc060c551980d37ee9e428ef528ee2813137249ccebb0bfc412ef83071cac91"
   name = "github.com/golang/protobuf"
   packages = ["proto"]
+  pruneopts = "UT"
   revision = "925541529c1fa6821df4e44ce2723319eb2be768"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:5985ef4caf91ece5d54817c11ea25f182697534f8ae6521eadcd628c142ac4b6"
   name = "github.com/matttproud/golang_protobuf_extensions"
   packages = ["pbutil"]
+  pruneopts = "UT"
   revision = "3247c84500bff8d9fb6d579d800f20b3e091582c"
   version = "v1.0.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:afa1e06ea6d032b05068597d26dbcfdb47483ce1ddb4d8ad2f73cc4fd4811367"
   name = "github.com/mreiferson/go-httpclient"
   packages = ["."]
+  pruneopts = "UT"
   revision = "31f0106b4474f14bc441575c19d3a5fa21aa1f6c"
 
 [[projects]]
+  digest = "1:5b3b29ce0e569f62935d9541dff2e16cc09df981ebde48e82259076a73a3d0c7"
   name = "github.com/op/go-logging"
   packages = ["."]
+  pruneopts = "UT"
   revision = "b2cb9fa56473e98db8caba80237377e83fe44db5"
   version = "v1"
 
 [[projects]]
+  digest = "1:d14a5f4bfecf017cb780bdde1b6483e5deb87e12c332544d2c430eda58734bcb"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
-    "prometheus/promhttp"
+    "prometheus/promhttp",
   ]
+  pruneopts = "UT"
   revision = "c5b7fccd204277076155f10851dad72b76a49317"
   version = "v0.8.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:32d10bdfa8f09ecf13598324dba86ab891f11db3c538b6a34d1c3b5b99d7c36b"
   name = "github.com/prometheus/client_model"
   packages = ["go"]
+  pruneopts = "UT"
   revision = "99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c"
 
 [[projects]]
   branch = "master"
+  digest = "1:d8eb54ba064d155389fdb417aca96e928404dd1a8054570da25c071096d2bd9b"
   name = "github.com/prometheus/common"
   packages = [
     "expfmt",
     "internal/bitbucket.org/ww/goautoneg",
-    "model"
+    "model",
   ]
+  pruneopts = "UT"
   revision = "38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a"
 
 [[projects]]
   branch = "master"
+  digest = "1:f261e077bd68fcb94edbc27ca4964fca036aebb79423f1e5cd7389df18e38b7f"
   name = "github.com/prometheus/procfs"
   packages = [
     ".",
     "internal/util",
     "nfs",
-    "xfs"
+    "xfs",
   ]
+  pruneopts = "UT"
   revision = "780932d4fbbe0e69b84c34c20f5c8d0981e109ea"
 
 [[projects]]
+  digest = "1:c830cba567f31aa1751831aba1decac2b97318744c1ebe6debe1c7694c9f820f"
   name = "github.com/weppos/publicsuffix-go"
   packages = ["publicsuffix"]
+  pruneopts = "UT"
   revision = "c5490f26d8f43b84857ac54e23387b8ed9b100dd"
   version = "v0.3.2"
 
 [[projects]]
   branch = "master"
+  digest = "1:83297f51010ae8370a65edabf65fa616236d36b56340270b201d4c57ba26650d"
   name = "github.com/zmap/rc2"
   packages = ["."]
+  pruneopts = "UT"
   revision = "24b9757f552165b15b95d4f9b096532fbc0fb950"
 
 [[projects]]
   branch = "release/0.1"
+  digest = "1:b4a576edf65f7f4ceb5a1012cc331ad9623b80a60cdfd2ff1b6f067bfd1040f7"
   name = "github.com/zmap/zcrypto"
   packages = [
     "ct",
@@ -96,38 +121,46 @@
     "json",
     "tls",
     "x509",
-    "x509/pkix"
+    "x509/pkix",
   ]
-  revision = "17ecf89a533a6d32e95a7ba948a900e36cae72dc"
+  pruneopts = "UT"
+  revision = "200b8a8d6b2375310f876f2d1d8cf6d59ecaf4c5"
 
 [[projects]]
   branch = "master"
+  digest = "1:58305455efc020071a8d0ea7df2e37c6d905586d811bac6df3cf4a1a4e5e2249"
   name = "golang.org/x/crypto"
   packages = [
     "curve25519",
     "ed25519",
-    "ed25519/internal/edwards25519"
+    "ed25519/internal/edwards25519",
   ]
+  pruneopts = "UT"
   revision = "88942b9c40a4c9d203b82b3731787b672d6e809b"
 
 [[projects]]
   branch = "master"
+  digest = "1:0d50897debf4d879e2c11d155189c7610eaf81bd4cabed6ccfc850f771252f0f"
   name = "golang.org/x/net"
   packages = [
     "context",
     "http2/hpack",
     "idna",
-    "lex/httplex"
+    "lex/httplex",
   ]
+  pruneopts = "UT"
   revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
 
 [[projects]]
   branch = "master"
+  digest = "1:99e9f259afc6328efa223a59cdcfac9f974a9708c5dc1512948c995069ed1a5b"
   name = "golang.org/x/sys"
   packages = ["unix"]
+  pruneopts = "UT"
   revision = "378d26f46672a356c46195c28f61bdb4c0a781dd"
 
 [[projects]]
+  digest = "1:0c56024909189aee3364b7f21a95a27459f718aa7c199a5c111c36cfffd9eaef"
   name = "golang.org/x/text"
   packages = [
     "collate",
@@ -144,20 +177,40 @@
     "unicode/cldr",
     "unicode/norm",
     "unicode/rangetable",
-    "width"
+    "width",
   ]
+  pruneopts = "UT"
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
 
 [[projects]]
   branch = "v1"
+  digest = "1:dcb51660fc1fd7bfa3f45305db912fa587c12c17658fd66b3ab55339b59ffbe6"
   name = "gopkg.in/check.v1"
   packages = ["."]
+  pruneopts = "UT"
   revision = "20d25e2804050c1cd24a7eea1e7a6447dd0e74ec"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "61584f9b36a4bac4bf078bcf1f00eceda8a706a2659a29317b81d89f640464f9"
+  input-imports = [
+    "github.com/mreiferson/go-httpclient",
+    "github.com/op/go-logging",
+    "github.com/prometheus/client_golang/prometheus/promhttp",
+    "github.com/zmap/zcrypto/json",
+    "github.com/zmap/zcrypto/tls",
+    "github.com/zmap/zcrypto/x509",
+    "golang.org/x/crypto/curve25519",
+    "golang.org/x/crypto/ed25519",
+    "golang.org/x/net/context",
+    "golang.org/x/net/http2/hpack",
+    "golang.org/x/net/idna",
+    "golang.org/x/net/lex/httplex",
+    "golang.org/x/sys/unix",
+    "golang.org/x/text/unicode/norm",
+    "golang.org/x/text/width",
+    "gopkg.in/check.v1",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1

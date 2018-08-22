@@ -297,7 +297,7 @@ type SignedCertificateTimestamp struct {
 	SCTVersion Version    `json:"version"` // The version of the protocol to which the SCT conforms
 	LogID      SHA256Hash `json:"log_id"`  // the SHA-256 hash of the log's public key, calculated over
 	// the DER encoding of the key represented as SubjectPublicKeyInfo.
-	Timestamp  uint64          `json:"timestamp,omitempty"`  // Timestamp (in ms since unix epoc) at which the SCT was issued
+	Timestamp  uint64          `json:"timestamp,omitempty"`  // Timestamp (in ms since unix epoc) at which the SCT was issued. NOTE: When this is serialized, the output is in seconds, not milliseconds.
 	Extensions CTExtensions    `json:"extensions,omitempty"` // For future extensions to the protocol
 	Signature  DigitallySigned `json:"signature"`            // The Log's signature for this SCT
 }

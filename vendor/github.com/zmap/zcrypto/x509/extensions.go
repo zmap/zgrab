@@ -33,8 +33,6 @@ var (
 	oidExtSignedCertificateTimestampList = oidExtensionSignedCertificateTimestampList
 )
 
-type encodedUnknownExtensions []encodedUnknownExtension
-
 type CertificateExtensions struct {
 	KeyUsage                       KeyUsage                         `json:"key_usage,omitempty"`
 	BasicConstraints               *BasicConstraints                `json:"basic_constraints,omitempty"`
@@ -52,12 +50,6 @@ type CertificateExtensions struct {
 }
 
 type UnknownCertificateExtensions []pkix.Extension
-
-type encodedUnknownExtension struct {
-	OID      string `json:"oid"`
-	Critical bool   `json:"critical"`
-	Value    []byte `json:"raw,omitempty"`
-}
 
 type IsPrecert bool
 
