@@ -188,7 +188,7 @@ func (h Header) sortedKeyValues(exclude map[string]bool) (kvs []keyValues, hs *h
 	}
 	kvs = hs.kvs[:0]
 	for k, vv := range h {
-		if !exclude[k] {
+		if exclude != nil && !exclude[k] {
 			kvs = append(kvs, keyValues{k, vv})
 		}
 	}
