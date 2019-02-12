@@ -111,7 +111,7 @@
 
 [[projects]]
   branch = "release/0.1"
-  digest = "1:b4a576edf65f7f4ceb5a1012cc331ad9623b80a60cdfd2ff1b6f067bfd1040f7"
+  digest = "1:130251bf9f37098a75a2b41b74d232cb136f651a38d051dbbbe6b6267fc61a03"
   name = "github.com/zmap/zcrypto"
   packages = [
     "ct",
@@ -124,7 +124,7 @@
     "x509/pkix",
   ]
   pruneopts = "UT"
-  revision = "200b8a8d6b2375310f876f2d1d8cf6d59ecaf4c5"
+  revision = "158623c77d9afa3578c0e2c415d0a4a4f465ac9b"
 
 [[projects]]
   branch = "master"
@@ -139,8 +139,8 @@
   revision = "88942b9c40a4c9d203b82b3731787b672d6e809b"
 
 [[projects]]
-  branch = "master"
-  digest = "1:0d50897debf4d879e2c11d155189c7610eaf81bd4cabed6ccfc850f771252f0f"
+  branch = "release-branch.go1.10"
+  digest = "1:ff26c18cfa18a88fd829d3f942df8ce4d80d4f1f8383ba2b375ce76957807db6"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -149,7 +149,7 @@
     "lex/httplex",
   ]
   pruneopts = "UT"
-  revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
+  revision = "0ed95abb35c445290478a5348a7b38bb154135fd"
 
 [[projects]]
   branch = "master"
