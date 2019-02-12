@@ -31,7 +31,7 @@
   name = "golang.org/x/crypto"
 
 [[constraint]]
-  branch = "master"
+  branch = "release-branch.go1.10"
   name = "golang.org/x/net"
 
 [[constraint]]
