@@ -110,8 +110,8 @@
   revision = "24b9757f552165b15b95d4f9b096532fbc0fb950"
 
 [[projects]]
-  branch = "release/0.1"
-  digest = "1:130251bf9f37098a75a2b41b74d232cb136f651a38d051dbbbe6b6267fc61a03"
+  branch = "release/0.1.1"
+  digest = "1:ddecd8ceed5d12b0caa9399f7d76b0a771174385080370ae1ef97cf89c82d6cf"
   name = "github.com/zmap/zcrypto"
   packages = [
     "ct",
@@ -124,7 +124,7 @@
     "x509/pkix",
   ]
   pruneopts = "UT"
-  revision = "158623c77d9afa3578c0e2c415d0a4a4f465ac9b"
+  revision = "bd65c6ebe5c0c51ede3a22cd72a60855c68e804b"
 
 [[projects]]
   branch = "master"

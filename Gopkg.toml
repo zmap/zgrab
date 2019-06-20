@@ -23,7 +23,7 @@
   version = "0.8.0"
 
 [[constraint]]
-  branch = "release/0.1"
+  branch = "release/0.1.1"
   name = "github.com/zmap/zcrypto"
 
 [[constraint]]
