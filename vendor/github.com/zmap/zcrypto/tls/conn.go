@@ -297,9 +297,9 @@ func (hc *halfConn) decrypt(b *block) (ok bool, prefixLen int, alertValue alert)
 		switch c := hc.cipher.(type) {
 		case cipher.Stream:
 			c.XORKeyStream(payload, payload)
-		case *tlsAead:
+		case tlsAead:
 			nonce := seq
-			if c.explicitNonce {
+			if c.explicitNonce() {
 				explicitIVLen = 8
 				if len(payload) < explicitIVLen {
 					return false, 0, alertBadRecordMAC
@@ -421,11 +421,11 @@ func (hc *halfConn) encrypt(b *block, explicitIVLen int) (bool, alert) {
 		switch c := hc.cipher.(type) {
 		case cipher.Stream:
 			c.XORKeyStream(payload, payload)
-		case *tlsAead:
+		case tlsAead:
 			payloadLen := len(b.data) - recordHeaderLen - explicitIVLen
 			b.resize(len(b.data) + c.Overhead())
 			nonce := hc.seq[:]
-			if c.explicitNonce {
+			if c.explicitNonce() {
 				nonce = b.data[recordHeaderLen : recordHeaderLen+explicitIVLen]
 			}
 			payload := b.data[recordHeaderLen+explicitIVLen:]
@@ -798,7 +798,7 @@ func (c *Conn) writeRecord(typ recordType, data []byte) (n int, err error) {
 			}
 		}
 		if explicitIVLen == 0 {
-			if aead, ok := c.out.cipher.(*tlsAead); ok && aead.explicitNonce {
+			if aead, ok := c.out.cipher.(tlsAead); ok && aead.explicitNonce() {
 				explicitIVLen = 8
 				// The AES-GCM construction in TLS has an
 				// explicit nonce so that the nonce can be

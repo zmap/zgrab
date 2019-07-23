@@ -110,8 +110,8 @@
   revision = "24b9757f552165b15b95d4f9b096532fbc0fb950"
 
 [[projects]]
-  branch = "release/0.1.1"
-  digest = "1:ddecd8ceed5d12b0caa9399f7d76b0a771174385080370ae1ef97cf89c82d6cf"
+  branch = "release/0.1.2"
+  digest = "1:063be2ab1b0806bab0e6cd6677355b44953006d8f0778362bf4e596f82d1364c"
   name = "github.com/zmap/zcrypto"
   packages = [
     "ct",
@@ -124,16 +124,19 @@
     "x509/pkix",
   ]
   pruneopts = "UT"
-  revision = "bd65c6ebe5c0c51ede3a22cd72a60855c68e804b"
+  revision = "e3d0180038bc1aaf8446e50d8ade96385ca2b426"
 
 [[projects]]
   branch = "master"
-  digest = "1:58305455efc020071a8d0ea7df2e37c6d905586d811bac6df3cf4a1a4e5e2249"
+  digest = "1:ab403c4d45ff1784347fbe3db2701e5a9f342781bd17ad302e6df5264580bf4a"
   name = "golang.org/x/crypto"
   packages = [
+    "chacha20poly1305",
     "curve25519",
     "ed25519",
     "ed25519/internal/edwards25519",
+    "internal/chacha20",
+    "poly1305",
   ]
   pruneopts = "UT"
   revision = "88942b9c40a4c9d203b82b3731787b672d6e809b"
