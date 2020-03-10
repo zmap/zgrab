@@ -71,7 +71,9 @@ func Process(in Decoder, out io.Writer, w Worker, m Marshaler, workers uint) {
 					result := handler(obj)
 					enc, err := m.Marshal(result)
 					if err != nil {
-						panic(err.Error())
+						// Don't let an unexpected marshaling error abort the rest of the scan, but still log the error.
+						zlog.Errorf("Error marshaling result %#v from object %#v: %s", result, obj, err.Error())
+						continue
 					}
 					outputQueue <- enc
 				}
