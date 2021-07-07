@@ -1,10 +1,11 @@
-zgrab
-==================
+## 🚨 **ZGRAB 1.0 IS DEPRECATED**. Please use ZGrab 2.0: https://github.com/zmap/zgrab2. 
+
+### ZGrab 1.0: A Banner Grabber, in Go
 
 [![Build Status](https://travis-ci.org/zmap/zgrab.svg?branch=master)](https://travis-ci.org/zmap/zgrab)
 [![Go Report Card](https://goreportcard.com/badge/github.com/zmap/zgrab)](https://goreportcard.com/report/github.com/zmap/zgrab)
 
-A Banner Grabber, in Go
+
 
 ## Building
 
